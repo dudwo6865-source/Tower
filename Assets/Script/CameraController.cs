@@ -22,12 +22,8 @@ public class RTSCameraPivotController : MonoBehaviour
     [Tooltip("카메라 위치가 목표 지점에 도달할 때 부드럽게 따라가는 시간입니다. 값이 작을수록 반응이 빠릅니다.")]
     public float positionSmoothTime = 0.12f;
 
-    [Tooltip("카메라 회전(Q/E)이 목표 각도에 도달할 때 부드럽게 따라가는 시간입니다.")]
+    [Tooltip("카메라 회전이 목표 각도에 도달할 때 부드럽게 따라가는 시간입니다.")]
     public float rotationSmoothTime = 0.1f;
-
-    [Header("Rotation")]
-    [Tooltip("Q/E 키로 카메라를 회전할 때 초당 회전 각도(도)입니다.")]
-    public float rotationSpeed = 120f;
 
     [Header("Zoom")]
     [Tooltip("줌 및 팬에 사용할 메인 카메라입니다. CameraRig의 자식 카메라를 연결하세요.")]
@@ -36,11 +32,27 @@ public class RTSCameraPivotController : MonoBehaviour
     [Tooltip("마우스 휠 스크롤 한 칸당 줌 이동량입니다. 값이 클수록 빠르게 확대/축소됩니다.")]
     public float zoomSpeed = 5f;
 
-    [Tooltip("카메라가 가장 가까이 접근할 수 있는 최소 거리입니다.")]
+    [Tooltip("직교(Orthographic) 투영을 사용합니다. 거리와 무관하게 일정한 크기로 보여 일정한 뷰를 원할 때 적합합니다.")]
+    public bool useOrthographic = true;
+
+    [Tooltip("[직교 모드] 가장 확대했을 때의 크기(orthographicSize)입니다. 작을수록 확대됩니다.")]
+    public float minOrthoSize = 12f;
+
+    [Tooltip("[직교 모드] 가장 축소했을 때의 크기(orthographicSize)입니다. 클수록 더 넓게 보입니다.")]
+    public float maxOrthoSize = 45f;
+
+    [Tooltip("[원근 모드] 카메라가 가장 가까이 접근할 수 있는 최소 거리입니다.")]
     public float minCameraDistance = 15f;
 
-    [Tooltip("카메라가 가장 멀리 떨어질 수 있는 최대 거리입니다.")]
+    [Tooltip("[원근 모드] 카메라가 가장 멀리 떨어질 수 있는 최대 거리입니다.")]
     public float maxCameraDistance = 60f;
+
+    [Header("Start Focus")]
+    [Tooltip("게임 시작 시 카메라가 이 대상(예: 본진 건물)을 중심으로 시작합니다. 비워두면 맵 중앙에서 시작합니다.")]
+    public Transform startFocusTarget;
+
+    [Tooltip("켜면 Home 키를 눌렀을 때도 Start Focus Target 위치로 돌아갑니다. (Use Custom Home Position이 꺼져 있을 때)")]
+    public bool homeReturnsToStartFocus = true;
 
     [Header("Home")]
     [Tooltip("켜면 Home 키 입력 시 아래 Custom Home Position으로 이동합니다. 끄면 게임 시작 시 맵 중앙으로 이동합니다.")]
@@ -50,8 +62,8 @@ public class RTSCameraPivotController : MonoBehaviour
     public Vector3 customHomePosition;
 
     [Header("Terrain Bounds")]
-    [Tooltip("지형 가장자리에서 카메라가 멈추는 여백 거리입니다. 이 값만큼 안쪽까지만 이동할 수 있습니다.")]
-    public float borderPadding = 10f;
+    [Tooltip("화면에 보이는 영역이 맵을 벗어나지 않도록 카메라를 제한합니다. 이 값만큼 가장자리에서 추가 여백을 둡니다. 0이면 보이는 영역의 끝이 맵 끝에 딱 맞고, 음수면 맵 밖이 조금 보입니다.")]
+    public float edgeMargin = 0f;
 
     private Terrain terrain;
 
@@ -83,18 +95,61 @@ public class RTSCameraPivotController : MonoBehaviour
         terrainWidth = terrain.terrainData.size.x;
         terrainLength = terrain.terrainData.size.z;
 
-        Vector3 startPosition = new Vector3(
+        Vector3 mapCenter = new Vector3(
             terrainWidth * 0.5f,
             0f,
             terrainLength * 0.5f);
+
+        Vector3 startPosition = mapCenter;
+
+        if (startFocusTarget != null)
+        {
+            startPosition.x = startFocusTarget.position.x;
+            startPosition.z = startFocusTarget.position.z;
+        }
 
         transform.position = startPosition;
         targetPosition = startPosition;
         targetYaw = transform.eulerAngles.y;
 
-        homePosition = useCustomHomePosition
-            ? customHomePosition
-            : startPosition;
+        if (useCustomHomePosition)
+            homePosition = customHomePosition;
+        else if (startFocusTarget != null && homeReturnsToStartFocus)
+            homePosition = startPosition;
+        else
+            homePosition = mapCenter;
+
+        SetupProjection();
+    }
+
+    void SetupProjection()
+    {
+        if (mainCamera == null)
+            return;
+
+        if (!useOrthographic)
+        {
+            mainCamera.orthographic = false;
+            return;
+        }
+
+        mainCamera.orthographic = true;
+
+        float initialSize = mainCamera.orthographicSize;
+
+        if (initialSize < minOrthoSize || initialSize > maxOrthoSize)
+            initialSize = (minOrthoSize + maxOrthoSize) * 0.5f;
+
+        mainCamera.orthographicSize =
+            Mathf.Clamp(initialSize, minOrthoSize, maxOrthoSize);
+
+        float cameraDistance =
+            Mathf.Abs(mainCamera.transform.localPosition.z);
+
+        float requiredFar = cameraDistance + maxOrthoSize * 4f + 100f;
+
+        if (mainCamera.farClipPlane < requiredFar)
+            mainCamera.farClipPlane = requiredFar;
     }
 
     void Update()
@@ -107,7 +162,6 @@ public class RTSCameraPivotController : MonoBehaviour
         if (!pointerOverUI)
         {
             KeyboardMove();
-            HandleRotation();
             DragPan();
             EdgeScrollMove();
             Zoom();
@@ -159,14 +213,6 @@ public class RTSCameraPivotController : MonoBehaviour
                 new GameObject("SelectionBoxUI");
 
             boxObject.AddComponent<SelectionBoxUI>();
-        }
-
-        if (FindObjectOfType<RTSSceneBootstrap>() == null)
-        {
-            GameObject bootstrapObject =
-                new GameObject("RTSSceneBootstrap");
-
-            bootstrapObject.AddComponent<RTSSceneBootstrap>();
         }
     }
 
@@ -221,22 +267,6 @@ public class RTSCameraPivotController : MonoBehaviour
             Time.deltaTime;
 
         targetPosition = ClampToTerrain(targetPosition);
-    }
-
-    void HandleRotation()
-    {
-        float rotateInput = 0f;
-
-        if (Input.GetKey(KeyCode.Q))
-            rotateInput -= 1f;
-
-        if (Input.GetKey(KeyCode.E))
-            rotateInput += 1f;
-
-        if (Mathf.Abs(rotateInput) < 0.01f)
-            return;
-
-        targetYaw += rotateInput * rotationSpeed * Time.deltaTime;
     }
 
     void DragPan()
@@ -329,6 +359,12 @@ public class RTSCameraPivotController : MonoBehaviour
 
     float GetZoomRatio()
     {
+        if (useOrthographic && mainCamera.orthographic)
+            return Mathf.InverseLerp(
+                minOrthoSize,
+                maxOrthoSize,
+                mainCamera.orthographicSize);
+
         float currentDistance =
             Mathf.Abs(
                 mainCamera.transform.localPosition.z);
@@ -350,6 +386,34 @@ public class RTSCameraPivotController : MonoBehaviour
         Vector3 worldPointBefore =
             GetGroundPointUnderMouse();
 
+        if (useOrthographic && mainCamera.orthographic)
+            ZoomOrthographic(scroll);
+        else
+            ZoomPerspective(scroll);
+
+        Vector3 worldPointAfter =
+            GetGroundPointUnderMouse();
+
+        Vector3 offset =
+            worldPointBefore - worldPointAfter;
+
+        targetPosition +=
+            new Vector3(offset.x, 0f, offset.z);
+
+        targetPosition = ClampToTerrain(targetPosition);
+    }
+
+    void ZoomOrthographic(float scroll)
+    {
+        float size =
+            mainCamera.orthographicSize - scroll * zoomSpeed;
+
+        mainCamera.orthographicSize =
+            Mathf.Clamp(size, minOrthoSize, maxOrthoSize);
+    }
+
+    void ZoomPerspective(float scroll)
+    {
         Vector3 localPos =
             mainCamera.transform.localPosition;
 
@@ -378,17 +442,6 @@ public class RTSCameraPivotController : MonoBehaviour
         }
 
         mainCamera.transform.localPosition = localPos;
-
-        Vector3 worldPointAfter =
-            GetGroundPointUnderMouse();
-
-        Vector3 offset =
-            worldPointBefore - worldPointAfter;
-
-        targetPosition +=
-            new Vector3(offset.x, 0f, offset.z);
-
-        targetPosition = ClampToTerrain(targetPosition);
     }
 
     Vector3 GetGroundPointUnderMouse()
@@ -437,16 +490,94 @@ public class RTSCameraPivotController : MonoBehaviour
 
     Vector3 ClampToTerrain(Vector3 pos)
     {
-        pos.x = Mathf.Clamp(
-            pos.x,
-            borderPadding,
-            terrainWidth - borderPadding);
+        if (mainCamera == null)
+            return pos;
 
-        pos.z = Mathf.Clamp(
-            pos.z,
-            borderPadding,
-            terrainLength - borderPadding);
+        ComputeVisibleGroundOffsets(
+            out float offMinX,
+            out float offMaxX,
+            out float offMinZ,
+            out float offMaxZ);
+
+        float xMin = edgeMargin - offMinX;
+        float xMax = terrainWidth - edgeMargin - offMaxX;
+        float zMin = edgeMargin - offMinZ;
+        float zMax = terrainLength - edgeMargin - offMaxZ;
+
+        pos.x = ClampOrCenter(pos.x, xMin, xMax, terrainWidth * 0.5f);
+        pos.z = ClampOrCenter(pos.z, zMin, zMax, terrainLength * 0.5f);
 
         return pos;
+    }
+
+    float ClampOrCenter(float value, float min, float max, float fallbackCenter)
+    {
+        if (min > max)
+            return fallbackCenter;
+
+        return Mathf.Clamp(value, min, max);
+    }
+
+    void ComputeVisibleGroundOffsets(
+        out float offMinX,
+        out float offMaxX,
+        out float offMinZ,
+        out float offMaxZ)
+    {
+        offMinX = 0f;
+        offMaxX = 0f;
+        offMinZ = 0f;
+        offMaxZ = 0f;
+
+        float groundY = GetGroundHeightAt(transform.position);
+
+        Plane groundPlane =
+            new Plane(Vector3.up, new Vector3(0f, groundY, 0f));
+
+        Vector2[] corners =
+        {
+            new Vector2(0f, 0f),
+            new Vector2(1f, 0f),
+            new Vector2(0f, 1f),
+            new Vector2(1f, 1f)
+        };
+
+        float minX = float.MaxValue;
+        float maxX = float.MinValue;
+        float minZ = float.MaxValue;
+        float maxZ = float.MinValue;
+
+        foreach (Vector2 corner in corners)
+        {
+            Ray ray = mainCamera.ViewportPointToRay(corner);
+
+            if (!groundPlane.Raycast(ray, out float distance))
+                continue;
+
+            Vector3 point = ray.GetPoint(distance);
+
+            float terrainHeight = GetGroundHeightAt(point);
+
+            Plane localPlane =
+                new Plane(Vector3.up, new Vector3(0f, terrainHeight, 0f));
+
+            if (localPlane.Raycast(ray, out float localDistance))
+                point = ray.GetPoint(localDistance);
+
+            minX = Mathf.Min(minX, point.x);
+            maxX = Mathf.Max(maxX, point.x);
+            minZ = Mathf.Min(minZ, point.z);
+            maxZ = Mathf.Max(maxZ, point.z);
+        }
+
+        if (minX > maxX)
+            return;
+
+        Vector3 pivot = transform.position;
+
+        offMinX = minX - pivot.x;
+        offMaxX = maxX - pivot.x;
+        offMinZ = minZ - pivot.z;
+        offMaxZ = maxZ - pivot.z;
     }
 }

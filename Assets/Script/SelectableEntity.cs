@@ -66,8 +66,13 @@ public class SelectableEntity : MonoBehaviour
 
     void OnDisable()
     {
-        if (IsSelected)
-            SetSelected(false);
+        IsSelected = false;
+
+        if (ringIndicator != null)
+            ringIndicator.SetVisible(false);
+
+        if (UnitSelectionManager.Instance != null)
+            UnitSelectionManager.Instance.NotifyEntityRemoved(this);
 
         SelectableRegistry.Unregister(this);
     }

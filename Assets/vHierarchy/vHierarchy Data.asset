@@ -21,6 +21,8 @@ MonoBehaviour:
         - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-840169016-0
         - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-938182283-0
         - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-144707705-0
+        - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-346236505-0
+        - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-389560205-0
         values:
         - colorIndex: 2
           iconNameOrGuid: 
@@ -34,5 +36,13 @@ MonoBehaviour:
           iconNameOrGuid: 
           isIconRecursive: 0
           isColorRecursive: 1
+        - colorIndex: 3
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 3
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
   bookmarks: []
   bookmarkedScenePaths: []

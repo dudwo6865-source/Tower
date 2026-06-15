@@ -7,11 +7,13 @@ public class UnitMovement : MonoBehaviour
 {
     private NavMeshAgent agent;
     private SelectableEntity selectableEntity;
+    private UnitCombatAI combatAI;
 
     void Start()
     {
         agent = GetComponent<NavMeshAgent>();
         selectableEntity = GetComponent<SelectableEntity>();
+        combatAI = GetComponent<UnitCombatAI>();
     }
 
     void Update()
@@ -28,7 +30,12 @@ public class UnitMovement : MonoBehaviour
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
 
             if (Physics.Raycast(ray, out RaycastHit hit))
+            {
                 agent.SetDestination(hit.point);
+
+                if (combatAI != null)
+                    combatAI.SuspendForManualMove();
+            }
         }
     }
 }

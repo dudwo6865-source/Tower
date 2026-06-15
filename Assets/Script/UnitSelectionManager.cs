@@ -320,22 +320,43 @@ public class UnitSelectionManager : MonoBehaviour
     void DeselectAll()
     {
         foreach (SelectableEntity entity in selectedEntities)
-            entity.SetSelected(false);
+        {
+            if (entity != null)
+                entity.SetSelected(false);
+        }
 
         selectedEntities.Clear();
     }
 
+    public void NotifyEntityRemoved(SelectableEntity entity)
+    {
+        selectedEntities.Remove(entity);
+
+        if (lastClickedEntity == entity)
+            lastClickedEntity = null;
+    }
+
     public void FocusOnSelection()
     {
-        if (selectedEntities.Count == 0 || cameraController == null)
+        if (cameraController == null)
             return;
 
         Vector3 center = Vector3.zero;
+        int count = 0;
 
         foreach (SelectableEntity entity in selectedEntities)
-            center += entity.transform.position;
+        {
+            if (entity == null)
+                continue;
 
-        center /= selectedEntities.Count;
+            center += entity.transform.position;
+            count++;
+        }
+
+        if (count == 0)
+            return;
+
+        center /= count;
 
         cameraController.FocusOnPosition(center);
     }
