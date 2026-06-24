@@ -196,17 +196,6 @@ public class RTSCameraPivotController : MonoBehaviour
             manager.cameraController = this;
         }
 
-        if (FindObjectOfType<RTSMinimap>() == null)
-        {
-            GameObject minimapObject =
-                new GameObject("RTSMinimap");
-
-            RTSMinimap minimap =
-                minimapObject.AddComponent<RTSMinimap>();
-
-            minimap.cameraController = this;
-        }
-
         if (FindObjectOfType<SelectionBoxUI>() == null)
         {
             GameObject boxObject =
@@ -518,16 +507,19 @@ public class RTSCameraPivotController : MonoBehaviour
         return Mathf.Clamp(value, min, max);
     }
 
-    void ComputeVisibleGroundOffsets(
-        out float offMinX,
-        out float offMaxX,
-        out float offMinZ,
-        out float offMaxZ)
+    public bool TryGetVisibleGroundBounds(
+        out float minX,
+        out float maxX,
+        out float minZ,
+        out float maxZ)
     {
-        offMinX = 0f;
-        offMaxX = 0f;
-        offMinZ = 0f;
-        offMaxZ = 0f;
+        minX = 0f;
+        maxX = 0f;
+        minZ = 0f;
+        maxZ = 0f;
+
+        if (mainCamera == null || terrain == null)
+            return false;
 
         float groundY = GetGroundHeightAt(transform.position);
 
@@ -542,10 +534,12 @@ public class RTSCameraPivotController : MonoBehaviour
             new Vector2(1f, 1f)
         };
 
-        float minX = float.MaxValue;
-        float maxX = float.MinValue;
-        float minZ = float.MaxValue;
-        float maxZ = float.MinValue;
+        minX = float.MaxValue;
+        maxX = float.MinValue;
+        minZ = float.MaxValue;
+        maxZ = float.MinValue;
+
+        bool anyHit = false;
 
         foreach (Vector2 corner in corners)
         {
@@ -568,9 +562,28 @@ public class RTSCameraPivotController : MonoBehaviour
             maxX = Mathf.Max(maxX, point.x);
             minZ = Mathf.Min(minZ, point.z);
             maxZ = Mathf.Max(maxZ, point.z);
+            anyHit = true;
         }
 
-        if (minX > maxX)
+        return anyHit && minX <= maxX && minZ <= maxZ;
+    }
+
+    void ComputeVisibleGroundOffsets(
+        out float offMinX,
+        out float offMaxX,
+        out float offMinZ,
+        out float offMaxZ)
+    {
+        offMinX = 0f;
+        offMaxX = 0f;
+        offMinZ = 0f;
+        offMaxZ = 0f;
+
+        if (!TryGetVisibleGroundBounds(
+                out float minX,
+                out float maxX,
+                out float minZ,
+                out float maxZ))
             return;
 
         Vector3 pivot = transform.position;

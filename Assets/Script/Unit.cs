@@ -50,6 +50,22 @@ public class Unit : MonoBehaviour
         ApplyCombatAI(source);
         ApplyMovement(source);
         ApplyHealthBar(source);
+        ApplyFogOfWar(source);
+        ApplyGrid(source);
+    }
+
+    void ApplyGrid(UnitData source)
+    {
+        if (source.footprintCells.x <= 0 || source.footprintCells.y <= 0)
+            return;
+
+        GridFootprint footprint = GetComponent<GridFootprint>();
+
+        if (footprint == null)
+            footprint = gameObject.AddComponent<GridFootprint>();
+
+        footprint.footprintCells = source.footprintCells;
+        footprint.blockCells = source.entityType == SelectableEntityType.Building;
     }
 
     void ApplyMovement(UnitData source)
@@ -131,12 +147,24 @@ public class Unit : MonoBehaviour
         target.heightOffset = source.healthBarHeightOffset;
     }
 
+    void ApplyFogOfWar(UnitData source)
+    {
+        FogOfWarVisionSource vision = GetComponent<FogOfWarVisionSource>();
+        if (vision == null)
+            return;
+
+        if (source.visionRange > 0f)
+            vision.visionRange = source.visionRange;
+    }
+
 #if UNITY_EDITOR
     public void EnsureComponents(bool wantsAttacker, bool wantsCombatAI, bool wantsMovement)
     {
         GetOrAdd<SelectableEntity>();
         GetOrAdd<EntityHealth>();
         GetOrAdd<WorldHealthBar>();
+        GetOrAdd<FogOfWarVisionSource>();
+        GetOrAdd<FogOfWarVisibility>();
 
         if (wantsAttacker || wantsCombatAI)
             GetOrAdd<UnitAttacker>();

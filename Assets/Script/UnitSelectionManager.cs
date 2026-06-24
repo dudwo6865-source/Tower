@@ -83,22 +83,25 @@ public class UnitSelectionManager : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Space))
             FocusOnSelection();
 
+        if (TowerPlacementController.Instance != null &&
+            TowerPlacementController.Instance.IsPlacing)
+            return;
+
+        if (isDragging)
+        {
+            HandleActiveDrag();
+            return;
+        }
+
         if (IsPointerOverUI())
             return;
 
         HandleSelectionInput();
     }
 
-    void HandleSelectionInput()
+    void HandleActiveDrag()
     {
-        if (Input.GetMouseButtonDown(0))
-        {
-            dragStartScreen = Input.mousePosition;
-            isDragging = true;
-            isBoxDragging = false;
-        }
-
-        if (isDragging && Input.GetMouseButton(0))
+        if (Input.GetMouseButton(0))
         {
             Vector2 current = Input.mousePosition;
             float dragDistance = Vector2.Distance(current, dragStartScreen);
@@ -108,21 +111,34 @@ public class UnitSelectionManager : MonoBehaviour
                 isBoxDragging = true;
                 selectionBoxUI.UpdateBox(dragStartScreen, current);
             }
+
+            return;
         }
 
-        if (Input.GetMouseButtonUp(0) && isDragging)
-        {
-            Vector2 end = Input.mousePosition;
+        if (!Input.GetMouseButtonUp(0))
+            return;
 
-            if (isBoxDragging)
-                HandleBoxSelect(dragStartScreen, end);
-            else
-                HandleSingleClick();
+        Vector2 end = Input.mousePosition;
+        bool releasedOverUI = IsPointerOverUI();
 
-            selectionBoxUI.Hide();
-            isDragging = false;
-            isBoxDragging = false;
-        }
+        if (isBoxDragging && !releasedOverUI)
+            HandleBoxSelect(dragStartScreen, end);
+        else if (!isBoxDragging && !releasedOverUI)
+            HandleSingleClick();
+
+        selectionBoxUI.Hide();
+        isDragging = false;
+        isBoxDragging = false;
+    }
+
+    void HandleSelectionInput()
+    {
+        if (!Input.GetMouseButtonDown(0))
+            return;
+
+        dragStartScreen = Input.mousePosition;
+        isDragging = true;
+        isBoxDragging = false;
     }
 
     void HandleSingleClick()

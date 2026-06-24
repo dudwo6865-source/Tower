@@ -42,20 +42,7 @@ public class UnitCombatAI : CombatAIBase
     {
         agent.stoppingDistance = stoppingDistance;
         agent.autoBraking = false;
-        EnsureOnNavMesh();
-    }
-
-    void EnsureOnNavMesh()
-    {
-        if (agent.isOnNavMesh)
-            return;
-
-        if (NavMesh.SamplePosition(
-                transform.position,
-                out NavMeshHit hit,
-                10f,
-                NavMesh.AllAreas))
-            agent.Warp(hit.position);
+        GridMovement.EnsureAgentOnNavMesh(agent);
     }
 
     void Update()
@@ -144,11 +131,13 @@ public class UnitCombatAI : CombatAIBase
             return;
 
         Vector3 destination =
-            TargetFinder.GetApproachPosition(
-                transform.position,
-                currentTarget,
-                stoppingDistance,
-                approachAngleFactor * approachSpreadAngle);
+            GridMovement.SnapMoveDestination(
+                TargetFinder.GetApproachPosition(
+                    transform.position,
+                    currentTarget,
+                    stoppingDistance,
+                    approachAngleFactor * approachSpreadAngle),
+                GridMovement.GetFootprintCells(this));
 
         float sqrDistToTarget =
             (currentTarget.transform.position - transform.position).sqrMagnitude;
@@ -170,7 +159,7 @@ public class UnitCombatAI : CombatAIBase
             return;
 
         lastDestination = destination;
-        hasDestination = agent.SetDestination(destination);
+        hasDestination = GridMovement.TrySetAgentDestination(agent, destination);
     }
 
     void FaceTarget()

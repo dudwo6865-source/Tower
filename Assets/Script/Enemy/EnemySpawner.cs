@@ -165,6 +165,9 @@ public class EnemySpawner : MonoBehaviour
         NavMeshAgent agent = enemy.GetComponent<NavMeshAgent>();
         if (agent != null)
             agent.speed *= speedMultiplier;
+
+        if (enemy.GetComponent<FogOfWarVisibility>() == null)
+            enemy.AddComponent<FogOfWarVisibility>();
     }
 
     void TrackAlive(EntityHealth health)

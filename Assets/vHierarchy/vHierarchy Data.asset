@@ -23,6 +23,25 @@ MonoBehaviour:
         - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-144707705-0
         - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-346236505-0
         - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-389560205-0
+        - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-878188455-0
+        - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-87010280-0
+        - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-101339157-0
+        - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-1169651938-0
+        - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-1082245860-0
+        - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-788718214-0
+        - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-1738914648-0
+        - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-1975827386-0
+        - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-166941978-0
+        - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-143594151-0
+        - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-1718603097-0
+        - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-706527341-0
+        - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-2017740482-0
+        - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-100000-1732855001
+        - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-100000-1972752871
+        - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-100000-923504345
+        - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-100000-1441108186
+        - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-100000-2024241459
+        - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-1545845613-0
         values:
         - colorIndex: 2
           iconNameOrGuid: 
@@ -37,6 +56,82 @@ MonoBehaviour:
           isIconRecursive: 0
           isColorRecursive: 1
         - colorIndex: 3
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 4
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 3
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 3
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 4
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 3
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 4
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 5
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 3
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 9
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 3
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 4
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 3
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 2
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 3
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 4
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 4
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 4
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 4
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 4
           iconNameOrGuid: 
           isIconRecursive: 0
           isColorRecursive: 0

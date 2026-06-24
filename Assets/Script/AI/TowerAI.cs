@@ -10,13 +10,15 @@ public class TowerAI : CombatAIBase
     [Tooltip("포탑이 대상을 바라보는 회전 속도입니다.")]
     public float facingSpeed = 8f;
 
-    [Tooltip("포탑이 적을 정확히 겨누도록 보정하는 Y축 각도(도)입니다. 모델 정면이 어긋나면 값을 조정하세요.")]
+    [Tooltip("포탑이 적을 정확히 겨누도록 추가 보정하는 Y축 각도(도)입니다. " +
+             "Fire Point가 있으면 그 방향을 기준으로 자동 보정되며, 이 값은 추가로 더해집니다.")]
     public float aimYawOffset;
 
     [Tooltip("대상이 없을 때 처음 바라보던 방향으로 천천히 돌아갑니다.")]
     public bool returnToIdleWhenNoTarget = true;
 
     private Quaternion idleRotation;
+    private float effectiveYawOffset;
 
     protected override void Awake()
     {
@@ -26,6 +28,27 @@ public class TowerAI : CombatAIBase
             turretPivot = transform;
 
         idleRotation = turretPivot.rotation;
+        effectiveYawOffset = aimYawOffset + ComputeFirePointYawOffset();
+    }
+
+    float ComputeFirePointYawOffset()
+    {
+        if (attacker == null || attacker.firePoint == null)
+            return 0f;
+
+        Vector3 pivotForward = turretPivot.forward;
+        Vector3 fireForward = attacker.firePoint.forward;
+        pivotForward.y = 0f;
+        fireForward.y = 0f;
+
+        if (pivotForward.sqrMagnitude < 0.0001f ||
+            fireForward.sqrMagnitude < 0.0001f)
+            return 0f;
+
+        return Vector3.SignedAngle(
+            pivotForward.normalized,
+            fireForward.normalized,
+            Vector3.up);
     }
 
     void Update()
@@ -56,13 +79,14 @@ public class TowerAI : CombatAIBase
         if (direction.sqrMagnitude < 0.01f)
             return;
 
-        // 초기 자세(모델 기울기 포함)를 유지한 채 월드 Y축으로만 회전시킨다.
-        // 이렇게 하면 루트에 -90 X 기울기가 있어도 뒤집히지 않는다.
+        // Fire Point 방향을 기준으로 Y축만 돌려 모델 기울기(X/Z)는 idle 자세를 유지한다.
         float yaw =
-            Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg + aimYawOffset;
+            Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg +
+            effectiveYawOffset;
 
+        Vector3 idleEuler = idleRotation.eulerAngles;
         Quaternion targetRotation =
-            Quaternion.AngleAxis(yaw, Vector3.up) * idleRotation;
+            Quaternion.Euler(idleEuler.x, yaw, idleEuler.z);
 
         RotateTowards(targetRotation);
     }

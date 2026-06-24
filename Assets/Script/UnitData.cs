@@ -95,4 +95,12 @@ public class UnitData : ScriptableObject
 
     [Tooltip("콜라이더 위쪽에서 체력바가 떠 있는 추가 높이입니다.")]
     public float healthBarHeightOffset = 0.3f;
+
+    [Header("Fog of War")]
+    [Tooltip("이 유닛·건물이 밝히는 시야 반경입니다. FogOfWarVisionSource에 적용됩니다.")]
+    public float visionRange = 12f;
+
+    [Header("Grid")]
+    [Tooltip("이 유닛이 차지하는 칸 수입니다.")]
+    public Vector2Int footprintCells = Vector2Int.one;
 }

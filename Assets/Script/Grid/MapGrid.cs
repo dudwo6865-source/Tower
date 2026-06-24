@@ -1,0 +1,654 @@
+using UnityEngine;
+using UnityEngine.AI;
+using Unity.AI.Navigation;
+
+public enum MapGridBoundsSource
+{
+    Terrain,
+    NavMesh
+}
+
+[DisallowMultipleComponent]
+[DefaultExecutionOrder(-300)]
+public class MapGrid : MonoBehaviour
+{
+    public static MapGrid Instance { get; private set; }
+
+    [Header("Grid")]
+    [Tooltip("한 칸의 월드 크기(미터)입니다.")]
+    public float cellSize = 2f;
+
+    [Header("Bounds Source")]
+    [Tooltip("Terrain: 지형 전체 크기. NavMesh: Bake된 이동 가능 영역 AABB.")]
+    public MapGridBoundsSource boundsSource = MapGridBoundsSource.NavMesh;
+
+    [Tooltip("NavMesh 모드에서 footprint 모든 칸이 NavMesh 위에 있어야 합니다.")]
+    public bool requireNavMeshForCells = true;
+
+    [Tooltip("NavMesh.SamplePosition 검색 반경(칸 크기 대비)입니다.")]
+    [Range(0.1f, 1.5f)]
+    public float navMeshSampleRadiusFactor = 0.45f;
+
+    [Tooltip("높이/시각화용 NavMesh 샘플 반경(칸 크기 대비)입니다.")]
+    [Range(0.5f, 2f)]
+    public float navMeshHeightSampleRadiusFactor = 1.2f;
+
+    [Tooltip("NavMesh 샘플 시 위에서 내려다볼 여유 높이(미터)입니다. Terrain 위 메쉬에 필요합니다.")]
+    public float navMeshSampleHeightOffset = 4f;
+
+    public int navMeshAreaMask = NavMesh.AllAreas;
+
+    [Tooltip("NavMesh를 못 찾으면 Terrain으로 fallback 합니다.")]
+    public bool fallbackToTerrain = true;
+
+    [Tooltip("Terrain bounds / 높이 샘플 fallback용입니다.")]
+    public Terrain terrain;
+
+    [Header("Debug")]
+    public bool drawGridGizmos = true;
+
+    [Tooltip("NavMesh 모드에서 Gizmo를 walkable 칸만 그립니다.")]
+    public bool drawOnlyWalkableCellsInGizmos = true;
+
+    public float CellSize => cellSize;
+
+    public int CellCountX =>
+        mapSize.x > 0f ? Mathf.FloorToInt(mapSize.x / cellSize) : 0;
+
+    public int CellCountZ =>
+        mapSize.y > 0f ? Mathf.FloorToInt(mapSize.y / cellSize) : 0;
+
+    public Vector3 MapOrigin => mapOrigin;
+
+    public Vector2 MapSize => mapSize;
+
+    public bool UsesNavMesh => boundsSource == MapGridBoundsSource.NavMesh;
+
+    public bool IsNavMeshBoundsActive => navMeshBoundsActive;
+
+    private Vector3 mapOrigin;
+    private Vector2 mapSize;
+    private float navMeshMinY;
+    private float navMeshMaxY;
+    private bool navMeshBoundsActive;
+    private bool loggedNavMeshFailure;
+
+    void Awake()
+    {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        Instance = this;
+
+        if (boundsSource != MapGridBoundsSource.NavMesh)
+            Refresh();
+    }
+
+    void Start()
+    {
+        if (boundsSource == MapGridBoundsSource.NavMesh)
+            Refresh();
+    }
+
+    void OnEnable()
+    {
+        if (!Application.isPlaying ||
+            boundsSource != MapGridBoundsSource.NavMesh ||
+            navMeshBoundsActive)
+        {
+            return;
+        }
+
+        Refresh();
+    }
+
+    void OnDestroy()
+    {
+        if (Instance == this)
+            Instance = null;
+    }
+
+    public void Refresh()
+    {
+        if (boundsSource == MapGridBoundsSource.NavMesh &&
+            TryRefreshFromNavMesh())
+        {
+            loggedNavMeshFailure = false;
+            return;
+        }
+
+        if (boundsSource == MapGridBoundsSource.NavMesh &&
+            TryRefreshFromNavMeshSurfaces())
+        {
+            loggedNavMeshFailure = false;
+            return;
+        }
+
+        if (boundsSource == MapGridBoundsSource.NavMesh && !fallbackToTerrain)
+        {
+            if (!loggedNavMeshFailure)
+            {
+                Debug.LogError(
+                    "MapGrid: NavMesh bounds required but no NavMesh data is available. " +
+                    "Navigation(NavMeshSurface)가 씬에 있는지, Bake 되었는지 확인하세요.");
+                loggedNavMeshFailure = true;
+            }
+
+            return;
+        }
+
+        RefreshFromTerrain();
+    }
+
+    public bool TryRefreshFromNavMesh()
+    {
+        NavMeshTriangulation triangulation = NavMesh.CalculateTriangulation();
+
+        if (triangulation.vertices == null || triangulation.vertices.Length == 0)
+            return false;
+
+        Vector3 min = triangulation.vertices[0];
+        Vector3 max = triangulation.vertices[0];
+
+        for (int i = 1; i < triangulation.vertices.Length; i++)
+        {
+            Vector3 vertex = triangulation.vertices[i];
+            min = Vector3.Min(min, vertex);
+            max = Vector3.Max(max, vertex);
+        }
+
+        mapOrigin = new Vector3(min.x, min.y, min.z);
+        mapSize = new Vector2(max.x - min.x, max.z - min.z);
+        navMeshMinY = min.y;
+        navMeshMaxY = max.y;
+        navMeshBoundsActive = true;
+        return true;
+    }
+
+    public bool TryRefreshFromNavMeshSurfaces()
+    {
+        NavMeshSurface[] surfaces = FindObjectsByType<NavMeshSurface>(
+            FindObjectsInactive.Include,
+            FindObjectsSortMode.None);
+
+        if (surfaces == null || surfaces.Length == 0)
+            return false;
+
+        bool hasBounds = false;
+        Vector3 min = Vector3.zero;
+        Vector3 max = Vector3.zero;
+
+        foreach (NavMeshSurface surface in surfaces)
+        {
+            if (surface == null || surface.navMeshData == null)
+                continue;
+
+            Matrix4x4 matrix = Matrix4x4.TRS(
+                surface.transform.position,
+                surface.transform.rotation,
+                Vector3.one);
+
+            foreach (Vector3 corner in GetBoundsCorners(surface.navMeshData.sourceBounds))
+            {
+                Vector3 worldCorner = matrix.MultiplyPoint3x4(corner);
+
+                if (!hasBounds)
+                {
+                    min = max = worldCorner;
+                    hasBounds = true;
+                }
+                else
+                {
+                    min = Vector3.Min(min, worldCorner);
+                    max = Vector3.Max(max, worldCorner);
+                }
+            }
+        }
+
+        if (!hasBounds)
+            return false;
+
+        mapOrigin = new Vector3(min.x, min.y, min.z);
+        mapSize = new Vector2(max.x - min.x, max.z - min.z);
+        navMeshMinY = min.y;
+        navMeshMaxY = max.y;
+        navMeshBoundsActive = true;
+        return true;
+    }
+
+    static Vector3[] GetBoundsCorners(Bounds bounds)
+    {
+        Vector3 center = bounds.center;
+        Vector3 extents = bounds.extents;
+
+        return new[]
+        {
+            center + new Vector3(-extents.x, -extents.y, -extents.z),
+            center + new Vector3(extents.x, -extents.y, -extents.z),
+            center + new Vector3(-extents.x, -extents.y, extents.z),
+            center + new Vector3(extents.x, -extents.y, extents.z),
+            center + new Vector3(-extents.x, extents.y, -extents.z),
+            center + new Vector3(extents.x, extents.y, -extents.z),
+            center + new Vector3(-extents.x, extents.y, extents.z),
+            center + new Vector3(extents.x, extents.y, extents.z),
+        };
+    }
+
+    public void RefreshFromTerrain()
+    {
+        if (terrain == null)
+            terrain = Terrain.activeTerrain;
+
+        if (terrain == null)
+        {
+            Debug.LogError("MapGrid: Terrain not found");
+            return;
+        }
+
+        mapOrigin = terrain.transform.position;
+        mapSize = new Vector2(
+            terrain.terrainData.size.x,
+            terrain.terrainData.size.z);
+        navMeshBoundsActive = false;
+    }
+
+    public Vector2Int WorldToCell(Vector3 worldPosition)
+    {
+        Vector3 local = worldPosition - mapOrigin;
+
+        return new Vector2Int(
+            Mathf.FloorToInt(local.x / cellSize),
+            Mathf.FloorToInt(local.z / cellSize));
+    }
+
+    public Vector3 CellCornerToWorld(Vector2Int cell)
+    {
+        return mapOrigin + new Vector3(
+            cell.x * cellSize,
+            0f,
+            cell.y * cellSize);
+    }
+
+    public Vector3 GetCellCenterWorld(Vector2Int cell)
+    {
+        Vector3 corner = CellCornerToWorld(cell);
+
+        return corner + new Vector3(
+            cellSize * 0.5f,
+            0f,
+            cellSize * 0.5f);
+    }
+
+    public Vector3 GetFootprintCenterWorld(
+        Vector2Int originCell,
+        Vector2Int footprintCells)
+    {
+        Vector3 corner = CellCornerToWorld(originCell);
+
+        return corner + new Vector3(
+            footprintCells.x * cellSize * 0.5f,
+            0f,
+            footprintCells.y * cellSize * 0.5f);
+    }
+
+    public Vector2Int GetFootprintOriginFromWorld(
+        Vector3 worldPosition,
+        Vector2Int footprintCells)
+    {
+        Vector2Int origin = WorldToCell(worldPosition);
+        origin.x = ClampOriginCoord(origin.x, footprintCells.x, CellCountX);
+        origin.y = ClampOriginCoord(origin.y, footprintCells.y, CellCountZ);
+        return origin;
+    }
+
+    public Vector2Int GetFootprintOriginFromCenterWorld(
+        Vector3 centerWorld,
+        Vector2Int footprintCells)
+    {
+        Vector3 local = centerWorld - mapOrigin;
+
+        Vector2Int origin = new Vector2Int(
+            Mathf.FloorToInt(
+                (local.x - footprintCells.x * cellSize * 0.5f) / cellSize),
+            Mathf.FloorToInt(
+                (local.z - footprintCells.y * cellSize * 0.5f) / cellSize));
+
+        origin.x = ClampOriginCoord(origin.x, footprintCells.x, CellCountX);
+        origin.y = ClampOriginCoord(origin.y, footprintCells.y, CellCountZ);
+        return origin;
+    }
+
+    public bool IsFootprintInBounds(
+        Vector2Int originCell,
+        Vector2Int footprintCells)
+    {
+        if (!IsFootprintInRect(originCell, footprintCells))
+            return false;
+
+        if (UsesNavMesh && requireNavMeshForCells)
+            return IsFootprintOnNavMesh(originCell, footprintCells);
+
+        return true;
+    }
+
+    public bool IsFootprintInRect(
+        Vector2Int originCell,
+        Vector2Int footprintCells)
+    {
+        if (footprintCells.x <= 0 || footprintCells.y <= 0)
+            return false;
+
+        if (originCell.x < 0 || originCell.y < 0)
+            return false;
+
+        return originCell.x + footprintCells.x <= CellCountX &&
+               originCell.y + footprintCells.y <= CellCountZ;
+    }
+
+    public bool IsCellOnNavMesh(Vector2Int cell)
+    {
+        return TrySampleNavMesh(GetCellNavMeshProbePosition(cell), out _);
+    }
+
+    Vector3 GetCellNavMeshProbePosition(Vector2Int cell)
+    {
+        Vector3 center = GetCellCenterWorld(cell);
+
+        if (UsesNavMesh && navMeshBoundsActive)
+            center.y = navMeshMaxY + navMeshSampleHeightOffset;
+
+        return center;
+    }
+
+    public bool TrySampleNavMeshAtXZ(Vector3 worldPosition, out NavMeshHit hit)
+    {
+        Vector3 probe = worldPosition;
+
+        if (UsesNavMesh && navMeshBoundsActive)
+            probe.y = navMeshMaxY + navMeshSampleHeightOffset;
+
+        return TrySampleNavMesh(probe, out hit);
+    }
+
+    public bool IsFootprintOnNavMesh(
+        Vector2Int originCell,
+        Vector2Int footprintCells)
+    {
+        for (int x = 0; x < footprintCells.x; x++)
+        {
+            for (int z = 0; z < footprintCells.y; z++)
+            {
+                Vector2Int cell = new Vector2Int(
+                    originCell.x + x,
+                    originCell.y + z);
+
+                if (!IsCellOnNavMesh(cell))
+                    return false;
+            }
+        }
+
+        return true;
+    }
+
+    public bool TryGetSnappedFootprintPlacement(
+        Vector3 worldHint,
+        Vector2Int footprintCells,
+        out Vector2Int originCell,
+        out Vector3 centerWorld)
+    {
+        originCell = default;
+        centerWorld = worldHint;
+
+        if (footprintCells.x <= 0 || footprintCells.y <= 0)
+            return false;
+
+        if (CellCountX <= 0 || CellCountZ <= 0)
+            return false;
+
+        originCell = GetFootprintOriginFromCenterWorld(worldHint, footprintCells);
+
+        if (!IsFootprintInBounds(originCell, footprintCells) &&
+            UsesNavMesh &&
+            requireNavMeshForCells &&
+            TryFindNearestValidFootprint(
+                originCell,
+                footprintCells,
+                out Vector2Int fallbackOrigin))
+        {
+            originCell = fallbackOrigin;
+        }
+
+        if (!IsFootprintInBounds(originCell, footprintCells))
+            return false;
+
+        centerWorld = GetFootprintCenterWorld(originCell, footprintCells);
+        centerWorld.y = SampleGroundHeight(centerWorld);
+        return true;
+    }
+
+    public float SampleGroundHeight(Vector3 worldPosition)
+    {
+        if (UsesNavMesh)
+        {
+            if (TrySampleNavMeshHeight(worldPosition, out NavMeshHit hit))
+                return hit.position.y;
+
+            Vector2Int cell = WorldToCell(worldPosition);
+            Vector3 cellCenter = GetCellCenterWorld(cell);
+
+            if (TrySampleNavMeshHeight(cellCenter, out hit))
+                return hit.position.y;
+
+            return worldPosition.y;
+        }
+
+        if (TrySampleNavMesh(worldPosition, out NavMeshHit navHit))
+            return navHit.position.y;
+
+        if (terrain == null)
+            terrain = Terrain.activeTerrain;
+
+        if (terrain == null)
+            return worldPosition.y;
+
+        return terrain.SampleHeight(worldPosition) + terrain.transform.position.y;
+    }
+
+    public bool TrySampleNavMesh(Vector3 worldPosition, out NavMeshHit hit)
+    {
+        float radius = cellSize * navMeshSampleRadiusFactor;
+
+        if (NavMesh.SamplePosition(
+                worldPosition,
+                out hit,
+                radius,
+                navMeshAreaMask))
+        {
+            return true;
+        }
+
+        if (!UsesNavMesh)
+            return false;
+
+        float verticalRange = GetNavMeshVerticalSearchRange();
+
+        Vector3 fromAbove = worldPosition;
+        fromAbove.y = navMeshBoundsActive
+            ? navMeshMaxY + navMeshSampleHeightOffset
+            : worldPosition.y + navMeshSampleHeightOffset;
+
+        if (NavMesh.SamplePosition(
+                fromAbove,
+                out hit,
+                verticalRange,
+                navMeshAreaMask))
+        {
+            return true;
+        }
+
+        Vector3 fromBelow = worldPosition;
+        fromBelow.y = navMeshBoundsActive
+            ? navMeshMinY - navMeshSampleHeightOffset
+            : worldPosition.y - navMeshSampleHeightOffset;
+
+        return NavMesh.SamplePosition(
+            fromBelow,
+            out hit,
+            verticalRange,
+            navMeshAreaMask);
+    }
+
+    float GetNavMeshVerticalSearchRange()
+    {
+        if (navMeshBoundsActive)
+        {
+            return navMeshMaxY - navMeshMinY +
+                   navMeshSampleHeightOffset * 2f +
+                   cellSize;
+        }
+
+        return navMeshSampleHeightOffset * 4f + cellSize * 2f;
+    }
+
+    bool TrySampleNavMeshHeight(Vector3 worldPosition, out NavMeshHit hit)
+    {
+        if (TrySampleNavMesh(worldPosition, out hit))
+            return true;
+
+        return NavMesh.SamplePosition(
+            worldPosition,
+            out hit,
+            cellSize * navMeshHeightSampleRadiusFactor,
+            navMeshAreaMask);
+    }
+
+    bool TryFindNearestValidFootprint(
+        Vector2Int originCell,
+        Vector2Int footprintCells,
+        out Vector2Int validOrigin)
+    {
+        validOrigin = originCell;
+
+        int maxRadius = 8;
+
+        for (int radius = 0; radius <= maxRadius; radius++)
+        {
+            for (int x = -radius; x <= radius; x++)
+            {
+                for (int z = -radius; z <= radius; z++)
+                {
+                    if (Mathf.Abs(x) != radius && Mathf.Abs(z) != radius)
+                        continue;
+
+                    Vector2Int candidate = new Vector2Int(
+                        originCell.x + x,
+                        originCell.y + z);
+
+                    if (!IsFootprintInBounds(candidate, footprintCells))
+                        continue;
+
+                    validOrigin = candidate;
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    static int ClampOriginCoord(int origin, int footprint, int cellCount)
+    {
+        if (cellCount <= footprint)
+            return 0;
+
+        return Mathf.Clamp(origin, 0, cellCount - footprint);
+    }
+
+    void OnDrawGizmosSelected()
+    {
+        if (!drawGridGizmos || cellSize <= 0f)
+            return;
+
+        if (Application.isPlaying)
+            Refresh();
+        else if (boundsSource == MapGridBoundsSource.NavMesh)
+        {
+            if (!TryRefreshFromNavMesh())
+                TryRefreshFromNavMeshSurfaces();
+        }
+        else
+            RefreshFromTerrain();
+
+        if (CellCountX <= 0 || CellCountZ <= 0)
+            return;
+
+        Gizmos.color = UsesNavMesh
+            ? new Color(0.25f, 0.75f, 1f, 0.45f)
+            : new Color(0.3f, 0.9f, 0.4f, 0.35f);
+
+        if (UsesNavMesh && drawOnlyWalkableCellsInGizmos)
+        {
+            DrawWalkableCellGizmos();
+            return;
+        }
+
+        DrawFullRectGridGizmos();
+    }
+
+    void DrawFullRectGridGizmos()
+    {
+        for (int x = 0; x <= CellCountX; x++)
+        {
+            float worldX = mapOrigin.x + x * cellSize;
+            Vector3 start = new Vector3(worldX, mapOrigin.y, mapOrigin.z);
+            Vector3 end = new Vector3(
+                worldX,
+                mapOrigin.y,
+                mapOrigin.z + mapSize.y);
+
+            Gizmos.DrawLine(start, end);
+        }
+
+        for (int z = 0; z <= CellCountZ; z++)
+        {
+            float worldZ = mapOrigin.z + z * cellSize;
+            Vector3 start = new Vector3(mapOrigin.x, mapOrigin.y, worldZ);
+            Vector3 end = new Vector3(
+                mapOrigin.x + mapSize.x,
+                mapOrigin.y,
+                worldZ);
+
+            Gizmos.DrawLine(start, end);
+        }
+    }
+
+    void DrawWalkableCellGizmos()
+    {
+        for (int x = 0; x < CellCountX; x++)
+        {
+            for (int z = 0; z < CellCountZ; z++)
+            {
+                Vector2Int cell = new Vector2Int(x, z);
+
+                if (!IsCellOnNavMesh(cell))
+                    continue;
+
+                Vector3 corner = CellCornerToWorld(cell);
+                float y = SampleGroundHeight(GetCellCenterWorld(cell));
+
+                Vector3 a = new Vector3(corner.x, y, corner.z);
+                Vector3 b = new Vector3(corner.x + cellSize, y, corner.z);
+                Vector3 c = new Vector3(corner.x + cellSize, y, corner.z + cellSize);
+                Vector3 d = new Vector3(corner.x, y, corner.z + cellSize);
+
+                Gizmos.DrawLine(a, b);
+                Gizmos.DrawLine(b, c);
+                Gizmos.DrawLine(c, d);
+                Gizmos.DrawLine(d, a);
+            }
+        }
+    }
+}
