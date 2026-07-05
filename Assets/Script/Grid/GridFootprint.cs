@@ -7,10 +7,10 @@ public class GridFootprint : MonoBehaviour
 {
     public static Vector2Int DefaultBuildingFootprint = new Vector2Int(2, 2);
 
-    [Tooltip("이 오브젝트가 차지하는 칸 수입니다. 타워·건물 프리팹마다 설정합니다.")]
+    [Tooltip("배치·겹침 검사에 사용할 칸 수입니다. 배치 미리보기 격자 크기도 이 값을 따릅니다.")]
     public Vector2Int footprintCells = new Vector2Int(2, 2);
 
-    [Tooltip("격자 점유 및 NavMeshObstacle 크기를 자동 적용합니다.")]
+    [Tooltip("켜면 footprint 칸을 격자에 점유하고 NavMeshObstacle 크기를 footprint에 맞춥니다.")]
     public bool blockCells = true;
 
     [Tooltip("등록 시 transform.position을 footprint 중심 격자에 맞춥니다.")]
@@ -54,13 +54,26 @@ public class GridFootprint : MonoBehaviour
     void Awake()
     {
         if (blockCells)
-            ConfigureStationaryBuilding();
+            ConfigureStationaryBuilding(gameObject);
     }
 
     void Start()
     {
-        if (blockCells && !IsRegistered)
+        if (!blockCells)
+            return;
+
+        if (!IsRegistered)
             RegisterAtCurrentPosition();
+        else
+            ApplyNavMeshObstacleSize();
+    }
+
+    void OnValidate()
+    {
+        footprintCells = NormalizeFootprint(footprintCells);
+
+        if (blockCells)
+            ApplyNavMeshObstacleSize();
     }
 
     void OnDisable()
@@ -107,7 +120,7 @@ public class GridFootprint : MonoBehaviour
         IsRegistered = true;
         RegisteredOrigin = originCell;
 
-        ConfigureStationaryBuilding();
+        ConfigureStationaryBuilding(gameObject);
 
         if (snapTransformOnRegister)
         {
@@ -152,30 +165,30 @@ public class GridFootprint : MonoBehaviour
         }
     }
 
-    void ConfigureStationaryBuilding()
-    {
-        ConfigureStationaryBuilding(gameObject);
-    }
-
     void ApplyNavMeshObstacleSize()
     {
-        if (MapGrid.Instance == null)
+        if (!blockCells)
             return;
+
+        float cellSize = MapGrid.Instance != null
+            ? MapGrid.Instance.cellSize
+            : 2f;
 
         NavMeshObstacle obstacle = GetComponent<NavMeshObstacle>();
 
         if (obstacle == null)
             obstacle = gameObject.AddComponent<NavMeshObstacle>();
 
-        float width = footprintCells.x * MapGrid.Instance.cellSize;
-        float depth = footprintCells.y * MapGrid.Instance.cellSize;
+        float width = footprintCells.x * cellSize;
+        float depth = footprintCells.y * cellSize;
+        float height = obstacle.size.y > 0f ? obstacle.size.y : 4f;
 
         obstacle.shape = NavMeshObstacleShape.Box;
         obstacle.size = new Vector3(
-            width * 0.95f,
-            obstacle.size.y > 0f ? obstacle.size.y : 4f,
-            depth * 0.95f);
-        obstacle.center = new Vector3(0f, obstacle.size.y * 0.5f, 0f);
+            width * 0.85f,
+            height,
+            depth * 0.85f);
+        obstacle.center = new Vector3(0f, height * 0.5f, 0f);
         obstacle.carving = true;
         obstacle.carveOnlyStationary = true;
         obstacle.enabled = true;

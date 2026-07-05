@@ -60,6 +60,8 @@ public class WorldHealthBar : MonoBehaviour
     private CanvasGroup canvasGroup;
     private Transform barAnchor;
     private float damageShowTimer;
+    private bool lastFogVisible = true;
+    private FogOfWarVisibility fogVisibility;
     private Color baseFillColor;
     private Sprite defaultSprite;
     private Material overlayMaterial;
@@ -68,6 +70,7 @@ public class WorldHealthBar : MonoBehaviour
     {
         entityHealth = GetComponent<EntityHealth>();
         selectableEntity = GetComponent<SelectableEntity>();
+        fogVisibility = GetComponent<FogOfWarVisibility>();
 
         entityHealth.OnHealthChanged += HandleHealthChanged;
         entityHealth.OnDied += HandleDied;
@@ -267,21 +270,13 @@ public class WorldHealthBar : MonoBehaviour
         if (selectableEntity.ownerId == manager.LocalPlayerOwnerId)
             return true;
 
-        return manager.IsVisible(GetGroundPosition());
-    }
+        if (fogVisibility != null)
+            return fogVisibility.IsCurrentlyVisible;
 
-    Vector3 GetGroundPosition()
-    {
-        Vector3 position = transform.position;
-        Terrain activeTerrain = Terrain.activeTerrain;
-
-        if (activeTerrain == null)
-            return position;
-
-        position.y = activeTerrain.SampleHeight(position) +
-                     activeTerrain.transform.position.y;
-
-        return position;
+        lastFogVisible = manager.EvaluateEntityGameplayVisibility(
+            selectableEntity.SelectionBounds,
+            lastFogVisible);
+        return lastFogVisible;
     }
 
     void HandleHealthChanged(float currentHealth, float maxHealth)

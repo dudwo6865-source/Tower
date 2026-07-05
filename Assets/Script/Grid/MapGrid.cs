@@ -2,12 +2,6 @@ using UnityEngine;
 using UnityEngine.AI;
 using Unity.AI.Navigation;
 
-public enum MapGridBoundsSource
-{
-    Terrain,
-    NavMesh
-}
-
 [DisallowMultipleComponent]
 [DefaultExecutionOrder(-300)]
 public class MapGrid : MonoBehaviour
@@ -18,31 +12,40 @@ public class MapGrid : MonoBehaviour
     [Tooltip("한 칸의 월드 크기(미터)입니다.")]
     public float cellSize = 2f;
 
-    [Header("Bounds Source")]
-    [Tooltip("Terrain: 지형 전체 크기. NavMesh: Bake된 이동 가능 영역 AABB.")]
-    public MapGridBoundsSource boundsSource = MapGridBoundsSource.NavMesh;
+    [Header("Bounds")]
+    [Tooltip("Bake된 NavMesh 이동 가능 영역 AABB를 맵 bounds로 사용합니다.")]
+    public bool useNavMeshBounds = true;
 
-    [Tooltip("NavMesh 모드에서 footprint 모든 칸이 NavMesh 위에 있어야 합니다.")]
+    [Tooltip("footprint 모든 칸이 NavMesh 위에 있어야 합니다.")]
     public bool requireNavMeshForCells = true;
 
     [Tooltip("NavMesh.SamplePosition 검색 반경(칸 크기 대비)입니다.")]
     [Range(0.1f, 1.5f)]
     public float navMeshSampleRadiusFactor = 0.45f;
 
+    [Tooltip("칸 NavMesh 검증 샘플 반경(칸 크기 대비)입니다. 건설 구역에서 사용합니다.")]
+    [Range(0.05f, 0.75f)]
+    public float navMeshCellValidationRadiusFactor = 0.25f;
+
+    [Tooltip("칸 NavMesh 검증 시 모서리에서 안쪽으로 띄울 거리(칸 크기 대비)입니다.")]
+    [Range(0f, 0.45f)]
+    public float navMeshCellSampleInsetFactor = 0.2f;
+
     [Tooltip("높이/시각화용 NavMesh 샘플 반경(칸 크기 대비)입니다.")]
     [Range(0.5f, 2f)]
     public float navMeshHeightSampleRadiusFactor = 1.2f;
 
-    [Tooltip("NavMesh 샘플 시 위에서 내려다볼 여유 높이(미터)입니다. Terrain 위 메쉬에 필요합니다.")]
+    [Tooltip("NavMesh 샘플 시 위에서 내려다볼 여유 높이(미터)입니다.")]
     public float navMeshSampleHeightOffset = 4f;
 
     public int navMeshAreaMask = NavMesh.AllAreas;
 
-    [Tooltip("NavMesh를 못 찾으면 Terrain으로 fallback 합니다.")]
-    public bool fallbackToTerrain = true;
+    [Header("Manual Bounds Fallback")]
+    [Tooltip("NavMesh를 못 찾을 때 사용할 맵 원점(왼쪽 아래)입니다.")]
+    public Vector3 manualMapOrigin;
 
-    [Tooltip("Terrain bounds / 높이 샘플 fallback용입니다.")]
-    public Terrain terrain;
+    [Tooltip("NavMesh를 못 찾을 때 사용할 맵 크기(X=가로, Y=세로)입니다.")]
+    public Vector2 manualMapSize = new Vector2(256f, 256f);
 
     [Header("Debug")]
     public bool drawGridGizmos = true;
@@ -62,7 +65,7 @@ public class MapGrid : MonoBehaviour
 
     public Vector2 MapSize => mapSize;
 
-    public bool UsesNavMesh => boundsSource == MapGridBoundsSource.NavMesh;
+    public bool UsesNavMesh => useNavMeshBounds;
 
     public bool IsNavMeshBoundsActive => navMeshBoundsActive;
 
@@ -82,25 +85,17 @@ public class MapGrid : MonoBehaviour
         }
 
         Instance = this;
-
-        if (boundsSource != MapGridBoundsSource.NavMesh)
-            Refresh();
     }
 
     void Start()
     {
-        if (boundsSource == MapGridBoundsSource.NavMesh)
-            Refresh();
+        Refresh();
     }
 
     void OnEnable()
     {
-        if (!Application.isPlaying ||
-            boundsSource != MapGridBoundsSource.NavMesh ||
-            navMeshBoundsActive)
-        {
+        if (!Application.isPlaying || navMeshBoundsActive)
             return;
-        }
 
         Refresh();
     }
@@ -113,34 +108,31 @@ public class MapGrid : MonoBehaviour
 
     public void Refresh()
     {
-        if (boundsSource == MapGridBoundsSource.NavMesh &&
-            TryRefreshFromNavMesh())
+        if (useNavMeshBounds && TryRefreshFromNavMesh())
         {
             loggedNavMeshFailure = false;
             return;
         }
 
-        if (boundsSource == MapGridBoundsSource.NavMesh &&
-            TryRefreshFromNavMeshSurfaces())
+        if (useNavMeshBounds && TryRefreshFromNavMeshSurfaces())
         {
             loggedNavMeshFailure = false;
             return;
         }
 
-        if (boundsSource == MapGridBoundsSource.NavMesh && !fallbackToTerrain)
+        if (TryRefreshFromManualBounds())
         {
-            if (!loggedNavMeshFailure)
-            {
-                Debug.LogError(
-                    "MapGrid: NavMesh bounds required but no NavMesh data is available. " +
-                    "Navigation(NavMeshSurface)가 씬에 있는지, Bake 되었는지 확인하세요.");
-                loggedNavMeshFailure = true;
-            }
-
+            loggedNavMeshFailure = false;
             return;
         }
 
-        RefreshFromTerrain();
+        if (!loggedNavMeshFailure)
+        {
+            Debug.LogError(
+                "MapGrid: NavMesh 또는 Manual bounds를 찾을 수 없습니다. " +
+                "Navigation(NavMeshSurface) Bake 또는 Manual Map Size를 설정하세요.");
+            loggedNavMeshFailure = true;
+        }
     }
 
     public bool TryRefreshFromNavMesh()
@@ -219,6 +211,17 @@ public class MapGrid : MonoBehaviour
         return true;
     }
 
+    public bool TryRefreshFromManualBounds()
+    {
+        if (manualMapSize.x <= 0f || manualMapSize.y <= 0f)
+            return false;
+
+        mapOrigin = manualMapOrigin;
+        mapSize = manualMapSize;
+        navMeshBoundsActive = false;
+        return true;
+    }
+
     static Vector3[] GetBoundsCorners(Bounds bounds)
     {
         Vector3 center = bounds.center;
@@ -235,24 +238,6 @@ public class MapGrid : MonoBehaviour
             center + new Vector3(-extents.x, extents.y, extents.z),
             center + new Vector3(extents.x, extents.y, extents.z),
         };
-    }
-
-    public void RefreshFromTerrain()
-    {
-        if (terrain == null)
-            terrain = Terrain.activeTerrain;
-
-        if (terrain == null)
-        {
-            Debug.LogError("MapGrid: Terrain not found");
-            return;
-        }
-
-        mapOrigin = terrain.transform.position;
-        mapSize = new Vector2(
-            terrain.terrainData.size.x,
-            terrain.terrainData.size.z);
-        navMeshBoundsActive = false;
     }
 
     public Vector2Int WorldToCell(Vector3 worldPosition)
@@ -350,7 +335,70 @@ public class MapGrid : MonoBehaviour
 
     public bool IsCellOnNavMesh(Vector2Int cell)
     {
-        return TrySampleNavMesh(GetCellNavMeshProbePosition(cell), out _);
+        if (!IsCellInGrid(cell))
+            return false;
+
+        return IsNavMeshSampleInCell(cell, GetCellCenterWorld(cell)) &&
+               IsNavMeshSampleInCell(cell, GetCellSamplePoint(cell, 0f, 0f)) &&
+               IsNavMeshSampleInCell(cell, GetCellSamplePoint(cell, 1f, 0f)) &&
+               IsNavMeshSampleInCell(cell, GetCellSamplePoint(cell, 1f, 1f)) &&
+               IsNavMeshSampleInCell(cell, GetCellSamplePoint(cell, 0f, 1f));
+    }
+
+    bool IsCellInGrid(Vector2Int cell)
+    {
+        return cell.x >= 0 &&
+               cell.y >= 0 &&
+               cell.x < CellCountX &&
+               cell.y < CellCountZ;
+    }
+
+    Vector3 GetCellSamplePoint(Vector2Int cell, float normalizedX, float normalizedZ)
+    {
+        Vector3 corner = CellCornerToWorld(cell);
+        float inset = cellSize * navMeshCellSampleInsetFactor;
+        float sampleX = Mathf.Lerp(inset, cellSize - inset, normalizedX);
+        float sampleZ = Mathf.Lerp(inset, cellSize - inset, normalizedZ);
+
+        return corner + new Vector3(sampleX, 0f, sampleZ);
+    }
+
+    bool IsNavMeshSampleInCell(Vector2Int cell, Vector3 worldPoint)
+    {
+        if (!TrySampleNavMeshForCell(cell, worldPoint, out NavMeshHit hit))
+            return false;
+
+        return WorldToCell(hit.position) == cell;
+    }
+
+    bool TrySampleNavMeshForCell(
+        Vector2Int cell,
+        Vector3 worldPoint,
+        out NavMeshHit hit)
+    {
+        hit = default;
+
+        Vector3 probe = worldPoint;
+
+        if (UsesNavMesh && navMeshBoundsActive)
+            probe.y = navMeshMaxY + navMeshSampleHeightOffset;
+
+        float radius = cellSize * navMeshCellValidationRadiusFactor;
+
+        if (NavMesh.SamplePosition(
+                probe,
+                out hit,
+                radius,
+                navMeshAreaMask) &&
+            WorldToCell(hit.position) == cell)
+        {
+            return true;
+        }
+
+        if (!TrySampleNavMesh(probe, out hit))
+            return false;
+
+        return WorldToCell(hit.position) == cell;
     }
 
     Vector3 GetCellNavMeshProbePosition(Vector2Int cell)
@@ -431,30 +479,16 @@ public class MapGrid : MonoBehaviour
 
     public float SampleGroundHeight(Vector3 worldPosition)
     {
-        if (UsesNavMesh)
-        {
-            if (TrySampleNavMeshHeight(worldPosition, out NavMeshHit hit))
-                return hit.position.y;
+        if (TrySampleNavMeshHeight(worldPosition, out NavMeshHit hit))
+            return hit.position.y;
 
-            Vector2Int cell = WorldToCell(worldPosition);
-            Vector3 cellCenter = GetCellCenterWorld(cell);
+        Vector2Int cell = WorldToCell(worldPosition);
+        Vector3 cellCenter = GetCellCenterWorld(cell);
 
-            if (TrySampleNavMeshHeight(cellCenter, out hit))
-                return hit.position.y;
+        if (TrySampleNavMeshHeight(cellCenter, out hit))
+            return hit.position.y;
 
-            return worldPosition.y;
-        }
-
-        if (TrySampleNavMesh(worldPosition, out NavMeshHit navHit))
-            return navHit.position.y;
-
-        if (terrain == null)
-            terrain = Terrain.activeTerrain;
-
-        if (terrain == null)
-            return worldPosition.y;
-
-        return terrain.SampleHeight(worldPosition) + terrain.transform.position.y;
+        return worldPosition.y;
     }
 
     public bool TrySampleNavMesh(Vector3 worldPosition, out NavMeshHit hit)
@@ -574,18 +608,18 @@ public class MapGrid : MonoBehaviour
 
         if (Application.isPlaying)
             Refresh();
-        else if (boundsSource == MapGridBoundsSource.NavMesh)
+        else if (useNavMeshBounds)
         {
             if (!TryRefreshFromNavMesh())
                 TryRefreshFromNavMeshSurfaces();
         }
         else
-            RefreshFromTerrain();
+            TryRefreshFromManualBounds();
 
         if (CellCountX <= 0 || CellCountZ <= 0)
             return;
 
-        Gizmos.color = UsesNavMesh
+        Gizmos.color = navMeshBoundsActive
             ? new Color(0.25f, 0.75f, 1f, 0.45f)
             : new Color(0.3f, 0.9f, 0.4f, 0.35f);
 

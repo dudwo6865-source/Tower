@@ -17,23 +17,37 @@ public class MinimapBlipManager : MonoBehaviour
     public int localPlayerOwnerId = -1;
 
     [Header("Ally Colors")]
+    [Tooltip("아군 유닛 블립 색입니다.")]
     public Color allyUnitColor = new Color(0.25f, 0.95f, 0.35f, 1f);
+
+    [Tooltip("아군 건물 블립 색입니다.")]
     public Color allyBuildingColor = new Color(0.25f, 0.75f, 1f, 1f);
 
     [Header("Enemy Colors")]
+    [Tooltip("현재 시야 안에 있는 적 유닛 블립 색입니다.")]
     public Color enemyUnitColor = new Color(1f, 0.25f, 0.25f, 1f);
+
+    [Tooltip("현재 시야 안에 있는 적 건물 블립 색입니다.")]
     public Color enemyBuildingColor = new Color(1f, 0.35f, 0.35f, 1f);
+
     [Tooltip("한번 본 적 건물이 현재 시야 밖일 때 표시 색입니다.")]
     public Color seenEnemyBuildingColor = new Color(0.85f, 0.35f, 0.35f, 0.75f);
 
     [Header("Sizes")]
+    [Tooltip("아군 유닛 블립 크기(픽셀)입니다.")]
     public float allyUnitSize = 6f;
-    public float allyBuildingSize = 10f;
+
+    [Tooltip("적 유닛 블립 크기(픽셀)입니다.")]
     public float enemyUnitSize = 6f;
-    public float enemyBuildingSize = 10f;
+
+    [Tooltip("건물 블립 크기(픽셀). GridFootprint 칸 수 × 이 값으로 가로·세로가 결정됩니다.")]
+    public float buildingBlipPixelsPerCell = 5f;
+
+    [Tooltip("선택된 유닛·건물 블립에 곱할 크기 배율입니다.")]
     public float selectedScale = 1.35f;
 
     [Header("Pool")]
+    [Tooltip("미리 만들어 둘 블립 UI 개수입니다. 유닛/건물 수보다 크게 두면 런타임 생성이 줄어듭니다.")]
     public int initialPoolSize = 32;
 
     private RTSMinimap minimap;
@@ -42,6 +56,9 @@ public class MinimapBlipManager : MonoBehaviour
 
     private readonly Dictionary<SelectableEntity, BlipView> activeBlips =
         new Dictionary<SelectableEntity, BlipView>();
+
+    private readonly Dictionary<SelectableEntity, bool> enemyFogVisibility =
+        new Dictionary<SelectableEntity, bool>();
 
     private readonly HashSet<SelectableEntity> seenEnemyBuildings =
         new HashSet<SelectableEntity>();
@@ -132,7 +149,10 @@ public class MinimapBlipManager : MonoBehaviour
         }
 
         foreach (SelectableEntity entity in toRemove)
+        {
             ReleaseBlip(entity);
+            enemyFogVisibility.Remove(entity);
+        }
 
         foreach (SelectableEntity entity in stillActive)
         {
@@ -148,7 +168,7 @@ public class MinimapBlipManager : MonoBehaviour
     {
         public bool isAlly;
         public bool currentlyVisible;
-        public float size;
+        public Vector2 size;
         public Color color;
     }
 
@@ -166,13 +186,12 @@ public class MinimapBlipManager : MonoBehaviour
         if (health != null && !health.IsAlive)
         {
             seenEnemyBuildings.Remove(entity);
+            enemyFogVisibility.Remove(entity);
             return false;
         }
 
         bool isAlly = entity.ownerId == localPlayerOwnerId;
-        Vector3 groundPosition = GetGroundPosition(entity.transform.position);
-        bool currentlyVisible =
-            fogManager == null || fogManager.IsVisible(groundPosition);
+        bool currentlyVisible = IsEntityCurrentlyVisible(entity);
 
         if (isAlly)
         {
@@ -182,8 +201,8 @@ public class MinimapBlipManager : MonoBehaviour
                 ? allyBuildingColor
                 : allyUnitColor;
             display.size = entity.entityType == SelectableEntityType.Building
-                ? allyBuildingSize
-                : allyUnitSize;
+                ? GetBuildingBlipSize(entity)
+                : new Vector2(allyUnitSize, allyUnitSize);
             return true;
         }
 
@@ -198,7 +217,7 @@ public class MinimapBlipManager : MonoBehaviour
             display.isAlly = false;
             display.currentlyVisible = true;
             display.color = enemyUnitColor;
-            display.size = enemyUnitSize;
+            display.size = new Vector2(enemyUnitSize, enemyUnitSize);
             return true;
         }
 
@@ -213,8 +232,20 @@ public class MinimapBlipManager : MonoBehaviour
         display.color = currentlyVisible
             ? enemyBuildingColor
             : seenEnemyBuildingColor;
-        display.size = enemyBuildingSize;
+        display.size = GetBuildingBlipSize(entity);
         return true;
+    }
+
+    Vector2 GetBuildingBlipSize(SelectableEntity entity)
+    {
+        Vector2Int footprintCells =
+            GridFootprint.ResolveFootprintCells(entity.gameObject);
+
+        float perCell = Mathf.Max(0.1f, buildingBlipPixelsPerCell);
+
+        return new Vector2(
+            footprintCells.x * perCell,
+            footprintCells.y * perCell);
     }
 
     BlipView GetOrCreateBlip(SelectableEntity entity)
@@ -273,7 +304,7 @@ public class MinimapBlipManager : MonoBehaviour
         SelectableEntity entity,
         BlipDisplay display)
     {
-        float size = display.size;
+        Vector2 size = display.size;
 
         if (entity.IsSelected)
             size *= selectedScale;
@@ -281,20 +312,27 @@ public class MinimapBlipManager : MonoBehaviour
         blip.rect.anchoredPosition =
             minimap.WorldToMinimapLocal(entity.transform.position);
 
-        blip.rect.sizeDelta = new Vector2(size, size);
+        blip.rect.sizeDelta = size;
         blip.image.color = display.color;
     }
 
-    static Vector3 GetGroundPosition(Vector3 position)
+    bool IsEntityCurrentlyVisible(SelectableEntity entity)
     {
-        Terrain activeTerrain = Terrain.activeTerrain;
+        if (fogManager == null)
+            return true;
 
-        if (activeTerrain == null)
-            return position;
+        FogOfWarVisibility fogVisibility = entity.GetComponent<FogOfWarVisibility>();
 
-        position.y = activeTerrain.SampleHeight(position) +
-                     activeTerrain.transform.position.y;
+        if (fogVisibility != null)
+            return fogVisibility.IsCurrentlyVisible;
 
-        return position;
+        if (!enemyFogVisibility.TryGetValue(entity, out bool wasVisible))
+            wasVisible = false;
+
+        wasVisible = fogManager.EvaluateEntityGameplayVisibility(
+            entity.SelectionBounds,
+            wasVisible);
+        enemyFogVisibility[entity] = wasVisible;
+        return wasVisible;
     }
 }

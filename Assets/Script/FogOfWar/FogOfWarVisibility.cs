@@ -12,6 +12,8 @@ public class FogOfWarVisibility : MonoBehaviour
 
     private bool lastVisible = true;
 
+    public bool IsCurrentlyVisible => lastVisible;
+
     void Awake()
     {
         selectableEntity = GetComponent<SelectableEntity>();
@@ -29,13 +31,30 @@ public class FogOfWarVisibility : MonoBehaviour
         if (selectableEntity.ownerId == manager.LocalPlayerOwnerId)
             return;
 
-        lastVisible = manager.IsVisible(GetGroundPosition());
+        lastVisible = manager.EvaluateEntityGameplayVisibility(
+            GetVisibilityBounds(),
+            lastVisible);
         ApplyVisibility(lastVisible);
     }
 
-    Vector3 GetGroundPosition()
+    Bounds GetVisibilityBounds()
     {
-        return FogGroundUtility.SnapToGround(transform.position);
+        if (selectableEntity != null)
+            return selectableEntity.SelectionBounds;
+
+        if (renderers != null && renderers.Length > 0)
+        {
+            Bounds bounds = renderers[0].bounds;
+            for (int i = 1; i < renderers.Length; i++)
+            {
+                if (renderers[i] != null)
+                    bounds.Encapsulate(renderers[i].bounds);
+            }
+
+            return bounds;
+        }
+
+        return new Bounds(transform.position, Vector3.one);
     }
 
     void LateUpdate()
@@ -48,7 +67,9 @@ public class FogOfWarVisibility : MonoBehaviour
         if (selectableEntity.ownerId == manager.LocalPlayerOwnerId)
             return;
 
-        bool visible = manager.IsVisible(GetGroundPosition());
+        bool visible = manager.EvaluateEntityGameplayVisibility(
+            GetVisibilityBounds(),
+            lastVisible);
 
         if (visible == lastVisible)
             return;

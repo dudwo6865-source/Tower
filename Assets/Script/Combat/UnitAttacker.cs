@@ -6,20 +6,25 @@ public enum AttackType
     Ranged
 }
 
+[DisallowMultipleComponent]
 public class UnitAttacker : MonoBehaviour
 {
     [Header("Attack")]
-    [Tooltip("공격 방식입니다. 근접은 즉시 피해, 원거리는 투사체를 발사합니다.")]
+    [Tooltip("근접은 즉시 피해(투사체 없음), 원거리는 투사체 발사. 사거리 규칙은 동일합니다.")]
     public AttackType attackType = AttackType.Melee;
 
     [Tooltip("한 번 공격할 때 주는 피해량입니다.")]
     public float attackDamage = 10f;
 
-    [Tooltip("공격이 닿는 사거리입니다. 대상 표면까지의 거리로 판정합니다.")]
+    [Tooltip("공격이 닿는 가로(XZ) 사거리입니다.")]
     public float attackRange = 2.5f;
 
     [Tooltip("공격 사이의 최소 간격(초)입니다.")]
     public float attackCooldown = 1f;
+
+    [Header("Animation")]
+    [Tooltip("켜면 공격 애니메이션 이벤트(OnAttackHit)에서 피해/투사체를 적용합니다.")]
+    public bool useAttackAnimationEvent = true;
 
     [Header("Ranged")]
     [Tooltip("투사체 속도입니다. 원거리 공격일 때만 사용됩니다.")]
@@ -40,13 +45,22 @@ public class UnitAttacker : MonoBehaviour
 
     private float cooldownTimer;
     private UnitAnimator unitAnimator;
+    private UnitSound unitSound;
+    private SelectableEntity selfEntity;
+
+    private SelectableEntity pendingTarget;
+    private EntityHealth pendingTargetHealth;
+    private bool pendingAttackActive;
 
     public float AttackRange => attackRange;
     public bool IsReady => cooldownTimer <= 0f;
+    public bool HasPendingAttack => pendingAttackActive;
 
     void Awake()
     {
         unitAnimator = GetComponent<UnitAnimator>();
+        unitSound = GetComponent<UnitSound>();
+        selfEntity = GetComponent<SelectableEntity>();
     }
 
     void Update()
@@ -57,16 +71,37 @@ public class UnitAttacker : MonoBehaviour
 
     public bool IsInRange(SelectableEntity target)
     {
+        return IsWithinHorizontalRange(target);
+    }
+
+    public bool CanEngage(SelectableEntity target)
+    {
+        return target != null;
+    }
+
+    public bool IsWithinHorizontalRange(SelectableEntity target)
+    {
         if (target == null)
             return false;
 
-        Vector3 closestPoint =
-            target.SelectionBounds.ClosestPoint(transform.position);
+        return GetHorizontalBoundsGap(target) <= attackRange;
+    }
 
-        Vector3 diff = closestPoint - transform.position;
+    float GetHorizontalBoundsGap(SelectableEntity target)
+    {
+        Bounds targetBounds = target.SelectionBounds;
+        Bounds selfBounds = selfEntity != null
+            ? selfEntity.SelectionBounds
+            : new Bounds(transform.position, Vector3.one);
+
+        Vector3 targetPoint = targetBounds.ClosestPoint(selfBounds.center);
+        Vector3 selfPoint = selfBounds.ClosestPoint(targetPoint);
+        targetPoint = targetBounds.ClosestPoint(selfPoint);
+
+        Vector3 diff = targetPoint - selfPoint;
         diff.y = 0f;
 
-        return diff.sqrMagnitude <= attackRange * attackRange;
+        return diff.magnitude;
     }
 
     public bool TryAttack(SelectableEntity target, EntityHealth targetHealth)
@@ -74,10 +109,56 @@ public class UnitAttacker : MonoBehaviour
         if (targetHealth == null || !targetHealth.IsAlive)
             return false;
 
+        if (!IsInRange(target))
+            return false;
+
         if (cooldownTimer > 0f)
             return false;
 
         cooldownTimer = attackCooldown;
+
+        if (ShouldUseAttackAnimationEvent())
+        {
+            pendingTarget = target;
+            pendingTargetHealth = targetHealth;
+            pendingAttackActive = true;
+
+            if (unitAnimator != null)
+                unitAnimator.PlayAttack();
+
+            return true;
+        }
+
+        ApplyAttackImpact(target, targetHealth);
+        return true;
+    }
+
+    public void ApplyAttackImpact()
+    {
+        if (!pendingAttackActive)
+            return;
+
+        ApplyAttackImpact(pendingTarget, pendingTargetHealth);
+        ClearPendingAttack();
+    }
+
+    public void CancelPendingAttack()
+    {
+        ClearPendingAttack();
+    }
+
+    bool ShouldUseAttackAnimationEvent()
+    {
+        return useAttackAnimationEvent && unitAnimator != null;
+    }
+
+    void ApplyAttackImpact(SelectableEntity target, EntityHealth targetHealth)
+    {
+        if (target == null || targetHealth == null || !targetHealth.IsAlive)
+            return;
+
+        if (!IsInRange(target))
+            return;
 
         Vector3 firePosition = firePoint != null
             ? firePoint.position
@@ -107,9 +188,25 @@ public class UnitAttacker : MonoBehaviour
         if (spawnVisualEffects)
             AttackVisuals.SpawnMuzzleFlash(firePosition, projectileColor);
 
-        if (unitAnimator != null)
+        if (!ShouldUseAttackAnimationEvent() && unitAnimator != null)
             unitAnimator.PlayAttack();
 
-        return true;
+        PlayAttackSound();
+    }
+
+    void PlayAttackSound()
+    {
+        if (unitSound == null)
+            unitSound = GetComponent<UnitSound>();
+
+        if (unitSound != null)
+            unitSound.PlayAttack();
+    }
+
+    void ClearPendingAttack()
+    {
+        pendingAttackActive = false;
+        pendingTarget = null;
+        pendingTargetHealth = null;
     }
 }

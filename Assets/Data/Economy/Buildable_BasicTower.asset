@@ -17,3 +17,4 @@ MonoBehaviour:
   prefab: {fileID: 347180470848206247, guid: eb266c64b00934041b537fbe9ba65d91, type: 3}
   wattCost: 50
   ownerId: 1
+  entityTypeId: canon

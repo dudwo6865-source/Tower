@@ -7,35 +7,41 @@ using UnityEngine.UI;
 [DefaultExecutionOrder(200)]
 public class RTSMinimap : MonoBehaviour, IPointerClickHandler
 {
-    [System.Serializable]
-    public class LayerColor
-    {
-        [Tooltip("이 Terrain Layer에 대응하는 미니맵 표시 색입니다.")]
-        public Color color = new Color(0.25f, 0.45f, 0.2f, 1f);
-    }
-
     [Header("References")]
-    [Tooltip("미니맵에 사용할 Terrain입니다. 비워두면 씬의 activeTerrain을 사용합니다.")]
-    public Terrain terrain;
-
     [Tooltip("미니맵 클릭 시 카메라를 이동시킬 RTS 카메라 컨트롤러입니다. 비워두면 씬에서 자동으로 찾습니다.")]
     public RTSCameraPivotController cameraController;
 
-    [Header("Terrain Layer Colors")]
-    [Tooltip("Terrain 텍스처 레이어를 미니맵 색으로 표시합니다.")]
-    public bool useTerrainLayerColors = true;
+    [Header("Map Bounds")]
+    [Tooltip("Auto: MapGrid(NavMesh) → Manual 순으로 맵 크기를 찾습니다.")]
+    public MapPlayBoundsSource boundsSource = MapPlayBoundsSource.Auto;
 
-    [Tooltip("미니맵 베이스 텍스처 해상도입니다.")]
+    [Tooltip("Manual/Auto fallback용 맵 원점(왼쪽 아래)입니다.")]
+    public Vector3 manualMapOrigin;
+
+    [Tooltip("Manual/Auto fallback용 맵 크기(X=가로, Y=세로)입니다.")]
+    public Vector2 manualMapSize = new Vector2(256f, 256f);
+
+    [Header("Mesh Minimap Texture")]
+    [Tooltip("메쉬 지형용 기본 바닥 색입니다.")]
+    public Color baseMapColor = new Color(0.22f, 0.48f, 0.18f, 1f);
+
+    [Tooltip("레이캐스트에 맞지 않은 영역 색입니다.")]
+    public Color emptyMapColor = new Color(0.08f, 0.1f, 0.12f, 1f);
+
+    [Tooltip("높이 차이에 따라 색을 약간 변화시킵니다.")]
+    public bool tintByHeight = true;
+
+    [Tooltip("높이 1m당 밝기 변화량입니다.")]
+    public float heightTintStrength = 0.015f;
+
+    [Tooltip("미니맵 텍스처 생성 시 지면 레이캐스트 마스크입니다.")]
+    public LayerMask groundRaycastMask = ~0;
+
+    [Tooltip("지면 레이캐스트 시작 높이 여유값입니다.")]
+    public float raycastHeightPadding = 64f;
+
+    [Tooltip("미니맵 텍스처 해상도입니다.")]
     public int textureResolution = 256;
-
-    [Tooltip("Terrain Layer 순서와 동일한 인덱스의 미니맵 색 목록입니다.")]
-    public LayerColor[] layerColors =
-    {
-        new LayerColor { color = new Color(0.22f, 0.48f, 0.18f, 1f) },
-        new LayerColor { color = new Color(0.45f, 0.34f, 0.18f, 1f) },
-        new LayerColor { color = new Color(0.38f, 0.38f, 0.38f, 1f) },
-        new LayerColor { color = new Color(0.18f, 0.36f, 0.52f, 1f) },
-    };
 
     [Header("Camera View")]
     [Tooltip("미니맵에 표시할 현재 카메라 시야 테두리 색입니다.")]
@@ -45,9 +51,8 @@ public class RTSMinimap : MonoBehaviour, IPointerClickHandler
     public float cameraViewBorderThickness = 2f;
 
     private RectTransform minimapRect;
-    private float terrainWidth;
-    private float terrainLength;
-    private Vector3 terrainOrigin;
+    private MapPlayBoundsData mapBounds;
+    private bool mapBoundsValid;
 
     private Texture2D minimapTexture;
     private Sprite minimapSprite;
@@ -57,16 +62,15 @@ public class RTSMinimap : MonoBehaviour, IPointerClickHandler
 
     public RectTransform MinimapRect => minimapRect;
 
-    public bool IsReady =>
-        minimapRect != null && terrain != null && terrainWidth > 0f;
+    public bool IsReady => minimapRect != null && mapBoundsValid;
 
     public Vector2 WorldToMinimapLocal(Vector3 worldPosition)
     {
         float normalizedX =
-            (worldPosition.x - terrainOrigin.x) / terrainWidth;
+            (worldPosition.x - mapBounds.Origin.x) / mapBounds.Width;
 
         float normalizedZ =
-            (worldPosition.z - terrainOrigin.z) / terrainLength;
+            (worldPosition.z - mapBounds.Origin.z) / mapBounds.Length;
 
         Rect rect = minimapRect.rect;
 
@@ -86,36 +90,26 @@ public class RTSMinimap : MonoBehaviour, IPointerClickHandler
             Mathf.InverseLerp(rect.yMin, rect.yMax, localPoint.y);
 
         return new Vector3(
-            terrainOrigin.x + normalizedX * terrainWidth,
+            mapBounds.Origin.x + normalizedX * mapBounds.Width,
             0f,
-            terrainOrigin.z + normalizedZ * terrainLength);
+            mapBounds.Origin.z + normalizedZ * mapBounds.Length);
     }
 
     void Start()
     {
         minimapRect = GetComponent<RectTransform>();
 
-        if (terrain == null)
-            terrain = Terrain.activeTerrain;
-
-        if (terrain == null)
+        if (!ResolveMapBounds())
         {
-            Debug.LogError("RTSMinimap: Terrain not found");
+            Debug.LogError(
+                "RTSMinimap: Map bounds not found. MapGrid(NavMesh) 또는 Manual Map Size를 설정하세요.");
             return;
         }
 
-        terrainWidth = terrain.terrainData.size.x;
-        terrainLength = terrain.terrainData.size.z;
-        terrainOrigin = terrain.transform.position;
-
-        SyncLayerColorCount();
-
-        if (useTerrainLayerColors)
-            RebuildTerrainLayerTexture();
+        RebuildMeshMinimapTexture();
 
         if (cameraController == null)
-            cameraController =
-                FindObjectOfType<RTSCameraPivotController>();
+            cameraController = FindObjectOfType<RTSCameraPivotController>();
 
         FogOfWarManager fogManager = FogOfWarManager.Instance;
 
@@ -132,35 +126,35 @@ public class RTSMinimap : MonoBehaviour, IPointerClickHandler
     void OnValidate()
     {
         textureResolution = Mathf.Clamp(textureResolution, 32, 2048);
-        SyncLayerColorCount();
     }
 #endif
 
-    [ContextMenu("Rebuild Minimap Texture")]
-    public void RebuildTerrainLayerTexture()
+    bool ResolveMapBounds()
     {
-        if (terrain == null)
+        mapBoundsValid = MapPlayBounds.TryResolve(
+            boundsSource,
+            manualMapOrigin,
+            manualMapSize,
+            out mapBounds);
+
+        return mapBoundsValid;
+    }
+
+    [ContextMenu("Rebuild Minimap Texture")]
+    public void RebuildMinimapTexture()
+    {
+        if (!ResolveMapBounds())
             return;
 
-        TerrainData terrainData = terrain.terrainData;
+        RebuildMeshMinimapTexture();
+    }
 
-        if (terrainData == null)
-            return;
-
-        SyncLayerColorCount();
-
-        int layerCount = terrainData.alphamapLayers;
-
-        if (layerCount <= 0)
-            return;
-
-        int alphamapWidth = terrainData.alphamapWidth;
-        int alphamapHeight = terrainData.alphamapHeight;
-        float[,,] alphamaps =
-            terrainData.GetAlphamaps(0, 0, alphamapWidth, alphamapHeight);
-
+    void RebuildMeshMinimapTexture()
+    {
         int resolution = textureResolution;
         var pixels = new Color[resolution * resolution];
+        float rayDistance = MapPlayBounds.GetRaycastDistance(raycastHeightPadding);
+        float referenceHeight = mapBounds.Origin.y;
 
         for (int y = 0; y < resolution; y++)
         {
@@ -169,41 +163,47 @@ public class RTSMinimap : MonoBehaviour, IPointerClickHandler
                 float normalizedX = (x + 0.5f) / resolution;
                 float normalizedZ = (y + 0.5f) / resolution;
 
-                int alphamapX = Mathf.Clamp(
-                    Mathf.FloorToInt(normalizedX * alphamapWidth),
-                    0,
-                    alphamapWidth - 1);
+                float worldX = mapBounds.Origin.x + normalizedX * mapBounds.Width;
+                float worldZ = mapBounds.Origin.z + normalizedZ * mapBounds.Length;
 
-                int alphamapZ = Mathf.Clamp(
-                    Mathf.FloorToInt(normalizedZ * alphamapHeight),
-                    0,
-                    alphamapHeight - 1);
+                Color pixelColor = emptyMapColor;
+                Vector3 origin = MapPlayBounds.GetRaycastOrigin(
+                    worldX,
+                    worldZ,
+                    raycastHeightPadding);
 
-                Color blendedColor = Color.black;
-                float totalWeight = 0f;
-                int colorCount = Mathf.Min(layerCount, layerColors.Length);
-
-                for (int layer = 0; layer < colorCount; layer++)
+                if (Physics.Raycast(
+                        origin,
+                        Vector3.down,
+                        out RaycastHit hit,
+                        rayDistance,
+                        groundRaycastMask,
+                        QueryTriggerInteraction.Ignore))
                 {
-                    float weight = alphamaps[alphamapZ, alphamapX, layer];
+                    pixelColor = baseMapColor;
 
-                    if (weight <= 0f)
-                        continue;
-
-                    blendedColor += layerColors[layer].color * weight;
-                    totalWeight += weight;
+                    if (tintByHeight)
+                    {
+                        float heightDelta = hit.point.y - referenceHeight;
+                        float tint = 1f + heightDelta * heightTintStrength;
+                        pixelColor = new Color(
+                            Mathf.Clamp01(pixelColor.r * tint),
+                            Mathf.Clamp01(pixelColor.g * tint),
+                            Mathf.Clamp01(pixelColor.b * tint),
+                            1f);
+                    }
                 }
 
-                if (totalWeight > 0f)
-                    blendedColor /= totalWeight;
-                else if (layerColors.Length > 0)
-                    blendedColor = layerColors[0].color;
-
-                blendedColor.a = 1f;
-                pixels[y * resolution + x] = blendedColor;
+                pixelColor.a = 1f;
+                pixels[y * resolution + x] = pixelColor;
             }
         }
 
+        ApplyPixelsToMinimapTexture(pixels, resolution);
+    }
+
+    void ApplyPixelsToMinimapTexture(Color[] pixels, int resolution)
+    {
         if (minimapTexture == null ||
             minimapTexture.width != resolution ||
             minimapTexture.height != resolution)
@@ -222,49 +222,7 @@ public class RTSMinimap : MonoBehaviour, IPointerClickHandler
 
         minimapTexture.SetPixels(pixels);
         minimapTexture.Apply();
-
         ApplyMinimapSprite();
-    }
-
-    void SyncLayerColorCount()
-    {
-        if (terrain == null)
-            return;
-
-        int layerCount = terrain.terrainData.terrainLayers.Length;
-
-        if (layerCount <= 0)
-            return;
-
-        if (layerColors == null || layerColors.Length != layerCount)
-        {
-            var previous = layerColors;
-            layerColors = new LayerColor[layerCount];
-
-            for (int i = 0; i < layerCount; i++)
-            {
-                if (previous != null && i < previous.Length)
-                    layerColors[i] = previous[i];
-                else
-                    layerColors[i] = new LayerColor
-                    {
-                        color = GetDefaultLayerColor(i)
-                    };
-            }
-        }
-    }
-
-    static Color GetDefaultLayerColor(int index)
-    {
-        Color[] defaults =
-        {
-            new Color(0.22f, 0.48f, 0.18f, 1f),
-            new Color(0.45f, 0.34f, 0.18f, 1f),
-            new Color(0.38f, 0.38f, 0.38f, 1f),
-            new Color(0.18f, 0.36f, 0.52f, 1f),
-        };
-
-        return defaults[index % defaults.Length];
     }
 
     void ApplyMinimapSprite()
@@ -329,7 +287,7 @@ public class RTSMinimap : MonoBehaviour, IPointerClickHandler
 
     public void OnPointerClick(PointerEventData eventData)
     {
-        if (cameraController == null || minimapRect == null)
+        if (cameraController == null || minimapRect == null || !mapBoundsValid)
             return;
 
         if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
@@ -339,7 +297,9 @@ public class RTSMinimap : MonoBehaviour, IPointerClickHandler
                 out Vector2 localPoint))
             return;
 
-        cameraController.FocusOnPosition(MinimapLocalToWorld(localPoint));
+        Vector3 worldPoint = MinimapLocalToWorld(localPoint);
+        worldPoint.y = MapPlayBounds.SampleGroundHeight(worldPoint);
+        cameraController.FocusOnPosition(worldPoint);
     }
 
     void EnsureCameraViewIndicator()
@@ -389,7 +349,7 @@ public class RTSMinimap : MonoBehaviour, IPointerClickHandler
 
     void UpdateCameraViewIndicator()
     {
-        if (cameraController == null || minimapRect == null)
+        if (cameraController == null || minimapRect == null || !mapBoundsValid)
             return;
 
         EnsureCameraViewIndicator();

@@ -65,7 +65,10 @@ public class BuildZoneManager : MonoBehaviour
         if (!TryGetHeadquarters(ownerId, out Headquarters headquarters))
             return allowBuildWithoutHeadquarters;
 
-        return headquarters.ContainsFootprint(originCell, footprintCells);
+        if (!headquarters.ContainsFootprint(originCell, footprintCells))
+            return false;
+
+        return true;
     }
 
     public bool TryGetHeadquarters(int ownerId, out Headquarters headquarters)

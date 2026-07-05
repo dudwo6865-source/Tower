@@ -27,6 +27,18 @@ public class FogOfWarManager : MonoBehaviour
     [Range(0f, 1f)]
     public float visibilityThreshold = 0.35f;
 
+    [Header("Entity Visibility")]
+    [Tooltip("유닛/건물 가시성 판정 시 bounds를 XZ로 확장하는 여유(미터)입니다.")]
+    public float entityVisibilityPadding = 0.75f;
+
+    [Tooltip("숨겨진 유닛이 다시 보일 때: 샘플 중 하나라도 이 값 이상이면 표시합니다.")]
+    [Range(0f, 1f)]
+    public float entityShowThreshold = 0.08f;
+
+    [Tooltip("보이는 유닛을 숨길 때: 모든 샘플이 이 값 이하면 완전히 시야 밖으로 판정합니다.")]
+    [Range(0f, 1f)]
+    public float entityHideThreshold = 0.02f;
+
     [Header("Update")]
     [Tooltip("안개 텍스처를 갱신하는 간격(초)입니다.")]
     public float updateInterval = 0.1f;
@@ -43,7 +55,7 @@ public class FogOfWarManager : MonoBehaviour
     public FogSurfaceSampleMode overlaySampleMode =
         FogSurfaceSampleMode.VisualGeometry;
 
-    [Tooltip("Terrain/메쉬 Collider를 레이캐스트로 찾을 레이어입니다.")]
+    [Tooltip("메쉬 Collider를 레이캐스트로 찾을 레이어입니다.")]
     public LayerMask groundRaycastMask = ~0;
 
     [Tooltip("표면 레이캐스트 시작 높이(지형 위 추가값)입니다.")]
@@ -58,6 +70,9 @@ public class FogOfWarManager : MonoBehaviour
     [Tooltip("지형 표면 위로 띄울 높이입니다. 유닛/지형이 안개를 뚫을 때 올리세요.")]
     public float overlayHeightOffset = 1.2f;
 
+    [Tooltip("플레이 맵 바깥으로 오버레이 메쉬를 확장하는 거리(미터)입니다. 카메라 각도로 가장자리가 비칠 때 늘리세요.")]
+    public float overlayMeshPadding = 48f;
+
     [Header("Colors")]
     public Color unexploredColor = new Color(0f, 0f, 0f, 0.95f);
     public Color exploredColor = new Color(0f, 0f, 0f, 0.55f);
@@ -68,7 +83,6 @@ public class FogOfWarManager : MonoBehaviour
     private readonly List<FogOfWarVisionSource> visionSources =
         new List<FogOfWarVisionSource>();
 
-    private Terrain terrain;
     private Vector3 mapOrigin;
     private Vector2 mapSize;
 
@@ -165,21 +179,22 @@ public class FogOfWarManager : MonoBehaviour
                 return;
         }
 
-        terrain = Terrain.activeTerrain;
-
-        if (terrain == null)
+        if (MapPlayBounds.TryResolve(
+                MapPlayBoundsSource.Auto,
+                Vector3.zero,
+                new Vector2(256f, 256f),
+                out MapPlayBoundsData bounds))
         {
-            Debug.LogError(
-                "FogOfWarManager: MapGrid bounds unavailable and Terrain not found.");
-            mapOrigin = Vector3.zero;
-            mapSize = new Vector2(256f, 256f);
+            mapOrigin = bounds.Origin;
+            mapSize = new Vector2(bounds.Width, bounds.Length);
             return;
         }
 
-        mapOrigin = terrain.transform.position;
-        mapSize = new Vector2(
-            terrain.terrainData.size.x,
-            terrain.terrainData.size.z);
+        Debug.LogWarning(
+            "FogOfWarManager: Map bounds not found. Using default 256x256 at origin.");
+
+        mapOrigin = Vector3.zero;
+        mapSize = new Vector2(256f, 256f);
     }
 
     void ApplySurfaceSamplingSettings()
@@ -251,7 +266,12 @@ public class FogOfWarManager : MonoBehaviour
 
         GameObject overlayObject = new GameObject("FogOfWarOverlay");
         overlayObject.transform.SetParent(transform, false);
-        overlayObject.transform.position = mapOrigin;
+
+        float padding = Mathf.Max(0f, overlayMeshPadding);
+        overlayObject.transform.position = new Vector3(
+            mapOrigin.x - padding,
+            mapOrigin.y,
+            mapOrigin.z - padding);
         overlayObject.transform.rotation = Quaternion.identity;
 
         overlayMesh = BuildSurfaceFollowingMesh(
@@ -281,6 +301,11 @@ public class FogOfWarManager : MonoBehaviour
         Vector2[] uvs = new Vector2[vertCount];
         int[] triangles = new int[segmentsX * segmentsZ * 6];
         float sinkY = mapOrigin.y - 100f;
+        float padding = Mathf.Max(0f, overlayMeshPadding);
+        float meshWidth = mapSize.x + padding * 2f;
+        float meshLength = mapSize.y + padding * 2f;
+        float worldMinX = mapOrigin.x - padding;
+        float worldMinZ = mapOrigin.z - padding;
 
         for (int z = 0; z < vertCountZ; z++)
         {
@@ -289,28 +314,28 @@ public class FogOfWarManager : MonoBehaviour
             for (int x = 0; x < vertCountX; x++)
             {
                 float u = x / (float)segmentsX;
-                float worldX = mapOrigin.x + u * mapSize.x;
-                float worldZ = mapOrigin.z + v * mapSize.y;
+                float worldX = worldMinX + u * meshWidth;
+                float worldZ = worldMinZ + v * meshLength;
                 int index = z * vertCountX + x;
 
                 uvs[index] = new Vector2(u, v);
 
-                if (FogGroundUtility.TrySampleSurfaceHeight(
+                if (TrySampleOverlaySurfaceHeight(
                         worldX,
                         worldZ,
                         out float surfaceY))
                 {
                     vertices[index] = new Vector3(
-                        u * mapSize.x,
+                        u * meshWidth,
                         surfaceY - mapOrigin.y + overlayHeightOffset,
-                        v * mapSize.y);
+                        v * meshLength);
                 }
                 else
                 {
                     vertices[index] = new Vector3(
-                        u * mapSize.x,
+                        u * meshWidth,
                         hideOverlayWithoutSurface ? sinkY - mapOrigin.y : overlayHeightOffset,
-                        v * mapSize.y);
+                        v * meshLength);
                 }
             }
         }
@@ -369,6 +394,38 @@ public class FogOfWarManager : MonoBehaviour
         mesh.RecalculateBounds();
 
         return mesh;
+    }
+
+    bool TrySampleOverlaySurfaceHeight(
+        float worldX,
+        float worldZ,
+        out float surfaceY)
+    {
+        if (FogGroundUtility.TrySampleSurfaceHeight(worldX, worldZ, out surfaceY))
+            return true;
+
+        if (!IsInsidePlayableMap(worldX, worldZ))
+        {
+            float edgeX = Mathf.Clamp(worldX, mapOrigin.x, mapOrigin.x + mapSize.x);
+            float edgeZ = Mathf.Clamp(worldZ, mapOrigin.z, mapOrigin.z + mapSize.y);
+
+            if (FogGroundUtility.TrySampleSurfaceHeight(edgeX, edgeZ, out surfaceY))
+                return true;
+
+            surfaceY = mapOrigin.y;
+            return true;
+        }
+
+        surfaceY = mapOrigin.y;
+        return false;
+    }
+
+    bool IsInsidePlayableMap(float worldX, float worldZ)
+    {
+        return worldX >= mapOrigin.x &&
+               worldX <= mapOrigin.x + mapSize.x &&
+               worldZ >= mapOrigin.z &&
+               worldZ <= mapOrigin.z + mapSize.y;
     }
 
     static bool ShouldSkipOverlayQuad(
@@ -541,6 +598,68 @@ public class FogOfWarManager : MonoBehaviour
             return false;
 
         return visible > (byte)(visibilityThreshold * 255f);
+    }
+
+    public bool EvaluateEntityGameplayVisibility(Bounds worldBounds, bool wasVisible)
+    {
+        if (wasVisible)
+            return !IsEntityFullyOutsideVision(worldBounds);
+
+        return IsEntityPartiallyVisible(worldBounds);
+    }
+
+    public bool IsEntityPartiallyVisible(Bounds worldBounds)
+    {
+        byte showCutoff = (byte)(entityShowThreshold * 255f);
+
+        foreach (Vector3 sample in GetEntityGroundSamplePoints(worldBounds))
+        {
+            if (TrySampleFog(sample, out _, out byte visible) && visible > showCutoff)
+                return true;
+        }
+
+        return false;
+    }
+
+    public bool IsEntityFullyOutsideVision(Bounds worldBounds)
+    {
+        byte hideCutoff = (byte)(entityHideThreshold * 255f);
+
+        foreach (Vector3 sample in GetEntityGroundSamplePoints(worldBounds))
+        {
+            if (TrySampleFog(sample, out _, out byte visible) && visible > hideCutoff)
+                return false;
+        }
+
+        return true;
+    }
+
+    IEnumerable<Vector3> GetEntityGroundSamplePoints(Bounds worldBounds)
+    {
+        float padding = entityVisibilityPadding;
+        float minX = worldBounds.min.x - padding;
+        float maxX = worldBounds.max.x + padding;
+        float minZ = worldBounds.min.z - padding;
+        float maxZ = worldBounds.max.z + padding;
+        float centerX = (minX + maxX) * 0.5f;
+        float centerZ = (minZ + maxZ) * 0.5f;
+        float referenceY = worldBounds.center.y;
+
+        yield return SnapSampleToGround(new Vector3(centerX, referenceY, centerZ));
+        yield return SnapSampleToGround(new Vector3(minX, referenceY, minZ));
+        yield return SnapSampleToGround(new Vector3(maxX, referenceY, minZ));
+        yield return SnapSampleToGround(new Vector3(minX, referenceY, maxZ));
+        yield return SnapSampleToGround(new Vector3(maxX, referenceY, maxZ));
+        yield return SnapSampleToGround(new Vector3(centerX, referenceY, minZ));
+        yield return SnapSampleToGround(new Vector3(centerX, referenceY, maxZ));
+        yield return SnapSampleToGround(new Vector3(minX, referenceY, centerZ));
+        yield return SnapSampleToGround(new Vector3(maxX, referenceY, centerZ));
+    }
+
+    static Vector3 SnapSampleToGround(Vector3 worldPosition)
+    {
+        worldPosition.y = MapPlayBounds.SampleGroundHeight(worldPosition);
+        return worldPosition;
     }
 
     public bool IsExplored(Vector3 worldPosition)

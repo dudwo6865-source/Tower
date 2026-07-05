@@ -58,25 +58,6 @@ public static class BlenderStyleSceneViewShortcuts
             }
         }
 
-        foreach (var terrain in Object.FindObjectsOfType<Terrain>())
-        {
-            if (terrain.terrainData == null)
-                continue;
-
-            var terrainBounds = terrain.terrainData.bounds;
-            terrainBounds.center += terrain.transform.position;
-
-            if (!hasBounds)
-            {
-                bounds = terrainBounds;
-                hasBounds = true;
-            }
-            else
-            {
-                bounds.Encapsulate(terrainBounds);
-            }
-        }
-
         if (hasBounds)
             view.Frame(bounds, false);
     }

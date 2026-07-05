@@ -10,6 +10,9 @@ public class Headquarters : MonoBehaviour
     [Tooltip("HQ 중심 기준 원형 건설 가능 반경(칸)입니다.")]
     public int buildRadiusCells = 12;
 
+    [Tooltip("건설 구역(푸른 타일)을 지면 위로 띄울 높이(미터)입니다.")]
+    public float buildZoneHeightOffset = 0.06f;
+
     public int OwnerId =>
         selectableEntity != null ? selectableEntity.ownerId : ownerId;
 

@@ -25,14 +25,23 @@ public class EnemySpawner : MonoBehaviour
     [Tooltip("한 번의 스폰 주기 사이 간격(초)입니다.")]
     public float spawnInterval = 3f;
 
-    [Tooltip("한 번의 스폰 주기에 생성할 적 수입니다.")]
+    [Tooltip("한 번의 스폰 주기에 생성할 적 수(기본값)입니다.")]
     public int enemiesPerSpawn = 1;
 
     [Header("Limits")]
     [Tooltip("동시에 살아있을 수 있는 최대 적 수입니다. 0이면 무제한입니다.")]
     public int maxAliveEnemies = 0;
 
+    [Tooltip("게임 전체에서 생성할 수 있는 적 최대 수입니다. 0이면 무제한입니다.")]
+    public int maxTotalSpawns = 0;
+
     [Header("Difficulty Scaling")]
+    [Tooltip("스폰 주기마다 한 번에 추가로 생성할 적 수입니다. (예: 1이면 주기마다 +1마리)")]
+    public int enemiesSpawnGrowthPerCycle = 0;
+
+    [Tooltip("한 번의 스폰 주기에 생성 가능한 최대 적 수입니다. 0이면 무제한입니다.")]
+    public int maxEnemiesPerSpawn = 0;
+
     [Tooltip("스폰 주기마다 누적되는 체력 증가 비율입니다. (예: 0.08 = 주기당 +8%)")]
     public float healthGrowthPerCycle = 0.08f;
 
@@ -47,6 +56,10 @@ public class EnemySpawner : MonoBehaviour
 
     public int AliveCount { get; private set; }
     public int CycleCount { get; private set; }
+    public int TotalSpawnedCount { get; private set; }
+
+    public bool HasReachedTotalSpawnLimit =>
+        maxTotalSpawns > 0 && TotalSpawnedCount >= maxTotalSpawns;
 
     public event System.Action<int> OnAliveCountChanged;
     public event System.Action<int> OnCycleStarted;
@@ -84,6 +97,12 @@ public class EnemySpawner : MonoBehaviour
 
         while (true)
         {
+            if (HasReachedTotalSpawnLimit)
+            {
+                spawnRoutine = null;
+                yield break;
+            }
+
             SpawnCycle();
             CycleCount++;
             OnCycleStarted?.Invoke(CycleCount);
@@ -92,9 +111,27 @@ public class EnemySpawner : MonoBehaviour
         }
     }
 
+    int GetEnemiesToSpawnThisCycle()
+    {
+        long scaledCount = (long)enemiesPerSpawn +
+            (long)enemiesSpawnGrowthPerCycle * CycleCount;
+
+        int count = scaledCount > int.MaxValue
+            ? int.MaxValue
+            : Mathf.Max(0, (int)scaledCount);
+
+        if (maxEnemiesPerSpawn > 0)
+            count = Mathf.Min(count, maxEnemiesPerSpawn);
+
+        return count;
+    }
+
     void SpawnCycle()
     {
         if (enemyPrefabs.Count == 0)
+            return;
+
+        if (HasReachedTotalSpawnLimit)
             return;
 
         float healthMultiplier = 1f + healthGrowthPerCycle * CycleCount;
@@ -102,16 +139,28 @@ public class EnemySpawner : MonoBehaviour
         float speedMultiplier =
             Mathf.Min(1f + speedGrowthPerCycle * CycleCount, maxSpeedMultiplier);
 
-        for (int i = 0; i < enemiesPerSpawn; i++)
+        int spawnCount = GetEnemiesToSpawnThisCycle();
+
+        if (maxTotalSpawns > 0)
+        {
+            int remaining = maxTotalSpawns - TotalSpawnedCount;
+            spawnCount = Mathf.Min(spawnCount, remaining);
+        }
+
+        for (int i = 0; i < spawnCount; i++)
         {
             if (maxAliveEnemies > 0 && AliveCount >= maxAliveEnemies)
                 return;
 
-            SpawnOne(healthMultiplier, damageMultiplier, speedMultiplier);
+            if (HasReachedTotalSpawnLimit)
+                return;
+
+            if (SpawnOne(healthMultiplier, damageMultiplier, speedMultiplier))
+                TotalSpawnedCount++;
         }
     }
 
-    void SpawnOne(
+    bool SpawnOne(
         float healthMultiplier,
         float damageMultiplier,
         float speedMultiplier)
@@ -120,13 +169,14 @@ public class EnemySpawner : MonoBehaviour
             enemyPrefabs[Random.Range(0, enemyPrefabs.Count)];
 
         if (prefab == null)
-            return;
+            return false;
 
         Vector3 position = GetSpawnPosition();
 
         GameObject enemy = Instantiate(prefab, position, prefab.transform.rotation);
 
         ConfigureEnemy(enemy, healthMultiplier, damageMultiplier, speedMultiplier);
+        return true;
     }
 
     Vector3 GetSpawnPosition()

@@ -32,6 +32,12 @@ public abstract class CombatAIBase : MonoBehaviour
 
     protected void TickRetarget()
     {
+        if (currentTarget != null && !currentTarget)
+        {
+            currentTarget = null;
+            currentTargetHealth = null;
+        }
+
         retargetTimer -= Time.deltaTime;
 
         // 현재 표적이 죽었거나 사라졌으면 타이머를 기다리지 않고 즉시 재탐색한다.
@@ -44,7 +50,18 @@ public abstract class CombatAIBase : MonoBehaviour
             return;
 
         retargetTimer = retargetInterval;
-        SetTarget(FindTarget());
+
+        SelectableEntity newTarget = FindTarget();
+
+        if (newTarget != null)
+        {
+            if (newTarget != currentTarget)
+                SetTarget(newTarget);
+        }
+        else if (targetLost)
+        {
+            SetTarget(null);
+        }
     }
 
     protected virtual SelectableEntity FindTarget()
@@ -53,17 +70,28 @@ public abstract class CombatAIBase : MonoBehaviour
             transform.position,
             selfEntity.ownerId,
             aggroRange,
-            targetPriority);
+            targetPriority,
+            attacker);
     }
 
     protected void SetTarget(SelectableEntity target)
     {
+        if (currentTarget != null && !currentTarget)
+        {
+            currentTarget = null;
+            currentTargetHealth = null;
+        }
+
         if (target == currentTarget)
             return;
 
+        SelectableEntity previous = currentTarget;
         currentTarget = target;
         currentTargetHealth =
             target != null ? target.GetComponent<EntityHealth>() : null;
+
+        UnitCombatAI combatAI = GetComponent<UnitCombatAI>();
+        combatAI?.LogTargetChange(previous, target);
 
         OnTargetChanged();
     }

@@ -9,7 +9,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5543680380123936405}
-  - component: {fileID: 7589290701394478942}
   m_Layer: 6
   m_Name: Wall2
   m_TagString: Untagged
@@ -33,22 +32,6 @@ Transform:
   - {fileID: 2583731932820313992}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &7589290701394478942
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6952186368260343129}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 35e95dc5ff2b64380880dd7ac5922847, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_Size: {x: 4, y: 3, z: 4}
-  m_Center: {x: 0, y: 1, z: 0}
-  m_Area: 1
-  m_AffectedAgents: ffffffff
 --- !u!1001 &2617149924875956323
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -102,9 +85,17 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -7511558181221131132, guid: 50c4c7c7f84c5f14faef0c9aca72f4e6, type: 3}
+      propertyPath: m_Materials.Array.size
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: -7511558181221131132, guid: 50c4c7c7f84c5f14faef0c9aca72f4e6, type: 3}
       propertyPath: m_Materials.Array.data[0]
       value: 
-      objectReference: {fileID: 2100000, guid: 4b64f961162c5c74e8d4b3c1605de5e3, type: 2}
+      objectReference: {fileID: 2100000, guid: 9ab972bb2738ec1479e4e77174126495, type: 2}
+    - target: {fileID: -7511558181221131132, guid: 50c4c7c7f84c5f14faef0c9aca72f4e6, type: 3}
+      propertyPath: m_Materials.Array.data[1]
+      value: 
+      objectReference: {fileID: -876546973899608171, guid: 9a13c0feee0c0f640b4c0bc866e28ebc, type: 3}
     - target: {fileID: 919132149155446097, guid: 50c4c7c7f84c5f14faef0c9aca72f4e6, type: 3}
       propertyPath: m_Name
       value: Wall2

@@ -93,6 +93,26 @@ public class UnitAnimator : MonoBehaviour
         animator.SetTrigger(dieHash);
     }
 
+    public void OnAttackHit()
+    {
+        ResolveAttacker()?.ApplyAttackImpact();
+    }
+
+    public void OnAttackFire()
+    {
+        OnAttackHit();
+    }
+
+    UnitAttacker ResolveAttacker()
+    {
+        UnitAttacker attacker = GetComponent<UnitAttacker>();
+
+        if (attacker != null)
+            return attacker;
+
+        return GetComponentInParent<UnitAttacker>();
+    }
+
     void HandleDied()
     {
         PlayDie();

@@ -11,8 +11,8 @@ public class BuildZoneVisualizer : MonoBehaviour
 
     public Color zoneEdgeColor = new Color(0.35f, 0.85f, 1f, 0.55f);
 
-    [Tooltip("지형 위로 띄울 높이입니다.")]
-    public float heightOffset = 0.06f;
+    [Tooltip("지형 위로 띄울 높이입니다. Headquarters.buildZoneHeightOffset에 더해집니다.")]
+    public float heightOffset = 0f;
 
     [Tooltip("구역 가장자리 선 두께(월드 단위)입니다.")]
     public float edgeLineWidth = 0.1f;
@@ -31,6 +31,7 @@ public class BuildZoneVisualizer : MonoBehaviour
     private Headquarters activeHeadquarters;
     private Vector2Int lastCenterCell = new Vector2Int(int.MinValue, int.MinValue);
     private int lastRadius = -1;
+    private float lastZoneHeightOffset = float.NaN;
     private bool wasVisible;
 
     void Awake()
@@ -92,12 +93,16 @@ public class BuildZoneVisualizer : MonoBehaviour
 
         if (headquarters != activeHeadquarters ||
             headquarters.CenterCell != lastCenterCell ||
-            headquarters.buildRadiusCells != lastRadius)
+            headquarters.buildRadiusCells != lastRadius ||
+            !Mathf.Approximately(
+                headquarters.buildZoneHeightOffset,
+                lastZoneHeightOffset))
         {
             RebuildZoneMesh(headquarters);
             activeHeadquarters = headquarters;
             lastCenterCell = headquarters.CenterCell;
             lastRadius = headquarters.buildRadiusCells;
+            lastZoneHeightOffset = headquarters.buildZoneHeightOffset;
         }
     }
 
@@ -214,6 +219,7 @@ public class BuildZoneVisualizer : MonoBehaviour
             activeHeadquarters = null;
             lastCenterCell = new Vector2Int(int.MinValue, int.MinValue);
             lastRadius = -1;
+            lastZoneHeightOffset = float.NaN;
         }
     }
 
@@ -233,6 +239,8 @@ public class BuildZoneVisualizer : MonoBehaviour
     void RebuildZoneMesh(Headquarters headquarters)
     {
         MapGrid grid = MapGrid.Instance;
+        float zoneHeightOffset =
+            headquarters.buildZoneHeightOffset + heightOffset;
         var fillVertices = new List<Vector3>();
         var fillTriangles = new List<int>();
         var edgeVertices = new List<Vector3>();
@@ -256,13 +264,14 @@ public class BuildZoneVisualizer : MonoBehaviour
                 if (grid.UsesNavMesh && !grid.IsCellOnNavMesh(cell))
                     continue;
 
-                AddCellQuad(fillVertices, fillTriangles, grid, cell);
+                AddCellQuad(fillVertices, fillTriangles, grid, cell, zoneHeightOffset);
                 AddBoundaryEdges(
                     edgeVertices,
                     edgeTriangles,
                     grid,
                     cell,
-                    headquarters);
+                    headquarters,
+                    zoneHeightOffset);
             }
         }
 
@@ -287,15 +296,16 @@ public class BuildZoneVisualizer : MonoBehaviour
         List<int> triangles,
         MapGrid grid,
         Vector2Int cell,
-        Headquarters headquarters)
+        Headquarters headquarters,
+        float zoneHeightOffset)
     {
         float size = grid.cellSize;
         Vector3 corner = grid.CellCornerToWorld(cell);
 
-        Vector3 bottomLeft = Lift(corner);
-        Vector3 bottomRight = Lift(corner + new Vector3(size, 0f, 0f));
-        Vector3 topRight = Lift(corner + new Vector3(size, 0f, size));
-        Vector3 topLeft = Lift(corner + new Vector3(0f, 0f, size));
+        Vector3 bottomLeft = Lift(corner, zoneHeightOffset);
+        Vector3 bottomRight = Lift(corner + new Vector3(size, 0f, 0f), zoneHeightOffset);
+        Vector3 topRight = Lift(corner + new Vector3(size, 0f, size), zoneHeightOffset);
+        Vector3 topLeft = Lift(corner + new Vector3(0f, 0f, size), zoneHeightOffset);
 
         if (!headquarters.ContainsCell(new Vector2Int(cell.x, cell.y - 1)))
             AddLineQuad(vertices, triangles, bottomLeft, bottomRight);
@@ -314,16 +324,17 @@ public class BuildZoneVisualizer : MonoBehaviour
         List<Vector3> vertices,
         List<int> triangles,
         MapGrid grid,
-        Vector2Int cell)
+        Vector2Int cell,
+        float zoneHeightOffset)
     {
         Vector3 corner = grid.CellCornerToWorld(cell);
         float size = grid.cellSize;
         int start = vertices.Count;
 
-        vertices.Add(Lift(corner));
-        vertices.Add(Lift(corner + new Vector3(size, 0f, 0f)));
-        vertices.Add(Lift(corner + new Vector3(size, 0f, size)));
-        vertices.Add(Lift(corner + new Vector3(0f, 0f, size)));
+        vertices.Add(Lift(corner, zoneHeightOffset));
+        vertices.Add(Lift(corner + new Vector3(size, 0f, 0f), zoneHeightOffset));
+        vertices.Add(Lift(corner + new Vector3(size, 0f, size), zoneHeightOffset));
+        vertices.Add(Lift(corner + new Vector3(0f, 0f, size), zoneHeightOffset));
 
         triangles.Add(start);
         triangles.Add(start + 2);
@@ -362,14 +373,14 @@ public class BuildZoneVisualizer : MonoBehaviour
         triangles.Add(startIndex + 2);
     }
 
-    Vector3 Lift(Vector3 worldPoint)
+    Vector3 Lift(Vector3 worldPoint, float zoneHeightOffset)
     {
         MapGrid grid = MapGrid.Instance;
 
         if (grid != null)
             worldPoint.y = grid.SampleGroundHeight(worldPoint);
 
-        worldPoint.y += heightOffset;
+        worldPoint.y += zoneHeightOffset;
 
         if (grid != null)
             worldPoint -= grid.MapOrigin;

@@ -9,7 +9,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1146826053788497626}
-  - component: {fileID: 1841865349255749516}
   m_Layer: 6
   m_Name: Wall1
   m_TagString: Untagged
@@ -33,22 +32,6 @@ Transform:
   - {fileID: 2152128469426824016}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1841865349255749516
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 601861281179985610}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 35e95dc5ff2b64380880dd7ac5922847, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_Size: {x: 4, y: 4, z: 4}
-  m_Center: {x: 0, y: 1, z: 0}
-  m_Area: 1
-  m_AffectedAgents: ffffffff
 --- !u!1001 &1898086982044452027
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -59,15 +42,15 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: 0e1a9ff362e68074c94831a79b51122f, type: 3}
       propertyPath: m_LocalScale.x
-      value: 2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 0e1a9ff362e68074c94831a79b51122f, type: 3}
       propertyPath: m_LocalScale.y
-      value: 2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 0e1a9ff362e68074c94831a79b51122f, type: 3}
       propertyPath: m_LocalScale.z
-      value: 2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 0e1a9ff362e68074c94831a79b51122f, type: 3}
       propertyPath: m_LocalPosition.x
@@ -114,9 +97,17 @@ PrefabInstance:
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: -7511558181221131132, guid: 0e1a9ff362e68074c94831a79b51122f, type: 3}
+      propertyPath: m_Materials.Array.size
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: -7511558181221131132, guid: 0e1a9ff362e68074c94831a79b51122f, type: 3}
       propertyPath: m_Materials.Array.data[0]
       value: 
-      objectReference: {fileID: 2100000, guid: 4b64f961162c5c74e8d4b3c1605de5e3, type: 2}
+      objectReference: {fileID: 2100000, guid: 9ab972bb2738ec1479e4e77174126495, type: 2}
+    - target: {fileID: -7511558181221131132, guid: 0e1a9ff362e68074c94831a79b51122f, type: 3}
+      propertyPath: m_Materials.Array.data[1]
+      value: 
+      objectReference: {fileID: -876546973899608171, guid: 9a13c0feee0c0f640b4c0bc866e28ebc, type: 3}
     - target: {fileID: 919132149155446097, guid: 0e1a9ff362e68074c94831a79b51122f, type: 3}
       propertyPath: m_Name
       value: Wall1
@@ -159,7 +150,7 @@ MeshCollider:
   serializedVersion: 5
   m_Convex: 0
   m_CookingOptions: 30
-  m_Mesh: {fileID: 6375708778553226300, guid: 0e1a9ff362e68074c94831a79b51122f, type: 3}
+  m_Mesh: {fileID: -3773207412704142900, guid: 0e1a9ff362e68074c94831a79b51122f, type: 3}
 --- !u!4 &2152128469426824016 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 0e1a9ff362e68074c94831a79b51122f, type: 3}

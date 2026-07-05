@@ -28,7 +28,7 @@ public class UnitSelectionManager : MonoBehaviour
     [Tooltip("이 픽셀 이상 드래그하면 클릭이 아닌 박스 선택으로 처리합니다.")]
     public float dragThreshold = 8f;
 
-    [Tooltip("박스 선택 시 포함할 대상 종류를 제한합니다.")]
+    [Tooltip("단일 클릭·더블클릭 선택에만 적용됩니다. 드래그 박스 선택은 종류와 관계없이 범위 안 전체를 고릅니다.")]
     public SelectionTypeFilter typeFilter = SelectionTypeFilter.All;
 
     private readonly List<SelectableEntity> selectedEntities =
@@ -96,7 +96,30 @@ public class UnitSelectionManager : MonoBehaviour
         if (IsPointerOverUI())
             return;
 
-        HandleSelectionInput();
+        if (UnitCommandController.HasInstance &&
+            UnitCommandController.Instance.TryHandleCommandClick())
+        {
+            // 명령 클릭 처리됨 — 같은 클릭으로 선택이 바뀌지 않게 함
+        }
+        else if (!UnitCommandController.HasInstance ||
+                 !UnitCommandController.Instance.ShouldBlockSelectionInput())
+        {
+            HandleSelectionInput();
+        }
+
+        HandleCommandInput();
+    }
+
+    void HandleCommandInput()
+    {
+        if (!Input.GetMouseButtonDown(1))
+            return;
+
+        if (UnitCommandController.HasInstance &&
+            UnitCommandController.Instance.HasPendingMode)
+            return;
+
+        UnitCommandHandler.TryIssueCommandToSelection();
     }
 
     void HandleActiveDrag()
@@ -118,6 +141,15 @@ public class UnitSelectionManager : MonoBehaviour
         if (!Input.GetMouseButtonUp(0))
             return;
 
+        if (UnitCommandController.HasInstance &&
+            UnitCommandController.Instance.ShouldBlockSelectionInput())
+        {
+            selectionBoxUI.Hide();
+            isDragging = false;
+            isBoxDragging = false;
+            return;
+        }
+
         Vector2 end = Input.mousePosition;
         bool releasedOverUI = IsPointerOverUI();
 
@@ -134,6 +166,10 @@ public class UnitSelectionManager : MonoBehaviour
     void HandleSelectionInput()
     {
         if (!Input.GetMouseButtonDown(0))
+            return;
+
+        if (UnitCommandController.HasInstance &&
+            UnitCommandController.Instance.ShouldBlockSelectionInput())
             return;
 
         dragStartScreen = Input.mousePosition;
@@ -229,7 +265,7 @@ public class UnitSelectionManager : MonoBehaviour
             if (!CanSelectEntity(entity))
                 continue;
 
-            if (entity.entityTypeId != referenceEntity.entityTypeId)
+            if (!IsSameSelectionType(entity, referenceEntity))
                 continue;
 
             if (!IsVisibleOnScreen(entity))
@@ -245,7 +281,7 @@ public class UnitSelectionManager : MonoBehaviour
 
         foreach (SelectableEntity entity in SelectableRegistry.Entities)
         {
-            if (!CanSelectEntity(entity))
+            if (!CanSelectEntityInBox(entity))
                 continue;
 
             if (IsEntityInSelectionRect(entity, screenRect))
@@ -281,23 +317,34 @@ public class UnitSelectionManager : MonoBehaviour
         return false;
     }
 
-    bool IsVisibleOnScreen(SelectableEntity entity)
+    bool IsSameSelectionType(
+        SelectableEntity a,
+        SelectableEntity b)
     {
-        Vector3 screenPos =
-            selectionCamera.WorldToScreenPoint(entity.transform.position);
-
-        if (screenPos.z < 0f)
+        if (a == null || b == null)
             return false;
 
-        return screenPos.x >= 0f &&
-               screenPos.x <= Screen.width &&
-               screenPos.y >= 0f &&
-               screenPos.y <= Screen.height;
+        if (a.entityType != b.entityType)
+            return false;
+
+        return string.Equals(
+            a.entityTypeId,
+            b.entityTypeId,
+            System.StringComparison.OrdinalIgnoreCase);
+    }
+
+    bool IsVisibleOnScreen(SelectableEntity entity)
+    {
+        if (selectionCamera == null)
+            return false;
+
+        Rect screenRect = new Rect(0f, 0f, Screen.width, Screen.height);
+        return IsEntityInSelectionRect(entity, screenRect);
     }
 
     bool CanSelectEntity(SelectableEntity entity)
     {
-        if (!entity.CanBeSelectedBy(localPlayerOwnerId))
+        if (!CanSelectEntityByOwner(entity))
             return false;
 
         if (typeFilter == SelectionTypeFilter.UnitsOnly &&
@@ -311,6 +358,16 @@ public class UnitSelectionManager : MonoBehaviour
         return true;
     }
 
+    bool CanSelectEntityInBox(SelectableEntity entity)
+    {
+        return CanSelectEntityByOwner(entity);
+    }
+
+    bool CanSelectEntityByOwner(SelectableEntity entity)
+    {
+        return entity != null && entity.CanBeSelectedBy(localPlayerOwnerId);
+    }
+
     void SelectEntity(SelectableEntity entity)
     {
         if (selectedEntities.Contains(entity))
@@ -318,6 +375,7 @@ public class UnitSelectionManager : MonoBehaviour
 
         entity.SetSelected(true);
         selectedEntities.Add(entity);
+        NotifySelectionChanged();
     }
 
     void ToggleSelectEntity(SelectableEntity entity)
@@ -331,6 +389,9 @@ public class UnitSelectionManager : MonoBehaviour
         {
             SelectEntity(entity);
         }
+
+        RefreshCommandIndicators();
+        NotifySelectionChanged();
     }
 
     void DeselectAll()
@@ -342,6 +403,35 @@ public class UnitSelectionManager : MonoBehaviour
         }
 
         selectedEntities.Clear();
+        RefreshCommandIndicators();
+        NotifySelectionChanged();
+    }
+
+    void NotifySelectionChanged()
+    {
+        if (UnitCommandController.HasInstance)
+            UnitCommandController.Instance.OnSelectionChanged();
+    }
+
+    void RefreshCommandIndicators()
+    {
+        bool hasSelectedUnit = false;
+
+        foreach (SelectableEntity entity in selectedEntities)
+        {
+            if (entity != null && entity.entityType == SelectableEntityType.Unit)
+            {
+                hasSelectedUnit = true;
+                break;
+            }
+        }
+
+        if (hasSelectedUnit)
+            return;
+
+        MoveDestinationIndicator.HideIndicator();
+        AttackTargetIndicator.HideIndicator();
+        UnitCommandIndicatorTracker.ClearTracking();
     }
 
     public void NotifyEntityRemoved(SelectableEntity entity)
@@ -350,6 +440,8 @@ public class UnitSelectionManager : MonoBehaviour
 
         if (lastClickedEntity == entity)
             lastClickedEntity = null;
+
+        RefreshCommandIndicators();
     }
 
     public void FocusOnSelection()

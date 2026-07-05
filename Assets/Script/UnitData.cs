@@ -42,6 +42,9 @@ public class UnitData : ScriptableObject
     [Tooltip("공격 사이의 최소 간격(초)입니다.")]
     public float attackCooldown = 1f;
 
+    [Tooltip("공격 애니메이션 이벤트(OnAttackHit)로 피해/투사체를 적용합니다.")]
+    public bool useAttackAnimationEvent = true;
+
     [Tooltip("투사체 속도입니다. 원거리 공격일 때만 사용됩니다.")]
     public float projectileSpeed = 25f;
 
@@ -103,4 +106,17 @@ public class UnitData : ScriptableObject
     [Header("Grid")]
     [Tooltip("이 유닛이 차지하는 칸 수입니다.")]
     public Vector2Int footprintCells = Vector2Int.one;
+
+    [Header("Sound")]
+    [Tooltip("공격 사운드입니다.")]
+    public AudioClip[] attackSoundClips;
+
+    [Tooltip("피격 사운드입니다.")]
+    public AudioClip[] hitSoundClips;
+
+    [Tooltip("사망·파괴 사운드입니다.")]
+    public AudioClip[] deathSoundClips;
+
+    [Tooltip("사운드 볼륨입니다. 0 이하면 UnitSound 인스펙터 값을 유지합니다.")]
+    public float soundVolume;
 }

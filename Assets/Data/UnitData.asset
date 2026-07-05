@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   entityType: 0
   ownerId: 1
-  entityTypeId: unit
+  entityTypeId: monster
   maxHealth: 100
   deathAnimationDuration: 1
   deathSinkDistance: 1.5

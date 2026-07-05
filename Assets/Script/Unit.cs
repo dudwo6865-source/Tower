@@ -16,6 +16,7 @@ public class Unit : MonoBehaviour
     private UnitMovement movement;
     private WorldHealthBar healthBar;
     private NavMeshAgent navAgent;
+    private UnitSound unitSound;
 
     public SelectableEntity Selection => Resolve(ref selection);
     public EntityHealth Health => Resolve(ref health);
@@ -52,6 +53,7 @@ public class Unit : MonoBehaviour
         ApplyHealthBar(source);
         ApplyFogOfWar(source);
         ApplyGrid(source);
+        ApplySound(source);
     }
 
     void ApplyGrid(UnitData source)
@@ -117,6 +119,7 @@ public class Unit : MonoBehaviour
         target.attackDamage = source.attackDamage;
         target.attackRange = source.attackRange;
         target.attackCooldown = source.attackCooldown;
+        target.useAttackAnimationEvent = source.useAttackAnimationEvent;
         target.projectileSpeed = source.projectileSpeed;
         target.projectileColor = source.projectileColor;
         target.hitColor = source.hitColor;
@@ -157,6 +160,33 @@ public class Unit : MonoBehaviour
             vision.visionRange = source.visionRange;
     }
 
+    void ApplySound(UnitData source)
+    {
+        bool hasClips =
+            HasClips(source.attackSoundClips) ||
+            HasClips(source.hitSoundClips) ||
+            HasClips(source.deathSoundClips);
+
+        if (!hasClips && source.soundVolume <= 0f)
+            return;
+
+        UnitSound target = Resolve(ref unitSound);
+
+        if (target == null)
+            target = gameObject.AddComponent<UnitSound>();
+
+        target.ApplyClips(
+            source.attackSoundClips,
+            source.hitSoundClips,
+            source.deathSoundClips,
+            source.soundVolume > 0f ? source.soundVolume : -1f);
+    }
+
+    static bool HasClips(AudioClip[] clips)
+    {
+        return clips != null && clips.Length > 0;
+    }
+
 #if UNITY_EDITOR
     public void EnsureComponents(bool wantsAttacker, bool wantsCombatAI, bool wantsMovement)
     {
@@ -165,6 +195,7 @@ public class Unit : MonoBehaviour
         GetOrAdd<WorldHealthBar>();
         GetOrAdd<FogOfWarVisionSource>();
         GetOrAdd<FogOfWarVisibility>();
+        GetOrAdd<UnitSound>();
 
         if (wantsAttacker || wantsCombatAI)
             GetOrAdd<UnitAttacker>();
@@ -198,6 +229,7 @@ public class Unit : MonoBehaviour
         movement = null;
         healthBar = null;
         navAgent = null;
+        unitSound = null;
     }
 
     T GetOrAdd<T>() where T : Component

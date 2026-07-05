@@ -59,9 +59,6 @@ public static class FogGroundUtility
                 if (TrySampleRaycastHeight(worldX, worldZ, out surfaceY))
                     return true;
 
-                if (TrySampleTerrainHeight(worldX, worldZ, out surfaceY))
-                    return true;
-
                 return TrySampleNavMeshHeight(worldX, worldZ, out surfaceY);
 
             case FogSurfaceSampleMode.Hybrid:
@@ -69,10 +66,7 @@ public static class FogGroundUtility
                 if (TrySampleNavMeshHeight(worldX, worldZ, out surfaceY))
                     return true;
 
-                if (TrySampleRaycastHeight(worldX, worldZ, out surfaceY))
-                    return true;
-
-                return TrySampleTerrainHeight(worldX, worldZ, out surfaceY);
+                return TrySampleRaycastHeight(worldX, worldZ, out surfaceY);
         }
     }
 
@@ -123,31 +117,6 @@ public static class FogGroundUtility
         return false;
     }
 
-    static bool TrySampleTerrainHeight(float worldX, float worldZ, out float surfaceY)
-    {
-        Terrain activeTerrain = GetTerrain();
-
-        if (activeTerrain == null)
-        {
-            surfaceY = 0f;
-            return false;
-        }
-
-        surfaceY = activeTerrain.SampleHeight(new Vector3(worldX, 0f, worldZ)) +
-                   activeTerrain.transform.position.y;
-        return true;
-    }
-
-    static Terrain GetTerrain()
-    {
-        MapGrid grid = MapGrid.Instance;
-
-        if (grid != null && grid.terrain != null)
-            return grid.terrain;
-
-        return Terrain.activeTerrain;
-    }
-
     static Vector3 GetRaycastOrigin(float worldX, float worldZ)
     {
         float startY = raycastHeightPadding;
@@ -156,15 +125,12 @@ public static class FogGroundUtility
 
         if (grid != null && grid.IsNavMeshBoundsActive)
             startY = grid.MapOrigin.y + raycastHeightPadding;
-
-        Terrain activeTerrain = GetTerrain();
-
-        if (activeTerrain != null)
-        {
-            float terrainY = activeTerrain.SampleHeight(new Vector3(worldX, 0f, worldZ)) +
-                             activeTerrain.transform.position.y;
-            startY = Mathf.Max(startY, terrainY + raycastHeightPadding);
-        }
+        else if (MapPlayBounds.TryResolve(
+                     MapPlayBoundsSource.Auto,
+                     Vector3.zero,
+                     new Vector2(256f, 256f),
+                     out MapPlayBoundsData bounds))
+            startY = bounds.Origin.y + raycastHeightPadding;
 
         return new Vector3(worldX, startY, worldZ);
     }

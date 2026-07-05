@@ -4,7 +4,7 @@ using UnityEngine.EventSystems;
 public class RTSCameraPivotController : MonoBehaviour
 {
     [Header("Movement")]
-    [Tooltip("화면 가장자리에서 이 픽셀 범위 안에 마우스가 들어오면 카메라가 자동으로 이동합니다.")]
+    [Tooltip("화면 가장자리에서 이 픽셀 범위 안에 마우스가 들어오면 카메라가 자동으로 이동합니다. 키보드 이동은 방향키(↑↓←→)입니다.")]
     public float edgeSize = 20f;
 
     [Header("Middle Mouse Drag")]
@@ -61,14 +61,54 @@ public class RTSCameraPivotController : MonoBehaviour
     [Tooltip("Home 키를 눌렀을 때 카메라가 이동할 월드 좌표입니다. Use Custom Home Position이 켜져 있을 때만 사용됩니다.")]
     public Vector3 customHomePosition;
 
-    [Header("Terrain Bounds")]
-    [Tooltip("화면에 보이는 영역이 맵을 벗어나지 않도록 카메라를 제한합니다. 이 값만큼 가장자리에서 추가 여백을 둡니다. 0이면 보이는 영역의 끝이 맵 끝에 딱 맞고, 음수면 맵 밖이 조금 보입니다.")]
+    [Header("Map Bounds")]
+    [Tooltip("Auto: MapGrid(NavMesh) → Manual 순으로 맵 크기를 찾습니다.")]
+    public MapPlayBoundsSource boundsSource = MapPlayBoundsSource.Auto;
+
+    [Tooltip("Manual/Auto fallback용 맵 원점(왼쪽 아래 모서리)입니다.")]
+    public Vector3 manualMapOrigin;
+
+    [Tooltip("Manual/Auto fallback용 맵 크기(X=가로, Y=세로)입니다.")]
+    public Vector2 manualMapSize = new Vector2(256f, 256f);
+
+    [Header("Camera Edge Limit")]
+    [Tooltip("플레이 맵 가장자리 안쪽으로 남길 여백(미터)입니다. 0이면 화면 끝이 맵 끝에 맞춰집니다.")]
     public float edgeMargin = 0f;
 
-    private Terrain terrain;
+    [Tooltip("플레이 맵 밖으로 카메라가 더 보여줄 수 있는 최대 거리(미터)입니다. 검은 void 배경 크기는 이 값 이상으로 잡으세요.")]
+    public float maxPanBeyondMap = 24f;
 
-    private float terrainWidth;
-    private float terrainLength;
+    public float MaxPanBeyondMap => maxPanBeyondMap;
+
+    public bool TryGetPlayableMapBounds(out MapPlayBoundsData bounds)
+    {
+        bounds = mapBounds;
+        return mapBoundsValid;
+    }
+
+    public bool TryGetExtendedPanBounds(
+        out float minX,
+        out float maxX,
+        out float minZ,
+        out float maxZ)
+    {
+        minX = 0f;
+        maxX = 0f;
+        minZ = 0f;
+        maxZ = 0f;
+
+        if (!mapBoundsValid)
+            return false;
+
+        minX = mapBounds.Origin.x - maxPanBeyondMap;
+        maxX = mapBounds.Origin.x + mapBounds.Width + maxPanBeyondMap;
+        minZ = mapBounds.Origin.z - maxPanBeyondMap;
+        maxZ = mapBounds.Origin.z + mapBounds.Length + maxPanBeyondMap;
+        return true;
+    }
+
+    private MapPlayBoundsData mapBounds;
+    private bool mapBoundsValid;
 
     private Vector3 targetPosition;
     private Vector3 moveVelocity;
@@ -83,23 +123,17 @@ public class RTSCameraPivotController : MonoBehaviour
     {
         EnsureEventSystem();
         EnsureGameSystems();
+        ResolveMapBounds();
 
-        terrain = Terrain.activeTerrain;
-
-        if (terrain == null)
+        if (!mapBoundsValid)
         {
-            Debug.LogError("Terrain not found");
+            Debug.LogError(
+                "RTSCameraPivotController: Map bounds not found. " +
+                "Mesh 지형은 MapGrid(NavMesh bounds) 또는 Manual Map Size를 설정하세요.");
             return;
         }
 
-        terrainWidth = terrain.terrainData.size.x;
-        terrainLength = terrain.terrainData.size.z;
-
-        Vector3 mapCenter = new Vector3(
-            terrainWidth * 0.5f,
-            0f,
-            terrainLength * 0.5f);
-
+        Vector3 mapCenter = mapBounds.Center;
         Vector3 startPosition = mapCenter;
 
         if (startFocusTarget != null)
@@ -152,9 +186,18 @@ public class RTSCameraPivotController : MonoBehaviour
             mainCamera.farClipPlane = requiredFar;
     }
 
+    void ResolveMapBounds()
+    {
+        mapBoundsValid = MapPlayBounds.TryResolve(
+            boundsSource,
+            manualMapOrigin,
+            manualMapSize,
+            out mapBounds);
+    }
+
     void Update()
     {
-        if (terrain == null)
+        if (!mapBoundsValid)
             return;
 
         bool pointerOverUI = IsPointerOverUI();
@@ -215,7 +258,7 @@ public class RTSCameraPivotController : MonoBehaviour
 
     public void FocusOnPosition(Vector3 worldPosition)
     {
-        targetPosition = ClampToTerrain(
+        targetPosition = ClampToMapBounds(
             new Vector3(
                 worldPosition.x,
                 targetPosition.y,
@@ -227,8 +270,7 @@ public class RTSCameraPivotController : MonoBehaviour
         if (isDragPanning)
             return;
 
-        float horizontal = Input.GetAxisRaw("Horizontal");
-        float vertical = Input.GetAxisRaw("Vertical");
+        GetArrowKeyPanInput(out float horizontal, out float vertical);
 
         if (Mathf.Abs(horizontal) < 0.01f &&
             Mathf.Abs(vertical) < 0.01f)
@@ -255,7 +297,25 @@ public class RTSCameraPivotController : MonoBehaviour
             moveSpeed *
             Time.deltaTime;
 
-        targetPosition = ClampToTerrain(targetPosition);
+        targetPosition = ClampToMapBounds(targetPosition);
+    }
+
+    static void GetArrowKeyPanInput(out float horizontal, out float vertical)
+    {
+        horizontal = 0f;
+        vertical = 0f;
+
+        if (Input.GetKey(KeyCode.LeftArrow))
+            horizontal -= 1f;
+
+        if (Input.GetKey(KeyCode.RightArrow))
+            horizontal += 1f;
+
+        if (Input.GetKey(KeyCode.DownArrow))
+            vertical -= 1f;
+
+        if (Input.GetKey(KeyCode.UpArrow))
+            vertical += 1f;
     }
 
     void DragPan()
@@ -297,7 +357,7 @@ public class RTSCameraPivotController : MonoBehaviour
             panSpeed;
 
         targetPosition += pan;
-        targetPosition = ClampToTerrain(targetPosition);
+        targetPosition = ClampToMapBounds(targetPosition);
     }
 
     void EdgeScrollMove()
@@ -343,7 +403,7 @@ public class RTSCameraPivotController : MonoBehaviour
             moveSpeed *
             Time.deltaTime;
 
-        targetPosition = ClampToTerrain(targetPosition);
+        targetPosition = ClampToMapBounds(targetPosition);
     }
 
     float GetZoomRatio()
@@ -389,7 +449,7 @@ public class RTSCameraPivotController : MonoBehaviour
         targetPosition +=
             new Vector3(offset.x, 0f, offset.z);
 
-        targetPosition = ClampToTerrain(targetPosition);
+        targetPosition = ClampToMapBounds(targetPosition);
     }
 
     void ZoomOrthographic(float scroll)
@@ -451,11 +511,7 @@ public class RTSCameraPivotController : MonoBehaviour
 
     float GetGroundHeightAt(Vector3 position)
     {
-        if (terrain == null)
-            return 0f;
-
-        return terrain.SampleHeight(
-            new Vector3(position.x, 0f, position.z));
+        return MapPlayBounds.SampleGroundHeight(position);
     }
 
     void ApplySmoothMovement()
@@ -477,7 +533,7 @@ public class RTSCameraPivotController : MonoBehaviour
             Quaternion.Euler(0f, smoothedYaw, 0f);
     }
 
-    Vector3 ClampToTerrain(Vector3 pos)
+    Vector3 ClampToMapBounds(Vector3 pos)
     {
         if (mainCamera == null)
             return pos;
@@ -488,13 +544,13 @@ public class RTSCameraPivotController : MonoBehaviour
             out float offMinZ,
             out float offMaxZ);
 
-        float xMin = edgeMargin - offMinX;
-        float xMax = terrainWidth - edgeMargin - offMaxX;
-        float zMin = edgeMargin - offMinZ;
-        float zMax = terrainLength - edgeMargin - offMaxZ;
+        float xMin = mapBounds.Origin.x - maxPanBeyondMap + edgeMargin - offMinX;
+        float xMax = mapBounds.Origin.x + mapBounds.Width + maxPanBeyondMap - edgeMargin - offMaxX;
+        float zMin = mapBounds.Origin.z - maxPanBeyondMap + edgeMargin - offMinZ;
+        float zMax = mapBounds.Origin.z + mapBounds.Length + maxPanBeyondMap - edgeMargin - offMaxZ;
 
-        pos.x = ClampOrCenter(pos.x, xMin, xMax, terrainWidth * 0.5f);
-        pos.z = ClampOrCenter(pos.z, zMin, zMax, terrainLength * 0.5f);
+        pos.x = ClampOrCenter(pos.x, xMin, xMax, mapBounds.Center.x);
+        pos.z = ClampOrCenter(pos.z, zMin, zMax, mapBounds.Center.z);
 
         return pos;
     }
@@ -518,7 +574,7 @@ public class RTSCameraPivotController : MonoBehaviour
         minZ = 0f;
         maxZ = 0f;
 
-        if (mainCamera == null || terrain == null)
+        if (mainCamera == null || !mapBoundsValid)
             return false;
 
         float groundY = GetGroundHeightAt(transform.position);
@@ -550,10 +606,10 @@ public class RTSCameraPivotController : MonoBehaviour
 
             Vector3 point = ray.GetPoint(distance);
 
-            float terrainHeight = GetGroundHeightAt(point);
+            float groundHeight = GetGroundHeightAt(point);
 
             Plane localPlane =
-                new Plane(Vector3.up, new Vector3(0f, terrainHeight, 0f));
+                new Plane(Vector3.up, new Vector3(0f, groundHeight, 0f));
 
             if (localPlane.Raycast(ray, out float localDistance))
                 point = ray.GetPoint(localDistance);

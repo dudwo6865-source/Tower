@@ -7,6 +7,9 @@ public class WattManager : MonoBehaviour
     public static WattManager Instance { get; private set; }
 
     [Header("Watt")]
+    [Tooltip("Watt 최대 충전량입니다.")]
+    public float maxWatt = 100f;
+
     [Tooltip("배틀 시작 시 보유 Watt입니다.")]
     public float startingWatt = 50f;
 
@@ -14,6 +17,21 @@ public class WattManager : MonoBehaviour
     public float incomePerSecond = 5f;
 
     public float CurrentWatt { get; private set; }
+
+    public float MaxWatt => Mathf.Max(0f, maxWatt);
+
+    public float FillRatio
+    {
+        get
+        {
+            if (MaxWatt <= 0f)
+                return 0f;
+
+            return Mathf.Clamp01(CurrentWatt / MaxWatt);
+        }
+    }
+
+    public bool IsFull => MaxWatt > 0f && CurrentWatt >= MaxWatt - 0.001f;
 
     public event Action<float> OnWattChanged;
 
@@ -26,7 +44,7 @@ public class WattManager : MonoBehaviour
         }
 
         Instance = this;
-        CurrentWatt = Mathf.Max(0f, startingWatt);
+        CurrentWatt = ClampWatt(Mathf.Max(0f, startingWatt));
         NotifyChanged();
     }
 
@@ -38,7 +56,7 @@ public class WattManager : MonoBehaviour
 
     void Update()
     {
-        if (incomePerSecond <= 0f)
+        if (incomePerSecond <= 0f || IsFull)
             return;
 
         AddWatt(incomePerSecond * Time.deltaTime);
@@ -57,7 +75,7 @@ public class WattManager : MonoBehaviour
         if (!CanAfford(cost))
             return false;
 
-        CurrentWatt -= cost;
+        CurrentWatt = ClampWatt(CurrentWatt - cost);
         NotifyChanged();
         return true;
     }
@@ -67,8 +85,21 @@ public class WattManager : MonoBehaviour
         if (amount <= 0f)
             return;
 
-        CurrentWatt += amount;
+        float before = CurrentWatt;
+        CurrentWatt = ClampWatt(CurrentWatt + amount);
+
+        if (Mathf.Approximately(before, CurrentWatt))
+            return;
+
         NotifyChanged();
+    }
+
+    float ClampWatt(float value)
+    {
+        if (MaxWatt <= 0f)
+            return Mathf.Max(0f, value);
+
+        return Mathf.Clamp(value, 0f, MaxWatt);
     }
 
     void NotifyChanged()

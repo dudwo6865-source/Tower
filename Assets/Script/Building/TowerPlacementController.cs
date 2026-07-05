@@ -72,7 +72,6 @@ public class TowerPlacementController : MonoBehaviour
     private readonly List<Renderer> ghostRenderers = new List<Renderer>();
     private readonly List<Material> ghostMaterials = new List<Material>();
     private Camera mainCamera;
-    private Terrain terrain;
 
     void Awake()
     {
@@ -97,7 +96,6 @@ public class TowerPlacementController : MonoBehaviour
     void Start()
     {
         mainCamera = Camera.main;
-        terrain = Terrain.activeTerrain;
 
         if (UnitSelectionManager.Instance != null)
             localPlayerOwnerId = UnitSelectionManager.Instance.localPlayerOwnerId;
@@ -226,6 +224,7 @@ public class TowerPlacementController : MonoBehaviour
             selectable.ownerId = data.ownerId > 0
                 ? data.ownerId
                 : localPlayerOwnerId;
+            selectable.entityTypeId = data.GetEntityTypeId();
         }
 
         WorldHealthBar healthBar =
@@ -236,7 +235,13 @@ public class TowerPlacementController : MonoBehaviour
 
         GridFootprint footprint = GridFootprint.EnsureOnInstance(towerObject);
         footprint.snapTransformOnRegister = true;
-        footprint.RegisterAtOriginCell(originCell);
+
+        if (!footprint.RegisterAtOriginCell(originCell))
+        {
+            Debug.LogWarning(
+                $"TowerPlacementController: '{data.name}' footprint registration failed at {originCell}.",
+                towerObject);
+        }
     }
 
     void UpdateGhostTransform()
@@ -403,15 +408,12 @@ public class TowerPlacementController : MonoBehaviour
             return TryFinalizePlacementPoint(SnapToGround(candidate), out placementPoint);
         }
 
-        if (terrain == null)
-            terrain = Terrain.activeTerrain;
-
-        if (terrain == null)
-            return false;
+        float groundY = MapPlayBounds.SampleGroundHeight(
+            ray.origin + ray.direction * 50f);
 
         Plane groundPlane = new Plane(
             Vector3.up,
-            terrain.transform.position);
+            new Vector3(0f, groundY, 0f));
 
         if (!groundPlane.Raycast(ray, out float distance))
             return false;
@@ -440,23 +442,7 @@ public class TowerPlacementController : MonoBehaviour
 
     Vector3 SnapToGround(Vector3 worldPoint)
     {
-        MapGrid grid = MapGrid.Instance;
-
-        if (grid != null)
-        {
-            worldPoint.y = grid.SampleGroundHeight(worldPoint);
-            return worldPoint;
-        }
-
-        if (terrain == null)
-            terrain = Terrain.activeTerrain;
-
-        if (terrain == null)
-            return worldPoint;
-
-        worldPoint.y = terrain.SampleHeight(worldPoint) +
-                       terrain.transform.position.y;
-
+        worldPoint.y = MapPlayBounds.SampleGroundHeight(worldPoint);
         return worldPoint;
     }
 
@@ -497,12 +483,7 @@ public class TowerPlacementController : MonoBehaviour
 
         ghostObject = (GameObject)Instantiate(prefab);
         ghostObject.name = "TowerPlacementGhost";
-
-        foreach (Collider collider in ghostObject.GetComponentsInChildren<Collider>())
-            collider.enabled = false;
-
-        foreach (MonoBehaviour behaviour in ghostObject.GetComponentsInChildren<MonoBehaviour>())
-            behaviour.enabled = false;
+        ConfigureGhostNonColliding(ghostObject);
 
         ghostRenderers.Clear();
         ghostMaterials.Clear();
@@ -526,6 +507,38 @@ public class TowerPlacementController : MonoBehaviour
         }
 
         return true;
+    }
+
+    static void ConfigureGhostNonColliding(GameObject ghost)
+    {
+        const int IgnoreRaycastLayer = 2;
+
+        foreach (Transform child in ghost.GetComponentsInChildren<Transform>(true))
+            child.gameObject.layer = IgnoreRaycastLayer;
+
+        foreach (Collider collider in ghost.GetComponentsInChildren<Collider>(true))
+            collider.enabled = false;
+
+        foreach (NavMeshObstacle obstacle in ghost.GetComponentsInChildren<NavMeshObstacle>(true))
+        {
+            obstacle.carving = false;
+            obstacle.enabled = false;
+        }
+
+        foreach (NavMeshAgent agent in ghost.GetComponentsInChildren<NavMeshAgent>(true))
+            agent.enabled = false;
+
+        foreach (Rigidbody body in ghost.GetComponentsInChildren<Rigidbody>(true))
+        {
+            body.isKinematic = true;
+            body.detectCollisions = false;
+        }
+
+        foreach (CharacterController controller in ghost.GetComponentsInChildren<CharacterController>(true))
+            controller.enabled = false;
+
+        foreach (MonoBehaviour behaviour in ghost.GetComponentsInChildren<MonoBehaviour>(true))
+            behaviour.enabled = false;
     }
 
     static bool IsSpawnablePrefab(GameObject prefab, string dataName)
