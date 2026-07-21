@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 63b9589c94b7f8845aff0903c96d4d8a, type: 3}
+  m_Name: TestMap
+  m_EditorClassIdentifier: 
+  displayName: New Map
+  description: 
+  previewImage: {fileID: 0}
+  mapRootPrefab: {fileID: 0}
+  cellSize: 2
+  overrideEconomy: 1
+  maxWatt: 100
+  startingWatt: 50
+  incomePerSecond: 5
+  overrideDayNight: 1
+  startPhase: 0
+  dayDuration: 120
+  nightDuration: 60
+  overrideWave: 1
+  initialEnemyCount: 12
+  initialEnemiesAdvanceToBase: 0
+  nightWaveStartDelay: 3
+  waveInterval: 12
+  enemiesPerSpawnerPerWave: 0
+  maxWavesPerNight: 0

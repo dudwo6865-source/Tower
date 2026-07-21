@@ -1,0 +1,39 @@
+{
+  // Unity가 실행 중 끊임없이 다시 쓰는 생성 폴더들을 파일 감시(watcher)에서 제외합니다.
+  // 이것이 커서 실행 중 CPU/팬 부하의 주된 원인입니다. (Library는 4만+ 파일, ~2GB)
+  "files.watcherExclude": {
+    "**/Library/**": true,
+    "**/Temp/**": true,
+    "**/Obj/**": true,
+    "**/obj/**": true,
+    "**/Build/**": true,
+    "**/Builds/**": true,
+    "**/Logs/**": true,
+    "**/UserSettings/**": true,
+    "**/MemoryCaptures/**": true,
+    "**/.git/objects/**": true
+  },
+
+  // 전체 텍스트 검색 및 인덱싱 대상에서도 제외합니다.
+  "search.exclude": {
+    "**/Library/**": true,
+    "**/Temp/**": true,
+    "**/Obj/**": true,
+    "**/obj/**": true,
+    "**/Build/**": true,
+    "**/Builds/**": true,
+    "**/Logs/**": true,
+    "**/UserSettings/**": true,
+    "**/MemoryCaptures/**": true
+  },
+
+  // 탐색기 트리에서 숨겨 렌더링 부하도 줄입니다.
+  "files.exclude": {
+    "**/Library/**": true,
+    "**/Temp/**": true,
+    "**/Obj/**": true,
+    "**/obj/**": true,
+    "**/Logs/**": true,
+    "**/MemoryCaptures/**": true
+  }
+}

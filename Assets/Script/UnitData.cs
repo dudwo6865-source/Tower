@@ -13,6 +13,13 @@ public class UnitData : ScriptableObject
     [Tooltip("같은 타입 전체 선택(더블클릭)에 사용되는 타입 ID입니다. 예: tank, barracks")]
     public string entityTypeId = "unit";
 
+    [Header("UI")]
+    [Tooltip("선택 정보 패널에 표시할 이름입니다. 비워두면 entityTypeId를 사용합니다.")]
+    public string displayName;
+
+    [Tooltip("선택 정보 패널에 표시할 초상화입니다. SelectableEntity.portrait가 없을 때만 사용됩니다.")]
+    public Sprite portrait;
+
     [Header("체력 (Health)")]
     [Tooltip("최대 체력입니다.")]
     public float maxHealth = 100f;
@@ -51,8 +58,11 @@ public class UnitData : ScriptableObject
     [Tooltip("머즐 플래시 / 투사체 색상입니다.")]
     public Color projectileColor = new Color(1f, 0.85f, 0.3f, 1f);
 
-    [Tooltip("피격 이펙트 색상입니다.")]
+    [Tooltip("피격 이펙트 색상입니다. 프리팹이 없을 때만 사용됩니다.")]
     public Color hitColor = new Color(1f, 0.5f, 0.2f, 1f);
+
+    [Header("공격 이펙트")]
+    public CombatEffectPrefabs combatEffects;
 
     [Header("전투 AI (UnitCombatAI)")]
     [Tooltip("전투 AI를 사용합니다. 자동 교전/이동이 필요한 유닛만 켜세요.")]
@@ -93,9 +103,6 @@ public class UnitData : ScriptableObject
     public float acceleration = 12f;
 
     [Header("체력바 (Health Bar)")]
-    [Tooltip("체력바의 월드 기준 너비입니다. 0이면 콜라이더 크기에 맞게 자동 설정합니다.")]
-    public float healthBarWidth = 0f;
-
     [Tooltip("콜라이더 위쪽에서 체력바가 떠 있는 추가 높이입니다.")]
     public float healthBarHeightOffset = 0.3f;
 

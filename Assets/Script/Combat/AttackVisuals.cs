@@ -4,39 +4,70 @@ public static class AttackVisuals
 {
     private static Material sharedMaterial;
 
-    public static void SpawnMuzzleFlash(Vector3 position, Color color)
+    public static void SpawnMuzzleFlash(
+        Vector3 position,
+        Quaternion rotation,
+        GameObject prefab,
+        Color fallbackColor)
     {
-        GameObject flash = CreateSphere("MuzzleFlash", position, 0.35f, color);
+        if (CombatEffectSpawner.Spawn(prefab, position, rotation) != null)
+            return;
+
+        GameObject flash = CreateSphere("MuzzleFlash", position, 0.35f, fallbackColor);
+        flash.transform.rotation = rotation;
         TempVisual temp = flash.AddComponent<TempVisual>();
         temp.Play(0.12f, 0.35f, 0.05f);
     }
 
-    public static void SpawnHitEffect(Vector3 position, Color color)
+    public static void SpawnHitEffect(
+        Vector3 position,
+        GameObject prefab,
+        Color fallbackColor)
     {
-        GameObject hit = CreateSphere("HitEffect", position, 0.3f, color);
+        if (CombatEffectSpawner.Spawn(prefab, position, Quaternion.identity) != null)
+            return;
+
+        GameObject hit = CreateSphere("HitEffect", position, 0.3f, fallbackColor);
         TempVisual temp = hit.AddComponent<TempVisual>();
         temp.Play(0.2f, 0.3f, 0.9f);
     }
 
     public static void SpawnProjectile(
         Vector3 firePosition,
+        Quaternion rotation,
         SelectableEntity target,
         EntityHealth targetHealth,
         float damage,
         float speed,
-        Color color,
-        Color hitColor)
+        GameObject prefab,
+        GameObject hitEffectPrefab,
+        Color fallbackProjectileColor,
+        Color fallbackHitColor,
+        SelectableEntity attacker = null)
     {
-        GameObject projectileObject =
-            CreateSphere("Projectile", firePosition, 0.25f, color);
+        GameObject projectileObject;
 
-        Projectile projectile = projectileObject.AddComponent<Projectile>();
+        if (prefab != null)
+            projectileObject = CombatEffectSpawner.Spawn(prefab, firePosition, rotation);
+        else
+            projectileObject = CreateSphere("Projectile", firePosition, 0.25f, fallbackProjectileColor);
+
+        if (projectileObject == null)
+            return;
+
+        Projectile projectile = projectileObject.GetComponent<Projectile>();
+
+        if (projectile == null)
+            projectile = projectileObject.AddComponent<Projectile>();
+
         projectile.Initialize(
             target,
             targetHealth,
             damage,
             speed,
-            hitColor);
+            hitEffectPrefab,
+            fallbackHitColor,
+            attacker);
     }
 
     static GameObject CreateSphere(

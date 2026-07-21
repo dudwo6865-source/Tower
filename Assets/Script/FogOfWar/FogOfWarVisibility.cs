@@ -3,7 +3,7 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class FogOfWarVisibility : MonoBehaviour
 {
-    [Tooltip("탐색됐지만 현재 시야 밖일 때도 숨깁니다. (적 유닛·건물에 권장)")]
+    [Tooltip("탐색된 지역에서 현재 시야 밖일 때 숨깁니다. 한 번 시야에 들어온 적은 탐색 지역 안에서는 시야 밖에서도 계속 표시됩니다.")]
     public bool hideWhenNotVisible = true;
 
     private SelectableEntity selectableEntity;
@@ -11,6 +11,8 @@ public class FogOfWarVisibility : MonoBehaviour
     private WorldHealthBar healthBar;
 
     private bool lastVisible = true;
+    private bool lastShown = true;
+    private bool hasBeenRevealed;
 
     public bool IsCurrentlyVisible => lastVisible;
 
@@ -34,7 +36,12 @@ public class FogOfWarVisibility : MonoBehaviour
         lastVisible = manager.EvaluateEntityGameplayVisibility(
             GetVisibilityBounds(),
             lastVisible);
-        ApplyVisibility(lastVisible);
+
+        if (lastVisible)
+            hasBeenRevealed = true;
+
+        lastShown = ShouldShow(lastVisible);
+        ApplyVisibility(lastShown);
     }
 
     Bounds GetVisibilityBounds()
@@ -67,21 +74,45 @@ public class FogOfWarVisibility : MonoBehaviour
         if (selectableEntity.ownerId == manager.LocalPlayerOwnerId)
             return;
 
-        bool visible = manager.EvaluateEntityGameplayVisibility(
+        bool inVision = manager.EvaluateEntityGameplayVisibility(
             GetVisibilityBounds(),
             lastVisible);
 
-        if (visible == lastVisible)
+        if (inVision)
+            hasBeenRevealed = true;
+
+        lastVisible = inVision;
+
+        bool shouldShow = ShouldShow(inVision);
+
+        if (shouldShow == lastShown)
             return;
 
-        lastVisible = visible;
-        ApplyVisibility(visible);
+        lastShown = shouldShow;
+        ApplyVisibility(shouldShow);
     }
 
-    void ApplyVisibility(bool visible)
+    bool ShouldShow(bool inVision)
     {
-        bool show = visible || !hideWhenNotVisible;
+        if (!hideWhenNotVisible)
+            return true;
 
+        if (inVision)
+            return true;
+
+        if (!hasBeenRevealed)
+            return false;
+
+        FogOfWarManager manager = FogOfWarManager.Instance;
+
+        if (manager == null)
+            return true;
+
+        return manager.IsEntityExplored(GetVisibilityBounds());
+    }
+
+    void ApplyVisibility(bool show)
+    {
         foreach (Renderer renderer in renderers)
         {
             if (renderer == null)

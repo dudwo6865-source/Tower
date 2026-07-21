@@ -31,6 +31,9 @@ public class UnitSelectionManager : MonoBehaviour
     [Tooltip("단일 클릭·더블클릭 선택에만 적용됩니다. 드래그 박스 선택은 종류와 관계없이 범위 안 전체를 고릅니다.")]
     public SelectionTypeFilter typeFilter = SelectionTypeFilter.All;
 
+    [Tooltip("켜면 적(다른 오너) 유닛·건물도 단일 클릭으로 선택해 정보를 볼 수 있습니다. 드래그 박스·다중 선택에는 포함되지 않습니다.")]
+    public bool allowEnemySingleSelect = true;
+
     private readonly List<SelectableEntity> selectedEntities =
         new List<SelectableEntity>();
 
@@ -43,6 +46,8 @@ public class UnitSelectionManager : MonoBehaviour
 
     private SelectionBoxUI selectionBoxUI;
     private Camera selectionCamera;
+
+    public event System.Action OnSelectionChanged;
 
     void Awake()
     {
@@ -119,6 +124,9 @@ public class UnitSelectionManager : MonoBehaviour
             UnitCommandController.Instance.HasPendingMode)
             return;
 
+        if (BuildingCommandHandler.TryIssueRallyPointFromRightClick())
+            return;
+
         UnitCommandHandler.TryIssueCommandToSelection();
     }
 
@@ -151,11 +159,10 @@ public class UnitSelectionManager : MonoBehaviour
         }
 
         Vector2 end = Input.mousePosition;
-        bool releasedOverUI = IsPointerOverUI();
 
-        if (isBoxDragging && !releasedOverUI)
+        if (isBoxDragging)
             HandleBoxSelect(dragStartScreen, end);
-        else if (!isBoxDragging && !releasedOverUI)
+        else if (!IsPointerOverUI())
             HandleSingleClick();
 
         selectionBoxUI.Hide();
@@ -192,6 +199,19 @@ public class UnitSelectionManager : MonoBehaviour
         SelectableEntity entity =
             hit.collider.GetComponentInParent<SelectableEntity>();
 
+        // 적(다른 오너)은 항상 단독으로만 선택한다. 시프트/컨트롤/더블클릭 다중 선택은 무시.
+        if (entity != null &&
+            allowEnemySingleSelect &&
+            !CanSelectEntityByOwner(entity))
+        {
+            DeselectAll();
+            SelectEntity(entity);
+
+            lastClickedEntity = entity;
+            lastClickTime = Time.time;
+            return;
+        }
+
         if (entity == null || !CanSelectEntity(entity))
         {
             if (!Input.GetKey(KeyCode.LeftShift) && !Input.GetKey(KeyCode.LeftControl))
@@ -209,7 +229,7 @@ public class UnitSelectionManager : MonoBehaviour
             SelectAllSameTypeOnScreen(entity);
 
             if (cameraController != null)
-                cameraController.FocusOnPosition(entity.transform.position);
+                cameraController.FocusOnPosition(GetEntityFocusPoint(entity));
         }
         else if (Input.GetKey(KeyCode.LeftControl))
         {
@@ -231,6 +251,9 @@ public class UnitSelectionManager : MonoBehaviour
     {
         Rect selectionRect = GetScreenRect(screenStart, screenEnd);
         List<SelectableEntity> entitiesInBox = GetEntitiesInRect(selectionRect);
+
+        // 박스 안에 유닛과 건물이 함께 있으면 유닛만 선택한다. (유닛이 없으면 건물 선택 허용)
+        entitiesInBox = PreferUnitsInBox(entitiesInBox);
 
         if (entitiesInBox.Count == 0)
         {
@@ -273,6 +296,34 @@ public class UnitSelectionManager : MonoBehaviour
 
             SelectEntity(entity);
         }
+    }
+
+    // 목록에 유닛이 하나라도 있으면 유닛만 남긴다. 유닛이 없으면 원본(건물 등)을 그대로 반환한다.
+    static List<SelectableEntity> PreferUnitsInBox(List<SelectableEntity> entities)
+    {
+        bool hasUnit = false;
+
+        foreach (SelectableEntity entity in entities)
+        {
+            if (entity != null && entity.entityType == SelectableEntityType.Unit)
+            {
+                hasUnit = true;
+                break;
+            }
+        }
+
+        if (!hasUnit)
+            return entities;
+
+        List<SelectableEntity> unitsOnly = new List<SelectableEntity>();
+
+        foreach (SelectableEntity entity in entities)
+        {
+            if (entity != null && entity.entityType == SelectableEntityType.Unit)
+                unitsOnly.Add(entity);
+        }
+
+        return unitsOnly;
     }
 
     List<SelectableEntity> GetEntitiesInRect(Rect screenRect)
@@ -409,6 +460,8 @@ public class UnitSelectionManager : MonoBehaviour
 
     void NotifySelectionChanged()
     {
+        OnSelectionChanged?.Invoke();
+
         if (UnitCommandController.HasInstance)
             UnitCommandController.Instance.OnSelectionChanged();
     }
@@ -457,7 +510,7 @@ public class UnitSelectionManager : MonoBehaviour
             if (entity == null)
                 continue;
 
-            center += entity.transform.position;
+            center += GetEntityFocusPoint(entity);
             count++;
         }
 
@@ -467,6 +520,17 @@ public class UnitSelectionManager : MonoBehaviour
         center /= count;
 
         cameraController.FocusOnPosition(center);
+    }
+
+    static Vector3 GetEntityFocusPoint(SelectableEntity entity)
+    {
+        if (entity == null)
+            return Vector3.zero;
+
+        Bounds bounds = entity.SelectionBounds;
+        Vector3 point = bounds.center;
+        point.y = MapPlayBounds.SampleGroundHeight(point);
+        return point;
     }
 
     public IReadOnlyList<SelectableEntity> GetSelectedEntities()

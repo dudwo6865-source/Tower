@@ -21,6 +21,10 @@ public class SelectableEntity : MonoBehaviour
     [Tooltip("선택/체력바 기준이 되는 콜라이더입니다. 비워두면 자식에서 자동으로 찾습니다. (Root 본의 콜라이더 등)")]
     public Collider selectionCollider;
 
+    [Header("UI")]
+    [Tooltip("선택 정보 패널 등에 표시할 초상화입니다. 비워두면 UnitData.portrait를 사용합니다.")]
+    public Sprite portrait;
+
     [Header("Health")]
     [Tooltip("EntityHealth와 WorldHealthBar가 없으면 자동으로 추가합니다.")]
     public bool autoSetupHealth = true;
@@ -85,12 +89,23 @@ public class SelectableEntity : MonoBehaviour
     public void SetSelected(bool selected)
     {
         IsSelected = selected;
-        GetOrCreateRingIndicator().SetVisible(selected);
+
+        SelectionRingIndicator ring = GetOrCreateRingIndicator();
+        ring.SetColor(IsEnemyOfLocalPlayer()
+            ? SelectionRingIndicator.EnemyRingColor
+            : SelectionRingIndicator.AllyRingColor);
+        ring.SetVisible(selected);
 
         WorldHealthBar healthBar = GetComponent<WorldHealthBar>();
 
         if (healthBar != null)
             healthBar.RefreshVisibility();
+    }
+
+    bool IsEnemyOfLocalPlayer()
+    {
+        UnitSelectionManager manager = UnitSelectionManager.Instance;
+        return manager != null && ownerId != manager.localPlayerOwnerId;
     }
 
     void EnsureHealthComponents()

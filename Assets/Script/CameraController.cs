@@ -47,8 +47,12 @@ public class RTSCameraPivotController : MonoBehaviour
     [Tooltip("[원근 모드] 카메라가 가장 멀리 떨어질 수 있는 최대 거리입니다.")]
     public float maxCameraDistance = 60f;
 
+    [Header("Focus")]
+    [Tooltip("선택·더블클릭 포커스 시 대상이 맞춰질 화면 위치입니다. Y를 낮출수록 유닛이 화면 아래쪽에 배치됩니다.")]
+    public Vector2 focusViewport = new Vector2(0.5f, 0.38f);
+
     [Header("Start Focus")]
-    [Tooltip("게임 시작 시 카메라가 이 대상(예: 본진 건물)을 중심으로 시작합니다. 비워두면 맵 중앙에서 시작합니다.")]
+    [Tooltip("게임 시작 시 카메라가 이 대상(예: 본진 건물)을 Focus Viewport 위치에 맞춥니다. 비워두면 맵 중앙에서 시작합니다.")]
     public Transform startFocusTarget;
 
     [Tooltip("켜면 Home 키를 눌렀을 때도 Start Focus Target 위치로 돌아갑니다. (Use Custom Home Position이 꺼져 있을 때)")]
@@ -134,26 +138,44 @@ public class RTSCameraPivotController : MonoBehaviour
         }
 
         Vector3 mapCenter = mapBounds.Center;
-        Vector3 startPosition = mapCenter;
+
+        SetupProjection();
+
+        transform.position = mapCenter;
+        targetPosition = mapCenter;
+        targetYaw = transform.eulerAngles.y;
 
         if (startFocusTarget != null)
-        {
-            startPosition.x = startFocusTarget.position.x;
-            startPosition.z = startFocusTarget.position.z;
-        }
-
-        transform.position = startPosition;
-        targetPosition = startPosition;
-        targetYaw = transform.eulerAngles.y;
+            ApplyInstantFocus(startFocusTarget.position);
 
         if (useCustomHomePosition)
             homePosition = customHomePosition;
-        else if (startFocusTarget != null && homeReturnsToStartFocus)
-            homePosition = startPosition;
         else
             homePosition = mapCenter;
+    }
 
-        SetupProjection();
+    void ApplyInstantFocus(Vector3 worldPosition)
+    {
+        FocusOnPosition(worldPosition);
+        transform.position = targetPosition;
+        moveVelocity = Vector3.zero;
+    }
+
+    void FocusHome()
+    {
+        if (useCustomHomePosition)
+        {
+            FocusOnPosition(homePosition);
+            return;
+        }
+
+        if (startFocusTarget != null && homeReturnsToStartFocus)
+        {
+            FocusOnPosition(startFocusTarget.position);
+            return;
+        }
+
+        FocusOnPosition(homePosition);
     }
 
     void SetupProjection()
@@ -211,7 +233,7 @@ public class RTSCameraPivotController : MonoBehaviour
         }
 
         if (Input.GetKeyDown(KeyCode.Home))
-            FocusOnPosition(homePosition);
+            FocusHome();
 
         ApplySmoothMovement();
     }
@@ -258,11 +280,29 @@ public class RTSCameraPivotController : MonoBehaviour
 
     public void FocusOnPosition(Vector3 worldPosition)
     {
-        targetPosition = ClampToMapBounds(
-            new Vector3(
-                worldPosition.x,
-                targetPosition.y,
-                worldPosition.z));
+        float groundY = GetGroundHeightAt(worldPosition);
+        Vector3 focusPoint = new Vector3(worldPosition.x, groundY, worldPosition.z);
+        FocusOnGroundPoint(focusPoint);
+    }
+
+    public void FocusOnGroundPoint(Vector3 groundPoint)
+    {
+        if (mainCamera == null)
+        {
+            targetPosition = ClampToMapBounds(
+                new Vector3(
+                    groundPoint.x,
+                    targetPosition.y,
+                    groundPoint.z));
+
+            return;
+        }
+
+        Vector3 viewAnchor = GetGroundPointUnderViewport(focusViewport);
+        Vector3 delta = groundPoint - viewAnchor;
+
+        targetPosition += new Vector3(delta.x, 0f, delta.z);
+        targetPosition = ClampToMapBounds(targetPosition);
     }
 
     void KeyboardMove()
@@ -495,18 +535,34 @@ public class RTSCameraPivotController : MonoBehaviour
 
     Vector3 GetGroundPointUnderMouse()
     {
-        Ray ray =
-            mainCamera.ScreenPointToRay(Input.mousePosition);
+        return GetGroundPointUnderViewport(
+            new Vector2(
+                Input.mousePosition.x / Screen.width,
+                Input.mousePosition.y / Screen.height));
+    }
 
-        float groundY = GetGroundHeightAt(targetPosition);
+    Vector3 GetGroundPointUnderViewport(Vector2 viewport)
+    {
+        if (mainCamera == null)
+            return targetPosition;
+
+        Ray ray = mainCamera.ViewportPointToRay(viewport);
+        return GetGroundPointFromRay(ray, transform.position);
+    }
+
+    Vector3 GetGroundPointFromRay(Ray ray, Vector3 pivotPosition)
+    {
+        float groundY = GetGroundHeightAt(pivotPosition);
 
         Plane groundPlane =
             new Plane(Vector3.up, new Vector3(0f, groundY, 0f));
 
-        if (groundPlane.Raycast(ray, out float distance))
-            return ray.GetPoint(distance);
+        if (!groundPlane.Raycast(ray, out float distance))
+            return targetPosition;
 
-        return targetPosition;
+        Vector3 point = ray.GetPoint(distance);
+        point.y = GetGroundHeightAt(point);
+        return point;
     }
 
     float GetGroundHeightAt(Vector3 position)

@@ -26,7 +26,10 @@ public static class UnitCommandHandler
         SelectableEntity clickedEntity =
             hit.collider.GetComponentInParent<SelectableEntity>();
 
-        if (TryGetEnemyTarget(clickedEntity, manager.localPlayerOwnerId, out SelectableEntity enemy))
+        if (TryGetEnemyTarget(
+                clickedEntity,
+                manager.localPlayerOwnerId,
+                out SelectableEntity enemy))
             IssueAttack(units, enemy);
         else
             IssueMove(units, hit.point);
@@ -37,23 +40,35 @@ public static class UnitCommandHandler
         return TryGetCommandingUnits(out _);
     }
 
-    public static bool TryGetEnemyTarget(
+    public static bool TryGetAttackTarget(
         SelectableEntity entity,
-        int localOwnerId,
-        out SelectableEntity enemy)
+        out SelectableEntity target)
     {
-        enemy = null;
+        target = null;
 
-        if (entity == null || entity.ownerId == localOwnerId)
+        if (entity == null)
             return false;
 
         EntityHealth health = entity.GetComponent<EntityHealth>();
 
-        if (health != null && !health.IsAlive)
+        if (health == null || !health.IsAlive)
             return false;
 
-        enemy = entity;
+        target = entity;
         return true;
+    }
+
+    public static bool TryGetEnemyTarget(
+        SelectableEntity entity,
+        int localOwnerId,
+        out SelectableEntity target)
+    {
+        target = null;
+
+        if (entity == null || entity.ownerId == localOwnerId)
+            return false;
+
+        return TryGetAttackTarget(entity, out target);
     }
 
     public static void IssueStopToSelection()
@@ -80,12 +95,12 @@ public static class UnitCommandHandler
         return IssueMove(units, hitPoint);
     }
 
-    public static bool IssueAttackToSelection(SelectableEntity enemy)
+    public static bool IssueAttackToSelection(SelectableEntity target)
     {
         if (!TryGetCommandingUnits(out List<SelectableEntity> units))
             return false;
 
-        return IssueAttack(units, enemy);
+        return IssueAttack(units, target);
     }
 
     public static bool IssueAttackMoveToSelection(Vector3 hitPoint)
@@ -111,9 +126,15 @@ public static class UnitCommandHandler
         if (UnitSelectionManager.Instance == null)
             return false;
 
+        int localOwnerId = UnitSelectionManager.Instance.localPlayerOwnerId;
+
         foreach (SelectableEntity entity in UnitSelectionManager.Instance.GetSelectedEntities())
         {
             if (entity == null || entity.entityType != SelectableEntityType.Unit)
+                continue;
+
+            // 적 유닛이 선택돼 있어도 명령 대상에서 제외한다(정보용 단일 선택).
+            if (entity.ownerId != localOwnerId)
                 continue;
 
             if (entity.GetComponent<NavMeshAgent>() == null)
@@ -165,7 +186,7 @@ public static class UnitCommandHandler
         UnitCommandIndicatorTracker.ClearTracking();
     }
 
-    static bool IssueAttack(List<SelectableEntity> units, SelectableEntity enemy)
+    static bool IssueAttack(List<SelectableEntity> units, SelectableEntity target)
     {
         bool anyIssued = false;
         var attackTracks = new List<(UnitAttacker attacker, SelectableEntity target)>();
@@ -178,24 +199,23 @@ public static class UnitCommandHandler
             if (combatAI == null || attacker == null)
                 continue;
 
-            UnitCommandDebugLog.Log(combatAI, $"플레이어 명령: 공격 -> {enemy.name}");
+            UnitCommandDebugLog.Log(combatAI, $"플레이어 명령: 공격 -> {target.name}");
 
-            combatAI.AttackTarget(enemy);
-            attackTracks.Add((attacker, enemy));
+            combatAI.AttackTarget(target);
+            attackTracks.Add((attacker, target));
             anyIssued = true;
         }
 
         if (!anyIssued)
             return false;
 
-        UnitCommandIndicatorTracker.TrackAttackTarget(attackTracks, enemy);
+        UnitCommandIndicatorTracker.TrackAttackTarget(attackTracks, target);
         return true;
     }
 
     static bool IssueMove(List<SelectableEntity> units, Vector3 hitPoint)
     {
         bool anyIssued = false;
-        Vector3? indicatorPosition = null;
         var moveTracks = new List<(NavMeshAgent agent, Vector3 destination)>();
 
         foreach (SelectableEntity unit in units)
@@ -223,20 +243,18 @@ public static class UnitCommandHandler
 
             moveTracks.Add((agent, destination));
             anyIssued = true;
-            indicatorPosition ??= destination;
         }
 
-        if (!anyIssued || !indicatorPosition.HasValue)
+        if (!anyIssued)
             return false;
 
-        UnitCommandIndicatorTracker.TrackMoveToPoint(moveTracks, indicatorPosition.Value);
+        UnitCommandIndicatorTracker.TrackMoveToPoint(moveTracks, hitPoint);
         return true;
     }
 
     static bool IssueAttackMove(List<SelectableEntity> units, Vector3 hitPoint)
     {
         bool anyIssued = false;
-        Vector3? indicatorPosition = null;
         var moveTracks = new List<(NavMeshAgent agent, Vector3 destination)>();
 
         foreach (SelectableEntity unit in units)
@@ -260,20 +278,21 @@ public static class UnitCommandHandler
 
             moveTracks.Add((agent, destination));
             anyIssued = true;
-            indicatorPosition ??= destination;
         }
 
-        if (!anyIssued || !indicatorPosition.HasValue)
+        if (!anyIssued)
             return false;
 
-        UnitCommandIndicatorTracker.TrackMoveToPoint(moveTracks, indicatorPosition.Value);
+        UnitCommandIndicatorTracker.TrackMoveToPoint(
+            moveTracks,
+            hitPoint,
+            MoveDestinationIndicator.AttackMoveColor);
         return true;
     }
 
     static bool IssuePatrol(List<SelectableEntity> units, Vector3 hitPoint)
     {
         bool anyIssued = false;
-        Vector3? indicatorPosition = null;
         var moveTracks = new List<(NavMeshAgent agent, Vector3 destination)>();
 
         foreach (SelectableEntity unit in units)
@@ -292,13 +311,12 @@ public static class UnitCommandHandler
 
             moveTracks.Add((agent, destination));
             anyIssued = true;
-            indicatorPosition ??= destination;
         }
 
-        if (!anyIssued || !indicatorPosition.HasValue)
+        if (!anyIssued)
             return false;
 
-        UnitCommandIndicatorTracker.TrackMoveToPoint(moveTracks, indicatorPosition.Value);
+        UnitCommandIndicatorTracker.TrackMoveToPoint(moveTracks, hitPoint);
         return true;
     }
 }

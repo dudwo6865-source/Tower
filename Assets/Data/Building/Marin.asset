@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3881b96314386b042badd45b0c66a0e8, type: 3}
+  m_Name: Marin
+  m_EditorClassIdentifier: 
+  unitPrefab: {fileID: 1258975795556199837, guid: d96f2fb610cbbe848b1d14733aedf7c7, type: 3}
+  initialSpawnDelay: 0
+  spawnInterval: 12
+  maxAlivePerBuilding: 4

@@ -153,9 +153,6 @@ PrefabInstance:
       addedObject: {fileID: 5369806134732747381}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: a00a3e4a0cb76914dad695dbcba2246e, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 8445857086186034521}
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: a00a3e4a0cb76914dad695dbcba2246e, type: 3}
-      insertIndex: -1
       addedObject: {fileID: 8367865592795398976}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: a00a3e4a0cb76914dad695dbcba2246e, type: 3}
       insertIndex: -1
@@ -224,6 +221,7 @@ MonoBehaviour:
   ownerId: 1
   entityTypeId: worker
   selectionCollider: {fileID: 0}
+  portrait: {fileID: 0}
   autoSetupHealth: 1
 --- !u!114 &5369806134732747381
 MonoBehaviour:
@@ -241,32 +239,7 @@ MonoBehaviour:
   deathAnimationDuration: 1
   deathSinkDistance: 1.5
   deathEffectColor: {r: 0.3, g: 0.3, b: 0.3, a: 1}
---- !u!114 &8445857086186034521
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8014457485355405843}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: cb8a6c9de3fe8b1458e4548a1aea8319, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  heightOffset: 2
-  barWidth: 0
-  barHeight: 0.3
-  worldScale: 0.03
-  localPlayerOwnerId: 1
-  alwaysShowEnemyBar: 1
-  showWhenSelected: 1
-  showAfterDamageDuration: 3
-  allyFillColor: {r: 0.2, g: 0.9, b: 0.3, a: 1}
-  enemyFillColor: {r: 0.95, g: 0.2, b: 0.2, a: 1}
-  lowHealthColor: {r: 0.95, g: 0.55, b: 0.1, a: 1}
-  lowHealthThreshold: 0.35
-  healthPerSegment: 10
-  segmentSpacing: 2
+  deathEffectPrefab: {fileID: 0}
 --- !u!114 &8367865592795398976
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -315,6 +288,9 @@ MonoBehaviour:
   spawnVisualEffects: 1
   projectileColor: {r: 1, g: 0.85, b: 0.3, a: 1}
   hitColor: {r: 1, g: 0.5, b: 0.2, a: 1}
+  muzzleFlashPrefab: {fileID: 0}
+  hitEffectPrefab: {fileID: 0}
+  projectilePrefab: {fileID: 0}
 --- !u!114 &5350302906054332410
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -348,7 +324,12 @@ MonoBehaviour:
   aggroRange: 12
   targetPriority: 0
   retargetInterval: 0.5
+  damageFocusSwitchMargin: 2
   advanceToEnemyBuildings: 0
+  squadMovement: 1
+  squadRadius: 12
+  squadFollowSpacing: 2.5
+  squadFollowSpread: 3
   stoppingDistance: 2
   destinationRefreshInterval: 0.25
   facingSpeed: 8
@@ -356,6 +337,7 @@ MonoBehaviour:
   stuckRepositionMaxAttempts: 32
   blockedMovementTimeout: 0.6
   patrolArrivalDistance: 1.25
+  shareAggroWithAllies: 1
   debugCommandLog: 0
 --- !u!114 &5369465093440560824
 MonoBehaviour:

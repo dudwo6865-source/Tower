@@ -115,6 +115,22 @@ public class GridOccupancy : MonoBehaviour
             occupiedCells.Remove(cell);
     }
 
+    public bool IsOccupied(Vector2Int cell)
+    {
+        return occupiedCells.ContainsKey(cell);
+    }
+
+    public void CopyOccupiedCellsTo(List<Vector2Int> results)
+    {
+        if (results == null)
+            return;
+
+        results.Clear();
+
+        foreach (Vector2Int cell in occupiedCells.Keys)
+            results.Add(cell);
+    }
+
     static IEnumerable<Vector2Int> IterateFootprint(
         Vector2Int originCell,
         Vector2Int footprintCells)

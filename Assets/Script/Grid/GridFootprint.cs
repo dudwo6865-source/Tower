@@ -13,6 +13,9 @@ public class GridFootprint : MonoBehaviour
     [Tooltip("켜면 footprint 칸을 격자에 점유하고 NavMeshObstacle 크기를 footprint에 맞춥니다.")]
     public bool blockCells = true;
 
+    [Tooltip("켜면 NavMesh에 구멍을 뚫습니다(카빙). 적 스포너처럼 유닛이 위에서 스폰돼 나와야 하는 건물은 끄세요.")]
+    public bool carveNavMesh = true;
+
     [Tooltip("등록 시 transform.position을 footprint 중심 격자에 맞춥니다.")]
     public bool snapTransformOnRegister;
 
@@ -170,11 +173,26 @@ public class GridFootprint : MonoBehaviour
         if (!blockCells)
             return;
 
+        NavMeshObstacle existing = GetComponent<NavMeshObstacle>();
+
+        // 카빙을 끈 건물(예: 적 스포너)은 NavMesh 구멍을 뚫지 않는다.
+        // 유닛이 건물 위에서 스폰돼 나올 수 있어야 하므로 장애물을 비활성화한다.
+        if (!carveNavMesh)
+        {
+            if (existing != null)
+            {
+                existing.carving = false;
+                existing.enabled = false;
+            }
+
+            return;
+        }
+
         float cellSize = MapGrid.Instance != null
             ? MapGrid.Instance.cellSize
             : 2f;
 
-        NavMeshObstacle obstacle = GetComponent<NavMeshObstacle>();
+        NavMeshObstacle obstacle = existing;
 
         if (obstacle == null)
             obstacle = gameObject.AddComponent<NavMeshObstacle>();
@@ -182,12 +200,15 @@ public class GridFootprint : MonoBehaviour
         float width = footprintCells.x * cellSize;
         float depth = footprintCells.y * cellSize;
         float height = obstacle.size.y > 0f ? obstacle.size.y : 4f;
+        float sizeScale = MapGrid.Instance != null
+            ? MapGrid.Instance.navObstacleSizeScale
+            : 0.85f;
 
         obstacle.shape = NavMeshObstacleShape.Box;
         obstacle.size = new Vector3(
-            width * 0.85f,
+            width * sizeScale,
             height,
-            depth * 0.85f);
+            depth * sizeScale);
         obstacle.center = new Vector3(0f, height * 0.5f, 0f);
         obstacle.carving = true;
         obstacle.carveOnlyStationary = true;

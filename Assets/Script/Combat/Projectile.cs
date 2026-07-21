@@ -6,10 +6,12 @@ public class Projectile : MonoBehaviour
     public float maxLifeTime = 5f;
 
     private SelectableEntity target;
+    private SelectableEntity attacker;
     private EntityHealth targetHealth;
     private float damage;
     private float speed;
-    private Color hitColor;
+    private GameObject hitEffectPrefab;
+    private Color hitFallbackColor;
     private Vector3 lastKnownPosition;
     private float lifeTimer;
 
@@ -18,13 +20,17 @@ public class Projectile : MonoBehaviour
         EntityHealth targetHealth,
         float damage,
         float speed,
-        Color hitColor)
+        GameObject hitEffectPrefab,
+        Color hitFallbackColor,
+        SelectableEntity attacker = null)
     {
         this.target = target;
         this.targetHealth = targetHealth;
         this.damage = damage;
         this.speed = speed;
-        this.hitColor = hitColor;
+        this.hitEffectPrefab = hitEffectPrefab;
+        this.hitFallbackColor = hitFallbackColor;
+        this.attacker = attacker;
 
         lastKnownPosition = GetTargetPoint();
     }
@@ -64,9 +70,12 @@ public class Projectile : MonoBehaviour
     void Impact()
     {
         if (targetHealth != null && targetHealth.IsAlive)
-            targetHealth.TakeDamage(damage);
+            targetHealth.TakeDamage(damage, attacker);
 
-        AttackVisuals.SpawnHitEffect(transform.position, hitColor);
+        AttackVisuals.SpawnHitEffect(
+            transform.position,
+            hitEffectPrefab,
+            hitFallbackColor);
         Destroy(gameObject);
     }
 }

@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.AI;
 
 public class EnemySpawner : MonoBehaviour
 {
@@ -16,7 +15,7 @@ public class EnemySpawner : MonoBehaviour
     public int enemyOwnerId = 2;
 
     [Header("Timing")]
-    [Tooltip("시작 시 자동으로 스폰을 시작합니다.")]
+    [Tooltip("WaveManager가 없을 때만 사용합니다. WaveManager가 있으면 자동으로 꺼집니다.")]
     public bool autoStart = true;
 
     [Tooltip("스폰을 시작하기 전 대기 시간(초)입니다.")]
@@ -36,22 +35,22 @@ public class EnemySpawner : MonoBehaviour
     public int maxTotalSpawns = 0;
 
     [Header("Difficulty Scaling")]
-    [Tooltip("스폰 주기마다 한 번에 추가로 생성할 적 수입니다. (예: 1이면 주기마다 +1마리)")]
+    [Tooltip("웨이브/사이클마다 한 번에 추가로 생성할 적 수입니다.")]
     public int enemiesSpawnGrowthPerCycle = 0;
 
     [Tooltip("한 번의 스폰 주기에 생성 가능한 최대 적 수입니다. 0이면 무제한입니다.")]
     public int maxEnemiesPerSpawn = 0;
 
-    [Tooltip("스폰 주기마다 누적되는 체력 증가 비율입니다. (예: 0.08 = 주기당 +8%)")]
+    [Tooltip("웨이브/사이클마다 누적되는 체력 증가 비율입니다.")]
     public float healthGrowthPerCycle = 0.08f;
 
-    [Tooltip("스폰 주기마다 누적되는 공격력 증가 비율입니다.")]
+    [Tooltip("웨이브/사이클마다 누적되는 공격력 증가 비율입니다.")]
     public float damageGrowthPerCycle = 0.05f;
 
-    [Tooltip("스폰 주기마다 누적되는 이동 속도 증가 비율입니다.")]
+    [Tooltip("웨이브/사이클마다 누적되는 이동 속도 증가 비율입니다.")]
     public float speedGrowthPerCycle = 0f;
 
-    [Tooltip("이동 속도 배율의 상한입니다. NavMesh가 깨지지 않도록 제한합니다.")]
+    [Tooltip("이동 속도 배율의 상한입니다.")]
     public float maxSpeedMultiplier = 2f;
 
     public int AliveCount { get; private set; }
@@ -64,10 +63,13 @@ public class EnemySpawner : MonoBehaviour
     public event System.Action<int> OnAliveCountChanged;
     public event System.Action<int> OnCycleStarted;
 
-    private Coroutine spawnRoutine;
+    Coroutine spawnRoutine;
 
     void Start()
     {
+        if (WaveManager.Instance != null)
+            return;
+
         if (autoStart)
             StartSpawning();
     }
@@ -89,6 +91,134 @@ public class EnemySpawner : MonoBehaviour
 
         StopCoroutine(spawnRoutine);
         spawnRoutine = null;
+    }
+
+    public int SpawnWaveBurst(int count, int waveIndex, bool? advanceToEnemyBuildings = null)
+    {
+        if (enemyPrefabs.Count == 0 || count <= 0)
+            return 0;
+
+        if (HasReachedTotalSpawnLimit)
+            return 0;
+
+        GetWaveMultipliers(
+            waveIndex,
+            out float healthMultiplier,
+            out float damageMultiplier,
+            out float speedMultiplier);
+
+        int spawned = 0;
+
+        for (int i = 0; i < count; i++)
+        {
+            if (maxAliveEnemies > 0 && AliveCount >= maxAliveEnemies)
+                break;
+
+            if (HasReachedTotalSpawnLimit)
+                break;
+
+            if (SpawnOne(
+                    healthMultiplier,
+                    damageMultiplier,
+                    speedMultiplier,
+                    advanceToEnemyBuildings))
+            {
+                TotalSpawnedCount++;
+                spawned++;
+            }
+        }
+
+        if (spawned > 0)
+        {
+            CycleCount++;
+            OnCycleStarted?.Invoke(CycleCount);
+        }
+
+        return spawned;
+    }
+
+    public GameObject SpawnAtPosition(
+        Vector3 position,
+        int waveIndex,
+        bool? advanceToEnemyBuildings = null)
+    {
+        return SpawnAtPosition(null, position, waveIndex, advanceToEnemyBuildings);
+    }
+
+    // prefabOverride가 지정되면 그 프리팹을, 아니면 enemyPrefabs에서 무작위로 스폰한다.
+    public GameObject SpawnAtPosition(
+        GameObject prefabOverride,
+        Vector3 position,
+        int waveIndex,
+        bool? advanceToEnemyBuildings = null)
+    {
+        if (HasReachedTotalSpawnLimit)
+            return null;
+
+        if (maxAliveEnemies > 0 && AliveCount >= maxAliveEnemies)
+            return null;
+
+        GameObject prefab = prefabOverride != null
+            ? prefabOverride
+            : (enemyPrefabs.Count > 0
+                ? enemyPrefabs[Random.Range(0, enemyPrefabs.Count)]
+                : null);
+
+        if (prefab == null)
+            return null;
+
+        GetWaveMultipliers(
+            waveIndex,
+            out float healthMultiplier,
+            out float damageMultiplier,
+            out float speedMultiplier);
+
+        GameObject enemyObject = EnemySpawnUtility.SpawnEnemy(
+            prefab,
+            position,
+            prefab.transform.rotation,
+            enemyOwnerId,
+            healthMultiplier,
+            damageMultiplier,
+            speedMultiplier,
+            TrackAlive);
+
+        if (enemyObject == null)
+            return null;
+
+        if (advanceToEnemyBuildings.HasValue)
+            EnemySpawnUtility.ApplyAdvanceToEnemyBuildings(
+                enemyObject,
+                advanceToEnemyBuildings.Value);
+
+        TotalSpawnedCount++;
+        return enemyObject;
+    }
+
+    public void GetWaveMultipliers(
+        int waveIndex,
+        out float healthMultiplier,
+        out float damageMultiplier,
+        out float speedMultiplier)
+    {
+        healthMultiplier = 1f + healthGrowthPerCycle * waveIndex;
+        damageMultiplier = 1f + damageGrowthPerCycle * waveIndex;
+
+        // 속도 배율은 기본 1에서 시작해 증가만 하는 값이다.
+        // maxSpeedMultiplier가 1 미만(예: 0)으로 잘못 설정돼도 속도가 0이 되어
+        // 스폰된 적이 아예 움직이지 못하는 것을 막기 위해 하한을 1로 둔다.
+        float speedCap = Mathf.Max(1f, maxSpeedMultiplier);
+        speedMultiplier =
+            Mathf.Min(1f + speedGrowthPerCycle * waveIndex, speedCap);
+    }
+
+    public Vector3 GetSpawnPosition()
+    {
+        Vector3 basePosition = spawnPoints.Count > 0
+            ? spawnPoints[Random.Range(0, spawnPoints.Count)].position
+            : transform.position;
+
+        return EnemySpawnUtility.SampleNavMeshPosition(basePosition);
     }
 
     IEnumerator SpawnLoop()
@@ -128,16 +258,11 @@ public class EnemySpawner : MonoBehaviour
 
     void SpawnCycle()
     {
-        if (enemyPrefabs.Count == 0)
-            return;
-
-        if (HasReachedTotalSpawnLimit)
-            return;
-
-        float healthMultiplier = 1f + healthGrowthPerCycle * CycleCount;
-        float damageMultiplier = 1f + damageGrowthPerCycle * CycleCount;
-        float speedMultiplier =
-            Mathf.Min(1f + speedGrowthPerCycle * CycleCount, maxSpeedMultiplier);
+        GetWaveMultipliers(
+            CycleCount,
+            out float healthMultiplier,
+            out float damageMultiplier,
+            out float speedMultiplier);
 
         int spawnCount = GetEnemiesToSpawnThisCycle();
 
@@ -163,7 +288,23 @@ public class EnemySpawner : MonoBehaviour
     bool SpawnOne(
         float healthMultiplier,
         float damageMultiplier,
-        float speedMultiplier)
+        float speedMultiplier,
+        bool? advanceToEnemyBuildings = null)
+    {
+        return SpawnOneAt(
+            GetSpawnPosition(),
+            healthMultiplier,
+            damageMultiplier,
+            speedMultiplier,
+            advanceToEnemyBuildings);
+    }
+
+    bool SpawnOneAt(
+        Vector3 position,
+        float healthMultiplier,
+        float damageMultiplier,
+        float speedMultiplier,
+        bool? advanceToEnemyBuildings = null)
     {
         GameObject prefab =
             enemyPrefabs[Random.Range(0, enemyPrefabs.Count)];
@@ -171,57 +312,32 @@ public class EnemySpawner : MonoBehaviour
         if (prefab == null)
             return false;
 
-        Vector3 position = GetSpawnPosition();
+        GameObject enemyObject = EnemySpawnUtility.SpawnEnemy(
+            prefab,
+            position,
+            prefab.transform.rotation,
+            enemyOwnerId,
+            healthMultiplier,
+            damageMultiplier,
+            speedMultiplier,
+            TrackAlive);
 
-        GameObject enemy = Instantiate(prefab, position, prefab.transform.rotation);
+        if (enemyObject == null)
+            return false;
 
-        ConfigureEnemy(enemy, healthMultiplier, damageMultiplier, speedMultiplier);
+        if (advanceToEnemyBuildings.HasValue)
+            EnemySpawnUtility.ApplyAdvanceToEnemyBuildings(
+                enemyObject,
+                advanceToEnemyBuildings.Value);
+
         return true;
-    }
-
-    Vector3 GetSpawnPosition()
-    {
-        Vector3 basePosition = spawnPoints.Count > 0
-            ? spawnPoints[Random.Range(0, spawnPoints.Count)].position
-            : transform.position;
-
-        if (NavMesh.SamplePosition(basePosition, out NavMeshHit hit, 10f, NavMesh.AllAreas))
-            return hit.position;
-
-        return basePosition;
-    }
-
-    void ConfigureEnemy(
-        GameObject enemy,
-        float healthMultiplier,
-        float damageMultiplier,
-        float speedMultiplier)
-    {
-        SelectableEntity selectable = enemy.GetComponent<SelectableEntity>();
-        if (selectable != null)
-            selectable.ownerId = enemyOwnerId;
-
-        EntityHealth health = enemy.GetComponent<EntityHealth>();
-        if (health != null)
-        {
-            health.SetMaxHealth(health.MaxHealth * healthMultiplier);
-            TrackAlive(health);
-        }
-
-        UnitAttacker attacker = enemy.GetComponent<UnitAttacker>();
-        if (attacker != null)
-            attacker.attackDamage *= damageMultiplier;
-
-        NavMeshAgent agent = enemy.GetComponent<NavMeshAgent>();
-        if (agent != null)
-            agent.speed *= speedMultiplier;
-
-        if (enemy.GetComponent<FogOfWarVisibility>() == null)
-            enemy.AddComponent<FogOfWarVisibility>();
     }
 
     void TrackAlive(EntityHealth health)
     {
+        if (health == null)
+            return;
+
         AliveCount++;
         OnAliveCountChanged?.Invoke(AliveCount);
 

@@ -11,6 +11,7 @@ public class UnitCommandIndicatorTracker : MonoBehaviour
     readonly List<MoveTrackEntry> moveTracks = new List<MoveTrackEntry>();
     readonly List<AttackTrackEntry> attackTracks = new List<AttackTrackEntry>();
     Vector3 moveIndicatorPosition;
+    Color moveIndicatorColor = MoveDestinationIndicator.MoveColor;
     SelectableEntity attackTarget;
 
     struct MoveTrackEntry
@@ -52,11 +53,19 @@ public class UnitCommandIndicatorTracker : MonoBehaviour
         IEnumerable<(NavMeshAgent agent, Vector3 destination)> agents,
         Vector3 indicatorPosition)
     {
+        TrackMoveToPoint(agents, indicatorPosition, MoveDestinationIndicator.MoveColor);
+    }
+
+    public static void TrackMoveToPoint(
+        IEnumerable<(NavMeshAgent agent, Vector3 destination)> agents,
+        Vector3 indicatorPosition,
+        Color indicatorColor)
+    {
         EnsureInstance();
         if (Instance == null)
             return;
 
-        Instance.BeginMoveTracking(agents, indicatorPosition);
+        Instance.BeginMoveTracking(agents, indicatorPosition, indicatorColor);
     }
 
     public static void TrackAttackTarget(
@@ -89,12 +98,14 @@ public class UnitCommandIndicatorTracker : MonoBehaviour
 
     void BeginMoveTracking(
         IEnumerable<(NavMeshAgent agent, Vector3 destination)> agents,
-        Vector3 indicatorPosition)
+        Vector3 indicatorPosition,
+        Color indicatorColor)
     {
         moveTracks.Clear();
         attackTracks.Clear();
         attackTarget = null;
         moveIndicatorPosition = indicatorPosition;
+        moveIndicatorColor = indicatorColor;
 
         foreach ((NavMeshAgent agent, Vector3 destination) entry in agents)
         {
@@ -115,7 +126,7 @@ public class UnitCommandIndicatorTracker : MonoBehaviour
         }
 
         AttackTargetIndicator.HideIndicator();
-        MoveDestinationIndicator.ShowAt(moveIndicatorPosition);
+        MoveDestinationIndicator.ShowAt(moveIndicatorPosition, moveIndicatorColor);
     }
 
     void BeginAttackTracking(
@@ -164,7 +175,7 @@ public class UnitCommandIndicatorTracker : MonoBehaviour
         if (moveTracks.Count == 0)
             MoveDestinationIndicator.HideIndicator();
         else
-            MoveDestinationIndicator.ShowAt(moveIndicatorPosition);
+            MoveDestinationIndicator.ShowAt(moveIndicatorPosition, moveIndicatorColor);
     }
 
     void UpdateAttackTracking()

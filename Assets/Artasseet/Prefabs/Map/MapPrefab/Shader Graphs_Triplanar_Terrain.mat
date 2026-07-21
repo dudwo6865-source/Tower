@@ -1,5 +1,18 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-6052382477826486247
+MonoBehaviour:
+  m_ObjectHideFlags: 11
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0353a89b1f911e48b9e16bdc9f2e058, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  version: 7
 --- !u!114 &-4862123131303987192
 MonoBehaviour:
   m_ObjectHideFlags: 11
@@ -36,32 +49,48 @@ Material:
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
+    - _AO:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _Grass_Albedo:
-        m_Texture: {fileID: 2800000, guid: 3b5fd75772b4553409194fc1d85f6ca4, type: 3}
+        m_Texture: {fileID: 2800000, guid: a426c64448db7a84e822e463a5651447, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _Grass_Normal:
-        m_Texture: {fileID: 2800000, guid: ebb2250a822734142986f29e0298f28c, type: 3}
+        m_Texture: {fileID: 2800000, guid: 5d7fae92296560c4d9ca7ccc1cdb10a3, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _Hill_Albedo:
-        m_Texture: {fileID: 2800000, guid: 08403f80816a39944a0cea37a367e98f, type: 3}
+        m_Texture: {fileID: 2800000, guid: 3be7eec3717c0d54aa71571ee53610c5, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _Hill_Normal:
-        m_Texture: {fileID: 2800000, guid: 06478222b4b699c4dbe473987c6defff, type: 3}
+        m_Texture: {fileID: 2800000, guid: 842ecfc54cd69eb4e838dbc8a4ed0ff3, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _Main_Albedo:
-        m_Texture: {fileID: 2800000, guid: 08403f80816a39944a0cea37a367e98f, type: 3}
+        m_Texture: {fileID: 2800000, guid: 3be7eec3717c0d54aa71571ee53610c5, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _Main_Normal:
-        m_Texture: {fileID: 2800000, guid: 06478222b4b699c4dbe473987c6defff, type: 3}
+        m_Texture: {fileID: 2800000, guid: 842ecfc54cd69eb4e838dbc8a4ed0ff3, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _hill_Albedo:
         m_Texture: {fileID: 2800000, guid: e774b94ace71dbe4f9a95574f87f3142, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_Lightmaps:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_LightmapsInd:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_ShadowMasks:
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Ints: []
@@ -70,6 +99,8 @@ Material:
     - _BUILTIN_QueueOffset: -6
     - _Blend_Smoothness: 1
     - _Detail_Scale: 1
+    - _QueueControl: 1
+    - _QueueOffset: 0
     - _Texture_Scale: 0.05
     - _Texture_Scale_1: 0.1
     m_Colors: []

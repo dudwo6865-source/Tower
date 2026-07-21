@@ -3,7 +3,7 @@ using UnityEngine;
 [CreateAssetMenu(
     fileName = "BuildableTowerData",
     menuName = "Tank/Buildable Tower Data")]
-public class BuildableTowerData : ScriptableObject
+public class BuildableTowerData : ScriptableObject, IBuildablePlacementData
 {
     [Header("Display")]
     public string displayName = "Tower";
@@ -22,6 +22,12 @@ public class BuildableTowerData : ScriptableObject
 
     [Tooltip("더블클릭 시 같은 종류로 묶을 타입 ID입니다. 비워두면 프리팹 SelectableEntity 값을 사용합니다.")]
     public string entityTypeId;
+
+    public string BuildAssetName => name;
+    public string DisplayName => displayName;
+    public GameObject Prefab => prefab;
+    public int WattCost => wattCost;
+    public int OwnerId => ownerId;
 
     public Vector2Int GetFootprintCells()
     {

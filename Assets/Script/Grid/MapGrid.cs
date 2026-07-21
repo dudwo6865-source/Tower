@@ -38,6 +38,11 @@ public class MapGrid : MonoBehaviour
     [Tooltip("NavMesh 샘플 시 위에서 내려다볼 여유 높이(미터)입니다.")]
     public float navMeshSampleHeightOffset = 4f;
 
+    [Header("Building NavMesh")]
+    [Tooltip("건물 footprint(격자) 대비 NavMeshObstacle Box 가로·세로 비율입니다. 1에 가까울수록 격자와 같습니다.")]
+    [Range(0.1f, 1f)]
+    public float navObstacleSizeScale = 0.85f;
+
     public int navMeshAreaMask = NavMesh.AllAreas;
 
     [Header("Manual Bounds Fallback")]

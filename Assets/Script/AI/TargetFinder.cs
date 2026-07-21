@@ -3,6 +3,7 @@ using UnityEngine.AI;
 
 public static class TargetFinder
 {
+
     public static SelectableEntity FindBestEnemyInRange(
         Vector3 fromPosition,
         int myOwnerId,
@@ -201,7 +202,14 @@ public static class TargetFinder
 
         Vector3 ideal = closest + towardChaser * holdDistance;
 
-        if (TryFindReachableApproach(fromPosition, ideal, sampleRadius, out Vector3 approach))
+        if (TryFindReachableApproach(
+                fromPosition,
+                ideal,
+                sampleRadius,
+                out Vector3 approach,
+                out _,
+                out _,
+                requireCompletePath: true))
             return approach;
 
         for (int i = 0; i < 8; i++)
@@ -213,7 +221,10 @@ public static class TargetFinder
                     fromPosition,
                     closest + direction * holdDistance,
                     sampleRadius,
-                    out approach))
+                    out approach,
+                    out _,
+                    out _,
+                    requireCompletePath: true))
                 return approach;
         }
 
@@ -221,8 +232,35 @@ public static class TargetFinder
                 fromPosition,
                 target.transform.position,
                 sampleRadius,
-                out approach))
+                out approach,
+                out _,
+                out _,
+                requireCompletePath: true))
             return approach;
+
+        if (TryFindReachableApproach(
+                fromPosition,
+                ideal,
+                sampleRadius,
+                out approach,
+                out _,
+                out _))
+            return approach;
+
+        for (int i = 0; i < 8; i++)
+        {
+            Vector3 direction =
+                Quaternion.Euler(0f, i * 45f, 0f) * towardChaser;
+
+            if (TryFindReachableApproach(
+                    fromPosition,
+                    closest + direction * holdDistance,
+                    sampleRadius,
+                    out approach,
+                    out _,
+                    out _))
+                return approach;
+        }
 
         return SampleNavMeshNear(ideal, sampleRadius);
     }
@@ -233,12 +271,37 @@ public static class TargetFinder
         float stoppingDistance,
         float angleOffsetDegrees)
     {
-        Vector3 targetPosition = target.transform.position;
+        // 직진이 막혀 있어도 PathComplete인 우회 접근점 중 가장 짧은 경로를 고른다.
+        if (TryFindBestBuildingApproach(
+                fromPosition,
+                target,
+                stoppingDistance,
+                angleOffsetDegrees,
+                preferCompletePath: true,
+                out Vector3 bestApproach,
+                out NavMeshPathStatus status,
+                out _))
+        {
+            if (status == NavMeshPathStatus.PathComplete)
+                return bestApproach;
+        }
 
+        if (TryFindBestBuildingApproach(
+                fromPosition,
+                target,
+                stoppingDistance,
+                angleOffsetDegrees,
+                preferCompletePath: false,
+                out bestApproach,
+                out _,
+                out _))
+        {
+            return bestApproach;
+        }
+
+        Vector3 targetPosition = target.transform.position;
         Bounds bounds = target.SelectionBounds;
         float targetRadius = Mathf.Max(bounds.extents.x, bounds.extents.z);
-
-        // Carve 영역 + stoppingDistance + NavMesh 복셀 여유
         float ringRadius = targetRadius + stoppingDistance + 1f;
 
         Vector3 outward = fromPosition - targetPosition;
@@ -252,42 +315,9 @@ public static class TargetFinder
         if (Mathf.Abs(angleOffsetDegrees) > 0.01f)
             outward = Quaternion.Euler(0f, angleOffsetDegrees, 0f) * outward;
 
-        float sampleRadius = stoppingDistance + targetRadius + 2f;
-
-        // 1차: 자신이 오는 방향의 건물 둘레
-        if (TryFindReachableApproach(
-                fromPosition,
-                targetPosition + outward * ringRadius,
-                sampleRadius,
-                out Vector3 approach))
-            return approach;
-
-        // 2차: 둘레를 여러 각도로 시도 (Carve 때문에 한 방향이 막혀 있을 수 있음)
-        for (int i = 0; i < 8; i++)
-        {
-            Vector3 direction =
-                Quaternion.Euler(0f, i * 45f, 0f) * outward;
-
-            if (TryFindReachableApproach(
-                    fromPosition,
-                    targetPosition + direction * ringRadius,
-                    sampleRadius,
-                    out approach))
-                return approach;
-        }
-
-        // 3차: 반경을 넓혀가며 탐색
-        for (float radius = ringRadius; radius <= ringRadius + 8f; radius += 2f)
-        {
-            if (TryFindReachableApproach(
-                    fromPosition,
-                    targetPosition + outward * radius,
-                    radius,
-                    out approach))
-                return approach;
-        }
-
-        return SampleNavMeshNear(targetPosition + outward * ringRadius, sampleRadius);
+        return SampleNavMeshNear(
+            targetPosition + outward * ringRadius,
+            stoppingDistance + targetRadius + 2f);
     }
 
     public static bool TryGetAlternateApproachPosition(
@@ -349,7 +379,9 @@ public static class TargetFinder
                         fromPosition,
                         sampleOrigin,
                         sampleRadius,
-                        out Vector3 reachable))
+                        out Vector3 reachable,
+                        out _,
+                        out _))
                 {
                     continue;
                 }
@@ -402,7 +434,9 @@ public static class TargetFinder
                 fromPosition,
                 candidate,
                 sampleRadius,
-                out Vector3 reachable))
+                out Vector3 reachable,
+                out _,
+                out _))
         {
             return false;
         }
@@ -431,13 +465,160 @@ public static class TargetFinder
         return worldPosition;
     }
 
+    static bool TryFindBestBuildingApproach(
+        Vector3 fromPosition,
+        SelectableEntity target,
+        float stoppingDistance,
+        float angleOffsetDegrees,
+        bool preferCompletePath,
+        out Vector3 bestApproach,
+        out NavMeshPathStatus bestStatus,
+        out float bestPathLength)
+    {
+        bestApproach = fromPosition;
+        bestStatus = NavMeshPathStatus.PathInvalid;
+        bestPathLength = float.MaxValue;
+
+        if (target == null)
+            return false;
+
+        Vector3 targetPosition = target.transform.position;
+        Bounds bounds = target.SelectionBounds;
+        float targetRadius = Mathf.Max(bounds.extents.x, bounds.extents.z);
+        float ringRadius = targetRadius + stoppingDistance + 1f;
+        float sampleRadius = stoppingDistance + targetRadius + 2f;
+
+        Vector3 outward = fromPosition - targetPosition;
+        outward.y = 0f;
+
+        if (outward.sqrMagnitude < 0.01f)
+            outward = Vector3.forward;
+
+        outward.Normalize();
+
+        if (Mathf.Abs(angleOffsetDegrees) > 0.01f)
+            outward = Quaternion.Euler(0f, angleOffsetDegrees, 0f) * outward;
+
+        bool found = false;
+        Vector3 currentApproach = bestApproach;
+        NavMeshPathStatus currentStatus = bestStatus;
+        float currentPathLength = bestPathLength;
+
+        const int directionCount = 16;
+        float angleStep = 360f / directionCount;
+
+        for (int ring = 0; ring <= 8; ring++)
+        {
+            float radius = ringRadius + ring * 2f;
+            float ringSampleRadius = Mathf.Max(sampleRadius, radius * 0.35f);
+
+            for (int i = 0; i < directionCount; i++)
+            {
+                Vector3 direction =
+                    Quaternion.Euler(0f, i * angleStep, 0f) * outward;
+
+                if (TryConsiderBuildingApproach(
+                        fromPosition,
+                        targetPosition + direction * radius,
+                        ringSampleRadius,
+                        preferCompletePath,
+                        ref currentApproach,
+                        ref currentStatus,
+                        ref currentPathLength))
+                {
+                    found = true;
+                }
+            }
+        }
+
+        if (!found)
+            return false;
+
+        bestApproach = currentApproach;
+        bestStatus = currentStatus;
+        bestPathLength = currentPathLength;
+        return true;
+    }
+
+    static bool TryConsiderBuildingApproach(
+        Vector3 fromPosition,
+        Vector3 sampleOrigin,
+        float sampleRadius,
+        bool requireCompletePath,
+        ref Vector3 bestApproach,
+        ref NavMeshPathStatus bestStatus,
+        ref float bestPathLength)
+    {
+        if (!TryFindReachableApproach(
+                fromPosition,
+                sampleOrigin,
+                sampleRadius,
+                out Vector3 approach,
+                out NavMeshPathStatus status,
+                out float pathLength,
+                requireCompletePath))
+        {
+            return false;
+        }
+
+        if (!IsBetterApproachCandidate(status, pathLength, bestStatus, bestPathLength))
+            return false;
+
+        bestApproach = approach;
+        bestStatus = status;
+        bestPathLength = pathLength;
+        return true;
+    }
+
+    static bool IsBetterApproachCandidate(
+        NavMeshPathStatus candidateStatus,
+        float candidatePathLength,
+        NavMeshPathStatus currentBestStatus,
+        float currentBestPathLength)
+    {
+        if (currentBestPathLength >= float.MaxValue)
+            return true;
+
+        if (candidateStatus == NavMeshPathStatus.PathComplete &&
+            currentBestStatus != NavMeshPathStatus.PathComplete)
+        {
+            return true;
+        }
+
+        if (candidateStatus != NavMeshPathStatus.PathComplete &&
+            currentBestStatus == NavMeshPathStatus.PathComplete)
+        {
+            return false;
+        }
+
+        return candidatePathLength < currentBestPathLength;
+    }
+
+    static float CalculatePathLength(NavMeshPath path)
+    {
+        if (path == null || path.corners == null || path.corners.Length < 2)
+            return 0f;
+
+        float length = 0f;
+
+        for (int i = 1; i < path.corners.Length; i++)
+            length += Vector3.Distance(path.corners[i - 1], path.corners[i]);
+
+        return length;
+    }
+
     static bool TryFindReachableApproach(
         Vector3 fromPosition,
         Vector3 sampleOrigin,
         float sampleRadius,
-        out Vector3 result)
+        out Vector3 result,
+        out NavMeshPathStatus pathStatus,
+        out float pathLength,
+        bool requireCompletePath = false)
     {
         result = sampleOrigin;
+        pathStatus = NavMeshPathStatus.PathInvalid;
+        pathLength = float.MaxValue;
 
         if (!NavMesh.SamplePosition(
                 sampleOrigin,
@@ -458,7 +639,12 @@ public static class TargetFinder
         if (path.status == NavMeshPathStatus.PathInvalid)
             return false;
 
+        if (requireCompletePath && path.status != NavMeshPathStatus.PathComplete)
+            return false;
+
         result = hit.position;
+        pathStatus = path.status;
+        pathLength = CalculatePathLength(path);
         return true;
     }
 }

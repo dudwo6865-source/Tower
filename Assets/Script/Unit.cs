@@ -47,6 +47,7 @@ public class Unit : MonoBehaviour
 
         ApplySelection(source);
         ApplyHealth(source);
+        ApplyDeathEffects(source);
         ApplyAttacker(source);
         ApplyCombatAI(source);
         ApplyMovement(source);
@@ -123,6 +124,18 @@ public class Unit : MonoBehaviour
         target.projectileSpeed = source.projectileSpeed;
         target.projectileColor = source.projectileColor;
         target.hitColor = source.hitColor;
+        target.muzzleFlashPrefab = source.combatEffects.muzzleFlashPrefab;
+        target.hitEffectPrefab = source.combatEffects.hitEffectPrefab;
+        target.projectilePrefab = source.combatEffects.projectilePrefab;
+    }
+
+    void ApplyDeathEffects(UnitData source)
+    {
+        EntityHealth target = Health;
+        if (target == null)
+            return;
+
+        target.deathEffectPrefab = source.combatEffects.deathEffectPrefab;
     }
 
     void ApplyCombatAI(UnitData source)
@@ -146,7 +159,6 @@ public class Unit : MonoBehaviour
         if (target == null)
             return;
 
-        target.barWidth = source.healthBarWidth;
         target.heightOffset = source.healthBarHeightOffset;
     }
 
@@ -192,7 +204,6 @@ public class Unit : MonoBehaviour
     {
         GetOrAdd<SelectableEntity>();
         GetOrAdd<EntityHealth>();
-        GetOrAdd<WorldHealthBar>();
         GetOrAdd<FogOfWarVisionSource>();
         GetOrAdd<FogOfWarVisibility>();
         GetOrAdd<UnitSound>();

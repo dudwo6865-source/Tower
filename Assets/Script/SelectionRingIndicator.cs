@@ -2,13 +2,17 @@ using UnityEngine;
 
 public class SelectionRingIndicator : MonoBehaviour
 {
-    private static readonly Color DefaultRingColor =
+    // 아군(로컬 플레이어)은 초록, 적은 빨강.
+    public static readonly Color AllyRingColor =
         new Color(0.2f, 1f, 0.35f, 0.95f);
+    public static readonly Color EnemyRingColor =
+        new Color(1f, 0.25f, 0.2f, 0.95f);
 
     private LineRenderer lineRenderer;
     private float radius;
     private int segments = 40;
     private float lineWidth = 0.1f;
+    private Color ringColor = AllyRingColor;
 
     public void Initialize(float ringRadius)
     {
@@ -17,12 +21,23 @@ public class SelectionRingIndicator : MonoBehaviour
         SetVisible(false);
     }
 
+    public void SetColor(Color color)
+    {
+        ringColor = color;
+
+        if (lineRenderer == null)
+            return;
+
+        lineRenderer.startColor = color;
+        lineRenderer.endColor = color;
+    }
+
     void BuildRing()
     {
         lineRenderer = gameObject.AddComponent<LineRenderer>();
         lineRenderer.material = new Material(Shader.Find("Sprites/Default"));
-        lineRenderer.startColor = DefaultRingColor;
-        lineRenderer.endColor = DefaultRingColor;
+        lineRenderer.startColor = ringColor;
+        lineRenderer.endColor = ringColor;
         lineRenderer.startWidth = lineWidth;
         lineRenderer.endWidth = lineWidth;
         lineRenderer.loop = true;

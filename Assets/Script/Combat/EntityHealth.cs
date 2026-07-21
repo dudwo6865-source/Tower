@@ -18,8 +18,11 @@ public class EntityHealth : MonoBehaviour
     [Tooltip("사망 연출 동안 아래로 가라앉는 거리입니다.")]
     public float deathSinkDistance = 1.5f;
 
-    [Tooltip("사망 시 표시할 이펙트 색상입니다.")]
+    [Tooltip("사망 시 표시할 이펙트 색상입니다. deathEffectPrefab이 없을 때만 사용됩니다.")]
     public Color deathEffectColor = new Color(0.3f, 0.3f, 0.3f, 1f);
+
+    [Tooltip("사망·파괴 시 재생할 이펙트·파티클 프리팹입니다.")]
+    public GameObject deathEffectPrefab;
 
     public event Action<float, float> OnHealthChanged;
     public event Action OnDied;
@@ -52,7 +55,7 @@ public class EntityHealth : MonoBehaviour
             BuildingRegistry.NotifyRemoved(selectableEntity);
     }
 
-    public void TakeDamage(float damage)
+    public void TakeDamage(float damage, SelectableEntity attacker = null)
     {
         if (!IsAlive)
             return;
@@ -60,8 +63,21 @@ public class EntityHealth : MonoBehaviour
         CurrentHealth = Mathf.Max(0f, CurrentHealth - damage);
         OnHealthChanged?.Invoke(CurrentHealth, maxHealth);
 
+        NotifyAttacked(attacker);
+
         if (CurrentHealth <= 0f)
             Die();
+    }
+
+    void NotifyAttacked(SelectableEntity attacker)
+    {
+        if (attacker == null)
+            return;
+
+        CombatAIBase combatAI = GetComponent<CombatAIBase>();
+
+        if (combatAI != null)
+            combatAI.NotifyAttackedBy(attacker);
     }
 
     public void SetMaxHealth(float value, bool refill = true)
@@ -96,9 +112,17 @@ public class EntityHealth : MonoBehaviour
 
         DisableGameplayComponents();
 
-        AttackVisuals.SpawnHitEffect(
-            selectableEntity.SelectionBounds.center,
-            deathEffectColor);
+        Vector3 effectPosition = selectableEntity.SelectionBounds.center;
+
+        if (deathEffectPrefab != null)
+            CombatEffectSpawner.Spawn(deathEffectPrefab, effectPosition, Quaternion.identity);
+        else
+        {
+            AttackVisuals.SpawnHitEffect(
+                effectPosition,
+                null,
+                deathEffectColor);
+        }
 
         if (deathAnimationDuration <= 0f)
         {

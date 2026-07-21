@@ -132,9 +132,21 @@ public class UnitCommandController : MonoBehaviour
         SetMode(UnitCommandMode.Patrol);
     }
 
+    public void BeginRallyPointMode()
+    {
+        SetMode(UnitCommandMode.RallyPoint);
+    }
+
+    public void IssueBuildingStop()
+    {
+        CancelMode();
+        BuildingCommandHandler.IssueStopToSelection();
+    }
+
     public void OnSelectionChanged()
     {
-        if (!UnitCommandHandler.HasCommandableUnits())
+        if (!UnitCommandHandler.HasCommandableUnits() &&
+            !BuildingCommandHandler.HasCommandableBuildings())
             CancelMode();
     }
 
@@ -151,6 +163,9 @@ public class UnitCommandController : MonoBehaviour
             case UnitCommandMode.Patrol:
                 return UnitCommandHandler.IssuePatrolToSelection(hit.point);
 
+            case UnitCommandMode.RallyPoint:
+                return BuildingCommandHandler.IssueRallyPointToSelection(hit.point);
+
             default:
                 return false;
         }
@@ -158,22 +173,23 @@ public class UnitCommandController : MonoBehaviour
 
     bool TryExecuteAttackMode(RaycastHit hit)
     {
-        UnitSelectionManager manager = UnitSelectionManager.Instance;
-        if (manager == null)
-            return false;
-
         SelectableEntity clickedEntity =
             hit.collider.GetComponentInParent<SelectableEntity>();
 
-        if (UnitCommandHandler.TryGetEnemyTarget(
+        if (UnitCommandHandler.TryGetAttackTarget(
                 clickedEntity,
-                manager.localPlayerOwnerId,
-                out SelectableEntity enemy))
+                out SelectableEntity attackTarget))
         {
-            return UnitCommandHandler.IssueAttackToSelection(enemy);
+            if (UnitCommandHandler.IssueAttackToSelection(attackTarget))
+                return true;
+
+            return BuildingCommandHandler.IssueAttackToSelection(attackTarget);
         }
 
-        return UnitCommandHandler.IssueAttackMoveToSelection(hit.point);
+        if (UnitCommandHandler.HasCommandableUnits())
+            return UnitCommandHandler.IssueAttackMoveToSelection(hit.point);
+
+        return false;
     }
 
     public static bool HasInstance => Instance != null;

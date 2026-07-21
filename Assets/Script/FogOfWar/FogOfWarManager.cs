@@ -634,6 +634,17 @@ public class FogOfWarManager : MonoBehaviour
         return true;
     }
 
+    public bool IsEntityExplored(Bounds worldBounds)
+    {
+        foreach (Vector3 sample in GetEntityGroundSamplePoints(worldBounds))
+        {
+            if (TrySampleFog(sample, out byte explored, out _) && explored > 127)
+                return true;
+        }
+
+        return false;
+    }
+
     IEnumerable<Vector3> GetEntityGroundSamplePoints(Bounds worldBounds)
     {
         float padding = entityVisibilityPadding;

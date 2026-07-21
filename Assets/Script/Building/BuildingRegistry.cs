@@ -6,6 +6,7 @@ public static class BuildingRegistry
     private static readonly List<SelectableEntity> buildings =
         new List<SelectableEntity>();
 
+    public static event Action<SelectableEntity> OnBuildingRegistered;
     public static event Action<SelectableEntity> OnBuildingRemoved;
 
     public static IReadOnlyList<SelectableEntity> Buildings => buildings;
@@ -18,6 +19,7 @@ public static class BuildingRegistry
             return;
 
         buildings.Add(building);
+        OnBuildingRegistered?.Invoke(building);
     }
 
     public static void Unregister(SelectableEntity building)

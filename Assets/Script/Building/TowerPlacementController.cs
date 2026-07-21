@@ -46,22 +46,46 @@ public class TowerPlacementController : MonoBehaviour
     [Tooltip("배치 불가일 때 고스트 색입니다.")]
     public Color invalidGhostColor = new Color(0.95f, 0.25f, 0.25f, 0.55f);
 
-    public bool IsPlacing => pendingData != null;
+    [Header("Audio")]
+    [Tooltip("건물 배치가 확정될 때 재생할 사운드입니다.")]
+    public AudioClip placementSound;
+
+    [Tooltip("배치 사운드 볼륨입니다.")]
+    [Range(0f, 1f)]
+    public float placementSoundVolume = 1f;
+
+    [Tooltip("배치에 실패했을 때 재생할 사운드입니다.")]
+    public AudioClip failedPlacementSound;
+
+    [Tooltip("배치 실패 사운드 볼륨입니다.")]
+    [Range(0f, 1f)]
+    public float failedPlacementSoundVolume = 1f;
+
+    [Tooltip("켜면 맵 XZ 거리에 따라 볼륨을 줄입니다. 끄면 2D로 재생합니다.")]
+    public bool placementSoundUseMapDistance;
+
+    [Tooltip("맵 거리 감쇠 시작 거리입니다.")]
+    public float placementSoundMinDistance = 8f;
+
+    [Tooltip("맵 거리 감쇠 무음 거리입니다.")]
+    public float placementSoundMaxDistance = 120f;
+
+    public bool IsPlacing => pendingBuildData != null;
 
     public Vector2Int PreviewOriginCell => pendingOriginCell;
 
     public Vector2Int PendingFootprintCells => pendingFootprintCells;
 
     public bool PreviewPlacementValid =>
-        pendingData != null &&
-        IsValidPlacement(pendingOriginCell, pendingData);
+        pendingBuildData != null &&
+        IsValidPlacement(pendingOriginCell, pendingBuildData);
 
     public bool HasPreviewPlacement =>
         ghostObject != null && ghostObject.activeSelf;
 
     public event Action<PlacementPreviewState> PreviewChanged;
 
-    private BuildableTowerData pendingData;
+    private IBuildablePlacementData pendingBuildData;
     private Vector2Int pendingFootprintCells = Vector2Int.one;
     private Vector2Int pendingOriginCell;
     private Vector2Int lastNotifiedOriginCell = new Vector2Int(int.MinValue, int.MinValue);
@@ -72,6 +96,7 @@ public class TowerPlacementController : MonoBehaviour
     private readonly List<Renderer> ghostRenderers = new List<Renderer>();
     private readonly List<Material> ghostMaterials = new List<Material>();
     private Camera mainCamera;
+    private AudioSource placementAudioSource;
 
     void Awake()
     {
@@ -82,6 +107,7 @@ public class TowerPlacementController : MonoBehaviour
         }
 
         Instance = this;
+        EnsurePlacementAudioSource();
 
         if (GetComponent<PlacementGridVisualizer>() == null)
             gameObject.AddComponent<PlacementGridVisualizer>();
@@ -123,7 +149,17 @@ public class TowerPlacementController : MonoBehaviour
 
     public bool BeginPlacement(BuildableTowerData data)
     {
-        if (data == null || data.prefab == null)
+        return BeginPlacement((IBuildablePlacementData)data);
+    }
+
+    public bool BeginPlacement(BuildableProductionData data)
+    {
+        return BeginPlacement((IBuildablePlacementData)data);
+    }
+
+    public bool BeginPlacement(IBuildablePlacementData data)
+    {
+        if (data == null || data.Prefab == null)
             return false;
 
         if (WattManager.Instance == null)
@@ -132,20 +168,23 @@ public class TowerPlacementController : MonoBehaviour
             return false;
         }
 
-        if (!WattManager.Instance.CanAfford(data.wattCost))
+        if (!WattManager.Instance.CanAfford(data.WattCost))
+        {
+            PlayFailedPlacementFeedback();
             return false;
+        }
 
         CancelPlacement();
 
-        if (!IsSpawnablePrefab(data.prefab, data.name))
+        if (!IsSpawnablePrefab(data.Prefab, data.BuildAssetName))
             return false;
 
-        pendingData = data;
+        pendingBuildData = data;
         pendingFootprintCells = data.GetFootprintCells();
 
-        if (!CreateGhost(data.prefab))
+        if (!CreateGhost(data.Prefab))
         {
-            pendingData = null;
+            pendingBuildData = null;
             pendingFootprintCells = Vector2Int.one;
             return false;
         }
@@ -159,7 +198,7 @@ public class TowerPlacementController : MonoBehaviour
     public void CancelPlacement()
     {
         NotifyPreviewEnded();
-        pendingData = null;
+        pendingBuildData = null;
         pendingFootprintCells = Vector2Int.one;
         DestroyGhost();
     }
@@ -190,58 +229,208 @@ public class TowerPlacementController : MonoBehaviour
                 out Vector3 placementPoint))
             return;
 
-        if (!IsValidPlacement(originCell, pendingData))
-            return;
-
-        if (!WattManager.Instance.TrySpend(pendingData.wattCost))
+        if (!IsValidPlacement(originCell, pendingBuildData))
         {
+            PlayFailedPlacementSound(placementPoint);
+            return;
+        }
+
+        if (!WattManager.Instance.TrySpend(pendingBuildData.WattCost))
+        {
+            PlayFailedPlacementSound(placementPoint);
             CancelPlacement();
             return;
         }
 
-        PlaceTower(pendingData, originCell, placementPoint);
+        PlaceBuilding(pendingBuildData, originCell, placementPoint);
         CancelPlacement();
     }
 
-    void PlaceTower(
-        BuildableTowerData data,
+    void PlaceBuilding(
+        IBuildablePlacementData data,
         Vector2Int originCell,
         Vector3 position)
     {
-        if (!IsSpawnablePrefab(data.prefab, data.name))
+        if (!IsSpawnablePrefab(data.Prefab, data.BuildAssetName))
             return;
 
-        Quaternion rotation = data.prefab.transform.rotation;
+        Quaternion rotation = data.Prefab.transform.rotation;
 
-        GameObject towerObject =
-            (GameObject)Instantiate(data.prefab, position, rotation);
+        GameObject buildingObject =
+            (GameObject)Instantiate(data.Prefab, position, rotation);
 
         SelectableEntity selectable =
-            towerObject.GetComponent<SelectableEntity>();
+            buildingObject.GetComponent<SelectableEntity>();
 
         if (selectable != null)
         {
-            selectable.ownerId = data.ownerId > 0
-                ? data.ownerId
+            selectable.ownerId = data.OwnerId > 0
+                ? data.OwnerId
                 : localPlayerOwnerId;
             selectable.entityTypeId = data.GetEntityTypeId();
         }
 
         WorldHealthBar healthBar =
-            towerObject.GetComponent<WorldHealthBar>();
+            buildingObject.GetComponent<WorldHealthBar>();
 
         if (healthBar != null)
             healthBar.localPlayerOwnerId = localPlayerOwnerId;
 
-        GridFootprint footprint = GridFootprint.EnsureOnInstance(towerObject);
+        // Instantiate 직후 프리팹 NavMeshObstacle이 carve를 시작하면
+        // 자기 발밑 NavMesh가 사라져 footprint 등록(IsFootprintOnNavMesh)이 실패한다.
+        DisableNavMeshObstacles(buildingObject);
+
+        GridFootprint footprint = GridFootprint.EnsureOnInstance(buildingObject);
+        footprint.footprintCells = data.GetFootprintCells();
+        footprint.blockCells = true;
         footprint.snapTransformOnRegister = true;
 
         if (!footprint.RegisterAtOriginCell(originCell))
         {
             Debug.LogWarning(
-                $"TowerPlacementController: '{data.name}' footprint registration failed at {originCell}.",
-                towerObject);
+                $"TowerPlacementController: '{data.BuildAssetName}' footprint registration failed at {originCell}.",
+                buildingObject);
         }
+
+        ConfigureProductionBuilding(buildingObject, data);
+        PlayPlacementSound(position);
+    }
+
+    static void DisableNavMeshObstacles(GameObject target)
+    {
+        if (target == null)
+            return;
+
+        foreach (NavMeshObstacle obstacle in target.GetComponentsInChildren<NavMeshObstacle>(true))
+        {
+            obstacle.carving = false;
+            obstacle.enabled = false;
+        }
+    }
+
+    public void PlayFailedPlacementFeedback()
+    {
+        PlayFailedPlacementSound(GetFeedbackSoundPosition());
+    }
+
+    void PlayPlacementSound(Vector3 position)
+    {
+        PlaySoundAtPoint(placementSound, placementSoundVolume, position);
+    }
+
+    void PlayFailedPlacementSound(Vector3 position)
+    {
+        PlaySoundAtPoint(failedPlacementSound, failedPlacementSoundVolume, position);
+    }
+
+    Vector3 GetFeedbackSoundPosition()
+    {
+        if (mainCamera == null)
+            mainCamera = Camera.main;
+
+        if (mainCamera != null)
+            return mainCamera.transform.position;
+
+        AudioListener listener = FindAudioListener();
+
+        return listener != null
+            ? listener.transform.position
+            : transform.position;
+    }
+
+    void PlaySoundAtPoint(AudioClip clip, float volume, Vector3 position)
+    {
+        if (clip == null || volume <= 0f)
+            return;
+
+        AudioListener listener = FindAudioListener();
+        EnsurePlacementAudioSource();
+
+        float effectiveVolume = volume * GetPlacementSoundDistanceScale(position, listener);
+
+        if (effectiveVolume <= 0.001f)
+            return;
+
+        placementAudioSource.PlayOneShot(clip, effectiveVolume);
+    }
+
+    void EnsurePlacementAudioSource()
+    {
+        if (placementAudioSource == null)
+            placementAudioSource = GetComponent<AudioSource>();
+
+        if (placementAudioSource == null)
+            placementAudioSource = gameObject.AddComponent<AudioSource>();
+
+        placementAudioSource.playOnAwake = false;
+        placementAudioSource.loop = false;
+        placementAudioSource.spatialBlend = 0f;
+    }
+
+    float GetPlacementSoundDistanceScale(Vector3 position, AudioListener listener)
+    {
+        if (!placementSoundUseMapDistance || listener == null)
+            return 1f;
+
+        Vector3 listenerPos = listener.transform.position;
+        float distance = Vector2.Distance(
+            new Vector2(listenerPos.x, listenerPos.z),
+            new Vector2(position.x, position.z));
+
+        if (distance <= placementSoundMinDistance)
+            return 1f;
+
+        if (distance >= placementSoundMaxDistance)
+            return 0f;
+
+        return 1f - Mathf.InverseLerp(
+            placementSoundMinDistance,
+            placementSoundMaxDistance,
+            distance);
+    }
+
+    static AudioListener FindAudioListener()
+    {
+        if (Camera.main != null)
+        {
+            AudioListener onMain = Camera.main.GetComponent<AudioListener>();
+
+            if (onMain != null)
+                return onMain;
+        }
+
+        return FindObjectOfType<AudioListener>();
+    }
+
+    static void ConfigureProductionBuilding(
+        GameObject buildingObject,
+        IBuildablePlacementData data)
+    {
+        BuildableProductionData productionData = data as BuildableProductionData;
+        ProductionBuilding producer = buildingObject.GetComponent<ProductionBuilding>();
+
+        if (productionData != null && productionData.recipe != null)
+        {
+            if (producer == null)
+                producer = buildingObject.AddComponent<ProductionBuilding>();
+
+            producer.SetRecipe(productionData.recipe);
+            producer.BeginProduction();
+            return;
+        }
+
+        if (producer == null)
+            return;
+
+        Building building = buildingObject.GetComponent<Building>();
+
+        if (building == null || !building.isProductionBuilding)
+            return;
+
+        if (building.productionRecipe != null)
+            producer.SetRecipe(building.productionRecipe);
+
+        producer.BeginProduction();
     }
 
     void UpdateGhostTransform()
@@ -259,7 +448,7 @@ public class TowerPlacementController : MonoBehaviour
         ghostObject.SetActive(true);
         ghostObject.transform.position = placementPoint;
 
-        bool isValid = IsValidPlacement(pendingOriginCell, pendingData);
+        bool isValid = IsValidPlacement(pendingOriginCell, pendingBuildData);
 
         for (int i = 0; i < ghostMaterials.Count; i++)
             ghostMaterials[i].color = isValid ? validGhostColor : invalidGhostColor;
@@ -295,7 +484,7 @@ public class TowerPlacementController : MonoBehaviour
 
     void NotifyPreviewChangedIfNeeded(bool hasPreview, bool isValid)
     {
-        if (pendingData == null)
+        if (pendingBuildData == null)
             return;
 
         Vector3 centerWorld = Vector3.zero;
@@ -353,7 +542,7 @@ public class TowerPlacementController : MonoBehaviour
         if (!TryGetRawPlacementPoint(out Vector3 rawPoint))
             return false;
 
-        if (MapGrid.Instance == null || pendingData == null)
+        if (MapGrid.Instance == null || pendingBuildData == null)
         {
             centerWorld = SnapToGround(rawPoint);
             originCell = Vector2Int.zero;
@@ -446,16 +635,16 @@ public class TowerPlacementController : MonoBehaviour
         return worldPoint;
     }
 
-    bool IsValidPlacement(Vector2Int originCell, BuildableTowerData data)
+    bool IsValidPlacement(Vector2Int originCell, IBuildablePlacementData data)
     {
         if (data == null)
             return false;
 
-        Vector2Int footprint = data == pendingData
+        Vector2Int footprint = data == pendingBuildData
             ? pendingFootprintCells
             : data.GetFootprintCells();
 
-        int ownerId = data.ownerId > 0 ? data.ownerId : localPlayerOwnerId;
+        int ownerId = data.OwnerId > 0 ? data.OwnerId : localPlayerOwnerId;
 
         if (GridOccupancy.Instance != null &&
             MapGrid.Instance != null &&
@@ -478,7 +667,7 @@ public class TowerPlacementController : MonoBehaviour
 
     bool CreateGhost(GameObject prefab)
     {
-        if (!IsSpawnablePrefab(prefab, pendingData != null ? pendingData.name : "Tower"))
+        if (!IsSpawnablePrefab(prefab, pendingBuildData != null ? pendingBuildData.BuildAssetName : "Building"))
             return false;
 
         ghostObject = (GameObject)Instantiate(prefab);

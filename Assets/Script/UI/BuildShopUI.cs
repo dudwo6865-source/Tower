@@ -8,9 +8,16 @@ public class BuildShopUI : MonoBehaviour
     [System.Serializable]
     public class ShopEntry
     {
-        public BuildableTowerData data;
+        [Tooltip("BuildableTowerData 또는 BuildableProductionData를 할당합니다.")]
+        public ScriptableObject data;
+
         public Button button;
         public TextMeshProUGUI label;
+
+        public IBuildablePlacementData GetBuildData()
+        {
+            return data as IBuildablePlacementData;
+        }
     }
 
     [Header("References")]
@@ -84,7 +91,7 @@ public class BuildShopUI : MonoBehaviour
 
     void BindEntry(ShopEntry entry, int index)
     {
-        if (entry == null || entry.data == null || entry.button == null)
+        if (entry == null || entry.GetBuildData() == null || entry.button == null)
             return;
 
         entry.button.onClick.AddListener(() => TryBeginPlacementByIndex(index));
@@ -108,10 +115,12 @@ public class BuildShopUI : MonoBehaviour
 
     void RefreshEntry(ShopEntry entry, float currentWatt, int index)
     {
-        if (entry == null || entry.data == null)
+        IBuildablePlacementData buildData = entry?.GetBuildData();
+
+        if (entry == null || buildData == null)
             return;
 
-        bool canAfford = currentWatt >= entry.data.wattCost;
+        bool canAfford = currentWatt >= buildData.WattCost;
 
         if (entry.label != null)
         {
@@ -119,16 +128,16 @@ public class BuildShopUI : MonoBehaviour
             {
                 entry.label.text = string.Format(
                     canAfford ? affordableFormat : unaffordableFormat,
-                    entry.data.displayName,
-                    entry.data.wattCost,
+                    buildData.DisplayName,
+                    buildData.WattCost,
                     index + 1);
             }
             else
             {
                 entry.label.text = string.Format(
                     "{0}\n{1} W",
-                    entry.data.displayName,
-                    entry.data.wattCost);
+                    buildData.DisplayName,
+                    buildData.WattCost);
             }
         }
 
@@ -143,10 +152,10 @@ public class BuildShopUI : MonoBehaviour
 
         ShopEntry entry = entries[index];
 
-        if (entry == null || entry.data == null)
+        if (entry == null || entry.GetBuildData() == null)
             return;
 
-        TryBeginPlacement(entry.data);
+        TryBeginPlacement(entry.GetBuildData());
     }
 
     static bool IsTextInputFocused()
@@ -163,13 +172,16 @@ public class BuildShopUI : MonoBehaviour
                selected.GetComponent<UnityEngine.UI.InputField>() != null;
     }
 
-    void TryBeginPlacement(BuildableTowerData data)
+    void TryBeginPlacement(IBuildablePlacementData data)
     {
         if (data == null || placementController == null || wattManager == null)
             return;
 
-        if (!wattManager.CanAfford(data.wattCost))
+        if (!wattManager.CanAfford(data.WattCost))
+        {
+            placementController.PlayFailedPlacementFeedback();
             return;
+        }
 
         placementController.BeginPlacement(data);
     }

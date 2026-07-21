@@ -8,23 +8,23 @@ public class WorldHealthBar : MonoBehaviour
 {
     [Header("Layout")]
     [Tooltip("콜라이더 위쪽에서 체력바가 떠 있는 추가 높이입니다.")]
-    public float heightOffset = 2f;
-
-    [Tooltip("체력바의 월드 기준 너비입니다. 0이면 콜라이더 크기에 맞게 자동 설정합니다.")]
-    public float barWidth = 0f;
+    public float heightOffset = 3f;
 
     [Tooltip("체력바의 월드 기준 높이입니다.")]
-    public float barHeight = 0.3f;
+    public float barHeight = 0.5f;
 
     [Tooltip("월드 스페이스 캔버스 스케일입니다.")]
-    public float worldScale = 0.03f;
+    public float worldScale = 0.07f;
+
+    [Tooltip("체력바 한 칸의 월드 기준 너비입니다.")]
+    public float segmentWorldWidth = 0.4f;
 
     [Header("Display")]
     [Tooltip("로컬 플레이어 소유자 ID입니다. 아군/적 체력바 표시 규칙에 사용됩니다.")]
     public int localPlayerOwnerId = 1;
 
     [Tooltip("적 유닛·건물의 체력바를 항상 표시합니다.")]
-    public bool alwaysShowEnemyBar = true;
+    public bool alwaysShowEnemyBar = false;
 
     [Tooltip("아군이 선택되었을 때 체력바를 표시합니다.")]
     public bool showWhenSelected = true;
@@ -47,17 +47,22 @@ public class WorldHealthBar : MonoBehaviour
     public float lowHealthThreshold = 0.35f;
 
     [Header("Segments")]
-    [Tooltip("체력바 한 칸이 나타내는 체력량입니다.")]
+    [Tooltip("체력바 한 칸이 나타내는 체력량입니다. 최대 체력 ÷ 이 값 = 칸 개수입니다.")]
     public float healthPerSegment = 10f;
 
     [Tooltip("칸 사이 간격(캔버스 픽셀)입니다.")]
-    public float segmentSpacing = 2f;
+    public float segmentSpacing = 3f;
+
+    [Tooltip("한 줄에 표시할 최대 칸 수입니다. 초과하면 다음 줄로 넘깁니다.")]
+    public int maxSegmentsPerRow = 15;
 
     private EntityHealth entityHealth;
     private SelectableEntity selectableEntity;
     private RectTransform segmentsRoot;
+    private GridLayoutGroup segmentsGrid;
     private readonly List<Image> segmentImages = new List<Image>();
     private CanvasGroup canvasGroup;
+    private RectTransform healthBarCanvasRect;
     private Transform barAnchor;
     private float damageShowTimer;
     private bool lastFogVisible = true;
@@ -93,27 +98,23 @@ public class WorldHealthBar : MonoBehaviour
 
     void ApplyDefaultLayout()
     {
-        if (selectableEntity.entityType == SelectableEntityType.Building)
+        if (selectableEntity.entityType == SelectableEntityType.Building &&
+            heightOffset < 0.5f)
         {
-            if (barWidth <= 0f)
-                barWidth = 6f;
-
-            if (heightOffset < 0.5f)
-                heightOffset = 0.5f;
-        }
-        else if (barWidth <= 0f)
-        {
-            barWidth = 1.5f;
+            heightOffset = 0.5f;
         }
     }
 
     void OnDestroy()
     {
-        if (entityHealth == null)
-            return;
+        if (entityHealth != null)
+        {
+            entityHealth.OnHealthChanged -= HandleHealthChanged;
+            entityHealth.OnDied -= HandleDied;
+        }
 
-        entityHealth.OnHealthChanged -= HandleHealthChanged;
-        entityHealth.OnDied -= HandleDied;
+        if (barAnchor != null)
+            Destroy(barAnchor.gameObject);
     }
 
     void Update()
@@ -137,18 +138,22 @@ public class WorldHealthBar : MonoBehaviour
         if (camera == null || barAnchor == null)
             return;
 
+        barAnchor.position = GetBarWorldPosition();
         barAnchor.rotation = camera.transform.rotation;
     }
 
     void BuildHealthBarUI()
     {
-        float resolvedBarWidth = ResolveBarWidth();
+        int segmentCount = GetSegmentCount(entityHealth.MaxHealth);
 
-        GameObject anchorObject = new GameObject("HealthBarAnchor");
-        anchorObject.transform.SetParent(transform, false);
-        anchorObject.transform.localPosition = GetBarLocalPosition();
+        GameObject anchorObject = new GameObject($"{gameObject.name}_HealthBar");
+        anchorObject.transform.SetParent(WorldHealthBarRoot.Transform, false);
 
         barAnchor = anchorObject.transform;
+        barAnchor.position = GetBarWorldPosition();
+
+        if (Camera.main != null)
+            barAnchor.rotation = Camera.main.transform.rotation;
 
         GameObject canvasObject = new GameObject("HealthBarCanvas");
         canvasObject.transform.SetParent(anchorObject.transform, false);
@@ -159,10 +164,8 @@ public class WorldHealthBar : MonoBehaviour
         canvas.sortingOrder = 10;
 
         RectTransform canvasRect = canvasObject.GetComponent<RectTransform>();
-        canvasRect.sizeDelta =
-            new Vector2(
-                resolvedBarWidth / worldScale,
-                barHeight / worldScale);
+        healthBarCanvasRect = canvasRect;
+        ApplyBarSize(segmentCount);
 
         canvasObject.transform.localScale =
             Vector3.one * worldScale;
@@ -196,42 +199,92 @@ public class WorldHealthBar : MonoBehaviour
         segmentsRoot.offsetMin = new Vector2(2f, 2f);
         segmentsRoot.offsetMax = new Vector2(-2f, -2f);
 
-        HorizontalLayoutGroup layout =
-            segmentsObject.AddComponent<HorizontalLayoutGroup>();
-
-        layout.spacing = segmentSpacing;
-        layout.childAlignment = TextAnchor.MiddleCenter;
-        layout.childControlWidth = true;
-        layout.childControlHeight = true;
-        layout.childForceExpandWidth = true;
-        layout.childForceExpandHeight = true;
+        segmentsGrid = segmentsObject.AddComponent<GridLayoutGroup>();
+        ConfigureSegmentsGrid();
     }
 
-    float ResolveBarWidth()
+    void ConfigureSegmentsGrid()
     {
-        if (barWidth > 0f)
-            return barWidth;
+        if (segmentsGrid == null)
+            return;
 
+        segmentsGrid.cellSize = new Vector2(
+            GetSegmentCanvasWidth(),
+            GetSegmentCanvasHeight());
+
+        segmentsGrid.spacing = new Vector2(segmentSpacing, segmentSpacing);
+        segmentsGrid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+        segmentsGrid.constraintCount = Mathf.Max(1, maxSegmentsPerRow);
+        segmentsGrid.startCorner = GridLayoutGroup.Corner.UpperLeft;
+        segmentsGrid.startAxis = GridLayoutGroup.Axis.Horizontal;
+        segmentsGrid.childAlignment = TextAnchor.MiddleCenter;
+    }
+
+    void GetSegmentLayout(int segmentCount, out int columns, out int rows)
+    {
+        segmentCount = Mathf.Max(1, segmentCount);
+        int maxPerRow = Mathf.Max(1, maxSegmentsPerRow);
+        columns = Mathf.Min(segmentCount, maxPerRow);
+        rows = Mathf.CeilToInt(segmentCount / (float)maxPerRow);
+    }
+
+    float ResolveBarWidth(int segmentCount)
+    {
+        GetSegmentLayout(segmentCount, out int columns, out _);
+
+        float spacingWorld = segmentSpacing * worldScale;
+        float paddingWorld = 4f * worldScale;
+
+        return columns * segmentWorldWidth
+            + Mathf.Max(0, columns - 1) * spacingWorld
+            + paddingWorld;
+    }
+
+    float ResolveBarHeight(int segmentCount)
+    {
+        GetSegmentLayout(segmentCount, out _, out int rows);
+
+        float spacingWorld = segmentSpacing * worldScale;
+        float paddingWorld = 4f * worldScale;
+
+        return rows * barHeight
+            + Mathf.Max(0, rows - 1) * spacingWorld
+            + paddingWorld;
+    }
+
+    void ApplyBarSize(int segmentCount)
+    {
+        if (healthBarCanvasRect == null)
+            return;
+
+        ConfigureSegmentsGrid();
+        healthBarCanvasRect.sizeDelta = new Vector2(
+            ResolveBarWidth(segmentCount) / worldScale,
+            ResolveBarHeight(segmentCount) / worldScale);
+    }
+
+    float GetSegmentCanvasWidth()
+    {
+        return segmentWorldWidth / worldScale;
+    }
+
+    float GetSegmentCanvasHeight()
+    {
+        return barHeight / worldScale;
+    }
+
+    Vector3 GetBarWorldPosition()
+    {
         Collider collider = selectableEntity.SelectionCollider;
 
         if (collider == null)
-            return 1f;
+            return transform.position + Vector3.up * (1f + heightOffset);
 
-        float width = Mathf.Max(collider.bounds.size.x, collider.bounds.size.z);
-        return Mathf.Clamp(width, 1.2f, 8f);
-    }
-
-    Vector3 GetBarLocalPosition()
-    {
-        Collider collider = selectableEntity.SelectionCollider;
-
-        if (collider == null)
-            return Vector3.up * (1f + heightOffset);
-
-        float topHeight =
-            transform.InverseTransformPoint(collider.bounds.max).y;
-
-        return Vector3.up * (topHeight + heightOffset);
+        Bounds bounds = collider.bounds;
+        return new Vector3(
+            bounds.center.x,
+            bounds.max.y + heightOffset,
+            bounds.center.z);
     }
 
     public void RefreshVisibility()
@@ -304,6 +357,7 @@ public class WorldHealthBar : MonoBehaviour
 
         int segmentCount = GetSegmentCount(maxHealth);
         EnsureSegmentCount(segmentCount);
+        ApplyBarSize(segmentCount);
 
         for (int i = 0; i < segmentCount; i++)
         {

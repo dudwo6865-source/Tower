@@ -1,0 +1,10 @@
+# Unity 생성 폴더 - 커서 인덱싱/임베딩에서 제외 (실행 중 계속 변경되어 부하 유발)
+Library/
+Temp/
+Obj/
+obj/
+Build/
+Builds/
+Logs/
+UserSettings/
+MemoryCaptures/

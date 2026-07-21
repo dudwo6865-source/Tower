@@ -655,7 +655,7 @@ PlayerSettings:
     PS5: DOTWEEN
     QNX: DOTWEEN
     Stadia: DOTWEEN
-    Standalone: DOTWEEN;PWB_BIRP
+    Standalone: DOTWEEN;PWB_BIRP;UNITY_PIPELINE_URP;PWB_URP
     VisionOS: DOTWEEN
     WebGL: DOTWEEN
     Windows Store Apps: DOTWEEN

@@ -43,6 +43,16 @@ public class UnitAttacker : MonoBehaviour
     [Tooltip("피격 이펙트 색상입니다.")]
     public Color hitColor = new Color(1f, 0.5f, 0.2f, 1f);
 
+    [Header("Effect Prefabs")]
+    [Tooltip("공격 시 발사 위치에 재생할 머즐 플래시·파티클 프리팹입니다.")]
+    public GameObject muzzleFlashPrefab;
+
+    [Tooltip("피격 시 대상 위치에 재생할 히트 이펙트·파티클 프리팹입니다.")]
+    public GameObject hitEffectPrefab;
+
+    [Tooltip("원거리 공격 투사체 프리팹입니다.")]
+    public GameObject projectilePrefab;
+
     private float cooldownTimer;
     private UnitAnimator unitAnimator;
     private UnitSound unitSound;
@@ -164,29 +174,46 @@ public class UnitAttacker : MonoBehaviour
             ? firePoint.position
             : transform.position;
 
+        Vector3 targetPoint = target.SelectionBounds.center;
+        Quaternion fireRotation =
+            CombatEffectSpawner.GetFlatLookRotation(firePosition, targetPoint);
+
         if (attackType == AttackType.Ranged)
         {
             AttackVisuals.SpawnProjectile(
                 firePosition,
+                fireRotation,
                 target,
                 targetHealth,
                 attackDamage,
                 projectileSpeed,
+                projectilePrefab,
+                hitEffectPrefab,
                 projectileColor,
-                hitColor);
+                hitColor,
+                selfEntity);
         }
         else
         {
-            targetHealth.TakeDamage(attackDamage);
+            targetHealth.TakeDamage(attackDamage, selfEntity);
 
             if (spawnVisualEffects)
+            {
                 AttackVisuals.SpawnHitEffect(
-                    target.SelectionBounds.center,
+                    targetPoint,
+                    hitEffectPrefab,
                     hitColor);
+            }
         }
 
         if (spawnVisualEffects)
-            AttackVisuals.SpawnMuzzleFlash(firePosition, projectileColor);
+        {
+            AttackVisuals.SpawnMuzzleFlash(
+                firePosition,
+                fireRotation,
+                muzzleFlashPrefab,
+                projectileColor);
+        }
 
         if (!ShouldUseAttackAnimationEvent() && unitAnimator != null)
             unitAnimator.PlayAttack();
