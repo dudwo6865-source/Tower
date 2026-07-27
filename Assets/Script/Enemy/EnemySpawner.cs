@@ -1,370 +1,203 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+// 하이라키에 배치하는 스포너(건물형).
+// - 근처에 아군(플레이어 소속) 유닛이 들어오면 일정 간격으로 적을 스폰한다.
+// - 스포너 오브젝트가 파괴될 때 적을 한 번에 스폰한다.
+// 낮/밤과 무관하게 조건이 맞을 때만 동작한다.
+// (밤 웨이브 스폰은 WaveManager가 직접 담당하며, 이 컴포넌트와는 별개다.)
+[DisallowMultipleComponent]
 public class EnemySpawner : MonoBehaviour
 {
     [Header("Spawn Target")]
     [Tooltip("스폰할 적 프리팹 목록입니다. 여러 개면 매 스폰마다 무작위로 선택합니다.")]
     public List<GameObject> enemyPrefabs = new List<GameObject>();
 
-    [Tooltip("스폰 위치 목록입니다. 비워두면 이 오브젝트의 위치에서 스폰합니다.")]
-    public List<Transform> spawnPoints = new List<Transform>();
-
-    [Tooltip("스폰되는 적의 소속 ID입니다. 플레이어와 달라야 적으로 인식됩니다.")]
+    [Tooltip("스폰되는 적의 소속 ID입니다. 이 값과 다른 소속 유닛을 '아군'으로 감지합니다.")]
     public int enemyOwnerId = 2;
 
-    [Header("Timing")]
-    [Tooltip("WaveManager가 없을 때만 사용합니다. WaveManager가 있으면 자동으로 꺼집니다.")]
-    public bool autoStart = true;
+    [Header("Spawn Position")]
+    [Tooltip("이 스포너를 중심으로 적을 스폰할 반경(미터)입니다.")]
+    public float spawnRadius = 6f;
 
-    [Tooltip("스폰을 시작하기 전 대기 시간(초)입니다.")]
-    public float startDelay = 2f;
+    [Tooltip("스폰 위치(NavMesh 위)를 찾기 위한 최대 시도 횟수입니다.")]
+    public int spawnPositionAttempts = 16;
 
-    [Tooltip("한 번의 스폰 주기 사이 간격(초)입니다.")]
-    public float spawnInterval = 3f;
+    [Header("Proximity Spawn")]
+    [Tooltip("이 반경 안에 아군 유닛이 있으면 주기적으로 스폰합니다.")]
+    public float allyDetectRadius = 15f;
 
-    [Tooltip("한 번의 스폰 주기에 생성할 적 수(기본값)입니다.")]
-    public int enemiesPerSpawn = 1;
+    [Tooltip("근접 감지 대상을 유닛으로만 한정할지 여부입니다. 끄면 건물도 트리거가 됩니다.")]
+    public bool detectUnitsOnly = true;
 
-    [Header("Limits")]
-    [Tooltip("동시에 살아있을 수 있는 최대 적 수입니다. 0이면 무제한입니다.")]
+    [Tooltip("근접 조건이 충족된 동안의 스폰 간격(초)입니다.")]
+    public float spawnInterval = 5f;
+
+    [Tooltip("근접 조건 충족 시 한 번에 스폰할 적 수입니다.")]
+    public int enemiesPerSpawn = 2;
+
+    [Tooltip("이 스포너가 근접 스폰으로 동시에 유지할 최대 생존 적 수입니다. 0이면 무제한입니다.")]
     public int maxAliveEnemies = 0;
 
-    [Tooltip("게임 전체에서 생성할 수 있는 적 최대 수입니다. 0이면 무제한입니다.")]
-    public int maxTotalSpawns = 0;
+    [Header("Death Spawn")]
+    [Tooltip("스포너가 파괴될 때 스폰할 적 수입니다. 0이면 파괴 시 스폰하지 않습니다.")]
+    public int enemiesOnDeath = 5;
 
-    [Header("Difficulty Scaling")]
-    [Tooltip("웨이브/사이클마다 한 번에 추가로 생성할 적 수입니다.")]
-    public int enemiesSpawnGrowthPerCycle = 0;
-
-    [Tooltip("한 번의 스폰 주기에 생성 가능한 최대 적 수입니다. 0이면 무제한입니다.")]
-    public int maxEnemiesPerSpawn = 0;
-
-    [Tooltip("웨이브/사이클마다 누적되는 체력 증가 비율입니다.")]
-    public float healthGrowthPerCycle = 0.08f;
-
-    [Tooltip("웨이브/사이클마다 누적되는 공격력 증가 비율입니다.")]
-    public float damageGrowthPerCycle = 0.05f;
-
-    [Tooltip("웨이브/사이클마다 누적되는 이동 속도 증가 비율입니다.")]
-    public float speedGrowthPerCycle = 0f;
-
-    [Tooltip("이동 속도 배율의 상한입니다.")]
-    public float maxSpeedMultiplier = 2f;
+    [Header("Enemy Behavior")]
+    [Tooltip("스폰된 적이 아군 건물/본부로 자동 진군할지 여부입니다.")]
+    public bool advanceToEnemyBuildings = true;
 
     public int AliveCount { get; private set; }
-    public int CycleCount { get; private set; }
-    public int TotalSpawnedCount { get; private set; }
 
-    public bool HasReachedTotalSpawnLimit =>
-        maxTotalSpawns > 0 && TotalSpawnedCount >= maxTotalSpawns;
+    EntityHealth health;
+    float spawnTimer;
+    bool isDead;
 
-    public event System.Action<int> OnAliveCountChanged;
-    public event System.Action<int> OnCycleStarted;
-
-    Coroutine spawnRoutine;
-
-    void Start()
+    void Awake()
     {
-        if (WaveManager.Instance != null)
-            return;
+        health = GetComponent<EntityHealth>();
 
-        if (autoStart)
-            StartSpawning();
+        if (health != null)
+            health.OnDied += HandleDied;
     }
 
-    [ContextMenu("Start Spawning")]
-    public void StartSpawning()
+    void OnDestroy()
     {
-        if (spawnRoutine != null)
-            return;
-
-        spawnRoutine = StartCoroutine(SpawnLoop());
+        if (health != null)
+            health.OnDied -= HandleDied;
     }
 
-    [ContextMenu("Stop Spawning")]
-    public void StopSpawning()
+    void Update()
     {
-        if (spawnRoutine == null)
+        if (isDead)
             return;
 
-        StopCoroutine(spawnRoutine);
-        spawnRoutine = null;
+        if (!HasAllyNearby())
+            return;
+
+        if (maxAliveEnemies > 0 && AliveCount >= maxAliveEnemies)
+            return;
+
+        spawnTimer -= Time.deltaTime;
+
+        if (spawnTimer > 0f)
+            return;
+
+        spawnTimer = Mathf.Max(0.1f, spawnInterval);
+        SpawnBurst(enemiesPerSpawn, respectAliveCap: true);
     }
 
-    public int SpawnWaveBurst(int count, int waveIndex, bool? advanceToEnemyBuildings = null)
+    void HandleDied()
     {
-        if (enemyPrefabs.Count == 0 || count <= 0)
-            return 0;
+        if (isDead)
+            return;
 
-        if (HasReachedTotalSpawnLimit)
-            return 0;
+        isDead = true;
 
-        GetWaveMultipliers(
-            waveIndex,
-            out float healthMultiplier,
-            out float damageMultiplier,
-            out float speedMultiplier);
+        // 파괴 시 방출은 생존 상한을 무시하고 정해진 수만큼 모두 스폰한다.
+        SpawnBurst(enemiesOnDeath, respectAliveCap: false);
+    }
 
-        int spawned = 0;
+    void SpawnBurst(int count, bool respectAliveCap)
+    {
+        if (count <= 0 || enemyPrefabs.Count == 0)
+            return;
 
         for (int i = 0; i < count; i++)
         {
-            if (maxAliveEnemies > 0 && AliveCount >= maxAliveEnemies)
+            if (respectAliveCap &&
+                maxAliveEnemies > 0 &&
+                AliveCount >= maxAliveEnemies)
                 break;
 
-            if (HasReachedTotalSpawnLimit)
-                break;
+            GameObject prefab =
+                enemyPrefabs[Random.Range(0, enemyPrefabs.Count)];
 
-            if (SpawnOne(
-                    healthMultiplier,
-                    damageMultiplier,
-                    speedMultiplier,
-                    advanceToEnemyBuildings))
-            {
-                TotalSpawnedCount++;
-                spawned++;
-            }
-        }
+            if (prefab == null)
+                continue;
 
-        if (spawned > 0)
-        {
-            CycleCount++;
-            OnCycleStarted?.Invoke(CycleCount);
-        }
+            Vector3 position = EnemySpawnUtility.GetRandomPositionInRadius(
+                transform.position,
+                spawnRadius,
+                avoidPlayerVision: false,
+                spawnPositionAttempts);
 
-        return spawned;
-    }
+            GameObject enemyObject = EnemySpawnUtility.SpawnEnemy(
+                prefab,
+                position,
+                prefab.transform.rotation,
+                enemyOwnerId,
+                1f,
+                1f,
+                1f,
+                TrackAlive);
 
-    public GameObject SpawnAtPosition(
-        Vector3 position,
-        int waveIndex,
-        bool? advanceToEnemyBuildings = null)
-    {
-        return SpawnAtPosition(null, position, waveIndex, advanceToEnemyBuildings);
-    }
+            if (enemyObject == null)
+                continue;
 
-    // prefabOverride가 지정되면 그 프리팹을, 아니면 enemyPrefabs에서 무작위로 스폰한다.
-    public GameObject SpawnAtPosition(
-        GameObject prefabOverride,
-        Vector3 position,
-        int waveIndex,
-        bool? advanceToEnemyBuildings = null)
-    {
-        if (HasReachedTotalSpawnLimit)
-            return null;
-
-        if (maxAliveEnemies > 0 && AliveCount >= maxAliveEnemies)
-            return null;
-
-        GameObject prefab = prefabOverride != null
-            ? prefabOverride
-            : (enemyPrefabs.Count > 0
-                ? enemyPrefabs[Random.Range(0, enemyPrefabs.Count)]
-                : null);
-
-        if (prefab == null)
-            return null;
-
-        GetWaveMultipliers(
-            waveIndex,
-            out float healthMultiplier,
-            out float damageMultiplier,
-            out float speedMultiplier);
-
-        GameObject enemyObject = EnemySpawnUtility.SpawnEnemy(
-            prefab,
-            position,
-            prefab.transform.rotation,
-            enemyOwnerId,
-            healthMultiplier,
-            damageMultiplier,
-            speedMultiplier,
-            TrackAlive);
-
-        if (enemyObject == null)
-            return null;
-
-        if (advanceToEnemyBuildings.HasValue)
             EnemySpawnUtility.ApplyAdvanceToEnemyBuildings(
                 enemyObject,
-                advanceToEnemyBuildings.Value);
-
-        TotalSpawnedCount++;
-        return enemyObject;
-    }
-
-    public void GetWaveMultipliers(
-        int waveIndex,
-        out float healthMultiplier,
-        out float damageMultiplier,
-        out float speedMultiplier)
-    {
-        healthMultiplier = 1f + healthGrowthPerCycle * waveIndex;
-        damageMultiplier = 1f + damageGrowthPerCycle * waveIndex;
-
-        // 속도 배율은 기본 1에서 시작해 증가만 하는 값이다.
-        // maxSpeedMultiplier가 1 미만(예: 0)으로 잘못 설정돼도 속도가 0이 되어
-        // 스폰된 적이 아예 움직이지 못하는 것을 막기 위해 하한을 1로 둔다.
-        float speedCap = Mathf.Max(1f, maxSpeedMultiplier);
-        speedMultiplier =
-            Mathf.Min(1f + speedGrowthPerCycle * waveIndex, speedCap);
-    }
-
-    public Vector3 GetSpawnPosition()
-    {
-        Vector3 basePosition = spawnPoints.Count > 0
-            ? spawnPoints[Random.Range(0, spawnPoints.Count)].position
-            : transform.position;
-
-        return EnemySpawnUtility.SampleNavMeshPosition(basePosition);
-    }
-
-    IEnumerator SpawnLoop()
-    {
-        yield return new WaitForSeconds(startDelay);
-
-        while (true)
-        {
-            if (HasReachedTotalSpawnLimit)
-            {
-                spawnRoutine = null;
-                yield break;
-            }
-
-            SpawnCycle();
-            CycleCount++;
-            OnCycleStarted?.Invoke(CycleCount);
-
-            yield return new WaitForSeconds(spawnInterval);
+                advanceToEnemyBuildings);
         }
     }
 
-    int GetEnemiesToSpawnThisCycle()
+    bool HasAllyNearby()
     {
-        long scaledCount = (long)enemiesPerSpawn +
-            (long)enemiesSpawnGrowthPerCycle * CycleCount;
+        float radiusSqr = allyDetectRadius * allyDetectRadius;
+        Vector3 origin = transform.position;
 
-        int count = scaledCount > int.MaxValue
-            ? int.MaxValue
-            : Mathf.Max(0, (int)scaledCount);
-
-        if (maxEnemiesPerSpawn > 0)
-            count = Mathf.Min(count, maxEnemiesPerSpawn);
-
-        return count;
-    }
-
-    void SpawnCycle()
-    {
-        GetWaveMultipliers(
-            CycleCount,
-            out float healthMultiplier,
-            out float damageMultiplier,
-            out float speedMultiplier);
-
-        int spawnCount = GetEnemiesToSpawnThisCycle();
-
-        if (maxTotalSpawns > 0)
+        foreach (SelectableEntity entity in SelectableRegistry.Entities)
         {
-            int remaining = maxTotalSpawns - TotalSpawnedCount;
-            spawnCount = Mathf.Min(spawnCount, remaining);
+            if (entity == null)
+                continue;
+
+            // 이 스포너와 같은 소속(적)은 감지 대상이 아니다.
+            if (entity.ownerId == enemyOwnerId)
+                continue;
+
+            if (detectUnitsOnly &&
+                entity.entityType != SelectableEntityType.Unit)
+                continue;
+
+            EntityHealth entityHealth = entity.GetComponent<EntityHealth>();
+
+            if (entityHealth != null && !entityHealth.IsAlive)
+                continue;
+
+            Vector3 delta = entity.transform.position - origin;
+            delta.y = 0f;
+
+            if (delta.sqrMagnitude <= radiusSqr)
+                return true;
         }
 
-        for (int i = 0; i < spawnCount; i++)
-        {
-            if (maxAliveEnemies > 0 && AliveCount >= maxAliveEnemies)
-                return;
-
-            if (HasReachedTotalSpawnLimit)
-                return;
-
-            if (SpawnOne(healthMultiplier, damageMultiplier, speedMultiplier))
-                TotalSpawnedCount++;
-        }
+        return false;
     }
 
-    bool SpawnOne(
-        float healthMultiplier,
-        float damageMultiplier,
-        float speedMultiplier,
-        bool? advanceToEnemyBuildings = null)
+    void TrackAlive(EntityHealth spawnedHealth)
     {
-        return SpawnOneAt(
-            GetSpawnPosition(),
-            healthMultiplier,
-            damageMultiplier,
-            speedMultiplier,
-            advanceToEnemyBuildings);
-    }
-
-    bool SpawnOneAt(
-        Vector3 position,
-        float healthMultiplier,
-        float damageMultiplier,
-        float speedMultiplier,
-        bool? advanceToEnemyBuildings = null)
-    {
-        GameObject prefab =
-            enemyPrefabs[Random.Range(0, enemyPrefabs.Count)];
-
-        if (prefab == null)
-            return false;
-
-        GameObject enemyObject = EnemySpawnUtility.SpawnEnemy(
-            prefab,
-            position,
-            prefab.transform.rotation,
-            enemyOwnerId,
-            healthMultiplier,
-            damageMultiplier,
-            speedMultiplier,
-            TrackAlive);
-
-        if (enemyObject == null)
-            return false;
-
-        if (advanceToEnemyBuildings.HasValue)
-            EnemySpawnUtility.ApplyAdvanceToEnemyBuildings(
-                enemyObject,
-                advanceToEnemyBuildings.Value);
-
-        return true;
-    }
-
-    void TrackAlive(EntityHealth health)
-    {
-        if (health == null)
+        if (spawnedHealth == null)
             return;
 
         AliveCount++;
-        OnAliveCountChanged?.Invoke(AliveCount);
 
-        void HandleDied()
+        void HandleSpawnedDied()
         {
-            health.OnDied -= HandleDied;
+            spawnedHealth.OnDied -= HandleSpawnedDied;
             AliveCount = Mathf.Max(0, AliveCount - 1);
-            OnAliveCountChanged?.Invoke(AliveCount);
         }
 
-        health.OnDied += HandleDied;
+        spawnedHealth.OnDied += HandleSpawnedDied;
     }
 
     void OnDrawGizmosSelected()
     {
+        // 아군 감지 반경(노랑)
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireSphere(transform.position, allyDetectRadius);
+
+        // 스폰 반경(빨강)
         Gizmos.color = Color.red;
-
-        if (spawnPoints.Count == 0)
-        {
-            Gizmos.DrawWireSphere(transform.position, 1f);
-            return;
-        }
-
-        foreach (Transform point in spawnPoints)
-        {
-            if (point != null)
-                Gizmos.DrawWireSphere(point.position, 1f);
-        }
+        Gizmos.DrawWireSphere(transform.position, spawnRadius);
     }
 }

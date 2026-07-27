@@ -140,6 +140,12 @@ public static class UnitCommandHandler
             if (entity.GetComponent<NavMeshAgent>() == null)
                 continue;
 
+            // 밤 복귀 이동 중인 유닛은 추가 명령을 무시한다.
+            ProducedUnitMarker marker = entity.GetComponent<ProducedUnitMarker>();
+
+            if (marker != null && marker.IsRecalling)
+                continue;
+
             units.Add(entity);
         }
 

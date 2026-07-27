@@ -165,7 +165,7 @@ public class MapLoader : MonoBehaviour
         wave.initialEnemiesAdvanceToBase = config.initialEnemiesAdvanceToBase;
         wave.nightWaveStartDelay = config.nightWaveStartDelay;
         wave.waveInterval = config.waveInterval;
-        wave.enemiesPerSpawnerPerWave = config.enemiesPerSpawnerPerWave;
+        wave.enemiesPerWave = config.enemiesPerWave;
         wave.maxWavesPerNight = config.maxWavesPerNight;
     }
 }

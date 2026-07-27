@@ -427,7 +427,12 @@ public class UnitCombatAI : CombatAIBase
 
 
 
-        if (agent.isOnNavMesh && agent.hasPath)
+        // 새 표적으로 전환할 때는 경로를 즉시 리셋(정지)하지 않는다.
+        // hasDestination=false로 두면 다음 프레임 추격에서 SetDestination으로
+        // 부드럽게 경로가 교체되므로, 여기서 멈추면 오히려 정지→재출발 버벅임이 생긴다.
+        // 표적이 사라진 경우(currentTarget == null)에만 확실히 멈춘다.
+
+        if (currentTarget == null && agent.isOnNavMesh && agent.hasPath)
 
             agent.ResetPath();
 

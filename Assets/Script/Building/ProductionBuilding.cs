@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 [DisallowMultipleComponent]
@@ -38,22 +39,16 @@ public class ProductionBuilding : MonoBehaviour
 
     SelectableEntity selectableEntity;
     EntityHealth buildingHealth;
-    Coroutine productionRoutine;
-    float productionTimer;
     LineRenderer rallyMarker;
+    DayNightCycle dayNightCycle;
+    bool subscribedDayNight;
+    bool builtAtRuntime;
+    readonly List<ProducedUnitMarker> producedUnits = new List<ProducedUnitMarker>();
 
-    public float ProductionProgress
-    {
-        get
-        {
-            if (recipe == null || recipe.spawnInterval <= 0f)
-                return 0f;
+    // 버스트 방식은 진행도 개념이 없으므로 항상 0을 반환한다.
+    public float ProductionProgress => 0f;
 
-            return Mathf.Clamp01(productionTimer / recipe.spawnInterval);
-        }
-    }
-
-    public bool IsProductionActive => productionRoutine != null;
+    public bool IsProductionActive => subscribedDayNight;
 
     void Awake()
     {
@@ -63,6 +58,9 @@ public class ProductionBuilding : MonoBehaviour
 
     void OnEnable()
     {
+        if (buildingHealth != null)
+            buildingHealth.OnDied += HandleBuildingDied;
+
         if (autoStart)
             StartCoroutine(BeginWhenReady());
     }
@@ -77,6 +75,9 @@ public class ProductionBuilding : MonoBehaviour
 
     void OnDisable()
     {
+        if (buildingHealth != null)
+            buildingHealth.OnDied -= HandleBuildingDied;
+
         if (UnitSelectionManager.Instance != null)
             UnitSelectionManager.Instance.OnSelectionChanged -= HandleSelectionChanged;
 
@@ -84,6 +85,13 @@ public class ProductionBuilding : MonoBehaviour
 
         if (rallyMarker != null)
             rallyMarker.enabled = false;
+    }
+
+    // 건물이 죽는 즉시(파괴 연출 시작 시점) 낮/밤 이벤트 구독을 끊는다.
+    // 파괴 대기 중 밤 전환 이벤트가 이미 죽은 건물에서 실행되는 것을 막는다.
+    void HandleBuildingDied()
+    {
+        StopProduction();
     }
 
     void HandleSelectionChanged()
@@ -102,6 +110,13 @@ public class ProductionBuilding : MonoBehaviour
         recipe = newRecipe;
     }
 
+    // 게임 도중(런타임)에 건설된 건물임을 표시한다. TowerPlacementController가 호출한다.
+    // 이 건물은 생성된 낮에는 생산하지 않고, 다음 낮 전환부터 생산한다.
+    public void MarkBuiltAtRuntime()
+    {
+        builtAtRuntime = true;
+    }
+
     public void SetRallyPoint(Vector3 worldPoint)
     {
         rallyPointWorld = UnitSpawnUtility.SampleNavMeshPosition(worldPoint);
@@ -117,22 +132,120 @@ public class ProductionBuilding : MonoBehaviour
 
     public void BeginProduction()
     {
-        if (productionRoutine != null)
-            return;
-
         if (recipe == null || recipe.unitPrefab == null)
             return;
 
-        productionRoutine = StartCoroutine(ProductionLoop());
+        // 생산은 '낮 시작 버스트' 방식으로 동작한다.
+        // 매 낮이 시작될 때(OnPhaseStarted(Day)) 한 번, 생산 한도까지 즉시 채운다.
+        SubscribeDayNight();
+
+        // 게임 시작 시 이미 존재하던(미리 배치된) 건물은 첫 낮에 즉시 생산한다.
+        // 게임 도중 건설된 건물(builtAtRuntime)은 생성된 낮엔 생산하지 않고, 다음 낮 전환부터 생산한다.
+        // (낮/밤 사이클이 없으면 이벤트를 받을 수 없으므로 예외적으로 즉시 생산.)
+        if (!builtAtRuntime && (dayNightCycle == null || dayNightCycle.IsDay))
+            SpawnBurstToLimit();
+    }
+
+    void SubscribeDayNight()
+    {
+        if (subscribedDayNight)
+            return;
+
+        if (dayNightCycle == null)
+            dayNightCycle = FindObjectOfType<DayNightCycle>();
+
+        if (dayNightCycle == null)
+            return;
+
+        dayNightCycle.OnPhaseStarted += HandlePhaseStarted;
+        subscribedDayNight = true;
+    }
+
+    void UnsubscribeDayNight()
+    {
+        if (!subscribedDayNight || dayNightCycle == null)
+            return;
+
+        dayNightCycle.OnPhaseStarted -= HandlePhaseStarted;
+        subscribedDayNight = false;
+    }
+
+    void HandlePhaseStarted(DayNightPhase phase)
+    {
+        // 이미 파괴된 건물에서 이벤트가 호출되면 무시한다(구독 해제 타이밍 방어).
+        if (this == null)
+            return;
+
+        // 밤이 시작되면 남아 있는 생산 유닛을 건물로 불러들여 사라지게 한다.
+        if (phase == DayNightPhase.Night)
+        {
+            RecallUnits();
+            return;
+        }
+
+        if (buildingHealth != null && !buildingHealth.IsAlive)
+            return;
+
+        SpawnBurstToLimit();
+    }
+
+    // 밤 전환 시 호출: 살아 있는 생산 유닛을 생산 건물로 이동시킨 뒤,
+    // 도착하면 사라지게 한다.
+    void RecallUnits()
+    {
+        if (producedUnits.Count == 0)
+            return;
+
+        Vector3 target = spawnPoint != null
+            ? spawnPoint.position
+            : transform.position;
+
+        float arriveDistance = 1.5f;
+
+        if (selectableEntity != null)
+        {
+            Bounds bounds = selectableEntity.SelectionBounds;
+            arriveDistance = Mathf.Max(
+                1.5f,
+                Mathf.Max(bounds.extents.x, bounds.extents.z) + 1f);
+        }
+
+        // Recall 도중 Destroy로 목록이 바뀔 수 있으므로 스냅샷을 순회한다.
+        ProducedUnitMarker[] snapshot = producedUnits.ToArray();
+
+        foreach (ProducedUnitMarker marker in snapshot)
+        {
+            if (marker != null)
+                marker.Recall(target, arriveDistance);
+        }
+    }
+
+    // 생산 한도(maxAlivePerBuilding)까지 생산시간 없이 즉시 유닛을 채운다.
+    void SpawnBurstToLimit()
+    {
+        if (recipe == null || recipe.unitPrefab == null)
+            return;
+
+        // 한도가 없으면(<=0) 무한 루프를 막기 위해 한 마리만 생산한다.
+        if (recipe.maxAlivePerBuilding <= 0)
+        {
+            TrySpawnUnit();
+            return;
+        }
+
+        // 스폰 실패가 반복될 때의 무한 루프를 막는 안전장치.
+        int safety = recipe.maxAlivePerBuilding + 4;
+
+        while (!IsAtCapacity && safety-- > 0)
+        {
+            if (!TrySpawnUnit())
+                break;
+        }
     }
 
     public void StopProduction()
     {
-        if (productionRoutine == null)
-            return;
-
-        StopCoroutine(productionRoutine);
-        productionRoutine = null;
+        UnsubscribeDayNight();
     }
 
     public void NotifyUnitReleased(ProducedUnitMarker marker)
@@ -140,6 +253,7 @@ public class ProductionBuilding : MonoBehaviour
         if (marker == null)
             return;
 
+        producedUnits.Remove(marker);
         AliveCount = Mathf.Max(0, AliveCount - 1);
     }
 
@@ -154,46 +268,6 @@ public class ProductionBuilding : MonoBehaviour
             yield break;
 
         BeginProduction();
-    }
-
-    IEnumerator ProductionLoop()
-    {
-        if (recipe.initialSpawnDelay > 0f)
-            yield return new WaitForSeconds(recipe.initialSpawnDelay);
-
-        float timer = 0f;
-        productionTimer = 0f;
-
-        while (enabled)
-        {
-            if (buildingHealth != null && !buildingHealth.IsAlive)
-                yield break;
-
-            if (IsAtCapacity)
-            {
-                timer = 0f;
-                productionTimer = 0f;
-                yield return null;
-                continue;
-            }
-
-            timer += Time.deltaTime;
-            productionTimer = timer;
-
-            if (timer < recipe.spawnInterval)
-            {
-                yield return null;
-                continue;
-            }
-
-            timer = 0f;
-            productionTimer = 0f;
-
-            if (TrySpawnUnit())
-                continue;
-
-            yield return null;
-        }
     }
 
     bool TrySpawnUnit()
@@ -233,6 +307,7 @@ public class ProductionBuilding : MonoBehaviour
             marker = unitObject.AddComponent<ProducedUnitMarker>();
 
         marker.Initialize(this);
+        producedUnits.Add(marker);
         AliveCount++;
         SendSpawnedUnitToRally(unitObject);
         return true;

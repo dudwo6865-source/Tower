@@ -14,15 +14,32 @@ public class WaveManager : MonoBehaviour
     [Tooltip("비워두면 씬에서 자동으로 찾습니다.")]
     public DayNightCycle dayNightCycle;
 
-    [Tooltip("비워두면 씬의 모든 EnemySpawner를 사용합니다.")]
-    public EnemySpawner[] spawners;
+    [Header("Enemy Spawn")]
+    [Tooltip("밤 웨이브에 스폰할 적 프리팹 목록입니다. 여러 개면 매 스폰마다 무작위로 선택합니다.")]
+    public List<GameObject> enemyPrefabs = new List<GameObject>();
+
+    [Tooltip("스폰되는 적의 소속 ID입니다. 플레이어와 달라야 적으로 인식됩니다.")]
+    public int enemyOwnerId = 2;
+
+    [Header("Difficulty Scaling")]
+    [Tooltip("웨이브마다 누적되는 체력 증가 비율입니다.")]
+    public float healthGrowthPerCycle = 0.08f;
+
+    [Tooltip("웨이브마다 누적되는 공격력 증가 비율입니다.")]
+    public float damageGrowthPerCycle = 0.05f;
+
+    [Tooltip("웨이브마다 누적되는 이동 속도 증가 비율입니다.")]
+    public float speedGrowthPerCycle = 0f;
+
+    [Tooltip("이동 속도 배율의 상한입니다.")]
+    public float maxSpeedMultiplier = 2f;
 
     [Header("Player")]
     [Tooltip("플레이어 본부를 찾을 때 사용하는 ownerId입니다.")]
     public int playerOwnerId = 1;
 
     [Header("Initial Scatter (Day Start)")]
-    [Tooltip("초기 배치에 사용할 적 프리팹 목록입니다. 비워두면 스포너의 enemyPrefabs를 사용합니다. 여러 개면 배치마다 무작위로 선택합니다.")]
+    [Tooltip("초기 배치에 사용할 적 프리팹 목록입니다. 비워두면 위의 Enemy Spawn 프리팹을 사용합니다. 여러 개면 배치마다 무작위로 선택합니다.")]
     public List<GameObject> initialEnemyPrefabs = new List<GameObject>();
 
     [Tooltip("게임 시작 시 맵에 미리 배치할 적 수입니다.")]
@@ -57,8 +74,14 @@ public class WaveManager : MonoBehaviour
     [Tooltip("웨이브 사이 간격(초)입니다. maxWavesPerNight가 1 이상이면 밤 길이 ÷ maxWavesPerNight 값으로 자동 조정됩니다.")]
     public float waveInterval = 12f;
 
-    [Tooltip("각 스포너가 웨이브마다 생성할 기본 적 수입니다. 0이면 스포너의 enemiesPerSpawn을 사용합니다.")]
-    public int enemiesPerSpawnerPerWave = 0;
+    [Tooltip("각 밤 웨이브마다 스폰할 적 수입니다.")]
+    public int enemiesPerWave = 8;
+
+    [Tooltip("밤 웨이브 적을 본부와 최소 이 거리 이상 떨어진 곳에 배치합니다.")]
+    public float nightWaveMinDistanceFromHq = 20f;
+
+    [Tooltip("켜면 밤 웨이브 적을 플레이어 시야 밖(안개 속)에 우선 배치합니다.")]
+    public bool nightWaveAvoidPlayerVision = true;
 
     [Tooltip("밤 동안 진행할 최대 웨이브 수입니다. 0이면 밤이 끝날 때까지 계속합니다.")]
     public int maxWavesPerNight = 0;
@@ -67,7 +90,9 @@ public class WaveManager : MonoBehaviour
 
     public int CurrentNightWave { get; private set; }
 
-    public int TotalAliveEnemies { get; private set; }
+    public int TotalAliveEnemies => aliveCount;
+
+    int aliveCount;
 
     public event Action<int> OnNightWaveStarted;
 
@@ -84,7 +109,6 @@ public class WaveManager : MonoBehaviour
 
         Instance = this;
         ResolveReferences();
-        TakeOverSpawners();
     }
 
     void OnEnable()
@@ -103,8 +127,6 @@ public class WaveManager : MonoBehaviour
 
     void Start()
     {
-        SubscribeSpawnerAliveEvents();
-
         if (!initialScatterDone)
             ScatterInitialEnemies();
 
@@ -126,62 +148,23 @@ public class WaveManager : MonoBehaviour
     {
         if (dayNightCycle == null)
             dayNightCycle = FindObjectOfType<DayNightCycle>();
-
-        if (spawners == null || spawners.Length == 0)
-            spawners = FindObjectsOfType<EnemySpawner>();
     }
 
-    void TakeOverSpawners()
+    // 스폰한 적의 생존 수를 추적한다. 적이 죽으면 카운트를 줄인다.
+    void TrackAlive(EntityHealth health)
     {
-        if (spawners == null)
+        if (health == null)
             return;
 
-        foreach (EnemySpawner spawner in spawners)
+        aliveCount++;
+
+        void HandleDied()
         {
-            if (spawner == null)
-                continue;
-
-            spawner.autoStart = false;
-            spawner.StopSpawning();
-        }
-    }
-
-    void SubscribeSpawnerAliveEvents()
-    {
-        if (spawners == null)
-            return;
-
-        foreach (EnemySpawner spawner in spawners)
-        {
-            if (spawner == null)
-                continue;
-
-            spawner.OnAliveCountChanged -= HandleSpawnerAliveChanged;
-            spawner.OnAliveCountChanged += HandleSpawnerAliveChanged;
+            health.OnDied -= HandleDied;
+            aliveCount = Mathf.Max(0, aliveCount - 1);
         }
 
-        RefreshTotalAliveCount();
-    }
-
-    void HandleSpawnerAliveChanged(int aliveCount)
-    {
-        RefreshTotalAliveCount();
-    }
-
-    void RefreshTotalAliveCount()
-    {
-        int total = 0;
-
-        if (spawners != null)
-        {
-            foreach (EnemySpawner spawner in spawners)
-            {
-                if (spawner != null)
-                    total += spawner.AliveCount;
-            }
-        }
-
-        TotalAliveEnemies = total;
+        health.OnDied += HandleDied;
     }
 
     void HandlePhaseStarted(DayNightPhase phase)
@@ -203,11 +186,9 @@ public class WaveManager : MonoBehaviour
             return;
         }
 
-        EnemySpawner sourceSpawner = GetPrimarySpawner();
-
-        if (sourceSpawner == null)
+        if (!HasAnyEnemyPrefab())
         {
-            Debug.LogWarning("WaveManager: 초기 적 배치를 위한 EnemySpawner가 없습니다.");
+            Debug.LogWarning("WaveManager: 스폰할 적 프리팹이 없어 초기 배치를 건너뜁니다.");
             initialScatterDone = true;
             return;
         }
@@ -220,6 +201,13 @@ public class WaveManager : MonoBehaviour
         }
 
         Vector3 hqPosition = FindPlayerHeadquartersPosition();
+
+        GetWaveMultipliers(
+            initialWaveIndex,
+            out float healthMultiplier,
+            out float damageMultiplier,
+            out float speedMultiplier);
+
         int spawned = 0;
 
         for (int i = 0; i < initialEnemyCount; i++)
@@ -229,23 +217,38 @@ public class WaveManager : MonoBehaviour
                     hqPosition,
                     initialMinDistanceFromHq,
                     mapEdgeMargin,
+                    false,
                     out Vector3 position))
             {
                 continue;
             }
 
-            GameObject enemyObject = sourceSpawner.SpawnAtPosition(
-                GetInitialEnemyPrefab(),
+            GameObject prefab = GetInitialEnemyPrefab();
+
+            if (prefab == null)
+                continue;
+
+            GameObject enemyObject = EnemySpawnUtility.SpawnEnemy(
+                prefab,
                 position,
-                initialWaveIndex,
+                prefab.transform.rotation,
+                enemyOwnerId,
+                healthMultiplier,
+                damageMultiplier,
+                speedMultiplier,
+                TrackAlive);
+
+            if (enemyObject == null)
+                continue;
+
+            EnemySpawnUtility.ApplyAdvanceToEnemyBuildings(
+                enemyObject,
                 initialEnemiesAdvanceToBase);
 
-            if (enemyObject != null)
-                spawned++;
+            spawned++;
         }
 
         initialScatterDone = true;
-        RefreshTotalAliveCount();
 
         Debug.Log($"WaveManager: 초기 적 {spawned}/{initialEnemyCount}마리를 맵에 배치했습니다.");
     }
@@ -316,54 +319,110 @@ public class WaveManager : MonoBehaviour
 
     void SpawnNightWave(int waveIndex)
     {
-        if (spawners == null || spawners.Length == 0)
+        int count = Mathf.Max(0, enemiesPerWave);
+
+        if (count <= 0 || !HasAnyEnemyPrefab())
             return;
 
-        int totalSpawned = 0;
+        if (!TryGetMapBounds(out MapPlayBoundsData bounds))
+            return;
 
-        foreach (EnemySpawner spawner in spawners)
+        Vector3 hqPosition = FindPlayerHeadquartersPosition();
+
+        GetWaveMultipliers(
+            waveIndex,
+            out float healthMultiplier,
+            out float damageMultiplier,
+            out float speedMultiplier);
+
+        int spawned = 0;
+
+        for (int i = 0; i < count; i++)
         {
-            if (spawner == null)
+            if (!TryGetRandomMapPosition(
+                    bounds,
+                    hqPosition,
+                    nightWaveMinDistanceFromHq,
+                    mapEdgeMargin,
+                    nightWaveAvoidPlayerVision,
+                    out Vector3 position))
+            {
+                continue;
+            }
+
+            GameObject prefab = GetNightWaveEnemyPrefab();
+
+            if (prefab == null)
                 continue;
 
-            int count = enemiesPerSpawnerPerWave > 0
-                ? enemiesPerSpawnerPerWave
-                : spawner.enemiesPerSpawn;
+            GameObject enemyObject = EnemySpawnUtility.SpawnEnemy(
+                prefab,
+                position,
+                prefab.transform.rotation,
+                enemyOwnerId,
+                healthMultiplier,
+                damageMultiplier,
+                speedMultiplier,
+                TrackAlive);
 
-            totalSpawned += spawner.SpawnWaveBurst(count, waveIndex, true);
+            if (enemyObject == null)
+                continue;
+
+            EnemySpawnUtility.ApplyAdvanceToEnemyBuildings(enemyObject, true);
+            spawned++;
         }
-
-        RefreshTotalAliveCount();
 
         Debug.Log(
-            $"WaveManager: 밤 웨이브 {CurrentNightWave} — {totalSpawned}마리 스폰 (난이도 {waveIndex})");
+            $"WaveManager: 밤 웨이브 {CurrentNightWave} — {spawned}마리 스폰 (난이도 {waveIndex})");
     }
 
-    // 초기 배치에 사용할 프리팹을 고른다. 지정 목록이 비어 있으면 null을 반환해
-    // 스포너의 enemyPrefabs에서 무작위로 스폰되도록 한다.
+    // 웨이브 난이도 인덱스에 따른 체력/공격력/속도 배율을 계산한다.
+    public void GetWaveMultipliers(
+        int waveIndex,
+        out float healthMultiplier,
+        out float damageMultiplier,
+        out float speedMultiplier)
+    {
+        healthMultiplier = 1f + healthGrowthPerCycle * waveIndex;
+        damageMultiplier = 1f + damageGrowthPerCycle * waveIndex;
+
+        // 속도 배율은 기본 1에서 시작해 증가만 하며, 상한이 1 미만으로 잘못
+        // 설정돼도 속도가 0이 되지 않도록 하한을 1로 둔다.
+        float speedCap = Mathf.Max(1f, maxSpeedMultiplier);
+        speedMultiplier =
+            Mathf.Min(1f + speedGrowthPerCycle * waveIndex, speedCap);
+    }
+
+    bool HasAnyEnemyPrefab()
+    {
+        if (enemyPrefabs != null && enemyPrefabs.Count > 0)
+            return true;
+
+        return initialEnemyPrefabs != null && initialEnemyPrefabs.Count > 0;
+    }
+
+    // 밤 웨이브용 프리팹을 고른다. enemyPrefabs가 비어 있으면 초기 배치 목록으로 대체한다.
+    GameObject GetNightWaveEnemyPrefab()
+    {
+        if (enemyPrefabs == null || enemyPrefabs.Count == 0)
+            return GetInitialEnemyPrefab();
+
+        return enemyPrefabs[UnityEngine.Random.Range(0, enemyPrefabs.Count)];
+    }
+
+    // 초기 배치에 사용할 프리팹을 고른다. 지정 목록(initialEnemyPrefabs)이 비어 있으면
+    // 밤 웨이브용 enemyPrefabs에서 무작위로 고른다.
     GameObject GetInitialEnemyPrefab()
     {
-        if (initialEnemyPrefabs == null || initialEnemyPrefabs.Count == 0)
+        List<GameObject> source =
+            (initialEnemyPrefabs != null && initialEnemyPrefabs.Count > 0)
+                ? initialEnemyPrefabs
+                : enemyPrefabs;
+
+        if (source == null || source.Count == 0)
             return null;
 
-        GameObject prefab =
-            initialEnemyPrefabs[UnityEngine.Random.Range(0, initialEnemyPrefabs.Count)];
-
-        return prefab;
-    }
-
-    EnemySpawner GetPrimarySpawner()
-    {
-        if (spawners == null || spawners.Length == 0)
-            return null;
-
-        foreach (EnemySpawner spawner in spawners)
-        {
-            if (spawner != null && spawner.enemyPrefabs.Count > 0)
-                return spawner;
-        }
-
-        return spawners[0];
+        return source[UnityEngine.Random.Range(0, source.Count)];
     }
 
     bool TryGetMapBounds(out MapPlayBoundsData bounds)
@@ -409,6 +468,7 @@ public class WaveManager : MonoBehaviour
         Vector3 avoidCenter,
         float minDistanceFromAvoid,
         float edgeMargin,
+        bool avoidPlayerVision,
         out Vector3 position)
     {
         position = Vector3.zero;
@@ -423,6 +483,9 @@ public class WaveManager : MonoBehaviour
 
         float minDistanceSqr = minDistanceFromAvoid * minDistanceFromAvoid;
 
+        bool hasFallback = false;
+        Vector3 fallback = Vector3.zero;
+
         for (int attempt = 0; attempt < randomPositionAttempts; attempt++)
         {
             float x = UnityEngine.Random.Range(minX, maxX);
@@ -434,15 +497,40 @@ public class WaveManager : MonoBehaviour
 
             candidate.y = MapPlayBounds.SampleGroundHeight(candidate);
 
-            if (NavMesh.SamplePosition(
+            if (!NavMesh.SamplePosition(
                     candidate,
                     out NavMeshHit hit,
                     12f,
                     NavMesh.AllAreas))
             {
+                continue;
+            }
+
+            if (!avoidPlayerVision)
+            {
                 position = hit.position;
                 return true;
             }
+
+            // 시야 밖 지점을 못 찾을 때를 대비해 유효한 NavMesh 지점을 하나 저장해 둔다.
+            if (!hasFallback)
+            {
+                fallback = hit.position;
+                hasFallback = true;
+            }
+
+            if (!EnemySpawnUtility.IsVisibleToLocalPlayer(hit.position))
+            {
+                position = hit.position;
+                return true;
+            }
+        }
+
+        // 모든 후보가 시야 안이면 마지막 수단으로 유효 지점에 스폰한다.
+        if (avoidPlayerVision && hasFallback)
+        {
+            position = fallback;
+            return true;
         }
 
         return false;

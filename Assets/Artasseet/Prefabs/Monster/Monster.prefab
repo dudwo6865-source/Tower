@@ -276,7 +276,7 @@ MonoBehaviour:
   deathAnimationDuration: 1
   deathSinkDistance: 1.5
   deathEffectColor: {r: 0.3, g: 0.3, b: 0.3, a: 1}
-  deathEffectPrefab: {fileID: 0}
+  deathEffectPrefab: {fileID: 304414178702807373, guid: 45d6ec100fd5e4242a690c9cb7b4bbe5, type: 3}
 --- !u!114 &3291175716383722589
 MonoBehaviour:
   m_ObjectHideFlags: 0

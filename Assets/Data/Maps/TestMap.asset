@@ -30,5 +30,5 @@ MonoBehaviour:
   initialEnemiesAdvanceToBase: 0
   nightWaveStartDelay: 3
   waveInterval: 12
-  enemiesPerSpawnerPerWave: 0
+  enemiesPerWave: 8
   maxWavesPerNight: 0

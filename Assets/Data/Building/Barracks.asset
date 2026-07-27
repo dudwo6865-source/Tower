@@ -15,7 +15,7 @@ MonoBehaviour:
   displayName: Barracks
   description: 
   prefab: {fileID: 4641212407630778950, guid: f8b2a6d15b22b0849bcce5dd2f988126, type: 3}
-  wattCost: 50
+  wattCost: 150
   ownerId: 1
   entityTypeId: Barracks
   recipe: {fileID: 11400000, guid: fb403a9513c80234abcfa3866fb5fedf, type: 2}

@@ -56,8 +56,8 @@ public class MapConfig : ScriptableObject
     [Tooltip("웨이브 간격(초). maxWavesPerNight가 1 이상이면 밤 길이 ÷ 웨이브 수로 자동 조정됩니다.")]
     public float waveInterval = 12f;
 
-    [Tooltip("스포너 1개가 웨이브마다 생성할 적 수. 0이면 스포너의 enemiesPerSpawn을 사용합니다.")]
-    public int enemiesPerSpawnerPerWave = 0;
+    [Tooltip("각 밤 웨이브마다 스폰할 적 수입니다.")]
+    public int enemiesPerWave = 8;
 
     [Tooltip("밤 동안 진행할 최대 웨이브 수. 0이면 밤이 끝날 때까지 계속합니다.")]
     public int maxWavesPerNight = 0;

@@ -415,6 +415,7 @@ public class TowerPlacementController : MonoBehaviour
                 producer = buildingObject.AddComponent<ProductionBuilding>();
 
             producer.SetRecipe(productionData.recipe);
+            producer.MarkBuiltAtRuntime();
             producer.BeginProduction();
             return;
         }
@@ -430,6 +431,7 @@ public class TowerPlacementController : MonoBehaviour
         if (building.productionRecipe != null)
             producer.SetRecipe(building.productionRecipe);
 
+        producer.MarkBuiltAtRuntime();
         producer.BeginProduction();
     }
 

@@ -319,20 +319,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   enemyPrefabs:
   - {fileID: 4697029455683187683, guid: 819e706f8f24e334da3f97fc8b7c955c, type: 3}
-  spawnPoints: []
   enemyOwnerId: 2
-  autoStart: 1
-  startDelay: 2
-  spawnInterval: 3
-  enemiesPerSpawn: 1
-  maxAliveEnemies: 0
-  maxTotalSpawns: 0
-  enemiesSpawnGrowthPerCycle: 0
-  maxEnemiesPerSpawn: 0
-  healthGrowthPerCycle: 0.08
-  damageGrowthPerCycle: 0.05
-  speedGrowthPerCycle: 0
-  maxSpeedMultiplier: 2
+  spawnRadius: 6
+  spawnPositionAttempts: 16
+  allyDetectRadius: 15
+  detectUnitsOnly: 1
+  spawnInterval: 5
+  enemiesPerSpawn: 5
+  maxAliveEnemies: 20
+  enemiesOnDeath: 10
+  advanceToEnemyBuildings: 1
 --- !u!4 &9042834516025497343 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: c3e064e88102f6944a3d90b95544563a, type: 3}

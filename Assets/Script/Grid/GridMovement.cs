@@ -136,6 +136,11 @@ public static class GridMovement
         if (TrySampleNavMesh(destination, out NavMeshHit hit))
             destination = hit.position;
 
+        // 정지 상태(isStopped)로 남아 있으면 SetDestination을 해도 움직이지 않는다.
+        // 새 목적지를 받으면 즉시 이동을 재개하도록 정지를 해제한다.
+        if (agent.isStopped)
+            agent.isStopped = false;
+
         return agent.SetDestination(destination);
     }
 }

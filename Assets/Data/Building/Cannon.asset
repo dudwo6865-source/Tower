@@ -15,6 +15,6 @@ MonoBehaviour:
   displayName: Basic Tower
   description: Standard defensive tower.
   prefab: {fileID: 347180470848206247, guid: eb266c64b00934041b537fbe9ba65d91, type: 3}
-  wattCost: 200
+  wattCost: 75
   ownerId: 1
   entityTypeId: 
