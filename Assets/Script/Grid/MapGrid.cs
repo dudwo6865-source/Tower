@@ -85,6 +85,10 @@ public class MapGrid : MonoBehaviour
     private bool navMeshBoundsActive;
     private bool loggedNavMeshFailure;
     private CliffPainter cachedCliffPainter;
+    private MapGridNavFloorCache navFloorCache;
+
+    // 바운즈가 실제로 달라졌을 때만 칸 캐시를 무효화하기 위한 오차 허용치입니다.
+    const float BoundsChangeEpsilon = 0.01f;
 
     void Awake()
     {
@@ -95,6 +99,10 @@ public class MapGrid : MonoBehaviour
         }
 
         Instance = this;
+        navFloorCache = new MapGridNavFloorCache(this);
+
+        BuildingRegistry.OnBuildingRegistered += HandleBuildingRegistryChanged;
+        BuildingRegistry.OnBuildingRemoved += HandleBuildingRegistryChanged;
     }
 
     void Start()
@@ -112,8 +120,18 @@ public class MapGrid : MonoBehaviour
 
     void OnDestroy()
     {
+        BuildingRegistry.OnBuildingRegistered -= HandleBuildingRegistryChanged;
+        BuildingRegistry.OnBuildingRemoved -= HandleBuildingRegistryChanged;
+
         if (Instance == this)
             Instance = null;
+    }
+
+    // 건물이 놓이거나 철거되면 그 자리의 NavMesh가 carve되어 바뀌므로,
+    // 다음 조회부터 다시 계산하도록 칸 높이 캐시를 통째로 비운다.
+    void HandleBuildingRegistryChanged(SelectableEntity building)
+    {
+        navFloorCache?.Invalidate();
     }
 
     public void Refresh()
@@ -162,11 +180,7 @@ public class MapGrid : MonoBehaviour
             max = Vector3.Max(max, vertex);
         }
 
-        mapOrigin = new Vector3(min.x, min.y, min.z);
-        mapSize = new Vector2(max.x - min.x, max.z - min.z);
-        navMeshMinY = min.y;
-        navMeshMaxY = max.y;
-        navMeshBoundsActive = true;
+        ApplyNavMeshBounds(min, max);
         return true;
     }
 
@@ -213,11 +227,7 @@ public class MapGrid : MonoBehaviour
         if (!hasBounds)
             return false;
 
-        mapOrigin = new Vector3(min.x, min.y, min.z);
-        mapSize = new Vector2(max.x - min.x, max.z - min.z);
-        navMeshMinY = min.y;
-        navMeshMaxY = max.y;
-        navMeshBoundsActive = true;
+        ApplyNavMeshBounds(min, max);
         return true;
     }
 
@@ -226,10 +236,44 @@ public class MapGrid : MonoBehaviour
         if (manualMapSize.x <= 0f || manualMapSize.y <= 0f)
             return false;
 
+        bool boundsChanged =
+            navMeshBoundsActive ||
+            Vector3.Distance(mapOrigin, manualMapOrigin) > BoundsChangeEpsilon ||
+            Vector2.Distance(mapSize, manualMapSize) > BoundsChangeEpsilon;
+
         mapOrigin = manualMapOrigin;
         mapSize = manualMapSize;
         navMeshBoundsActive = false;
+
+        if (boundsChanged)
+            navFloorCache?.Invalidate();
+
         return true;
+    }
+
+    // NavMesh 기반 바운즈를 적용한다. 바운즈가 실제로 바뀐 경우에만 칸 높이 캐시를
+    // 비운다 - 트라이앵귤레이션은 Gizmo가 뜰 때마다 다시 돌더라도, 결과가 이전과
+    // 같으면 칸별 NavMesh 샘플링(가장 비싼 부분)까지 다시 할 필요는 없다.
+    void ApplyNavMeshBounds(Vector3 min, Vector3 max)
+    {
+        Vector3 newOrigin = new Vector3(min.x, min.y, min.z);
+        Vector2 newSize = new Vector2(max.x - min.x, max.z - min.z);
+
+        bool boundsChanged =
+            !navMeshBoundsActive ||
+            Vector3.Distance(mapOrigin, newOrigin) > BoundsChangeEpsilon ||
+            Vector2.Distance(mapSize, newSize) > BoundsChangeEpsilon ||
+            Mathf.Abs(navMeshMinY - min.y) > BoundsChangeEpsilon ||
+            Mathf.Abs(navMeshMaxY - max.y) > BoundsChangeEpsilon;
+
+        mapOrigin = newOrigin;
+        mapSize = newSize;
+        navMeshMinY = min.y;
+        navMeshMaxY = max.y;
+        navMeshBoundsActive = true;
+
+        if (boundsChanged)
+            navFloorCache?.Invalidate();
     }
 
     static Vector3[] GetBoundsCorners(Bounds bounds)
@@ -371,6 +415,16 @@ public class MapGrid : MonoBehaviour
         return cachedCliffPainter;
     }
 
+    // 보통 Awake에서 채워지지만, 에디터 Gizmo 경로처럼 Awake보다 먼저
+    // 호출될 수 있는 경우를 대비한 지연 초기화이다.
+    MapGridNavFloorCache GetNavFloorCache()
+    {
+        if (navFloorCache == null)
+            navFloorCache = new MapGridNavFloorCache(this);
+
+        return navFloorCache;
+    }
+
     public bool IsFootprintInRect(
         Vector2Int originCell,
         Vector2Int footprintCells)
@@ -385,24 +439,12 @@ public class MapGrid : MonoBehaviour
                originCell.y + footprintCells.y <= CellCountZ;
     }
 
-    readonly List<float> navMeshHeightScratch = new List<float>(4);
-    readonly List<float> navMeshFloorCandidateScratch = new List<float>(4);
-
     public bool IsCellOnNavMesh(Vector2Int cell)
     {
         if (!IsCellInGrid(cell))
             return false;
 
-        if (CollectNavMeshSurfaceHeights(cell, navMeshHeightScratch) <= 0)
-            return false;
-
-        for (int i = 0; i < navMeshHeightScratch.Count; i++)
-        {
-            if (IsCellCoveredAtHeight(cell, navMeshHeightScratch[i]))
-                return true;
-        }
-
-        return false;
+        return GetNavFloorCache().Get(cell).Covered.Length > 0;
     }
 
     // 칸 전체가 NavMesh로 덮인 층 중 가장 위쪽 높이입니다.
@@ -415,19 +457,14 @@ public class MapGrid : MonoBehaviour
         if (!IsCellInGrid(cell))
             return false;
 
-        if (CollectNavMeshSurfaceHeights(cell, navMeshHeightScratch) <= 0)
+        float[] covered = GetNavFloorCache().Get(cell).Covered;
+
+        if (covered.Length == 0)
             return false;
 
-        for (int i = navMeshHeightScratch.Count - 1; i >= 0; i--)
-        {
-            if (!IsCellCoveredAtHeight(cell, navMeshHeightScratch[i]))
-                continue;
-
-            height = navMeshHeightScratch[i];
-            return true;
-        }
-
-        return false;
+        // Compute()가 Raw(오름차순)를 그대로 걸러낸 순서라 Covered도 오름차순이다.
+        height = covered[covered.Length - 1];
+        return true;
     }
 
     public float FloorHeightTolerance => GetFloorHeightTolerance();
@@ -437,14 +474,18 @@ public class MapGrid : MonoBehaviour
     {
         height = 0f;
 
-        if (CollectNavMeshSurfaceHeights(cell, navMeshHeightScratch) <= 0)
+        float[] raw = GetNavFloorCache().Get(cell).Raw;
+
+        if (raw.Length == 0)
             return false;
 
-        height = navMeshHeightScratch[navMeshHeightScratch.Count - 1];
+        height = raw[raw.Length - 1];
         return true;
     }
 
     // 한 칸 XZ의 NavMesh 표면 높이를 수집합니다 (낮은 순).
+    // MapGridNavFloorCache가 칸당 한 번만 호출해 캐싱하므로, 직접 부르는 외부
+    // 코드가 없다면 매 프레임 반복 호출되지 않습니다.
     public int CollectNavMeshSurfaceHeights(
         Vector2Int cell,
         List<float> heights)
@@ -547,7 +588,8 @@ public class MapGrid : MonoBehaviour
         return Mathf.Max(0.5f, navMeshFloorHeightTolerance);
     }
 
-    bool IsCellCoveredAtHeight(Vector2Int cell, float height)
+    // MapGridNavFloorCache가 칸당 높이 후보를 걸러낼 때만 호출한다(내부 전용).
+    internal bool IsCellCoveredAtHeight(Vector2Int cell, float height)
     {
         return TrySampleCellPointAtHeight(cell, GetCellCenterWorld(cell), height, out _) &&
                TrySampleCellPointAtHeight(cell, GetCellSamplePoint(cell, 0f, 0f), height, out _) &&
@@ -627,20 +669,22 @@ public class MapGrid : MonoBehaviour
             return true;
         }
 
-        if (CollectNavMeshSurfaceHeights(originCell, navMeshHeightScratch) <= 0)
-            return false;
+        // 후보 높이는 원점 칸 기준으로만 뽑고(기존과 동일한 기준), 각 칸이 그
+        // 높이에서 실제로 덮여 있는지는 칸별 캐시에서 찾는다 - NavMesh를 다시
+        // 샘플링하지 않는다.
+        float[] candidates = GetNavFloorCache().Get(originCell).Raw;
 
-        navMeshFloorCandidateScratch.Clear();
-        navMeshFloorCandidateScratch.AddRange(navMeshHeightScratch);
+        if (candidates.Length == 0)
+            return false;
 
         float tolerance = GetFloorHeightTolerance();
         float bestScore = float.MaxValue;
         float bestAverage = 0f;
         bool found = false;
 
-        for (int c = 0; c < navMeshFloorCandidateScratch.Count; c++)
+        for (int c = 0; c < candidates.Length; c++)
         {
-            float candidate = navMeshFloorCandidateScratch[c];
+            float candidate = candidates[c];
 
             if (!float.IsNaN(preferredY) &&
                 Mathf.Abs(candidate - preferredY) > tolerance)
@@ -660,12 +704,7 @@ public class MapGrid : MonoBehaviour
                         originCell.x + x,
                         originCell.y + z);
 
-                    if (!IsCellCoveredAtHeight(cell, candidate) ||
-                        !TrySampleCellPointAtHeight(
-                            cell,
-                            GetCellCenterWorld(cell),
-                            candidate,
-                            out float match))
+                    if (!TryFindCoveredHeightNear(cell, candidate, tolerance, out float match))
                     {
                         allMatch = false;
                         break;
@@ -697,6 +736,23 @@ public class MapGrid : MonoBehaviour
 
         floorHeight = bestAverage;
         return true;
+    }
+
+    bool TryFindCoveredHeightNear(Vector2Int cell, float target, float tolerance, out float match)
+    {
+        float[] covered = GetNavFloorCache().Get(cell).Covered;
+
+        for (int i = 0; i < covered.Length; i++)
+        {
+            if (Mathf.Abs(covered[i] - target) <= tolerance)
+            {
+                match = covered[i];
+                return true;
+            }
+        }
+
+        match = 0f;
+        return false;
     }
 
     public bool TryGetSnappedFootprintPlacement(
@@ -771,11 +827,6 @@ public class MapGrid : MonoBehaviour
         return preferredY;
     }
 
-    public bool TrySampleNavMesh(Vector3 worldPosition, out NavMeshHit hit)
-    {
-        return TrySampleNavMeshNearHeight(worldPosition, worldPosition.y, out hit);
-    }
-
     public bool TrySampleNavMeshNearHeight(
         Vector3 worldPosition,
         float preferredY,
@@ -794,7 +845,6 @@ public class MapGrid : MonoBehaviour
         out NavMeshHit hit,
         float maxVerticalDelta)
     {
-        hit = default;
         bool found = false;
         float bestScore = float.MaxValue;
         NavMeshHit best = default;
@@ -802,34 +852,20 @@ public class MapGrid : MonoBehaviour
         float sampleRadius = Mathf.Max(0.05f, cellSize * navMeshSampleRadiusFactor);
         float maxYDelta = Mathf.Max(0.5f, maxVerticalDelta);
 
-        void Consider(NavMeshHit candidate)
-        {
-            float yDelta = Mathf.Abs(candidate.position.y - preferredY);
-            if (yDelta > maxYDelta)
-                return;
-
-            float score = yDelta;
-            float xz = Vector2.Distance(
-                new Vector2(candidate.position.x, candidate.position.z),
-                new Vector2(worldPosition.x, worldPosition.z));
-            score += xz * 0.05f;
-
-            if (score < bestScore)
-            {
-                bestScore = score;
-                best = candidate;
-                found = true;
-            }
-        }
-
         Vector3 atPreferred = worldPosition;
         atPreferred.y = preferredY;
 
-        if (NavMesh.SamplePosition(atPreferred, out NavMeshHit sample, sampleRadius, navMeshAreaMask))
-            Consider(sample);
+        if (NavMesh.SamplePosition(atPreferred, out NavMeshHit sample, sampleRadius, navMeshAreaMask) &&
+            TryImproveCandidate(sample, worldPosition, preferredY, maxYDelta, ref bestScore, ref best))
+        {
+            found = true;
+        }
 
-        if (NavMesh.SamplePosition(worldPosition, out sample, sampleRadius, navMeshAreaMask))
-            Consider(sample);
+        if (NavMesh.SamplePosition(worldPosition, out sample, sampleRadius, navMeshAreaMask) &&
+            TryImproveCandidate(sample, worldPosition, preferredY, maxYDelta, ref bestScore, ref best))
+        {
+            found = true;
+        }
 
         // 같은 층 근처만 슬라이스 (아래/위 층으로 떨어지지 않게)
         float minY = preferredY - maxYDelta;
@@ -848,12 +884,43 @@ public class MapGrid : MonoBehaviour
             Vector3 probe = worldPosition;
             probe.y = Mathf.Lerp(minY, maxY, t);
 
-            if (NavMesh.SamplePosition(probe, out sample, sampleRadius * 2f, navMeshAreaMask))
-                Consider(sample);
+            if (NavMesh.SamplePosition(probe, out sample, sampleRadius * 2f, navMeshAreaMask) &&
+                TryImproveCandidate(sample, worldPosition, preferredY, maxYDelta, ref bestScore, ref best))
+            {
+                found = true;
+            }
         }
 
         hit = best;
         return found;
+    }
+
+    // 후보가 이전 최선보다 나으면 채택한다. 지역 함수 클로저 할당을 피하려고
+    // static으로 뺐다 - 이 메서드는 유닛 스폰/건물 배치 등에서 자주 불린다.
+    static bool TryImproveCandidate(
+        NavMeshHit candidate,
+        Vector3 worldPosition,
+        float preferredY,
+        float maxYDelta,
+        ref float bestScore,
+        ref NavMeshHit best)
+    {
+        float yDelta = Mathf.Abs(candidate.position.y - preferredY);
+        if (yDelta > maxYDelta)
+            return false;
+
+        float score = yDelta;
+        float xz = Vector2.Distance(
+            new Vector2(candidate.position.x, candidate.position.z),
+            new Vector2(worldPosition.x, worldPosition.z));
+        score += xz * 0.05f;
+
+        if (score >= bestScore)
+            return false;
+
+        bestScore = score;
+        best = candidate;
+        return true;
     }
 
     bool TryFindNearestValidFootprint(
@@ -933,7 +1000,10 @@ public class MapGrid : MonoBehaviour
 
     void DrawFullRectGridGizmos()
     {
-        for (int x = 0; x <= CellCountX; x++)
+        int cellCountX = CellCountX;
+        int cellCountZ = CellCountZ;
+
+        for (int x = 0; x <= cellCountX; x++)
         {
             float worldX = mapOrigin.x + x * cellSize;
             Vector3 start = new Vector3(worldX, mapOrigin.y, mapOrigin.z);
@@ -945,7 +1015,7 @@ public class MapGrid : MonoBehaviour
             Gizmos.DrawLine(start, end);
         }
 
-        for (int z = 0; z <= CellCountZ; z++)
+        for (int z = 0; z <= cellCountZ; z++)
         {
             float worldZ = mapOrigin.z + z * cellSize;
             Vector3 start = new Vector3(mapOrigin.x, mapOrigin.y, worldZ);
@@ -960,17 +1030,21 @@ public class MapGrid : MonoBehaviour
 
     void DrawWalkableCellGizmos()
     {
-        for (int x = 0; x < CellCountX; x++)
+        int cellCountX = CellCountX;
+        int cellCountZ = CellCountZ;
+
+        for (int x = 0; x < cellCountX; x++)
         {
-            for (int z = 0; z < CellCountZ; z++)
+            for (int z = 0; z < cellCountZ; z++)
             {
                 Vector2Int cell = new Vector2Int(x, z);
 
-                if (!IsCellOnNavMesh(cell))
+                // 실제 건설 판정과 같은 기준(TryGetBuildableNavMeshHeight)으로
+                // 그려야, 다층 지형에서 표시와 판정이 어긋나지 않는다.
+                if (!TryGetBuildableNavMeshHeight(cell, out float y))
                     continue;
 
                 Vector3 corner = CellCornerToWorld(cell);
-                float y = SampleGroundHeight(GetCellCenterWorld(cell));
 
                 Vector3 a = new Vector3(corner.x, y, corner.z);
                 Vector3 b = new Vector3(corner.x + cellSize, y, corner.z);
