@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.AI;
 
 /// <summary>
 /// 적 전용 전투 AI. 기본 목표는 HQ이며, 어그로 범위 안의 유닛/건물만 가로채 공격합니다.
@@ -24,6 +25,14 @@ public class EnemyCombatAI : MobileCombatAI
     [Tooltip("팔로워가 리더 뒤로 물러나는 간격(m)입니다. 부채꼴 대형의 깊이입니다.")]
     public float squadFollowSpacing = 2f;
 
+    [Header("Building Chase")]
+    [Tooltip("직선 거리 대비 실제 경로가 이 배수 이상 길어지면(또는 경로가 끊기면) " +
+        "가는 길을 막고 있는 다른 건물을 대신 공격 대상으로 삼습니다.")]
+    public float detourRedirectMultiplier = 1.6f;
+
+    [Tooltip("우회 여부를 다시 검사하는 간격(초)입니다.")]
+    public float detourCheckInterval = 1f;
+
     const float SquadClaimInterval = 0.25f;
 
     // 리더를 빼앗는 데 필요한 거리 우위(m)의 제곱입니다. 2m 마진.
@@ -37,6 +46,7 @@ public class EnemyCombatAI : MobileCombatAI
     bool hasLocalEnemy;
     float squadClaimCheckTimer;
     float squadOffsetFactor;
+    float detourCheckTimer;
 
     protected override void Awake()
     {
@@ -48,6 +58,7 @@ public class EnemyCombatAI : MobileCombatAI
 
         // 스폰 직후 전원이 같은 프레임에 팔로워를 긁지 않도록 흩뿌립니다.
         squadClaimCheckTimer = normalized * SquadClaimInterval;
+        detourCheckTimer = normalized * detourCheckInterval;
     }
 
     void Update()
@@ -104,6 +115,10 @@ public class EnemyCombatAI : MobileCombatAI
 
         if (!HasValidTarget())
             return;
+
+        // 아직 사거리 밖이면(=이동/우회 중), 다른 건물이 가는 길을 막고 있는지 확인한다.
+        if (!attacker.IsInRange(currentTarget))
+            TryRedirectToBlockingBuilding();
 
         UpdateCombat();
     }
@@ -345,6 +360,144 @@ public class EnemyCombatAI : MobileCombatAI
         return candidate != null && attacker.IsInRange(candidate) ? candidate : null;
     }
 
+    /// <summary>
+    /// 지금 표적(건물)으로 가는 경로가 다른 건물 때문에 끊기거나 크게 우회하고 있으면,
+    /// 실제로 길을 막고 있는 그 건물을 대신 공격 대상으로 삼는다.
+    /// 막던 건물이 죽으면 다음 TickRetarget/FindInAttackRangeTarget이 원래 방향을 알아서
+    /// 이어받으므로, 원래 표적을 따로 기억해뒀다가 되돌릴 필요는 없다.
+    /// </summary>
+    void TryRedirectToBlockingBuilding()
+    {
+        if (currentTarget == null || currentTarget.entityType != SelectableEntityType.Building)
+            return;
+
+        if (agent == null || !agent.isOnNavMesh || agent.pathPending)
+            return;
+
+        detourCheckTimer -= Time.deltaTime;
+        if (detourCheckTimer > 0f)
+            return;
+        detourCheckTimer = detourCheckInterval;
+
+        bool blocked = agent.hasPath && agent.pathStatus == NavMeshPathStatus.PathPartial;
+        bool longDetour = false;
+
+        if (!blocked && agent.hasPath && agent.pathStatus == NavMeshPathStatus.PathComplete)
+        {
+            float straight = Vector3.Distance(transform.position, currentTarget.transform.position);
+            if (straight > 0.01f)
+            {
+                float pathLength = GetPathLength(agent.path.corners);
+                longDetour = pathLength > straight * detourRedirectMultiplier;
+            }
+        }
+
+        if (!blocked && !longDetour)
+            return;
+
+        SelectableEntity blocker = FindBuildingBlockingLineTo(currentTarget);
+        if (blocker == null || blocker == currentTarget)
+            return;
+
+        SetTarget(blocker);
+    }
+
+    static float GetPathLength(Vector3[] corners)
+    {
+        if (corners == null || corners.Length < 2)
+            return 0f;
+
+        float length = 0f;
+
+        for (int i = 1; i < corners.Length; i++)
+            length += Vector3.Distance(corners[i - 1], corners[i]);
+
+        return length;
+    }
+
+    /// <summary>
+    /// 나(transform.position)에서 target까지 직선이 지나가는 다른 적 건물을 찾는다.
+    /// 여러 개가 겹치면 나한테 더 가까운 쪽(먼저 부딪히는 쪽)을 고른다.
+    /// </summary>
+    SelectableEntity FindBuildingBlockingLineTo(SelectableEntity target)
+    {
+        if (selfEntity == null)
+            return null;
+
+        Vector3 from = transform.position;
+        Vector3 to = target.transform.position;
+
+        SelectableEntity best = null;
+        float bestSqr = float.MaxValue;
+
+        IReadOnlyList<SelectableEntity> all = SelectableRegistry.Entities;
+
+        for (int i = 0; i < all.Count; i++)
+        {
+            SelectableEntity other = all[i];
+            if (other == null || other == target || other == selfEntity)
+                continue;
+            if (other.entityType != SelectableEntityType.Building)
+                continue;
+            if (other.ownerId == selfEntity.ownerId)
+                continue;
+
+            EntityHealth health = other.CachedHealth;
+            if (health != null && !health.IsAlive)
+                continue;
+
+            if (!SegmentIntersectsBoundsXZ(from, to, other.SelectionBounds))
+                continue;
+
+            float sqr = (other.transform.position - from).sqrMagnitude;
+            if (sqr < bestSqr)
+            {
+                bestSqr = sqr;
+                best = other;
+            }
+        }
+
+        return best;
+    }
+
+    // Y를 무시한 2D(XZ) 선분-AABB 교차 검사입니다(Liang-Barsky 클리핑).
+    static bool SegmentIntersectsBoundsXZ(Vector3 from, Vector3 to, Bounds bounds)
+    {
+        float dx = to.x - from.x;
+        float dz = to.z - from.z;
+
+        float t0 = 0f;
+        float t1 = 1f;
+
+        if (!ClipSegment(-dx, from.x - bounds.min.x, ref t0, ref t1)) return false;
+        if (!ClipSegment(dx, bounds.max.x - from.x, ref t0, ref t1)) return false;
+        if (!ClipSegment(-dz, from.z - bounds.min.z, ref t0, ref t1)) return false;
+        if (!ClipSegment(dz, bounds.max.z - from.z, ref t0, ref t1)) return false;
+
+        return t0 <= t1;
+    }
+
+    static bool ClipSegment(float p, float q, ref float t0, ref float t1)
+    {
+        if (Mathf.Abs(p) < 1e-6f)
+            return q >= 0f;
+
+        float r = q / p;
+
+        if (p < 0f)
+        {
+            if (r > t1) return false;
+            if (r > t0) t0 = r;
+        }
+        else
+        {
+            if (r < t0) return false;
+            if (r < t1) t1 = r;
+        }
+
+        return true;
+    }
+
     static bool IsUsableLeader(EnemyCombatAI leader)
     {
         return leader != null && leader.isActiveAndEnabled;
@@ -473,6 +626,8 @@ public class EnemyCombatAI : MobileCombatAI
         squadRadius = 12f;
         squadFollowSpread = 2.5f;
         squadFollowSpacing = 2f;
+        detourRedirectMultiplier = 1.6f;
+        detourCheckInterval = 1f;
         targetPriority = CombatTargetPriority.UnitsFirst;
     }
 
