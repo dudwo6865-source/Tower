@@ -61,6 +61,12 @@ public class TowerAI : CombatAIBase
             attacker.TryAttack(currentTarget, currentTargetHealth);
     }
 
+    protected override void HandleAttackedBy(SelectableEntity attackerEntity)
+    {
+        // 타워는 피격 반격을 하지 않는다. 맞았다고 공격한 상대를 표적으로
+        // 삼지 않고, 항상 일반 표적 탐색(TickRetarget/우선순위)으로만 고른다.
+    }
+
     Vector3 ResolveBarrelLocal()
     {
         Vector3 local = Vector3.forward;
