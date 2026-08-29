@@ -630,6 +630,17 @@ public class EnemyCombatAI : MobileCombatAI
         ResetRetargetTimer();
     }
 
+    protected override void HandleAttackedBy(SelectableEntity attackerEntity)
+    {
+        // 이미 사거리 안에서 유효한 표적을 때리는 중이면, 다른 공격자에게 맞았다고
+        // 표적을 바꾸지 않는다. 타워 여러 개에게 번갈아 맞으면서 표적만 계속
+        // 바뀌느라 아무것도 못 부수는 걸 막는다.
+        if (HasValidTarget() && attacker.IsInRange(currentTarget))
+            return;
+
+        base.HandleAttackedBy(attackerEntity);
+    }
+
     protected override SelectableEntity FindTarget()
     {
         SelectableEntity inAggro = base.FindTarget();
