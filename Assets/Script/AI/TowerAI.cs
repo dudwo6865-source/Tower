@@ -42,7 +42,10 @@ public class TowerAI : CombatAIBase
         if (BuildingConstructionGate.IsFeatureLockedOn(this))
             return;
 
-        TickRetarget();
+        // 이미 사거리 안에서 유효한 표적을 쏘고 있으면 재탐색하지 않는다.
+        // 사거리를 벗어나거나 죽어야만 다시 찾는다.
+        if (!(HasValidTarget() && attacker.IsInRange(currentTarget)))
+            TickRetarget();
 
         if (!HasValidTarget())
         {
