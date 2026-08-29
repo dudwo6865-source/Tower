@@ -63,16 +63,23 @@ public class EnemyCombatAI : MobileCombatAI
         }
         else if (follower)
         {
-            // 이미 사거리 안에 공격 가능한 대상이 있으면 리더 표적 대신 그걸 개별적으로 공격한다.
-            // 없으면(아직 접근 중이면) 지금처럼 리더를 따라간다.
-            // 타워가 뭉쳐 있을 때 전원이 리더가 찜한 타워 하나만 보고 정체되는 것을 막는다.
-            if (!HasValidTarget() || !attacker.IsInRange(currentTarget))
+            if (!HasValidTarget())
             {
+                // 표적이 죽었을 때는 리더 표적을 그대로 받지 않고, 이 유닛 기준으로
+                // 가까운 표적을 직접 찾는다(retargetTimer가 알아서 쓰로틀해준다).
+                // 주변에 감지되는 게 전혀 없을 때만(막 스폰 직후 등) 리더를 따른다.
+                TickRetarget();
+
+                if (!HasValidTarget())
+                    AdoptSquadLeaderTarget();
+            }
+            else if (!attacker.IsInRange(currentTarget))
+            {
+                // 이미 사거리 안에 공격 가능한 다른 대상이 있으면 그걸 개별적으로 공격한다.
+                // 타워가 뭉쳐 있을 때 전원이 리더가 찜한 타워 하나만 보고 정체되는 것을 막는다.
                 SelectableEntity nearbyInRange = FindInAttackRangeTarget();
                 if (nearbyInRange != null)
                     SetTarget(nearbyInRange);
-                else
-                    AdoptSquadLeaderTarget();
             }
         }
         else
@@ -356,10 +363,9 @@ public class EnemyCombatAI : MobileCombatAI
         if (IsPathStuck())
             return false;
 
-        if (!hasLocalEnemy)
-            return true;
-
-        // 리더와 같은 건물을 때리면 경로를 다시 잡지 않는다.
+        // 리더와 다른 표적을 쫓고 있으면 공유 경로가 의미 없다 - 직접 경로를 계산한다.
+        // (표적을 잃은 팔로워가 자기 기준으로 새 표적을 개별로 찾을 수 있어, 더 이상
+        // "팔로워는 항상 리더와 같은 표적"이라고 가정할 수 없다.)
         return LeaderHasSameTarget();
     }
 
