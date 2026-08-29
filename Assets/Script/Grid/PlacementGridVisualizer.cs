@@ -79,7 +79,11 @@ public class PlacementGridVisualizer : MonoBehaviour
         SyncVisualsRoot();
         SetVisualsActive(true);
 
-        Vector2Int originCell = ResolvePreviewOriginCell(state);
+        // state.originCell은 TowerPlacementController가 언덕/경계 폴백까지 거쳐
+        // 이미 확정한 칸이자 고스트가 실제로 서 있는 칸이다. 여기서 centerWorld로
+        // 다시 역산하면 부동소수점 왕복 오차로 가끔 한 칸 어긋나 고스트와
+        // 풋프린트 표시가 안 맞는 문제가 있었다.
+        Vector2Int originCell = state.originCell;
         preferredSampleY = state.centerWorld.y;
 
         bool layoutChanged = originCell != lastFootprintOrigin ||
@@ -106,18 +110,6 @@ public class PlacementGridVisualizer : MonoBehaviour
                 state.isValid);
             lastFootprintValid = state.isValid;
         }
-    }
-
-    Vector2Int ResolvePreviewOriginCell(PlacementPreviewState state)
-    {
-        MapGrid grid = MapGrid.Instance;
-
-        if (grid == null || !state.hasPreview)
-            return state.originCell;
-
-        return grid.GetFootprintOriginFromCenterWorld(
-            state.centerWorld,
-            state.footprintCells);
     }
 
     void OnDestroy()
