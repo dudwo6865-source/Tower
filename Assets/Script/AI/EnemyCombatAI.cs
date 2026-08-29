@@ -680,10 +680,19 @@ public class EnemyCombatAI : MobileCombatAI
         targetPriority = CombatTargetPriority.UnitsFirst;
     }
 
-    // Debug Command Log를 켜면 팔로워에서 리더로 선을 그어 스쿼드 재편성을 눈으로 확인합니다.
+    // Debug Command Log를 켜면 팔로워->리더, 유닛->공격 대상 선을 그어 눈으로 확인합니다.
     void OnDrawGizmos()
     {
-        if (!debugCommandLog || squadLeader == null || squadLeader == this)
+        if (!debugCommandLog)
+            return;
+
+        DrawSquadLeaderGizmo();
+        DrawAttackTargetGizmo();
+    }
+
+    void DrawSquadLeaderGizmo()
+    {
+        if (squadLeader == null || squadLeader == this)
             return;
 
         // squadLeader 필드는 마지막으로 배정된 값을 그대로 들고 있어서,
@@ -698,5 +707,23 @@ public class EnemyCombatAI : MobileCombatAI
         Gizmos.color = new Color(1f, 0.65f, 0.1f, 0.9f);
         Gizmos.DrawLine(from, to);
         Gizmos.DrawSphere(to, 0.2f);
+    }
+
+    // 지금 실제로 공격 사거리 안(빨강)인지 아직 접근/추격 중(노랑)인지 색으로 구분합니다.
+    void DrawAttackTargetGizmo()
+    {
+        if (!HasValidTarget())
+            return;
+
+        Vector3 from = transform.position + Vector3.up * 0.7f;
+        Vector3 to = currentTarget.transform.position + Vector3.up * 0.7f;
+
+        bool inRange = attacker != null && attacker.IsInRange(currentTarget);
+        Gizmos.color = inRange
+            ? new Color(1f, 0.1f, 0.1f, 0.9f)
+            : new Color(1f, 0.9f, 0.1f, 0.6f);
+
+        Gizmos.DrawLine(from, to);
+        Gizmos.DrawSphere(to, 0.25f);
     }
 }
