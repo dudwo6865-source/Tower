@@ -52,6 +52,17 @@ public class EnemyCombatAI : MobileCombatAI
 
     void Update()
     {
+        // 사거리 안에서 유효한 표적을 때리는 중이면 스쿼드 추종/재탐색을 완전히 쉰다.
+        // (내가 때리는 표적 자체가 "사거리 안의 다른 진영 개체"라 HasLocalEnemy가 항상
+        // true가 되어 버려서, 이 스킵이 없으면 매 프레임 follower가 false로 빠지고
+        // TickRetarget이 돌아 공격 중에도 다른 표적으로 흔들릴 수 있다.)
+        // 표적을 잃거나 사거리를 벗어나야만 다시 리더를 보거나 새로 찾는다.
+        if (HasValidTarget() && attacker.IsInRange(currentTarget))
+        {
+            UpdateCombat();
+            return;
+        }
+
         bool wouldFollow = ShouldFollowSquadLeader();
         bool breakForLocalEnemy = wouldFollow && HasLocalEnemy();
         bool follower = wouldFollow && !breakForLocalEnemy;
