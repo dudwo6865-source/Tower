@@ -63,7 +63,17 @@ public class EnemyCombatAI : MobileCombatAI
         }
         else if (follower)
         {
-            AdoptSquadLeaderTarget();
+            // 이미 사거리 안에 공격 가능한 대상이 있으면 리더 표적 대신 그걸 개별적으로 공격한다.
+            // 없으면(아직 접근 중이면) 지금처럼 리더를 따라간다.
+            // 타워가 뭉쳐 있을 때 전원이 리더가 찜한 타워 하나만 보고 정체되는 것을 막는다.
+            if (!HasValidTarget() || !attacker.IsInRange(currentTarget))
+            {
+                SelectableEntity nearbyInRange = FindInAttackRangeTarget();
+                if (nearbyInRange != null)
+                    SetTarget(nearbyInRange);
+                else
+                    AdoptSquadLeaderTarget();
+            }
         }
         else
         {
@@ -290,6 +300,31 @@ public class EnemyCombatAI : MobileCombatAI
         SelectableEntity leaderTarget = squadLeader.CurrentTarget;
         if (leaderTarget != currentTarget)
             SetTarget(leaderTarget);
+    }
+
+    /// <summary>
+    /// 지금 이 위치에서 실제로 공격 사거리 안에 들어온 대상을 찾는다.
+    /// 팔로워가 리더의 표적이 아니라 자기 옆의 다른 대상을 즉시 공격할 수 있게 한다.
+    /// </summary>
+    SelectableEntity FindInAttackRangeTarget()
+    {
+        if (selfEntity == null || attacker == null)
+            return null;
+
+        float range = attacker.AttackRange;
+        if (range <= 0.01f)
+            return null;
+
+        // TargetFinder는 중심 좌표 기준 거리라 콜라이더가 큰 건물엔 실제 사거리보다 빡빡할 수 있다.
+        // 여유를 두고 후보를 찾은 뒤, 콜라이더 경계 기준인 attacker.IsInRange로 다시 확인한다.
+        SelectableEntity candidate = TargetFinder.FindBestEnemyInRange(
+            transform.position,
+            selfEntity.ownerId,
+            range + 2f,
+            targetPriority,
+            attacker);
+
+        return candidate != null && attacker.IsInRange(candidate) ? candidate : null;
     }
 
     static bool IsUsableLeader(EnemyCombatAI leader)
