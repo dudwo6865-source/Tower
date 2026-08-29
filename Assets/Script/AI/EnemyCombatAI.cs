@@ -38,6 +38,9 @@ public class EnemyCombatAI : MobileCombatAI
     // 리더를 빼앗는 데 필요한 거리 우위(m)의 제곱입니다. 2m 마진.
     const float SquadLeaderSwitchMarginSqr = 4f;
 
+    // "전투 중" 판정을 유지했다가 다시 검사하는 간격(초)입니다.
+    const float BusyCheckInterval = 2f;
+
     static readonly List<SelectableEntity> squadBuffer = new List<SelectableEntity>(32);
 
     EnemyCombatAI squadLeader;
@@ -47,6 +50,8 @@ public class EnemyCombatAI : MobileCombatAI
     float squadClaimCheckTimer;
     float squadOffsetFactor;
     float detourCheckTimer;
+    float busyCheckTimer;
+    bool isBusyAttacking;
 
     protected override void Awake()
     {
@@ -59,16 +64,15 @@ public class EnemyCombatAI : MobileCombatAI
         // 스폰 직후 전원이 같은 프레임에 팔로워를 긁지 않도록 흩뿌립니다.
         squadClaimCheckTimer = normalized * SquadClaimInterval;
         detourCheckTimer = normalized * detourCheckInterval;
+        busyCheckTimer = normalized * BusyCheckInterval;
     }
 
     void Update()
     {
-        // 사거리 안에서 유효한 표적을 때리는 중이면 스쿼드 추종/재탐색을 완전히 쉰다.
-        // (내가 때리는 표적 자체가 "사거리 안의 다른 진영 개체"라 HasLocalEnemy가 항상
-        // true가 되어 버려서, 이 스킵이 없으면 매 프레임 follower가 false로 빠지고
-        // TickRetarget이 돌아 공격 중에도 다른 표적으로 흔들릴 수 있다.)
-        // 표적을 잃거나 사거리를 벗어나야만 다시 리더를 보거나 새로 찾는다.
-        if (IsBusyAttacking())
+        // 전투 중(어그로 범위 안에 적 건물이 있음)이면 스쿼드 추종/재탐색을 쉰다.
+        // 표적이 아예 없을 때는 여기서 UpdateCombat만 도는 게 아니라 재탐색이 필요하므로
+        // HasValidTarget()도 같이 확인한다.
+        if (HasValidTarget() && IsBusyAttacking())
         {
             UpdateCombat();
             return;
@@ -151,10 +155,50 @@ public class EnemyCombatAI : MobileCombatAI
                !leader.IsBusyAttacking();
     }
 
-    /// <summary>사거리 안에서 유효한 표적을 때리고 있는 중인지. Update()의 조기 반환과 같은 조건이다.</summary>
+    /// <summary>
+    /// "전투 중"인지를 판정한다. 어그로 범위 안에 적 건물이 있으면 전투 중으로 보고,
+    /// 그 판정을 BusyCheckInterval(2초)만큼 유지한 뒤 다시 검사한다. 매 프레임 사거리
+    /// 안팎을 오가며 판정이 뒤집혀 그 틈에 리더가 되거나 리더로 등록되는 걸 막는다.
+    /// </summary>
     bool IsBusyAttacking()
     {
-        return HasValidTarget() && attacker.IsInRange(currentTarget);
+        busyCheckTimer -= Time.deltaTime;
+        if (busyCheckTimer > 0f)
+            return isBusyAttacking;
+
+        busyCheckTimer = BusyCheckInterval;
+        isBusyAttacking = HasEnemyBuildingInAggroRange();
+        return isBusyAttacking;
+    }
+
+    bool HasEnemyBuildingInAggroRange()
+    {
+        if (selfEntity == null)
+            return false;
+
+        float rangeSqr = aggroRange * aggroRange;
+        Vector3 origin = transform.position;
+
+        IReadOnlyList<SelectableEntity> buildings = BuildingRegistry.Buildings;
+
+        for (int i = 0; i < buildings.Count; i++)
+        {
+            SelectableEntity building = buildings[i];
+            if (building == null || building.ownerId == selfEntity.ownerId)
+                continue;
+
+            EntityHealth health = building.CachedHealth;
+            if (health != null && !health.IsAlive)
+                continue;
+
+            Vector3 delta = building.transform.position - origin;
+            delta.y = 0f;
+
+            if (delta.sqrMagnitude <= rangeSqr)
+                return true;
+        }
+
+        return false;
     }
 
     bool HasLocalEnemy()
@@ -646,6 +690,12 @@ public class EnemyCombatAI : MobileCombatAI
     void OnDrawGizmos()
     {
         if (!debugCommandLog || squadLeader == null || squadLeader == this)
+            return;
+
+        // squadLeader 필드는 마지막으로 배정된 값을 그대로 들고 있어서,
+        // 지금 실제로 따를 수 있는 리더인지는 LeaderCanBeFollowed로 다시 확인해야 한다.
+        // 이걸 안 거르면 전투 중으로 빠진 리더를 향한 낡은 선이 계속 남아있는 것처럼 보인다.
+        if (!LeaderCanBeFollowed(squadLeader))
             return;
 
         Vector3 from = transform.position + Vector3.up * 0.5f;
