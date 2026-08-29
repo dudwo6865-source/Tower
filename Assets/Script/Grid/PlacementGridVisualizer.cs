@@ -260,10 +260,11 @@ public class PlacementGridVisualizer : MonoBehaviour
     {
         MapGrid grid = MapGrid.Instance;
 
-        if (grid != null)
-            worldPoint.y = grid.SampleGroundHeight(worldPoint, preferredSampleY);
-
-        worldPoint.y += heightOffset;
+        // 칸마다 SampleGroundHeight로 지면을 다시 재는 대신, 고스트가 실제로
+        // 서 있는 footprint 공통 높이(preferredSampleY)를 그대로 쓴다.
+        // 고스트 자체가 그 높이 하나로 평평하게 배치되므로, 오버레이도 칸마다
+        // 울퉁불퉁해지지 않고 고스트와 정확히 같은 기준으로 맞는다.
+        worldPoint.y = preferredSampleY + heightOffset;
 
         if (grid != null)
             return grid.transform.InverseTransformPoint(worldPoint);
