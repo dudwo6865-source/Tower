@@ -156,9 +156,10 @@ public class EnemyCombatAI : MobileCombatAI
     }
 
     /// <summary>
-    /// "전투 중"인지를 판정한다. 어그로 범위 안에 적 건물이 있으면 전투 중으로 보고,
-    /// 그 판정을 BusyCheckInterval(2초)만큼 유지한 뒤 다시 검사한다. 매 프레임 사거리
-    /// 안팎을 오가며 판정이 뒤집혀 그 틈에 리더가 되거나 리더로 등록되는 걸 막는다.
+    /// "전투 중"인지를 판정한다. 어그로 범위 안에 적(유닛 또는 건물)이 있으면 전투
+    /// 중으로 보고, 그 판정을 BusyCheckInterval(2초)만큼 유지한 뒤 다시 검사한다.
+    /// 매 프레임 사거리 안팎을 오가며 판정이 뒤집혀 그 틈에 리더가 되거나
+    /// 리더로 등록되는 걸 막는다.
     /// </summary>
     bool IsBusyAttacking()
     {
@@ -167,38 +168,8 @@ public class EnemyCombatAI : MobileCombatAI
             return isBusyAttacking;
 
         busyCheckTimer = BusyCheckInterval;
-        isBusyAttacking = HasEnemyBuildingInAggroRange();
+        isBusyAttacking = HasOtherOwnerNearby(aggroRange, unitsOnly: false);
         return isBusyAttacking;
-    }
-
-    bool HasEnemyBuildingInAggroRange()
-    {
-        if (selfEntity == null)
-            return false;
-
-        float rangeSqr = aggroRange * aggroRange;
-        Vector3 origin = transform.position;
-
-        IReadOnlyList<SelectableEntity> buildings = BuildingRegistry.Buildings;
-
-        for (int i = 0; i < buildings.Count; i++)
-        {
-            SelectableEntity building = buildings[i];
-            if (building == null || building.ownerId == selfEntity.ownerId)
-                continue;
-
-            EntityHealth health = building.CachedHealth;
-            if (health != null && !health.IsAlive)
-                continue;
-
-            Vector3 delta = building.transform.position - origin;
-            delta.y = 0f;
-
-            if (delta.sqrMagnitude <= rangeSqr)
-                return true;
-        }
-
-        return false;
     }
 
     bool HasLocalEnemy()
