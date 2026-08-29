@@ -9,6 +9,9 @@ public class SelectionInfoPanelUI : MonoBehaviour
     [Tooltip("유닛 선택을 감지하는 매니저입니다. 비워두면 UnitSelectionManager.Instance를 사용합니다.")]
     public UnitSelectionManager selectionManager;
 
+    [Tooltip("업그레이드 변경 시 전투 스탯 표시를 갱신합니다. 비워두면 자동으로 찾습니다.")]
+    public UpgradeManager upgradeManager;
+
     [Header("Panel")]
     [Tooltip("선택 정보 패널 전체 루트입니다. 선택이 없으면 숨깁니다.")]
     public GameObject panelRoot;
@@ -48,6 +51,18 @@ public class SelectionInfoPanelUI : MonoBehaviour
     public TextMeshProUGUI productionDetailText;
     [Tooltip("현재 생산 진행률(0~1)을 표시할 슬라이더입니다.")]
     public Slider productionSlider;
+
+    [Header("Upgrade Research")]
+    [Tooltip("업그레이드 건물 연구 정보 영역 루트입니다. UpgradeBuilding 선택 시에만 표시합니다.")]
+    public GameObject upgradeResearchSection;
+    [Tooltip("연구 중인 업그레이드 아이콘입니다.")]
+    public Image upgradeResearchIconImage;
+    [Tooltip("연구 중인 업그레이드 이름을 표시할 텍스트입니다.")]
+    public TextMeshProUGUI upgradeResearchTitleText;
+    [Tooltip("연구 상태/남은 시간 등을 표시할 텍스트입니다.")]
+    public TextMeshProUGUI upgradeResearchDetailText;
+    [Tooltip("현재 연구 진행률(0~1)을 표시할 슬라이더입니다.")]
+    public Slider upgradeResearchSlider;
 
     [Header("Multi Selection")]
     [Tooltip("여러 개 선택 시 각 대상 초상화를 나열할 그리드 부모입니다. (Grid Layout Group 등을 붙인 오브젝트)")]
@@ -97,12 +112,16 @@ public class SelectionInfoPanelUI : MonoBehaviour
     public string multiMixedFormat = "유닛 {0} / 건물 {1}";
     [Tooltip("생산 건물 보유 유닛 수 형식입니다. {0}=현재 보유, {1}=최대 보유")]
     public string productionCountFormat = "보유 {0} / {1}";
-    [Tooltip("유닛을 생산 중일 때 표시할 문구입니다.")]
-    public string productionProgressFormat = "생산 중";
+    [Tooltip("유닛을 생산 중일 때 표시할 문구입니다. {0}=남은 초")]
+    public string productionProgressFormat = "생산 중  {0:0.0}s";
     [Tooltip("생산 대기 중일 때 표시할 문구입니다.")]
     public string productionIdleFormat = "대기 중";
     [Tooltip("생산 한도에 도달했을 때 표시할 문구입니다.")]
     public string productionCapacityFormat = "생산 한도";
+    [Tooltip("업그레이드 연구 중일 때 표시할 문구입니다. {0}=남은 초")]
+    public string upgradeResearchProgressFormat = "연구 중  {0:0.0}s";
+    [Tooltip("업그레이드 연구가 없을 때 표시할 문구입니다.")]
+    public string upgradeResearchIdleFormat = "대기 중";
 
     // 단일 선택 시 생산 진행률 갱신 대상
     SelectableEntity trackedEntity;
@@ -125,6 +144,15 @@ public class SelectionInfoPanelUI : MonoBehaviour
         if (selectionManager != null)
             selectionManager.OnSelectionChanged += HandleSelectionChanged;
 
+        if (upgradeManager == null)
+            upgradeManager = UpgradeManager.Instance;
+
+        if (upgradeManager == null)
+            upgradeManager = FindObjectOfType<UpgradeManager>();
+
+        if (upgradeManager != null)
+            upgradeManager.OnUpgradesChanged += HandleUpgradesChanged;
+
         if (portraitGrid == null && portraitGridParent != null)
             portraitGrid = portraitGridParent.GetComponent<GridLayoutGroup>();
 
@@ -137,6 +165,9 @@ public class SelectionInfoPanelUI : MonoBehaviour
 
         if (selectionManager != null)
             selectionManager.OnSelectionChanged -= HandleSelectionChanged;
+
+        if (upgradeManager != null)
+            upgradeManager.OnUpgradesChanged -= HandleUpgradesChanged;
     }
 
     void Update()
@@ -154,16 +185,28 @@ public class SelectionInfoPanelUI : MonoBehaviour
             return;
 
         ProductionBuilding production = trackedEntity.GetComponent<ProductionBuilding>();
+        if (production != null)
+            RefreshProduction(production);
 
-        if (production == null)
-            return;
-
-        RefreshProduction(production);
+        if (trackedEntity.GetComponent<UpgradeBuilding>() != null)
+            RefreshUpgradeResearch(showSection: true);
     }
 
     void HandleSelectionChanged()
     {
         RefreshPanel();
+    }
+
+    // 업그레이드가 변경되면 단일 선택 대상의 전투 스탯 표시를 갱신합니다.
+    // (최대 체력은 EntityHealth.OnHealthChanged로 자동 갱신됩니다.)
+    void HandleUpgradesChanged()
+    {
+        if (multiSelectionActive || trackedEntity == null)
+            return;
+
+        UnitData data = SelectionInfoUtility.GetUnitData(trackedEntity);
+        RefreshCombat(trackedEntity, data);
+        RefreshProduction(trackedEntity.GetComponent<ProductionBuilding>());
     }
 
     void HandleTrackedHealthChanged(float currentHealth, float maxHealth)
@@ -234,6 +277,7 @@ public class SelectionInfoPanelUI : MonoBehaviour
 
         RefreshCombat(entity, data);
         RefreshProduction(entity.GetComponent<ProductionBuilding>());
+        RefreshUpgradeResearch(entity.GetComponent<UpgradeBuilding>() != null);
     }
 
     void ShowMultiSelection(IReadOnlyList<SelectableEntity> selected)
@@ -263,6 +307,7 @@ public class SelectionInfoPanelUI : MonoBehaviour
         SetSectionActive(identitySection, false);
         SetSectionActive(combatSection, false);
         SetSectionActive(productionSection, false);
+        SetSectionActive(upgradeResearchSection, false);
 
         multiSelectionActive = true;
         RefreshPortraitGrid(selected);
@@ -426,7 +471,7 @@ public class SelectionInfoPanelUI : MonoBehaviour
         if (!hasCombatData)
             return;
 
-        float attackDamage = attacker != null ? attacker.attackDamage : data.attackDamage;
+        float attackDamage = attacker != null ? attacker.EffectiveAttackDamage : data.attackDamage;
         float attackRange = attacker != null ? attacker.attackRange : data.attackRange;
         float moveSpeed = data != null ? data.moveSpeed : 0f;
         float visionRange = data != null ? data.visionRange : 0f;
@@ -479,30 +524,31 @@ public class SelectionInfoPanelUI : MonoBehaviour
             productionTitleText,
             SelectionInfoUtility.GetDisplayName(recipe.unitPrefab, unitData));
 
-        if (production.IsAtCapacity)
-        {
-            SetText(productionDetailText, productionCapacityFormat);
-
-            if (productionSlider != null)
-            {
-                productionSlider.minValue = 0f;
-                productionSlider.maxValue = 1f;
-                productionSlider.value = 1f;
-            }
-
-            return;
-        }
-
-        string countText = recipe.maxAlivePerBuilding > 0
-            ? string.Format(
-                productionCountFormat,
-                production.AliveCount,
-                recipe.maxAlivePerBuilding)
+        int maxAlive = production.MaxAliveCount;
+        string countText = maxAlive > 0
+            ? string.Format(productionCountFormat, production.AliveCount, maxAlive)
             : string.Empty;
 
-        string statusText = production.IsProductionActive
-            ? productionProgressFormat
-            : productionIdleFormat;
+        string statusText;
+        float sliderValue;
+
+        if (production.IsAtCapacity)
+        {
+            statusText = productionCapacityFormat;
+            sliderValue = 1f;
+        }
+        else if (production.IsProducing)
+        {
+            statusText = string.Format(
+                productionProgressFormat,
+                production.ProductionRemainingTime);
+            sliderValue = production.ProductionProgress;
+        }
+        else
+        {
+            statusText = productionIdleFormat;
+            sliderValue = 0f;
+        }
 
         SetText(
             productionDetailText,
@@ -514,7 +560,63 @@ public class SelectionInfoPanelUI : MonoBehaviour
         {
             productionSlider.minValue = 0f;
             productionSlider.maxValue = 1f;
-            productionSlider.value = production.ProductionProgress;
+            productionSlider.value = sliderValue;
+        }
+    }
+
+    void RefreshUpgradeResearch(bool showSection)
+    {
+        if (upgradeResearchSection == null &&
+            upgradeResearchIconImage == null &&
+            upgradeResearchTitleText == null &&
+            upgradeResearchDetailText == null &&
+            upgradeResearchSlider == null)
+        {
+            return;
+        }
+
+        bool hasUpgradeBuilding = showSection;
+        SetSectionActive(upgradeResearchSection, hasUpgradeBuilding);
+
+        if (!hasUpgradeBuilding)
+            return;
+
+        UpgradeDefinition research = upgradeManager != null
+            ? upgradeManager.ActiveResearch
+            : null;
+        bool researching = research != null;
+
+        if (upgradeResearchIconImage != null)
+        {
+            Sprite icon = researching ? research.icon : null;
+            upgradeResearchIconImage.sprite = icon;
+            upgradeResearchIconImage.enabled = icon != null;
+        }
+
+        SetText(
+            upgradeResearchTitleText,
+            researching ? research.displayName : string.Empty);
+
+        if (researching)
+        {
+            SetText(
+                upgradeResearchDetailText,
+                string.Format(
+                    upgradeResearchProgressFormat,
+                    upgradeManager.ResearchRemainingTime));
+        }
+        else
+        {
+            SetText(upgradeResearchDetailText, upgradeResearchIdleFormat);
+        }
+
+        if (upgradeResearchSlider != null)
+        {
+            upgradeResearchSlider.minValue = 0f;
+            upgradeResearchSlider.maxValue = 1f;
+            upgradeResearchSlider.value = researching
+                ? upgradeManager.ResearchProgress
+                : 0f;
         }
     }
 
@@ -541,6 +643,7 @@ public class SelectionInfoPanelUI : MonoBehaviour
         SetSectionActive(identitySection, false);
         SetSectionActive(combatSection, false);
         SetSectionActive(productionSection, false);
+        SetSectionActive(upgradeResearchSection, false);
         SetText(nameText, string.Empty);
         SetPortrait(null);
 
@@ -640,6 +743,9 @@ public static class SelectionInfoUtility
         {
             if (entity.GetComponent<Headquarters>() != null)
                 return "본부";
+
+            if (entity.GetComponent<BuildZoneProvider>() != null)
+                return "전초기지";
 
             if (entity.GetComponent<ProductionBuilding>() != null)
                 return "생산 건물";

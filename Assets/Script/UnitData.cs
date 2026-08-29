@@ -64,7 +64,7 @@ public class UnitData : ScriptableObject
     [Header("공격 이펙트")]
     public CombatEffectPrefabs combatEffects;
 
-    [Header("전투 AI (UnitCombatAI)")]
+    [Header("전투 AI (MobileCombatAI)")]
     [Tooltip("전투 AI를 사용합니다. 자동 교전/이동이 필요한 유닛만 켜세요.")]
     public bool hasCombatAI = true;
 
@@ -74,8 +74,11 @@ public class UnitData : ScriptableObject
     [Tooltip("교전 대상 선택 우선순위입니다.")]
     public CombatTargetPriority targetPriority = CombatTargetPriority.Nearest;
 
-    [Tooltip("교전 대상이 없을 때 가장 가까운 적 건물로 진군합니다. 공격 유닛(적)에 적합합니다.")]
+    [Tooltip("교전 대상이 없을 때 상대 HQ로 진군합니다. 적 유닛(EnemyCombatAI)에만 적용됩니다.")]
     public bool advanceToEnemyBuildings;
+
+    [Tooltip("건물 추격 중 우회 접근점 대신 건물로 직행하기 시작하는 거리입니다. 0 이하면 Aggro Range를 씁니다.")]
+    public float buildingDirectChaseRange;
 
     [Tooltip("대상에 접근할 때 멈추는 거리입니다.")]
     public float stoppingDistance = 2f;

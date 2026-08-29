@@ -11,6 +11,7 @@ public class BuildingEditor : Editor
 
         EditorGUILayout.PropertyField(serializedObject.FindProperty("data"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("isHeadquarters"));
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("isBuildZoneProvider"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("useTowerAI"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("isProductionBuilding"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("productionRecipe"));
@@ -50,6 +51,7 @@ public class BuildingEditor : Editor
         RestoreFlag<UnitAttacker>(building);
         RestoreFlag<TowerAI>(building);
         RestoreFlag<Headquarters>(building);
+        RestoreFlag<BuildZoneProvider>(building);
         RestoreFlag<ProductionBuilding>(building);
         RestoreFlag<UnitAnimator>(building);
         RestoreFlag<UnitSound>(building);

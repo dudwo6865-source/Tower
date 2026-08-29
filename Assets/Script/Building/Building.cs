@@ -13,6 +13,9 @@ public class Building : MonoBehaviour
     [Tooltip("본부(HQ) 건물이면 Headquarters 컴포넌트를 사용합니다.")]
     public bool isHeadquarters;
 
+    [Tooltip("건설 구역을 추가로 제공하는 건물입니다. HQ 구역 밖에도 배치할 수 있습니다.")]
+    public bool isBuildZoneProvider;
+
     [Tooltip("공격 건물(타워)이면 TowerAI를 사용합니다. UnitCombatAI 대신 포탑 회전용 AI입니다.")]
     public bool useTowerAI = true;
 
@@ -29,6 +32,7 @@ public class Building : MonoBehaviour
     private WorldHealthBar healthBar;
     private UnitSound unitSound;
     private Headquarters headquarters;
+    private BuildZoneProvider buildZoneProvider;
     private ProductionBuilding productionBuilding;
 
     public SelectableEntity Selection => Resolve(ref selection);
@@ -37,6 +41,7 @@ public class Building : MonoBehaviour
     public TowerAI TowerAI => Resolve(ref towerAI);
     public WorldHealthBar HealthBar => Resolve(ref healthBar);
     public Headquarters Headquarters => Resolve(ref headquarters);
+    public BuildZoneProvider BuildZoneProvider => Resolve(ref buildZoneProvider);
     public ProductionBuilding ProductionBuilding => Resolve(ref productionBuilding);
 
     void Awake()
@@ -68,6 +73,7 @@ public class Building : MonoBehaviour
         ApplyGrid(source);
         ApplySound(source);
         ApplyHeadquarters(source);
+        ApplyBuildZoneProvider(source);
         ApplyProductionBuilding(source);
     }
 
@@ -201,6 +207,18 @@ public class Building : MonoBehaviour
         target.ownerId = source.ownerId;
     }
 
+    void ApplyBuildZoneProvider(UnitData source)
+    {
+        if (!isBuildZoneProvider && !isHeadquarters)
+            return;
+
+        BuildZoneProvider target = BuildZoneProvider;
+        if (target == null)
+            return;
+
+        target.ownerId = source.ownerId;
+    }
+
     void ApplyProductionBuilding(UnitData source)
     {
         if (!isProductionBuilding)
@@ -224,6 +242,7 @@ public class Building : MonoBehaviour
         bool wantsAttacker,
         bool wantsTowerAI,
         bool wantsHeadquarters,
+        bool wantsBuildZoneProvider,
         bool wantsProduction)
     {
         GetOrAdd<SelectableEntity>();
@@ -255,12 +274,23 @@ public class Building : MonoBehaviour
             RemoveIfPresent<TowerAI>();
 
         if (wantsHeadquarters)
+        {
             GetOrAdd<Headquarters>();
+        }
         else
+        {
             RemoveIfPresent<Headquarters>();
+
+            if (wantsBuildZoneProvider)
+                GetOrAdd<BuildZoneProvider>();
+            else
+                RemoveIfPresent<BuildZoneProvider>();
+        }
 
         RemoveIfPresent<Unit>();
         RemoveIfPresent<UnitCombatAI>();
+        RemoveIfPresent<EnemyCombatAI>();
+        RemoveIfPresent<UnitEnemyAI>();
         RemoveIfPresent<UnitMovement>();
         RemoveIfPresent<NavMeshAgent>();
 
@@ -271,6 +301,7 @@ public class Building : MonoBehaviour
         healthBar = null;
         unitSound = null;
         headquarters = null;
+        buildZoneProvider = null;
         productionBuilding = null;
     }
 
@@ -280,8 +311,14 @@ public class Building : MonoBehaviour
         bool wantsAttacker = !wantsProduction && data != null && data.canAttack;
         bool wantsTowerAI = wantsAttacker && useTowerAI;
         bool wantsHeadquarters = isHeadquarters;
+        bool wantsBuildZoneProvider = isBuildZoneProvider;
 
-        EnsureComponents(wantsAttacker, wantsTowerAI, wantsHeadquarters, wantsProduction);
+        EnsureComponents(
+            wantsAttacker,
+            wantsTowerAI,
+            wantsHeadquarters,
+            wantsBuildZoneProvider,
+            wantsProduction);
     }
 
     T GetOrAdd<T>() where T : Component

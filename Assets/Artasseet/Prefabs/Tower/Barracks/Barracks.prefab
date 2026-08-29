@@ -25,7 +25,7 @@ Transform:
   m_GameObject: {fileID: 5512095711529239885}
   serializedVersion: 2
   m_LocalRotation: {x: 6.123234e-17, y: -1, z: -6.123234e-17, w: -3.7493994e-33}
-  m_LocalPosition: {x: 0.007, y: 1.023, z: 2.179}
+  m_LocalPosition: {x: 0.01, y: 1.02, z: 5.16}
   m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -102,7 +102,7 @@ PrefabInstance:
     - target: {fileID: -7511558181221131132, guid: b0301882a6293d44ba0df70791890ad6, type: 3}
       propertyPath: m_Materials.Array.data[0]
       value: 
-      objectReference: {fileID: 2100000, guid: 75def0149a5bf12429ee309d3db4f098, type: 2}
+      objectReference: {fileID: 2100000, guid: 8f29332e5421e3949bb7a433f310e49f, type: 2}
     - target: {fileID: 919132149155446097, guid: b0301882a6293d44ba0df70791890ad6, type: 3}
       propertyPath: m_Name
       value: Barracks
@@ -144,6 +144,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: b0301882a6293d44ba0df70791890ad6, type: 3}
       insertIndex: -1
       addedObject: {fileID: 283280464501641543}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: b0301882a6293d44ba0df70791890ad6, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6673459227747460072}
   m_SourcePrefab: {fileID: 100100000, guid: b0301882a6293d44ba0df70791890ad6, type: 3}
 --- !u!1 &4641212407630778950 stripped
 GameObject:
@@ -166,7 +169,7 @@ MonoBehaviour:
   ownerId: 1
   entityTypeId: unit
   selectionCollider: {fileID: 0}
-  portrait: {fileID: 0}
+  portrait: {fileID: 21300000, guid: ef82946de26ee514289bc80a7a50b4ad, type: 3}
   autoSetupHealth: 1
 --- !u!114 &2423212771722050173
 MonoBehaviour:
@@ -223,7 +226,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 06111e8d5f14f3b46a3c9a5a006c460d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  footprintCells: {x: 5, y: 5}
+  footprintCells: {x: 2, y: 2}
   blockCells: 1
   carveNavMesh: 1
   snapTransformOnRegister: 0
@@ -237,7 +240,7 @@ NavMeshObstacle:
   m_Enabled: 1
   serializedVersion: 3
   m_Shape: 1
-  m_Extents: {x: 4.25, y: 2.5, z: 4.25}
+  m_Extents: {x: 1.7, y: 2.5, z: 1.7}
   m_MoveThreshold: 0.1
   m_Carve: 1
   m_CarveOnlyStationary: 1
@@ -306,6 +309,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   data: {fileID: 0}
   isHeadquarters: 0
+  isBuildZoneProvider: 0
   useTowerAI: 0
   isProductionBuilding: 1
   productionRecipe: {fileID: 11400000, guid: fb403a9513c80234abcfa3866fb5fedf, type: 2}
@@ -322,12 +326,35 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   recipe: {fileID: 11400000, guid: fb403a9513c80234abcfa3866fb5fedf, type: 2}
-  spawnPoint: {fileID: 5229845724324671109}
+  spawnPoint: {fileID: 0}
+  spawnScatterSpacing: 1.2
+  spawnRingSlots: 8
   autoStart: 1
   hasRallyPoint: 0
   rallyPointWorld: {x: 0, y: 0, z: 0}
   rallyMarkerColor: {r: 1, g: 0.65, b: 0.15, a: 0.95}
   rallyMarkerRadius: 1.1
+--- !u!95 &6673459227747460072
+Animator:
+  serializedVersion: 5
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4641212407630778950}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: c36ce97cd5ac53b45af33831699b225d, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
 --- !u!4 &5414231326591518972 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: b0301882a6293d44ba0df70791890ad6, type: 3}

@@ -10,15 +10,14 @@ public class TowerAI : CombatAIBase
     [Tooltip("포탑이 대상을 바라보는 회전 속도입니다.")]
     public float facingSpeed = 8f;
 
-    [Tooltip("포탑이 적을 정확히 겨누도록 추가 보정하는 Y축 각도(도)입니다. " +
-             "Fire Point가 있으면 그 방향을 기준으로 자동 보정되며, 이 값은 추가로 더해집니다.")]
+    [Tooltip("포신 방향에 더하는 Y축 보정(도)입니다. Fire Point를 포신 끝에 두면 0으로 두세요.")]
     public float aimYawOffset;
 
     [Tooltip("대상이 없을 때 처음 바라보던 방향으로 천천히 돌아갑니다.")]
     public bool returnToIdleWhenNoTarget = true;
 
     private Quaternion idleRotation;
-    private float effectiveYawOffset;
+    private Vector3 barrelLocal = Vector3.forward;
 
     protected override void Awake()
     {
@@ -28,37 +27,27 @@ public class TowerAI : CombatAIBase
             turretPivot = transform;
 
         idleRotation = turretPivot.rotation;
-        effectiveYawOffset = aimYawOffset + ComputeFirePointYawOffset();
-    }
+        barrelLocal = ResolveBarrelLocal();
 
-    float ComputeFirePointYawOffset()
-    {
-        if (attacker == null || attacker.firePoint == null)
-            return 0f;
-
-        Vector3 pivotForward = turretPivot.forward;
-        Vector3 fireForward = attacker.firePoint.forward;
-        pivotForward.y = 0f;
-        fireForward.y = 0f;
-
-        if (pivotForward.sqrMagnitude < 0.0001f ||
-            fireForward.sqrMagnitude < 0.0001f)
-            return 0f;
-
-        return Vector3.SignedAngle(
-            pivotForward.normalized,
-            fireForward.normalized,
-            Vector3.up);
+        if (attacker != null)
+        {
+            attacker.aimTransform = turretPivot;
+            attacker.aimAxisLocal = barrelLocal;
+            attacker.aimYawOffset = 0f;
+        }
     }
 
     void Update()
     {
+        if (BuildingConstructionGate.IsFeatureLockedOn(this))
+            return;
+
         TickRetarget();
 
         if (!HasValidTarget())
         {
             if (returnToIdleWhenNoTarget)
-                RotateTowards(idleRotation);
+                RotateYawTowards(idleRotation);
 
             return;
         }
@@ -69,33 +58,71 @@ public class TowerAI : CombatAIBase
             attacker.TryAttack(currentTarget, currentTargetHealth);
     }
 
-    void FaceTarget()
+    Vector3 ResolveBarrelLocal()
     {
-        Vector3 direction =
-            currentTarget.transform.position - turretPivot.position;
+        Vector3 local = Vector3.forward;
 
-        direction.y = 0f;
+        if (attacker != null && attacker.firePoint != null)
+        {
+            Vector3 fromPivot = turretPivot.InverseTransformPoint(attacker.firePoint.position);
+            fromPivot.y = 0f;
+            if (fromPivot.sqrMagnitude > 0.01f)
+                local = fromPivot.normalized;
+            else
+            {
+                Vector3 fireForward = turretPivot.InverseTransformDirection(attacker.firePoint.forward);
+                fireForward.y = 0f;
+                if (fireForward.sqrMagnitude > 0.0001f)
+                    local = fireForward.normalized;
+            }
+        }
 
-        if (direction.sqrMagnitude < 0.01f)
-            return;
+        if (Mathf.Abs(aimYawOffset) > 0.01f)
+            local = Quaternion.Euler(0f, aimYawOffset, 0f) * local;
 
-        // Fire Point 방향을 기준으로 Y축만 돌려 모델 기울기(X/Z)는 idle 자세를 유지한다.
-        float yaw =
-            Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg +
-            effectiveYawOffset;
-
-        Vector3 idleEuler = idleRotation.eulerAngles;
-        Quaternion targetRotation =
-            Quaternion.Euler(idleEuler.x, yaw, idleEuler.z);
-
-        RotateTowards(targetRotation);
+        return local.sqrMagnitude > 0.0001f ? local.normalized : Vector3.forward;
     }
 
-    void RotateTowards(Quaternion targetRotation)
+    void FaceTarget()
     {
-        turretPivot.rotation = Quaternion.Slerp(
-            turretPivot.rotation,
-            targetRotation,
-            Time.deltaTime * facingSpeed);
+        Vector3 origin = attacker != null && attacker.firePoint != null
+            ? attacker.firePoint.position
+            : turretPivot.position;
+        Vector3 toTarget = currentTarget.SelectionBounds.center - origin;
+        toTarget.y = 0f;
+
+        if (toTarget.sqrMagnitude < 0.01f)
+            return;
+
+        Vector3 barrelWorld = turretPivot.TransformDirection(barrelLocal);
+        barrelWorld.y = 0f;
+        if (barrelWorld.sqrMagnitude < 0.0001f)
+            return;
+
+        float deltaYaw = Vector3.SignedAngle(barrelWorld, toTarget, Vector3.up);
+        ApplyYaw(deltaYaw);
+    }
+
+    void RotateYawTowards(Quaternion targetRotation)
+    {
+        Vector3 currentYaw = turretPivot.forward;
+        Vector3 targetYaw = targetRotation * Vector3.forward;
+        currentYaw.y = 0f;
+        targetYaw.y = 0f;
+        if (currentYaw.sqrMagnitude < 0.0001f || targetYaw.sqrMagnitude < 0.0001f)
+            return;
+
+        float deltaYaw = Vector3.SignedAngle(currentYaw, targetYaw, Vector3.up);
+        ApplyYaw(deltaYaw);
+    }
+
+    void ApplyYaw(float deltaYaw)
+    {
+        float maxDegrees = Mathf.Max(1f, facingSpeed) * 90f * Time.deltaTime;
+        float applied = Mathf.Min(Mathf.Abs(deltaYaw), maxDegrees) * Mathf.Sign(deltaYaw);
+        if (Mathf.Abs(applied) < 0.001f)
+            return;
+
+        turretPivot.rotation = Quaternion.AngleAxis(applied, Vector3.up) * turretPivot.rotation;
     }
 }

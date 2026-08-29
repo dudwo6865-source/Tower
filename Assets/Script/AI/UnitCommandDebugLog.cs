@@ -12,7 +12,7 @@ public static class UnitCommandDebugLog
 
     static bool IsEnabled(MonoBehaviour source)
     {
-        UnitCombatAI combatAI = source.GetComponent<UnitCombatAI>();
+        MobileCombatAI combatAI = source.GetComponent<MobileCombatAI>();
         return combatAI != null && combatAI.debugCommandLog;
     }
 }

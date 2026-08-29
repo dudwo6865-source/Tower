@@ -32,6 +32,38 @@ public class SelectableEntity : MonoBehaviour
     public bool IsSelected { get; private set; }
 
     private SelectionRingIndicator ringIndicator;
+    private EntityHealth cachedHealth;
+    private CombatAIBase cachedCombatAI;
+    private bool healthCached;
+    private bool combatAICached;
+
+    public EntityHealth CachedHealth
+    {
+        get
+        {
+            if (!healthCached)
+            {
+                cachedHealth = GetComponent<EntityHealth>();
+                healthCached = true;
+            }
+
+            return cachedHealth;
+        }
+    }
+
+    public CombatAIBase CachedCombatAI
+    {
+        get
+        {
+            if (!combatAICached)
+            {
+                cachedCombatAI = GetComponent<CombatAIBase>();
+                combatAICached = true;
+            }
+
+            return cachedCombatAI;
+        }
+    }
 
     public Collider SelectionCollider
     {
@@ -66,6 +98,9 @@ public class SelectableEntity : MonoBehaviour
     void OnEnable()
     {
         SelectableRegistry.Register(this);
+
+        // 스폰/활성화 시 현재 업그레이드 보너스를 반영한다(플레이어 소속만 적용됨).
+        UpgradeManager.NotifySpawned(this);
     }
 
     void OnDisable()

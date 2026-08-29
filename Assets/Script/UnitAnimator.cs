@@ -27,6 +27,8 @@ public class UnitAnimator : MonoBehaviour
 
     private NavMeshAgent agent;
     private EntityHealth health;
+    private Vector3 lastAnimatedPosition;
+    private bool hasAnimatedPosition;
 
     private int speedHash;
     private int attackHash;
@@ -66,10 +68,26 @@ public class UnitAnimator : MonoBehaviour
         if (isDead || animator == null || !useMoveAnimation)
             return;
 
+        if (!CameraVisibility.IsVisible(transform.position))
+            return;
+
         float speed = 0f;
 
         if (agent != null && agent.enabled && agent.isOnNavMesh)
             speed = agent.velocity.magnitude;
+
+        if (Time.deltaTime > 0.0001f)
+        {
+            if (hasAnimatedPosition)
+            {
+                float moved = (transform.position - lastAnimatedPosition).magnitude / Time.deltaTime;
+                if (moved > speed)
+                    speed = moved;
+            }
+
+            lastAnimatedPosition = transform.position;
+            hasAnimatedPosition = true;
+        }
 
         animator.SetFloat(speedHash, speed);
     }

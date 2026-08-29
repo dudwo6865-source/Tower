@@ -23,6 +23,8 @@ public class PlacementGridVisualizer : MonoBehaviour
     private Vector2Int lastFootprintOrigin = new Vector2Int(int.MinValue, int.MinValue);
     private Vector2Int lastFootprintSize = Vector2Int.one;
     private bool lastFootprintValid;
+    private float lastPreferredY = float.NaN;
+    private float preferredSampleY;
 
     void Awake()
     {
@@ -78,11 +80,13 @@ public class PlacementGridVisualizer : MonoBehaviour
         SetVisualsActive(true);
 
         Vector2Int originCell = ResolvePreviewOriginCell(state);
+        preferredSampleY = state.centerWorld.y;
 
         bool layoutChanged = originCell != lastFootprintOrigin ||
             state.footprintCells != lastFootprintSize;
+        bool heightChanged = !Mathf.Approximately(preferredSampleY, lastPreferredY);
 
-        if (layoutChanged)
+        if (layoutChanged || heightChanged)
         {
             RebuildFootprintMesh(
                 originCell,
@@ -92,6 +96,7 @@ public class PlacementGridVisualizer : MonoBehaviour
             lastFootprintOrigin = originCell;
             lastFootprintSize = state.footprintCells;
             lastFootprintValid = state.isValid;
+            lastPreferredY = preferredSampleY;
         }
         else if (state.isValid != lastFootprintValid)
         {
@@ -177,6 +182,7 @@ public class PlacementGridVisualizer : MonoBehaviour
     void InvalidateCache()
     {
         lastFootprintOrigin = new Vector2Int(int.MinValue, int.MinValue);
+        lastPreferredY = float.NaN;
     }
 
     void SyncVisualsRoot()
@@ -210,7 +216,7 @@ public class PlacementGridVisualizer : MonoBehaviour
 
         bool footprintFullyOnNavMesh =
             !grid.UsesNavMesh ||
-            grid.IsFootprintOnNavMesh(originCell, footprintCells);
+            grid.IsFootprintOnNavMesh(originCell, footprintCells, preferredSampleY);
 
         if (footprintFullyOnNavMesh)
         {
@@ -263,7 +269,7 @@ public class PlacementGridVisualizer : MonoBehaviour
         MapGrid grid = MapGrid.Instance;
 
         if (grid != null)
-            worldPoint.y = grid.SampleGroundHeight(worldPoint);
+            worldPoint.y = grid.SampleGroundHeight(worldPoint, preferredSampleY);
 
         worldPoint.y += heightOffset;
 

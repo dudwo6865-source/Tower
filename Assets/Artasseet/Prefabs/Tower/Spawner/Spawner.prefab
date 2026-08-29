@@ -148,7 +148,7 @@ MonoBehaviour:
   ownerId: 2
   entityTypeId: Building
   selectionCollider: {fileID: 0}
-  portrait: {fileID: 0}
+  portrait: {fileID: 21300000, guid: 55dc48ce13ca1fe46a50c62ea096a92a, type: 3}
   autoSetupHealth: 1
 --- !u!114 &6550602415435688423
 MonoBehaviour:
@@ -164,6 +164,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   data: {fileID: 0}
   isHeadquarters: 0
+  isBuildZoneProvider: 0
   useTowerAI: 1
   isProductionBuilding: 0
   productionRecipe: {fileID: 0}
@@ -322,11 +323,13 @@ MonoBehaviour:
   enemyOwnerId: 2
   spawnRadius: 6
   spawnPositionAttempts: 16
-  allyDetectRadius: 15
-  detectUnitsOnly: 1
-  spawnInterval: 5
-  enemiesPerSpawn: 5
+  spawnPeriodically: 1
+  spawnInterval: 20
+  enemiesPerSpawn: 3
   maxAliveEnemies: 20
+  allyDetectRadius: 0
+  detectUnitsOnly: 1
+  attackedSpawnDuration: 5
   enemiesOnDeath: 10
   advanceToEnemyBuildings: 1
 --- !u!4 &9042834516025497343 stripped

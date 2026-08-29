@@ -70,6 +70,13 @@ public class TowerPlacementController : MonoBehaviour
     [Tooltip("맵 거리 감쇠 무음 거리입니다.")]
     public float placementSoundMaxDistance = 120f;
 
+    [Header("Construction")]
+    [Tooltip("프리팹에 BuildingConstructionGate가 없을 때 추가하며 쓰는 기본 기능 잠금 시간(초)입니다.")]
+    public float defaultFeatureLockDuration = 2f;
+
+    [Tooltip("프리팹에 BuildingConstructionGate가 없을 때 추가하며 쓰는 Place 애니 트리거 이름입니다.")]
+    public string defaultPlaceAnimationTrigger = "Place";
+
     public bool IsPlacing => pendingBuildData != null;
 
     public Vector2Int PreviewOriginCell => pendingOriginCell;
@@ -78,10 +85,20 @@ public class TowerPlacementController : MonoBehaviour
 
     public bool PreviewPlacementValid =>
         pendingBuildData != null &&
-        IsValidPlacement(pendingOriginCell, pendingBuildData);
+        IsValidPlacement(
+            pendingOriginCell,
+            pendingBuildData,
+            lastNotifiedCenterWorld.y);
 
     public bool HasPreviewPlacement =>
         ghostObject != null && ghostObject.activeSelf;
+
+    public Vector3 PreviewCenterWorld =>
+        HasPreviewPlacement
+            ? ghostObject.transform.position
+            : lastNotifiedCenterWorld;
+
+    public IBuildablePlacementData PendingBuildData => pendingBuildData;
 
     public event Action<PlacementPreviewState> PreviewChanged;
 
@@ -176,7 +193,7 @@ public class TowerPlacementController : MonoBehaviour
 
         CancelPlacement();
 
-        if (!IsSpawnablePrefab(data.Prefab, data.BuildAssetName))
+        if (!BuildingSpawnUtility.IsSpawnablePrefab(data.Prefab, data.BuildAssetName))
             return false;
 
         pendingBuildData = data;
@@ -229,7 +246,7 @@ public class TowerPlacementController : MonoBehaviour
                 out Vector3 placementPoint))
             return;
 
-        if (!IsValidPlacement(originCell, pendingBuildData))
+        if (!IsValidPlacement(originCell, pendingBuildData, placementPoint.y))
         {
             PlayFailedPlacementSound(placementPoint);
             return;
@@ -251,61 +268,18 @@ public class TowerPlacementController : MonoBehaviour
         Vector2Int originCell,
         Vector3 position)
     {
-        if (!IsSpawnablePrefab(data.Prefab, data.BuildAssetName))
+        GameObject buildingObject = BuildingSpawnUtility.Spawn(
+            data,
+            originCell,
+            position,
+            localPlayerOwnerId,
+            defaultFeatureLockDuration,
+            defaultPlaceAnimationTrigger);
+
+        if (buildingObject == null)
             return;
 
-        Quaternion rotation = data.Prefab.transform.rotation;
-
-        GameObject buildingObject =
-            (GameObject)Instantiate(data.Prefab, position, rotation);
-
-        SelectableEntity selectable =
-            buildingObject.GetComponent<SelectableEntity>();
-
-        if (selectable != null)
-        {
-            selectable.ownerId = data.OwnerId > 0
-                ? data.OwnerId
-                : localPlayerOwnerId;
-            selectable.entityTypeId = data.GetEntityTypeId();
-        }
-
-        WorldHealthBar healthBar =
-            buildingObject.GetComponent<WorldHealthBar>();
-
-        if (healthBar != null)
-            healthBar.localPlayerOwnerId = localPlayerOwnerId;
-
-        // Instantiate 직후 프리팹 NavMeshObstacle이 carve를 시작하면
-        // 자기 발밑 NavMesh가 사라져 footprint 등록(IsFootprintOnNavMesh)이 실패한다.
-        DisableNavMeshObstacles(buildingObject);
-
-        GridFootprint footprint = GridFootprint.EnsureOnInstance(buildingObject);
-        footprint.footprintCells = data.GetFootprintCells();
-        footprint.blockCells = true;
-        footprint.snapTransformOnRegister = true;
-
-        if (!footprint.RegisterAtOriginCell(originCell))
-        {
-            Debug.LogWarning(
-                $"TowerPlacementController: '{data.BuildAssetName}' footprint registration failed at {originCell}.",
-                buildingObject);
-        }
-
-        ConfigureProductionBuilding(buildingObject, data);
         PlayPlacementSound(position);
-    }
-
-    static void DisableNavMeshObstacles(GameObject target)
-    {
-        if (target == null)
-            return;
-
-        foreach (NavMeshObstacle obstacle in target.GetComponentsInChildren<NavMeshObstacle>(true))
-        {
-            obstacle.carving = false;
-            obstacle.enabled = false;
-        }
     }
 
     public void PlayFailedPlacementFeedback()
@@ -402,39 +376,6 @@ public class TowerPlacementController : MonoBehaviour
         return FindObjectOfType<AudioListener>();
     }
 
-    static void ConfigureProductionBuilding(
-        GameObject buildingObject,
-        IBuildablePlacementData data)
-    {
-        BuildableProductionData productionData = data as BuildableProductionData;
-        ProductionBuilding producer = buildingObject.GetComponent<ProductionBuilding>();
-
-        if (productionData != null && productionData.recipe != null)
-        {
-            if (producer == null)
-                producer = buildingObject.AddComponent<ProductionBuilding>();
-
-            producer.SetRecipe(productionData.recipe);
-            producer.MarkBuiltAtRuntime();
-            producer.BeginProduction();
-            return;
-        }
-
-        if (producer == null)
-            return;
-
-        Building building = buildingObject.GetComponent<Building>();
-
-        if (building == null || !building.isProductionBuilding)
-            return;
-
-        if (building.productionRecipe != null)
-            producer.SetRecipe(building.productionRecipe);
-
-        producer.MarkBuiltAtRuntime();
-        producer.BeginProduction();
-    }
-
     void UpdateGhostTransform()
     {
         if (ghostObject == null)
@@ -450,7 +391,10 @@ public class TowerPlacementController : MonoBehaviour
         ghostObject.SetActive(true);
         ghostObject.transform.position = placementPoint;
 
-        bool isValid = IsValidPlacement(pendingOriginCell, pendingBuildData);
+        bool isValid = IsValidPlacement(
+            pendingOriginCell,
+            pendingBuildData,
+            placementPoint.y);
 
         for (int i = 0; i < ghostMaterials.Count; i++)
             ghostMaterials[i].color = isValid ? validGhostColor : invalidGhostColor;
@@ -637,7 +581,10 @@ public class TowerPlacementController : MonoBehaviour
         return worldPoint;
     }
 
-    bool IsValidPlacement(Vector2Int originCell, IBuildablePlacementData data)
+    bool IsValidPlacement(
+        Vector2Int originCell,
+        IBuildablePlacementData data,
+        float preferredY)
     {
         if (data == null)
             return false;
@@ -650,16 +597,23 @@ public class TowerPlacementController : MonoBehaviour
 
         if (GridOccupancy.Instance != null &&
             MapGrid.Instance != null &&
-            !GridOccupancy.Instance.CanOccupy(originCell, footprint))
+            !GridOccupancy.Instance.CanOccupy(originCell, footprint, preferredY))
         {
             return false;
         }
 
         if (BuildZoneManager.Instance != null &&
+            !BuildZoneProvider.PrefabCanPlaceOutsideBuildZones(data.Prefab) &&
             !BuildZoneManager.Instance.CanBuildFootprint(
                 originCell,
                 footprint,
                 ownerId))
+        {
+            return false;
+        }
+
+        if (BuildZoneProvider.PrefabRequiresVisibleVision(data.Prefab) &&
+            !BuildZoneProvider.IsFootprintCurrentlyVisible(originCell, footprint))
         {
             return false;
         }
@@ -669,7 +623,9 @@ public class TowerPlacementController : MonoBehaviour
 
     bool CreateGhost(GameObject prefab)
     {
-        if (!IsSpawnablePrefab(prefab, pendingBuildData != null ? pendingBuildData.BuildAssetName : "Building"))
+        if (!BuildingSpawnUtility.IsSpawnablePrefab(
+                prefab,
+                pendingBuildData != null ? pendingBuildData.BuildAssetName : "Building"))
             return false;
 
         ghostObject = (GameObject)Instantiate(prefab);
@@ -730,28 +686,6 @@ public class TowerPlacementController : MonoBehaviour
 
         foreach (MonoBehaviour behaviour in ghost.GetComponentsInChildren<MonoBehaviour>(true))
             behaviour.enabled = false;
-    }
-
-    static bool IsSpawnablePrefab(GameObject prefab, string dataName)
-    {
-        if (prefab == null)
-        {
-            Debug.LogError(
-                $"TowerPlacementController: '{dataName}' has no prefab assigned.");
-
-            return false;
-        }
-
-        if (prefab.scene.IsValid())
-        {
-            Debug.LogError(
-                $"TowerPlacementController: '{dataName}' references a scene object. " +
-                "Assign a Project prefab such as Assets/Artasseet/LowPolyCliffPack/Prefabs/Tower/Tower.prefab.");
-
-            return false;
-        }
-
-        return true;
     }
 
     void DestroyGhost()

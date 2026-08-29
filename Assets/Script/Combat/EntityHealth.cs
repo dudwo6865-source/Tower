@@ -26,13 +26,18 @@ public class EntityHealth : MonoBehaviour
 
     public event Action<float, float> OnHealthChanged;
     public event Action OnDied;
+    // 실제 피해를 입었을 때 발생합니다. (피해량, 공격자)
+    public event Action<float, SelectableEntity> OnDamaged;
 
     public float CurrentHealth { get; private set; }
-    public float MaxHealth => maxHealth;
+    // 최대 체력 = 기본값 + 업그레이드 보너스입니다.
+    public float MaxHealth => Mathf.Max(1f, maxHealth + upgradeMaxHealthBonus);
+
     public bool IsAlive => CurrentHealth > 0f;
 
     private SelectableEntity selectableEntity;
     private bool isDying;
+    private float upgradeMaxHealthBonus;
 
     void Awake()
     {
@@ -45,7 +50,7 @@ public class EntityHealth : MonoBehaviour
 
     void Start()
     {
-        OnHealthChanged?.Invoke(CurrentHealth, maxHealth);
+        OnHealthChanged?.Invoke(CurrentHealth, MaxHealth);
     }
 
     void OnDestroy()
@@ -61,12 +66,32 @@ public class EntityHealth : MonoBehaviour
             return;
 
         CurrentHealth = Mathf.Max(0f, CurrentHealth - damage);
-        OnHealthChanged?.Invoke(CurrentHealth, maxHealth);
+        OnHealthChanged?.Invoke(CurrentHealth, MaxHealth);
+        OnDamaged?.Invoke(damage, attacker);
 
         NotifyAttacked(attacker);
 
         if (CurrentHealth <= 0f)
             Die();
+    }
+
+    // 업그레이드로 인한 추가 최대 체력을 설정합니다.
+    // 보너스가 늘어나면 그만큼 현재 체력도 함께 회복시켜 즉시 체감되게 합니다.
+    public void SetUpgradeMaxHealthBonus(float bonus)
+    {
+        bonus = Mathf.Max(0f, bonus);
+
+        if (Mathf.Approximately(bonus, upgradeMaxHealthBonus))
+            return;
+
+        float delta = bonus - upgradeMaxHealthBonus;
+        upgradeMaxHealthBonus = bonus;
+
+        if (delta > 0f && IsAlive)
+            CurrentHealth += delta;
+
+        CurrentHealth = Mathf.Min(CurrentHealth, MaxHealth);
+        OnHealthChanged?.Invoke(CurrentHealth, MaxHealth);
     }
 
     void NotifyAttacked(SelectableEntity attacker)
@@ -78,16 +103,39 @@ public class EntityHealth : MonoBehaviour
 
         if (combatAI != null)
             combatAI.NotifyAttackedBy(attacker);
+
+        RallyAlliesIfBuildingAttacked(attacker, combatAI);
+    }
+
+    void RallyAlliesIfBuildingAttacked(SelectableEntity attacker, CombatAIBase combatAI)
+    {
+        if (selectableEntity == null ||
+            selectableEntity.entityType != SelectableEntityType.Building)
+        {
+            return;
+        }
+
+        if (attacker.ownerId == selectableEntity.ownerId)
+            return;
+
+        float range = combatAI != null ? combatAI.aggroRange : 30f;
+
+        MobileCombatAI.RallyAlliesAround(
+            transform.position,
+            selectableEntity.ownerId,
+            selectableEntity,
+            attacker,
+            range);
     }
 
     public void SetMaxHealth(float value, bool refill = true)
     {
         maxHealth = Mathf.Max(1f, value);
 
-        if (refill || CurrentHealth > maxHealth)
-            CurrentHealth = maxHealth;
+        if (refill || CurrentHealth > MaxHealth)
+            CurrentHealth = MaxHealth;
 
-        OnHealthChanged?.Invoke(CurrentHealth, maxHealth);
+        OnHealthChanged?.Invoke(CurrentHealth, MaxHealth);
     }
 
     public void Heal(float amount)
@@ -95,8 +143,8 @@ public class EntityHealth : MonoBehaviour
         if (!IsAlive)
             return;
 
-        CurrentHealth = Mathf.Min(maxHealth, CurrentHealth + amount);
-        OnHealthChanged?.Invoke(CurrentHealth, maxHealth);
+        CurrentHealth = Mathf.Min(MaxHealth, CurrentHealth + amount);
+        OnHealthChanged?.Invoke(CurrentHealth, MaxHealth);
     }
 
     void Die()

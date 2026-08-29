@@ -133,9 +133,23 @@ public class WorldHealthBar : MonoBehaviour
 
     void LateUpdate()
     {
+        if (barAnchor == null)
+            return;
+
+        if (canvasGroup != null && canvasGroup.alpha <= 0.01f)
+            return;
+
+        Bounds visibilityBounds = selectableEntity != null
+            ? selectableEntity.SelectionBounds
+            : new Bounds(transform.position, Vector3.one * 4f);
+        visibilityBounds.Encapsulate(GetBarWorldPosition());
+
+        if (!CameraVisibility.IsVisible(visibilityBounds))
+            return;
+
         Camera camera = Camera.main;
 
-        if (camera == null || barAnchor == null)
+        if (camera == null)
             return;
 
         barAnchor.position = GetBarWorldPosition();

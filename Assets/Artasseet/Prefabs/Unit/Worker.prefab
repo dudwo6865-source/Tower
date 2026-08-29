@@ -325,20 +325,14 @@ MonoBehaviour:
   targetPriority: 0
   retargetInterval: 0.5
   damageFocusSwitchMargin: 2
-  advanceToEnemyBuildings: 0
-  squadMovement: 1
-  squadRadius: 12
-  squadFollowSpacing: 2.5
-  squadFollowSpread: 3
   stoppingDistance: 2
   destinationRefreshInterval: 0.25
   facingSpeed: 8
-  approachSpreadAngle: 60
-  stuckRepositionMaxAttempts: 32
-  blockedMovementTimeout: 0.6
-  patrolArrivalDistance: 1.25
+  avoidancePriorityMin: 30
+  avoidancePriorityMax: 70
   shareAggroWithAllies: 1
   debugCommandLog: 0
+  patrolArrivalDistance: 1.25
 --- !u!114 &5369465093440560824
 MonoBehaviour:
   m_ObjectHideFlags: 0

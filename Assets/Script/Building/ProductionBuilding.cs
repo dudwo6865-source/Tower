@@ -12,6 +12,13 @@ public class ProductionBuilding : MonoBehaviour
     [Tooltip("유닛이 생성될 위치입니다. 비워두면 건물 위치에서 스폰합니다.")]
     public Transform spawnPoint;
 
+    [Tooltip("건물 외곽에서 얼마나 떨어져 링을 배치할지(미터)입니다. 0이면 모두 스폰 포인트에 겹칩니다.")]
+    public float spawnScatterSpacing = 1.2f;
+
+    [Tooltip("건물 둘레 한 링에 배치할 슬롯 수입니다. 슬롯이 가득 차면 바깥 링으로 확장합니다.")]
+    [Min(3)]
+    public int spawnRingSlots = 8;
+
     [Tooltip("건물이 준비되면 자동으로 생산을 시작합니다.")]
     public bool autoStart = true;
 
@@ -32,23 +39,68 @@ public class ProductionBuilding : MonoBehaviour
 
     public int AliveCount { get; private set; }
 
-    public bool IsAtCapacity =>
-        recipe != null &&
-        recipe.maxAlivePerBuilding > 0 &&
-        AliveCount >= recipe.maxAlivePerBuilding;
+    public bool IsAtCapacity
+    {
+        get
+        {
+            int cap = EffectiveMaxAlive();
+            return cap > 0 && AliveCount >= cap;
+        }
+    }
+
+    // 업그레이드(건물 유닛 스폰 수) 보너스를 반영한 최대 생존 수입니다.
+    // recipe 값이 0 이하면 무제한을 의미하므로 0을 반환합니다.
+    int EffectiveMaxAlive()
+    {
+        if (recipe == null || recipe.maxAlivePerBuilding <= 0)
+            return 0;
+
+        if (UpgradeManager.Instance == null || selectableEntity == null)
+            return recipe.maxAlivePerBuilding;
+
+        return UpgradeManager.Instance.GetModifiedSpawnCount(
+            selectableEntity.ownerId,
+            recipe.maxAlivePerBuilding);
+    }
 
     SelectableEntity selectableEntity;
     EntityHealth buildingHealth;
     LineRenderer rallyMarker;
-    DayNightCycle dayNightCycle;
-    bool subscribedDayNight;
-    bool builtAtRuntime;
+    Coroutine productionRoutine;
+    float cycleElapsed;
+    float cycleDuration;
     readonly List<ProducedUnitMarker> producedUnits = new List<ProducedUnitMarker>();
 
-    // 버스트 방식은 진행도 개념이 없으므로 항상 0을 반환한다.
-    public float ProductionProgress => 0f;
+    public int MaxAliveCount => EffectiveMaxAlive();
 
-    public bool IsProductionActive => subscribedDayNight;
+    public bool IsProducing =>
+        productionRoutine != null &&
+        !IsAtCapacity &&
+        !BuildingConstructionGate.IsFeatureLockedOn(this);
+
+    public float ProductionProgress
+    {
+        get
+        {
+            if (!IsProducing || cycleDuration <= 0f)
+                return 0f;
+
+            return Mathf.Clamp01(cycleElapsed / cycleDuration);
+        }
+    }
+
+    public float ProductionRemainingTime
+    {
+        get
+        {
+            if (!IsProducing)
+                return 0f;
+
+            return Mathf.Max(0f, cycleDuration - cycleElapsed);
+        }
+    }
+
+    public bool IsProductionActive => IsProducing;
 
     void Awake()
     {
@@ -87,8 +139,6 @@ public class ProductionBuilding : MonoBehaviour
             rallyMarker.enabled = false;
     }
 
-    // 건물이 죽는 즉시(파괴 연출 시작 시점) 낮/밤 이벤트 구독을 끊는다.
-    // 파괴 대기 중 밤 전환 이벤트가 이미 죽은 건물에서 실행되는 것을 막는다.
     void HandleBuildingDied()
     {
         StopProduction();
@@ -110,13 +160,6 @@ public class ProductionBuilding : MonoBehaviour
         recipe = newRecipe;
     }
 
-    // 게임 도중(런타임)에 건설된 건물임을 표시한다. TowerPlacementController가 호출한다.
-    // 이 건물은 생성된 낮에는 생산하지 않고, 다음 낮 전환부터 생산한다.
-    public void MarkBuiltAtRuntime()
-    {
-        builtAtRuntime = true;
-    }
-
     public void SetRallyPoint(Vector3 worldPoint)
     {
         rallyPointWorld = UnitSpawnUtility.SampleNavMeshPosition(worldPoint);
@@ -132,120 +175,128 @@ public class ProductionBuilding : MonoBehaviour
 
     public void BeginProduction()
     {
+        if (productionRoutine != null)
+            return;
+
         if (recipe == null || recipe.unitPrefab == null)
             return;
 
-        // 생산은 '낮 시작 버스트' 방식으로 동작한다.
-        // 매 낮이 시작될 때(OnPhaseStarted(Day)) 한 번, 생산 한도까지 즉시 채운다.
-        SubscribeDayNight();
-
-        // 게임 시작 시 이미 존재하던(미리 배치된) 건물은 첫 낮에 즉시 생산한다.
-        // 게임 도중 건설된 건물(builtAtRuntime)은 생성된 낮엔 생산하지 않고, 다음 낮 전환부터 생산한다.
-        // (낮/밤 사이클이 없으면 이벤트를 받을 수 없으므로 예외적으로 즉시 생산.)
-        if (!builtAtRuntime && (dayNightCycle == null || dayNightCycle.IsDay))
-            SpawnBurstToLimit();
-    }
-
-    void SubscribeDayNight()
-    {
-        if (subscribedDayNight)
-            return;
-
-        if (dayNightCycle == null)
-            dayNightCycle = FindObjectOfType<DayNightCycle>();
-
-        if (dayNightCycle == null)
-            return;
-
-        dayNightCycle.OnPhaseStarted += HandlePhaseStarted;
-        subscribedDayNight = true;
-    }
-
-    void UnsubscribeDayNight()
-    {
-        if (!subscribedDayNight || dayNightCycle == null)
-            return;
-
-        dayNightCycle.OnPhaseStarted -= HandlePhaseStarted;
-        subscribedDayNight = false;
-    }
-
-    void HandlePhaseStarted(DayNightPhase phase)
-    {
-        // 이미 파괴된 건물에서 이벤트가 호출되면 무시한다(구독 해제 타이밍 방어).
-        if (this == null)
-            return;
-
-        // 밤이 시작되면 남아 있는 생산 유닛을 건물로 불러들여 사라지게 한다.
-        if (phase == DayNightPhase.Night)
-        {
-            RecallUnits();
-            return;
-        }
-
-        if (buildingHealth != null && !buildingHealth.IsAlive)
-            return;
-
-        SpawnBurstToLimit();
-    }
-
-    // 밤 전환 시 호출: 살아 있는 생산 유닛을 생산 건물로 이동시킨 뒤,
-    // 도착하면 사라지게 한다.
-    void RecallUnits()
-    {
-        if (producedUnits.Count == 0)
-            return;
-
-        Vector3 target = spawnPoint != null
-            ? spawnPoint.position
-            : transform.position;
-
-        float arriveDistance = 1.5f;
-
-        if (selectableEntity != null)
-        {
-            Bounds bounds = selectableEntity.SelectionBounds;
-            arriveDistance = Mathf.Max(
-                1.5f,
-                Mathf.Max(bounds.extents.x, bounds.extents.z) + 1f);
-        }
-
-        // Recall 도중 Destroy로 목록이 바뀔 수 있으므로 스냅샷을 순회한다.
-        ProducedUnitMarker[] snapshot = producedUnits.ToArray();
-
-        foreach (ProducedUnitMarker marker in snapshot)
-        {
-            if (marker != null)
-                marker.Recall(target, arriveDistance);
-        }
-    }
-
-    // 생산 한도(maxAlivePerBuilding)까지 생산시간 없이 즉시 유닛을 채운다.
-    void SpawnBurstToLimit()
-    {
-        if (recipe == null || recipe.unitPrefab == null)
-            return;
-
-        // 한도가 없으면(<=0) 무한 루프를 막기 위해 한 마리만 생산한다.
-        if (recipe.maxAlivePerBuilding <= 0)
-        {
-            TrySpawnUnit();
-            return;
-        }
-
-        // 스폰 실패가 반복될 때의 무한 루프를 막는 안전장치.
-        int safety = recipe.maxAlivePerBuilding + 4;
-
-        while (!IsAtCapacity && safety-- > 0)
-        {
-            if (!TrySpawnUnit())
-                break;
-        }
+        productionRoutine = StartCoroutine(ProductionLoop());
     }
 
     public void StopProduction()
     {
-        UnsubscribeDayNight();
+        if (productionRoutine == null)
+            return;
+
+        StopCoroutine(productionRoutine);
+        productionRoutine = null;
+        cycleElapsed = 0f;
+        cycleDuration = 0f;
+    }
+
+    IEnumerator ProductionLoop()
+    {
+        while (BuildingConstructionGate.IsFeatureLockedOn(this))
+            yield return null;
+
+        if (recipe != null && recipe.initialSpawnDelay > 0f)
+        {
+            yield return RunProductionCycle(recipe.initialSpawnDelay);
+
+            if (buildingHealth != null && !buildingHealth.IsAlive)
+                yield break;
+        }
+
+        while (enabled)
+        {
+            if (buildingHealth != null && !buildingHealth.IsAlive)
+                yield break;
+
+            if (BuildingConstructionGate.IsFeatureLockedOn(this) || IsAtCapacity)
+            {
+                cycleElapsed = 0f;
+                cycleDuration = 0f;
+                yield return null;
+                continue;
+            }
+
+            float interval = recipe != null ? Mathf.Max(0f, recipe.spawnInterval) : 0f;
+            yield return RunProductionCycle(interval);
+
+            if (buildingHealth != null && !buildingHealth.IsAlive)
+                yield break;
+
+            TrySpawnUnit();
+        }
+    }
+
+    IEnumerator RunProductionCycle(float duration)
+    {
+        cycleDuration = Mathf.Max(0f, duration);
+        cycleElapsed = 0f;
+
+        if (cycleDuration <= 0f)
+            yield break;
+
+        while (cycleElapsed < cycleDuration)
+        {
+            if (buildingHealth != null && !buildingHealth.IsAlive)
+                yield break;
+
+            if (BuildingConstructionGate.IsFeatureLockedOn(this) || IsAtCapacity)
+            {
+                yield return null;
+                continue;
+            }
+
+            cycleElapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        cycleElapsed = cycleDuration;
+    }
+
+    // 건물 둘레를 각도별로 나눠 배치한다. 슬롯이 차면 바깥 링으로 한 칸씩 확장한다.
+    Vector3 GetRingOffset(int index)
+    {
+        if (spawnScatterSpacing <= 0f)
+            return Vector3.zero;
+
+        int slots = Mathf.Max(3, spawnRingSlots);
+        int ring = index / slots;
+        int slot = index % slots;
+        float angleStep = 360f / slots;
+        float angle = slot * angleStep + (ring % 2) * (angleStep * 0.5f);
+        float radius = GetSpawnRingRadius() + ring * spawnScatterSpacing;
+
+        Vector3 forward = transform.forward;
+        forward.y = 0f;
+
+        if (forward.sqrMagnitude < 0.0001f)
+            forward = Vector3.forward;
+        else
+            forward.Normalize();
+
+        return Quaternion.Euler(0f, angle, 0f) * forward * radius;
+    }
+
+    float GetSpawnRingRadius()
+    {
+        float buildingRadius = 1f;
+
+        if (selectableEntity != null)
+        {
+            Bounds bounds = selectableEntity.SelectionBounds;
+            buildingRadius = Mathf.Max(bounds.extents.x, bounds.extents.z);
+        }
+        else if (MapGrid.Instance != null)
+        {
+            Vector2Int footprint = GridFootprint.ResolveFootprintCells(gameObject);
+            buildingRadius = Mathf.Max(footprint.x, footprint.y) * MapGrid.Instance.cellSize * 0.5f;
+        }
+
+        return buildingRadius + spawnScatterSpacing;
     }
 
     public void NotifyUnitReleased(ProducedUnitMarker marker)
@@ -275,13 +326,24 @@ public class ProductionBuilding : MonoBehaviour
         if (recipe == null || recipe.unitPrefab == null)
             return false;
 
-        if (IsAtCapacity)
+        if (IsAtCapacity || BuildingConstructionGate.IsFeatureLockedOn(this))
             return false;
 
         int ownerId = selectableEntity != null ? selectableEntity.ownerId : 1;
-        Vector3 spawnPosition = spawnPoint != null
+        Vector3 basePosition = spawnPoint != null
             ? spawnPoint.position
             : transform.position;
+
+        // 건물 둘레 각도 슬롯에 배치. 층 밖이면 건물 쪽으로 되돌린다.
+        Vector3 scatterHint = basePosition + GetRingOffset(producedUnits.Count);
+
+        if (!UnitSpawnUtility.TryResolveSpawnPosition(
+                scatterHint,
+                basePosition,
+                out Vector3 spawnPosition))
+        {
+            spawnPosition = basePosition;
+        }
 
         Quaternion spawnRotation = spawnPoint != null
             ? spawnPoint.rotation
@@ -296,7 +358,8 @@ public class ProductionBuilding : MonoBehaviour
             spawnPosition,
             spawnRotation,
             ownerId,
-            localPlayerOwnerId);
+            localPlayerOwnerId,
+            resampleNavMesh: false);
 
         if (unitObject == null)
             return false;

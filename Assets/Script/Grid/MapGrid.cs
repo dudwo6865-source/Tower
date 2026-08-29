@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 using Unity.AI.Navigation;
@@ -16,27 +17,26 @@ public class MapGrid : MonoBehaviour
     [Tooltip("Bake된 NavMesh 이동 가능 영역 AABB를 맵 bounds로 사용합니다.")]
     public bool useNavMeshBounds = true;
 
-    [Tooltip("footprint 모든 칸이 NavMesh 위에 있어야 합니다.")]
+    [Tooltip("footprint 모든 칸이 같은 층의 NavMesh 위에 있어야 합니다.")]
     public bool requireNavMeshForCells = true;
 
-    [Tooltip("NavMesh.SamplePosition 검색 반경(칸 크기 대비)입니다.")]
+    [Tooltip("지면 스냅·층 탐색용 NavMesh 검색 반경(칸 크기 대비)입니다.")]
     [Range(0.1f, 1.5f)]
     public float navMeshSampleRadiusFactor = 0.45f;
 
-    [Tooltip("칸 NavMesh 검증 샘플 반경(칸 크기 대비)입니다. 건설 구역에서 사용합니다.")]
+    [Tooltip("칸 중심·모서리가 NavMesh에 얼마나 가까워야 건설 가능한지(칸 크기 대비)입니다. 작을수록 칸 전체가 길 위에 있어야 합니다.")]
     [Range(0.05f, 0.75f)]
     public float navMeshCellValidationRadiusFactor = 0.25f;
 
-    [Tooltip("칸 NavMesh 검증 시 모서리에서 안쪽으로 띄울 거리(칸 크기 대비)입니다.")]
+    [Tooltip("칸 모서리를 얼마나 안쪽에서 검사할지(칸 크기 대비)입니다. 0이면 진짜 모서리까지 NavMesh여야 합니다.")]
     [Range(0f, 0.45f)]
     public float navMeshCellSampleInsetFactor = 0.2f;
 
-    [Tooltip("높이/시각화용 NavMesh 샘플 반경(칸 크기 대비)입니다.")]
-    [Range(0.5f, 2f)]
-    public float navMeshHeightSampleRadiusFactor = 1.2f;
-
     [Tooltip("NavMesh 샘플 시 위에서 내려다볼 여유 높이(미터)입니다.")]
     public float navMeshSampleHeightOffset = 4f;
+
+    [Tooltip("같은 층으로 볼 높이 허용 오차(미터)입니다. 건물 footprint의 모든 칸이 이 오차 안의 높이에 있어야 건설됩니다.")]
+    public float navMeshFloorHeightTolerance = 2.5f;
 
     [Header("Building NavMesh")]
     [Tooltip("건물 footprint(격자) 대비 NavMeshObstacle Box 가로·세로 비율입니다. 1에 가까울수록 격자와 같습니다.")]
@@ -74,12 +74,17 @@ public class MapGrid : MonoBehaviour
 
     public bool IsNavMeshBoundsActive => navMeshBoundsActive;
 
+    public float NavMeshMinY => navMeshMinY;
+
+    public float NavMeshMaxY => navMeshMaxY;
+
     private Vector3 mapOrigin;
     private Vector2 mapSize;
     private float navMeshMinY;
     private float navMeshMaxY;
     private bool navMeshBoundsActive;
     private bool loggedNavMeshFailure;
+    private CliffPainter cachedCliffPainter;
 
     void Awake()
     {
@@ -315,13 +320,55 @@ public class MapGrid : MonoBehaviour
         Vector2Int originCell,
         Vector2Int footprintCells)
     {
+        return IsFootprintInBounds(originCell, footprintCells, float.NaN);
+    }
+
+    public bool IsFootprintInBounds(
+        Vector2Int originCell,
+        Vector2Int footprintCells,
+        float preferredY)
+    {
         if (!IsFootprintInRect(originCell, footprintCells))
             return false;
 
         if (UsesNavMesh && requireNavMeshForCells)
-            return IsFootprintOnNavMesh(originCell, footprintCells);
+            return IsFootprintOnNavMesh(originCell, footprintCells, preferredY);
 
         return true;
+    }
+
+    public bool IsCellOnHill(Vector2Int cell)
+    {
+        CliffPainter painter = GetCliffPainter();
+
+        if (painter == null)
+            return false;
+
+        painter.EnsureLookup();
+        return painter.HasHill(painter.WorldToCell(GetCellCenterWorld(cell)));
+    }
+
+    public bool IsFootprintOnHill(Vector2Int originCell, Vector2Int footprintCells)
+    {
+        for (int x = 0; x < footprintCells.x; x++)
+        {
+            for (int z = 0; z < footprintCells.y; z++)
+            {
+                if (IsCellOnHill(new Vector2Int(originCell.x + x, originCell.y + z)))
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
+    CliffPainter GetCliffPainter()
+    {
+        if (cachedCliffPainter != null)
+            return cachedCliffPainter;
+
+        cachedCliffPainter = FindFirstObjectByType<CliffPainter>();
+        return cachedCliffPainter;
     }
 
     public bool IsFootprintInRect(
@@ -338,16 +385,138 @@ public class MapGrid : MonoBehaviour
                originCell.y + footprintCells.y <= CellCountZ;
     }
 
+    readonly List<float> navMeshHeightScratch = new List<float>(4);
+    readonly List<float> navMeshFloorCandidateScratch = new List<float>(4);
+
     public bool IsCellOnNavMesh(Vector2Int cell)
     {
         if (!IsCellInGrid(cell))
             return false;
 
-        return IsNavMeshSampleInCell(cell, GetCellCenterWorld(cell)) &&
-               IsNavMeshSampleInCell(cell, GetCellSamplePoint(cell, 0f, 0f)) &&
-               IsNavMeshSampleInCell(cell, GetCellSamplePoint(cell, 1f, 0f)) &&
-               IsNavMeshSampleInCell(cell, GetCellSamplePoint(cell, 1f, 1f)) &&
-               IsNavMeshSampleInCell(cell, GetCellSamplePoint(cell, 0f, 1f));
+        if (CollectNavMeshSurfaceHeights(cell, navMeshHeightScratch) <= 0)
+            return false;
+
+        for (int i = 0; i < navMeshHeightScratch.Count; i++)
+        {
+            if (IsCellCoveredAtHeight(cell, navMeshHeightScratch[i]))
+                return true;
+        }
+
+        return false;
+    }
+
+    // 칸 전체가 NavMesh로 덮인 층 중 가장 위쪽 높이입니다.
+    // 건설 판정(IsCellOnNavMesh)과 같은 기준이면서 높이까지 한 번에 돌려주므로,
+    // 건설 가능 칸을 그리는 쪽은 이걸 써야 표시와 판정이 어긋나지 않습니다.
+    public bool TryGetBuildableNavMeshHeight(Vector2Int cell, out float height)
+    {
+        height = 0f;
+
+        if (!IsCellInGrid(cell))
+            return false;
+
+        if (CollectNavMeshSurfaceHeights(cell, navMeshHeightScratch) <= 0)
+            return false;
+
+        for (int i = navMeshHeightScratch.Count - 1; i >= 0; i--)
+        {
+            if (!IsCellCoveredAtHeight(cell, navMeshHeightScratch[i]))
+                continue;
+
+            height = navMeshHeightScratch[i];
+            return true;
+        }
+
+        return false;
+    }
+
+    public float FloorHeightTolerance => GetFloorHeightTolerance();
+
+    // 위에서 내려다볼 때 보이는 해당 칸의 최상단 NavMesh 높이.
+    public bool TryGetTopmostNavMeshHeight(Vector2Int cell, out float height)
+    {
+        height = 0f;
+
+        if (CollectNavMeshSurfaceHeights(cell, navMeshHeightScratch) <= 0)
+            return false;
+
+        height = navMeshHeightScratch[navMeshHeightScratch.Count - 1];
+        return true;
+    }
+
+    // 한 칸 XZ의 NavMesh 표면 높이를 수집합니다 (낮은 순).
+    public int CollectNavMeshSurfaceHeights(
+        Vector2Int cell,
+        List<float> heights)
+    {
+        if (heights == null)
+            return 0;
+
+        heights.Clear();
+
+        if (!IsCellInGrid(cell) || !UsesNavMesh)
+            return 0;
+
+        Vector3 center = GetCellCenterWorld(cell);
+        float sampleRadius = Mathf.Max(0.05f, cellSize * navMeshSampleRadiusFactor);
+
+        float minY = navMeshBoundsActive
+            ? navMeshMinY - 0.5f
+            : center.y - 32f;
+        float maxY = navMeshBoundsActive
+            ? navMeshMaxY + navMeshSampleHeightOffset
+            : center.y + 32f;
+
+        float separation = Mathf.Max(0.5f, GetFloorHeightTolerance());
+        const int sliceCount = 16;
+
+        for (int i = 0; i <= sliceCount; i++)
+        {
+            float t = i / (float)sliceCount;
+            Vector3 probe = center;
+            probe.y = Mathf.Lerp(maxY, minY, t);
+
+            if (!NavMesh.SamplePosition(
+                    probe,
+                    out NavMeshHit hit,
+                    sampleRadius,
+                    navMeshAreaMask))
+            {
+                continue;
+            }
+
+            // XZ가 칸 안에 있는지만 본다 (Y는 층마다 다름).
+            Vector2Int hitCell = WorldToCell(hit.position);
+            if (hitCell.x != cell.x || hitCell.y != cell.y)
+                continue;
+
+            float y = hit.position.y;
+            bool nearExisting = false;
+
+            for (int h = 0; h < heights.Count; h++)
+            {
+                if (Mathf.Abs(heights[h] - y) < separation)
+                {
+                    nearExisting = true;
+                    break;
+                }
+            }
+
+            if (!nearExisting)
+                heights.Add(y);
+        }
+
+        // 폴백: 최상단 XZ 샘플
+        if (heights.Count == 0 &&
+            UnitSpawnUtility.TrySampleTopmostAtXZ(center.x, center.z, out Vector3 topmost))
+        {
+            Vector2Int hitCell = WorldToCell(topmost);
+            if (hitCell.x == cell.x && hitCell.y == cell.y)
+                heights.Add(topmost.y);
+        }
+
+        heights.Sort();
+        return heights.Count;
     }
 
     bool IsCellInGrid(Vector2Int cell)
@@ -368,81 +537,165 @@ public class MapGrid : MonoBehaviour
         return corner + new Vector3(sampleX, 0f, sampleZ);
     }
 
-    bool IsNavMeshSampleInCell(Vector2Int cell, Vector3 worldPoint)
+    float GetCellValidationRadius()
     {
-        if (!TrySampleNavMeshForCell(cell, worldPoint, out NavMeshHit hit))
-            return false;
-
-        return WorldToCell(hit.position) == cell;
+        return Mathf.Max(0.05f, cellSize * navMeshCellValidationRadiusFactor);
     }
 
-    bool TrySampleNavMeshForCell(
+    float GetFloorHeightTolerance()
+    {
+        return Mathf.Max(0.5f, navMeshFloorHeightTolerance);
+    }
+
+    bool IsCellCoveredAtHeight(Vector2Int cell, float height)
+    {
+        return TrySampleCellPointAtHeight(cell, GetCellCenterWorld(cell), height, out _) &&
+               TrySampleCellPointAtHeight(cell, GetCellSamplePoint(cell, 0f, 0f), height, out _) &&
+               TrySampleCellPointAtHeight(cell, GetCellSamplePoint(cell, 1f, 0f), height, out _) &&
+               TrySampleCellPointAtHeight(cell, GetCellSamplePoint(cell, 1f, 1f), height, out _) &&
+               TrySampleCellPointAtHeight(cell, GetCellSamplePoint(cell, 0f, 1f), height, out _);
+    }
+
+    bool TrySampleCellPointAtHeight(
         Vector2Int cell,
         Vector3 worldPoint,
-        out NavMeshHit hit)
+        float height,
+        out float sampledY)
     {
-        hit = default;
+        sampledY = 0f;
 
         Vector3 probe = worldPoint;
+        probe.y = height;
 
-        if (UsesNavMesh && navMeshBoundsActive)
-            probe.y = navMeshMaxY + navMeshSampleHeightOffset;
-
-        float radius = cellSize * navMeshCellValidationRadiusFactor;
-
-        if (NavMesh.SamplePosition(
+        if (!NavMesh.SamplePosition(
                 probe,
-                out hit,
-                radius,
-                navMeshAreaMask) &&
-            WorldToCell(hit.position) == cell)
+                out NavMeshHit hit,
+                GetCellValidationRadius(),
+                navMeshAreaMask))
         {
-            return true;
+            return false;
         }
 
-        if (!TrySampleNavMesh(probe, out hit))
+        if (WorldToCell(hit.position) != cell)
             return false;
 
-        return WorldToCell(hit.position) == cell;
-    }
+        if (Mathf.Abs(hit.position.y - height) > GetFloorHeightTolerance())
+            return false;
 
-    Vector3 GetCellNavMeshProbePosition(Vector2Int cell)
-    {
-        Vector3 center = GetCellCenterWorld(cell);
-
-        if (UsesNavMesh && navMeshBoundsActive)
-            center.y = navMeshMaxY + navMeshSampleHeightOffset;
-
-        return center;
+        sampledY = hit.position.y;
+        return true;
     }
 
     public bool TrySampleNavMeshAtXZ(Vector3 worldPosition, out NavMeshHit hit)
     {
-        Vector3 probe = worldPosition;
-
-        if (UsesNavMesh && navMeshBoundsActive)
-            probe.y = navMeshMaxY + navMeshSampleHeightOffset;
-
-        return TrySampleNavMesh(probe, out hit);
+        return TrySampleNavMeshNearHeight(worldPosition, worldPosition.y, out hit);
     }
 
     public bool IsFootprintOnNavMesh(
         Vector2Int originCell,
         Vector2Int footprintCells)
     {
-        for (int x = 0; x < footprintCells.x; x++)
-        {
-            for (int z = 0; z < footprintCells.y; z++)
-            {
-                Vector2Int cell = new Vector2Int(
-                    originCell.x + x,
-                    originCell.y + z);
+        return IsFootprintOnNavMesh(originCell, footprintCells, float.NaN);
+    }
 
-                if (!IsCellOnNavMesh(cell))
-                    return false;
+    public bool IsFootprintOnNavMesh(
+        Vector2Int originCell,
+        Vector2Int footprintCells,
+        float preferredY)
+    {
+        return TryGetSharedFootprintFloorHeight(
+            originCell,
+            footprintCells,
+            out _,
+            preferredY);
+    }
+
+    public bool TryGetSharedFootprintFloorHeight(
+        Vector2Int originCell,
+        Vector2Int footprintCells,
+        out float floorHeight,
+        float preferredY = float.NaN)
+    {
+        floorHeight = 0f;
+
+        if (footprintCells.x <= 0 || footprintCells.y <= 0)
+            return false;
+
+        if (!UsesNavMesh)
+        {
+            floorHeight = GetFootprintCenterWorld(originCell, footprintCells).y;
+            return true;
+        }
+
+        if (CollectNavMeshSurfaceHeights(originCell, navMeshHeightScratch) <= 0)
+            return false;
+
+        navMeshFloorCandidateScratch.Clear();
+        navMeshFloorCandidateScratch.AddRange(navMeshHeightScratch);
+
+        float tolerance = GetFloorHeightTolerance();
+        float bestScore = float.MaxValue;
+        float bestAverage = 0f;
+        bool found = false;
+
+        for (int c = 0; c < navMeshFloorCandidateScratch.Count; c++)
+        {
+            float candidate = navMeshFloorCandidateScratch[c];
+
+            if (!float.IsNaN(preferredY) &&
+                Mathf.Abs(candidate - preferredY) > tolerance)
+            {
+                continue;
+            }
+
+            float sum = 0f;
+            int count = 0;
+            bool allMatch = true;
+
+            for (int x = 0; x < footprintCells.x && allMatch; x++)
+            {
+                for (int z = 0; z < footprintCells.y; z++)
+                {
+                    Vector2Int cell = new Vector2Int(
+                        originCell.x + x,
+                        originCell.y + z);
+
+                    if (!IsCellCoveredAtHeight(cell, candidate) ||
+                        !TrySampleCellPointAtHeight(
+                            cell,
+                            GetCellCenterWorld(cell),
+                            candidate,
+                            out float match))
+                    {
+                        allMatch = false;
+                        break;
+                    }
+
+                    sum += match;
+                    count++;
+                }
+            }
+
+            if (!allMatch || count <= 0)
+                continue;
+
+            float average = sum / count;
+            float score = float.IsNaN(preferredY)
+                ? 0f
+                : Mathf.Abs(average - preferredY);
+
+            if (score < bestScore)
+            {
+                bestScore = score;
+                bestAverage = average;
+                found = true;
             }
         }
 
+        if (!found)
+            return false;
+
+        floorHeight = bestAverage;
         return true;
     }
 
@@ -463,110 +716,150 @@ public class MapGrid : MonoBehaviour
 
         originCell = GetFootprintOriginFromCenterWorld(worldHint, footprintCells);
 
-        if (!IsFootprintInBounds(originCell, footprintCells) &&
+        if ((!IsFootprintInBounds(originCell, footprintCells, worldHint.y) ||
+             IsFootprintOnHill(originCell, footprintCells)) &&
             UsesNavMesh &&
             requireNavMeshForCells &&
             TryFindNearestValidFootprint(
                 originCell,
                 footprintCells,
+                worldHint.y,
                 out Vector2Int fallbackOrigin))
         {
             originCell = fallbackOrigin;
         }
 
-        if (!IsFootprintInBounds(originCell, footprintCells))
+        if (!IsFootprintInRect(originCell, footprintCells))
             return false;
 
         centerWorld = GetFootprintCenterWorld(originCell, footprintCells);
-        centerWorld.y = SampleGroundHeight(centerWorld);
+
+        if (UsesNavMesh &&
+            TryGetSharedFootprintFloorHeight(
+                originCell,
+                footprintCells,
+                out float floorHeight,
+                worldHint.y))
+        {
+            centerWorld.y = floorHeight;
+        }
+        else
+        {
+            centerWorld.y = SampleGroundHeight(centerWorld, worldHint.y);
+        }
+
         return true;
     }
 
     public float SampleGroundHeight(Vector3 worldPosition)
     {
-        if (TrySampleNavMeshHeight(worldPosition, out NavMeshHit hit))
+        return SampleGroundHeight(worldPosition, worldPosition.y);
+    }
+
+    // preferredY에 가장 가까운 NavMesh 표면 높이를 고릅니다 (다층 맵용).
+    public float SampleGroundHeight(Vector3 worldPosition, float preferredY)
+    {
+        if (TrySampleNavMeshNearHeight(worldPosition, preferredY, out NavMeshHit hit))
             return hit.position.y;
 
         Vector2Int cell = WorldToCell(worldPosition);
         Vector3 cellCenter = GetCellCenterWorld(cell);
 
-        if (TrySampleNavMeshHeight(cellCenter, out hit))
+        if (TrySampleNavMeshNearHeight(cellCenter, preferredY, out hit))
             return hit.position.y;
 
-        return worldPosition.y;
+        return preferredY;
     }
 
     public bool TrySampleNavMesh(Vector3 worldPosition, out NavMeshHit hit)
     {
-        float radius = cellSize * navMeshSampleRadiusFactor;
-
-        if (NavMesh.SamplePosition(
-                worldPosition,
-                out hit,
-                radius,
-                navMeshAreaMask))
-        {
-            return true;
-        }
-
-        if (!UsesNavMesh)
-            return false;
-
-        float verticalRange = GetNavMeshVerticalSearchRange();
-
-        Vector3 fromAbove = worldPosition;
-        fromAbove.y = navMeshBoundsActive
-            ? navMeshMaxY + navMeshSampleHeightOffset
-            : worldPosition.y + navMeshSampleHeightOffset;
-
-        if (NavMesh.SamplePosition(
-                fromAbove,
-                out hit,
-                verticalRange,
-                navMeshAreaMask))
-        {
-            return true;
-        }
-
-        Vector3 fromBelow = worldPosition;
-        fromBelow.y = navMeshBoundsActive
-            ? navMeshMinY - navMeshSampleHeightOffset
-            : worldPosition.y - navMeshSampleHeightOffset;
-
-        return NavMesh.SamplePosition(
-            fromBelow,
-            out hit,
-            verticalRange,
-            navMeshAreaMask);
+        return TrySampleNavMeshNearHeight(worldPosition, worldPosition.y, out hit);
     }
 
-    float GetNavMeshVerticalSearchRange()
+    public bool TrySampleNavMeshNearHeight(
+        Vector3 worldPosition,
+        float preferredY,
+        out NavMeshHit hit)
     {
+        return TrySampleNavMeshNearHeight(
+            worldPosition,
+            preferredY,
+            out hit,
+            maxVerticalDelta: GetFloorHeightTolerance());
+    }
+
+    public bool TrySampleNavMeshNearHeight(
+        Vector3 worldPosition,
+        float preferredY,
+        out NavMeshHit hit,
+        float maxVerticalDelta)
+    {
+        hit = default;
+        bool found = false;
+        float bestScore = float.MaxValue;
+        NavMeshHit best = default;
+
+        float sampleRadius = Mathf.Max(0.05f, cellSize * navMeshSampleRadiusFactor);
+        float maxYDelta = Mathf.Max(0.5f, maxVerticalDelta);
+
+        void Consider(NavMeshHit candidate)
+        {
+            float yDelta = Mathf.Abs(candidate.position.y - preferredY);
+            if (yDelta > maxYDelta)
+                return;
+
+            float score = yDelta;
+            float xz = Vector2.Distance(
+                new Vector2(candidate.position.x, candidate.position.z),
+                new Vector2(worldPosition.x, worldPosition.z));
+            score += xz * 0.05f;
+
+            if (score < bestScore)
+            {
+                bestScore = score;
+                best = candidate;
+                found = true;
+            }
+        }
+
+        Vector3 atPreferred = worldPosition;
+        atPreferred.y = preferredY;
+
+        if (NavMesh.SamplePosition(atPreferred, out NavMeshHit sample, sampleRadius, navMeshAreaMask))
+            Consider(sample);
+
+        if (NavMesh.SamplePosition(worldPosition, out sample, sampleRadius, navMeshAreaMask))
+            Consider(sample);
+
+        // 같은 층 근처만 슬라이스 (아래/위 층으로 떨어지지 않게)
+        float minY = preferredY - maxYDelta;
+        float maxY = preferredY + maxYDelta;
+
         if (navMeshBoundsActive)
         {
-            return navMeshMaxY - navMeshMinY +
-                   navMeshSampleHeightOffset * 2f +
-                   cellSize;
+            minY = Mathf.Max(minY, navMeshMinY - 0.5f);
+            maxY = Mathf.Min(maxY, navMeshMaxY + 0.5f);
         }
 
-        return navMeshSampleHeightOffset * 4f + cellSize * 2f;
-    }
+        const int sliceCount = 4;
+        for (int i = 0; i <= sliceCount; i++)
+        {
+            float t = i / (float)sliceCount;
+            Vector3 probe = worldPosition;
+            probe.y = Mathf.Lerp(minY, maxY, t);
 
-    bool TrySampleNavMeshHeight(Vector3 worldPosition, out NavMeshHit hit)
-    {
-        if (TrySampleNavMesh(worldPosition, out hit))
-            return true;
+            if (NavMesh.SamplePosition(probe, out sample, sampleRadius * 2f, navMeshAreaMask))
+                Consider(sample);
+        }
 
-        return NavMesh.SamplePosition(
-            worldPosition,
-            out hit,
-            cellSize * navMeshHeightSampleRadiusFactor,
-            navMeshAreaMask);
+        hit = best;
+        return found;
     }
 
     bool TryFindNearestValidFootprint(
         Vector2Int originCell,
         Vector2Int footprintCells,
+        float preferredY,
         out Vector2Int validOrigin)
     {
         validOrigin = originCell;
@@ -586,7 +879,8 @@ public class MapGrid : MonoBehaviour
                         originCell.x + x,
                         originCell.y + z);
 
-                    if (!IsFootprintInBounds(candidate, footprintCells))
+                    if (!IsFootprintInBounds(candidate, footprintCells, preferredY) ||
+                        IsFootprintOnHill(candidate, footprintCells))
                         continue;
 
                     validOrigin = candidate;

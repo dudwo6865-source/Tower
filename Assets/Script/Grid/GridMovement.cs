@@ -21,15 +21,39 @@ public static class GridMovement
         Vector3 snapped =
             MapGrid.Instance.GetFootprintCenterWorld(origin, footprintCells);
 
-        snapped.y = MapGrid.Instance.SampleGroundHeight(snapped);
+        snapped.y = MapGrid.Instance.SampleGroundHeight(snapped, worldPosition.y);
+
+        if (UnitSpawnUtility.TrySampleNavMeshNearPreferredHeight(
+                snapped,
+                worldPosition.y,
+                MapGrid.Instance.cellSize * 2f,
+                out Vector3 preferredHit))
+        {
+            return preferredHit;
+        }
 
         if (TrySampleNavMesh(snapped, out NavMeshHit hit))
             return hit.position;
 
-        if (TryFindNearestWalkableCell(origin, footprintCells, out Vector3 fallback))
+        if (TryFindNearestWalkableCell(
+                origin,
+                footprintCells,
+                worldPosition.y,
+                out Vector3 fallback))
             return fallback;
 
         return snapped;
+    }
+
+    // preferredY에 가까운 NavMesh 표면으로 목적지를 맞춥니다 (다층 맵용).
+    public static Vector3 SnapMoveDestinationNearHeight(
+        Vector3 worldPosition,
+        float preferredY,
+        Vector2Int footprintCells)
+    {
+        Vector3 hint = worldPosition;
+        hint.y = preferredY;
+        return SnapMoveDestination(hint, footprintCells);
     }
 
     public static Vector2Int GetFootprintCells(Component source)
@@ -61,6 +85,7 @@ public static class GridMovement
     static bool TryFindNearestWalkableCell(
         Vector2Int originCell,
         Vector2Int footprintCells,
+        float preferredY,
         out Vector3 worldPosition)
     {
         worldPosition = Vector3.zero;
@@ -93,12 +118,18 @@ public static class GridMovement
                             candidateOrigin,
                             footprintCells);
 
-                    candidate.y = MapGrid.Instance.SampleGroundHeight(candidate);
+                    candidate.y = MapGrid.Instance.SampleGroundHeight(
+                        candidate,
+                        preferredY);
 
-                    if (!TrySampleNavMesh(candidate, out NavMeshHit hit))
+                    if (!UnitSpawnUtility.TrySampleNavMeshNearPreferredHeight(
+                            candidate,
+                            preferredY,
+                            MapGrid.Instance.cellSize * 2f,
+                            out Vector3 sampled))
                         continue;
 
-                    worldPosition = hit.position;
+                    worldPosition = sampled;
                     return true;
                 }
             }
@@ -115,29 +146,52 @@ public static class GridMovement
         if (agent.isOnNavMesh)
             return true;
 
-        if (!NavMesh.SamplePosition(
-                agent.transform.position,
-                out NavMeshHit hit,
+        Vector3 position = agent.transform.position;
+
+        if (UnitSpawnUtility.TrySampleNavMeshNearPreferredHeight(
+                position,
+                position.y,
                 maxDistance,
-                NavMesh.AllAreas))
+                out Vector3 sampled))
         {
-            return false;
+            agent.Warp(sampled);
+            return agent.isOnNavMesh;
         }
 
-        agent.Warp(hit.position);
-        return agent.isOnNavMesh;
+        return false;
     }
 
-    public static bool TrySetAgentDestination(NavMeshAgent agent, Vector3 destination)
+    public static bool TrySetAgentDestination(
+        NavMeshAgent agent,
+        Vector3 destination,
+        bool immediate = false)
     {
         if (!EnsureAgentOnNavMesh(agent))
             return false;
 
-        if (TrySampleNavMesh(destination, out NavMeshHit hit))
-            destination = hit.position;
+        return TrySetAgentDestinationImmediate(agent, destination);
+    }
 
-        // 정지 상태(isStopped)로 남아 있으면 SetDestination을 해도 움직이지 않는다.
-        // 새 목적지를 받으면 즉시 이동을 재개하도록 정지를 해제한다.
+    public static bool TrySetAgentDestinationImmediate(
+        NavMeshAgent agent,
+        Vector3 destination)
+    {
+        if (!EnsureAgentOnNavMesh(agent))
+            return false;
+
+        if (UnitSpawnUtility.TrySampleNavMeshNearPreferredHeight(
+                destination,
+                destination.y,
+                MapGrid.Instance != null ? MapGrid.Instance.cellSize * 2f : 4f,
+                out Vector3 sampledDestination))
+        {
+            destination = sampledDestination;
+        }
+        else if (TrySampleNavMesh(destination, out NavMeshHit hit))
+        {
+            destination = hit.position;
+        }
+
         if (agent.isStopped)
             agent.isStopped = false;
 

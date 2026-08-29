@@ -600,6 +600,27 @@ public class FogOfWarManager : MonoBehaviour
         return visible > (byte)(visibilityThreshold * 255f);
     }
 
+    /// <summary>
+    /// 스폰 회피용: 적이 플레이어에게 그려질 수 있으면 true.
+    /// entityShowThreshold를 써서 시야 가장자리 스폰을 막습니다.
+    /// </summary>
+    public bool IsVisibleForSpawnAvoidance(Vector3 worldPosition)
+    {
+        if (!TrySampleFog(worldPosition, out _, out byte visible))
+            return false;
+
+        return visible > (byte)(entityShowThreshold * 255f);
+    }
+
+    /// <summary>시야 텍스처를 즉시 갱신합니다. 스포너 배치 직전에 호출합니다.</summary>
+    public void RefreshVisionNow()
+    {
+        if (fogTexture == null || fogPixels == null)
+            return;
+
+        UpdateFogTexture();
+    }
+
     public bool EvaluateEntityGameplayVisibility(Bounds worldBounds, bool wasVisible)
     {
         if (wasVisible)
@@ -689,14 +710,30 @@ public class FogOfWarManager : MonoBehaviour
         explored = 0;
         visible = 0;
 
-        if (fogTexture == null)
+        if (fogTexture == null || fogPixels == null)
             return false;
 
-        int x = WorldToGridX(worldPosition.x);
-        int z = WorldToGridZ(worldPosition.z);
-
-        if (x < 0 || x >= gridWidth || z < 0 || z >= gridHeight)
+        if (mapSize.x <= 0f || mapSize.y <= 0f)
             return false;
+
+        float normalizedX = (worldPosition.x - mapOrigin.x) / mapSize.x;
+        float normalizedZ = (worldPosition.z - mapOrigin.z) / mapSize.y;
+
+        // 맵 밖은 샘플하지 않는다(가장자리로 Clamp하면 시야 판정이 왜곡된다).
+        if (normalizedX < 0f || normalizedX > 1f ||
+            normalizedZ < 0f || normalizedZ > 1f)
+        {
+            return false;
+        }
+
+        int x = Mathf.Clamp(
+            Mathf.FloorToInt(normalizedX * gridWidth),
+            0,
+            gridWidth - 1);
+        int z = Mathf.Clamp(
+            Mathf.FloorToInt(normalizedZ * gridHeight),
+            0,
+            gridHeight - 1);
 
         Color32 pixel = fogPixels[z * gridWidth + x];
         explored = pixel.r;

@@ -3,7 +3,6 @@ using UnityEngine.AI;
 
 public static class TargetFinder
 {
-
     public static SelectableEntity FindBestEnemyInRange(
         Vector3 fromPosition,
         int myOwnerId,
@@ -23,12 +22,22 @@ public static class TargetFinder
         float minAny = float.MaxValue;
         float minAttackerOfAlly = float.MaxValue;
 
+        if (SpatialQueryWorld.Instance != null)
+        {
+            return SpatialQueryWorld.Instance.FindBestEnemyInRange(
+                fromPosition,
+                myOwnerId,
+                range,
+                priority,
+                engageFilter);
+        }
+
         foreach (SelectableEntity entity in SelectableRegistry.Entities)
         {
             if (entity == null || entity.ownerId == myOwnerId)
                 continue;
 
-            EntityHealth health = entity.GetComponent<EntityHealth>();
+            EntityHealth health = entity.CachedHealth;
 
             if (health != null && !health.IsAlive)
                 continue;
@@ -90,7 +99,7 @@ public static class TargetFinder
 
     static bool IsAttackingAlly(SelectableEntity enemy, int myOwnerId)
     {
-        CombatAIBase combatAI = enemy.GetComponent<CombatAIBase>();
+        CombatAIBase combatAI = enemy.CachedCombatAI;
 
         if (combatAI == null)
             return false;
@@ -108,12 +117,20 @@ public static class TargetFinder
         SelectableEntity nearest = null;
         float minSqrDistance = float.MaxValue;
 
+        if (SpatialQueryWorld.Instance != null)
+        {
+            return SpatialQueryWorld.Instance.FindNearestEnemyBuilding(
+                fromPosition,
+                myOwnerId,
+                engageFilter);
+        }
+
         foreach (SelectableEntity building in BuildingRegistry.Buildings)
         {
             if (building == null || building.ownerId == myOwnerId)
                 continue;
 
-            EntityHealth health = building.GetComponent<EntityHealth>();
+            EntityHealth health = building.CachedHealth;
 
             if (health != null && !health.IsAlive)
                 continue;
@@ -132,6 +149,50 @@ public static class TargetFinder
         }
 
         return nearest;
+    }
+
+    public static SelectableEntity FindOpposingHeadquarters(
+        int myOwnerId,
+        UnitAttacker engageFilter = null)
+    {
+        if (BuildZoneManager.Instance != null &&
+            BuildZoneManager.Instance.TryGetOpposingHeadquarters(
+                myOwnerId,
+                out Headquarters headquarters) &&
+            headquarters != null)
+        {
+            SelectableEntity entity = headquarters.GetComponent<SelectableEntity>();
+
+            if (IsUsableEnemy(entity, myOwnerId, engageFilter))
+                return entity;
+        }
+
+        foreach (SelectableEntity building in BuildingRegistry.Buildings)
+        {
+            if (!IsUsableEnemy(building, myOwnerId, engageFilter))
+                continue;
+
+            if (building.GetComponent<Headquarters>() != null)
+                return building;
+        }
+
+        return null;
+    }
+
+    static bool IsUsableEnemy(
+        SelectableEntity entity,
+        int myOwnerId,
+        UnitAttacker engageFilter)
+    {
+        if (entity == null || entity.ownerId == myOwnerId)
+            return false;
+
+        EntityHealth health = entity.CachedHealth;
+
+        if (health != null && !health.IsAlive)
+            return false;
+
+        return engageFilter == null || engageFilter.CanEngage(entity);
     }
 
     static float GetHorizontalSqrDistance(Vector3 fromPosition, Vector3 toPosition)
@@ -202,6 +263,7 @@ public static class TargetFinder
 
         Vector3 ideal = closest + towardChaser * holdDistance;
 
+        // complete 우선 직근 → 각도 확장 → 실패 시 partial 폴백 (이전 이중 전수 루프 제거).
         if (TryFindReachableApproach(
                 fromPosition,
                 ideal,
@@ -212,7 +274,7 @@ public static class TargetFinder
                 requireCompletePath: true))
             return approach;
 
-        for (int i = 0; i < 8; i++)
+        for (int i = 1; i < 8; i++)
         {
             Vector3 direction =
                 Quaternion.Euler(0f, i * 45f, 0f) * towardChaser;
@@ -230,37 +292,12 @@ public static class TargetFinder
 
         if (TryFindReachableApproach(
                 fromPosition,
-                target.transform.position,
-                sampleRadius,
-                out approach,
-                out _,
-                out _,
-                requireCompletePath: true))
-            return approach;
-
-        if (TryFindReachableApproach(
-                fromPosition,
                 ideal,
                 sampleRadius,
                 out approach,
                 out _,
                 out _))
             return approach;
-
-        for (int i = 0; i < 8; i++)
-        {
-            Vector3 direction =
-                Quaternion.Euler(0f, i * 45f, 0f) * towardChaser;
-
-            if (TryFindReachableApproach(
-                    fromPosition,
-                    closest + direction * holdDistance,
-                    sampleRadius,
-                    out approach,
-                    out _,
-                    out _))
-                return approach;
-        }
 
         return SampleNavMeshNear(ideal, sampleRadius);
     }
@@ -271,28 +308,13 @@ public static class TargetFinder
         float stoppingDistance,
         float angleOffsetDegrees)
     {
-        // 직진이 막혀 있어도 PathComplete인 우회 접근점 중 가장 짧은 경로를 고른다.
+        // 한 번의 탐색으로 complete/partial을 함께 고른다 (이전: complete 전수 + partial 전수).
         if (TryFindBestBuildingApproach(
                 fromPosition,
                 target,
                 stoppingDistance,
                 angleOffsetDegrees,
-                preferCompletePath: true,
                 out Vector3 bestApproach,
-                out NavMeshPathStatus status,
-                out _))
-        {
-            if (status == NavMeshPathStatus.PathComplete)
-                return bestApproach;
-        }
-
-        if (TryFindBestBuildingApproach(
-                fromPosition,
-                target,
-                stoppingDistance,
-                angleOffsetDegrees,
-                preferCompletePath: false,
-                out bestApproach,
                 out _,
                 out _))
         {
@@ -335,7 +357,8 @@ public static class TargetFinder
         if (target == null)
             return false;
 
-        const int directionsPerRound = 16;
+        // 가벼운 링 샘플만 사용 (GetApproachPosition 전수 탐색을 중첩 호출하지 않음).
+        const int directionsPerRound = 8;
         const float angleStep = 360f / directionsPerRound;
         float minMoveSqr = 0.25f;
         float avoidSqr = 1f;
@@ -364,7 +387,7 @@ public static class TargetFinder
         float targetRadius = Mathf.Max(bounds.extents.x, bounds.extents.z);
         float baseRing = targetRadius + attackRange + stoppingDistance * 0.5f;
 
-        for (int ring = 1; ring <= 4; ring++)
+        for (int ring = 1; ring <= 2; ring++)
         {
             float ringRadius = baseRing + ring * 1.5f;
             float sampleRadius = attackRange + targetRadius + 2f + ring;
@@ -413,26 +436,26 @@ public static class TargetFinder
     {
         approachPosition = fromPosition;
 
+        Vector3 targetPosition = target.transform.position;
         Bounds bounds = target.SelectionBounds;
         float targetRadius = Mathf.Max(bounds.extents.x, bounds.extents.z);
+        float ringRadius = targetRadius + stoppingDistance + 1f;
         float sampleRadius = attackRange + targetRadius + 2f;
 
-        Vector3 candidate = GetApproachPosition(
-            fromPosition,
-            target,
-            stoppingDistance,
-            attackRange,
-            angleOffsetDegrees);
+        Vector3 outward = fromPosition - targetPosition;
+        outward.y = 0f;
 
-        if ((candidate - fromPosition).sqrMagnitude < minMoveSqr)
-            return false;
+        if (outward.sqrMagnitude < 0.01f)
+            outward = Vector3.forward;
 
-        if ((candidate - avoidPosition).sqrMagnitude < avoidSqr)
-            return false;
+        outward.Normalize();
+        outward = Quaternion.Euler(0f, angleOffsetDegrees, 0f) * outward;
+
+        Vector3 sampleOrigin = targetPosition + outward * ringRadius;
 
         if (!TryFindReachableApproach(
                 fromPosition,
-                candidate,
+                sampleOrigin,
                 sampleRadius,
                 out Vector3 reachable,
                 out _,
@@ -470,7 +493,6 @@ public static class TargetFinder
         SelectableEntity target,
         float stoppingDistance,
         float angleOffsetDegrees,
-        bool preferCompletePath,
         out Vector3 bestApproach,
         out NavMeshPathStatus bestStatus,
         out float bestPathLength)
@@ -503,30 +525,70 @@ public static class TargetFinder
         Vector3 currentApproach = bestApproach;
         NavMeshPathStatus currentStatus = bestStatus;
         float currentPathLength = bestPathLength;
+        int pathBudget = MaxBuildingApproachPathCalculations;
 
-        const int directionCount = 16;
+        // 1) 적 방향(바깥) 직근 접근점 우선 — 대부분 여기서 PathComplete로 끝난다.
+        if (TryConsiderBuildingApproach(
+                fromPosition,
+                targetPosition + outward * ringRadius,
+                sampleRadius,
+                requireCompletePath: false,
+                ref currentApproach,
+                ref currentStatus,
+                ref currentPathLength,
+                ref pathBudget))
+        {
+            found = true;
+
+            if (currentStatus == NavMeshPathStatus.PathComplete)
+            {
+                bestApproach = currentApproach;
+                bestStatus = currentStatus;
+                bestPathLength = currentPathLength;
+                return true;
+            }
+        }
+
+        // 2) 축소된 링/방향 탐색. PathComplete를 찾으면 즉시 종료.
+        const int directionCount = 8;
+        const int maxRing = 3;
         float angleStep = 360f / directionCount;
 
-        for (int ring = 0; ring <= 8; ring++)
+        for (int ring = 0; ring <= maxRing && pathBudget > 0; ring++)
         {
             float radius = ringRadius + ring * 2f;
             float ringSampleRadius = Mathf.Max(sampleRadius, radius * 0.35f);
 
-            for (int i = 0; i < directionCount; i++)
+            for (int i = 0; i < directionCount && pathBudget > 0; i++)
             {
+                // ring 0, i 0은 직근과 동일하므로 스킵
+                if (ring == 0 && i == 0)
+                    continue;
+
                 Vector3 direction =
                     Quaternion.Euler(0f, i * angleStep, 0f) * outward;
 
-                if (TryConsiderBuildingApproach(
+                if (!TryConsiderBuildingApproach(
                         fromPosition,
                         targetPosition + direction * radius,
                         ringSampleRadius,
-                        preferCompletePath,
+                        requireCompletePath: false,
                         ref currentApproach,
                         ref currentStatus,
-                        ref currentPathLength))
+                        ref currentPathLength,
+                        ref pathBudget))
                 {
-                    found = true;
+                    continue;
+                }
+
+                found = true;
+
+                if (currentStatus == NavMeshPathStatus.PathComplete)
+                {
+                    bestApproach = currentApproach;
+                    bestStatus = currentStatus;
+                    bestPathLength = currentPathLength;
+                    return true;
                 }
             }
         }
@@ -540,6 +602,10 @@ public static class TargetFinder
         return true;
     }
 
+    const int MaxBuildingApproachPathCalculations = 20;
+
+    static readonly NavMeshPath SharedPath = new NavMeshPath();
+
     static bool TryConsiderBuildingApproach(
         Vector3 fromPosition,
         Vector3 sampleOrigin,
@@ -547,8 +613,14 @@ public static class TargetFinder
         bool requireCompletePath,
         ref Vector3 bestApproach,
         ref NavMeshPathStatus bestStatus,
-        ref float bestPathLength)
+        ref float bestPathLength,
+        ref int pathBudget)
     {
+        if (pathBudget <= 0)
+            return false;
+
+        pathBudget--;
+
         if (!TryFindReachableApproach(
                 fromPosition,
                 sampleOrigin,
@@ -620,31 +692,46 @@ public static class TargetFinder
         pathStatus = NavMeshPathStatus.PathInvalid;
         pathLength = float.MaxValue;
 
-        if (!NavMesh.SamplePosition(
-                sampleOrigin,
-                out NavMeshHit hit,
-                sampleRadius,
-                NavMesh.AllAreas))
-            return false;
+        Vector3 sampled;
 
-        NavMeshPath path = new NavMeshPath();
+        if (UnitSpawnUtility.TrySampleNavMeshNearPreferredHeight(
+                sampleOrigin,
+                fromPosition.y,
+                sampleRadius,
+                out sampled))
+        {
+        }
+        else if (NavMesh.SamplePosition(
+                     sampleOrigin,
+                     out NavMeshHit hit,
+                     sampleRadius,
+                     NavMesh.AllAreas))
+        {
+            sampled = hit.position;
+        }
+        else
+        {
+            return false;
+        }
+
+        SharedPath.ClearCorners();
 
         if (!NavMesh.CalculatePath(
                 fromPosition,
-                hit.position,
+                sampled,
                 NavMesh.AllAreas,
-                path))
+                SharedPath))
             return false;
 
-        if (path.status == NavMeshPathStatus.PathInvalid)
+        if (SharedPath.status == NavMeshPathStatus.PathInvalid)
             return false;
 
-        if (requireCompletePath && path.status != NavMeshPathStatus.PathComplete)
+        if (requireCompletePath && SharedPath.status != NavMeshPathStatus.PathComplete)
             return false;
 
-        result = hit.position;
-        pathStatus = path.status;
-        pathLength = CalculatePathLength(path);
+        result = sampled;
+        pathStatus = SharedPath.status;
+        pathLength = CalculatePathLength(SharedPath);
         return true;
     }
 }

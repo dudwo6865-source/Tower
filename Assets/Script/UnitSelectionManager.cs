@@ -429,6 +429,25 @@ public class UnitSelectionManager : MonoBehaviour
         NotifySelectionChanged();
     }
 
+    /// <summary>기존 선택을 비우고 이 엔티티들만 선택합니다. (건물 업그레이드 교체 등)</summary>
+    public void SelectOnly(IReadOnlyList<SelectableEntity> entities)
+    {
+        DeselectAll();
+
+        if (entities == null)
+            return;
+
+        for (int i = 0; i < entities.Count; i++)
+        {
+            SelectableEntity entity = entities[i];
+
+            if (entity != null && CanSelectEntity(entity))
+                SelectEntity(entity);
+        }
+
+        RefreshCommandIndicators();
+    }
+
     void ToggleSelectEntity(SelectableEntity entity)
     {
         if (selectedEntities.Contains(entity))

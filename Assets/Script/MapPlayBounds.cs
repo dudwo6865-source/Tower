@@ -47,6 +47,9 @@ public static class MapPlayBounds
 
     public static float SampleGroundHeight(Vector3 worldPosition)
     {
+        if (UnitSpawnUtility.TrySampleSpawnSurface(worldPosition, out Vector3 sampled))
+            return sampled.y;
+
         if (MapGrid.Instance != null)
             return MapGrid.Instance.SampleGroundHeight(worldPosition);
 
@@ -59,6 +62,24 @@ public static class MapPlayBounds
         }
 
         return worldPosition.y;
+    }
+
+    public static float SampleGroundHeight(Vector3 worldPosition, float preferredY)
+    {
+        if (UnitSpawnUtility.TrySampleNavMeshNearPreferredHeight(
+                worldPosition,
+                preferredY,
+                10f,
+                out Vector3 sampled))
+            return sampled.y;
+
+        if (UnitSpawnUtility.TrySampleTopmostAtXZ(
+                worldPosition.x,
+                worldPosition.z,
+                out sampled))
+            return sampled.y;
+
+        return preferredY;
     }
 
     public static Vector3 GetRaycastOrigin(float worldX, float worldZ, float padding)

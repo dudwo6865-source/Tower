@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 // MapConfig를 받아 맵을 로드하는 오케스트레이터입니다.
@@ -162,10 +163,9 @@ public class MapLoader : MonoBehaviour
             return;
 
         wave.initialEnemyCount = config.initialEnemyCount;
-        wave.initialEnemiesAdvanceToBase = config.initialEnemiesAdvanceToBase;
         wave.nightWaveStartDelay = config.nightWaveStartDelay;
-        wave.waveInterval = config.waveInterval;
-        wave.enemiesPerWave = config.enemiesPerWave;
-        wave.maxWavesPerNight = config.maxWavesPerNight;
+        wave.spawnersPerNight = config.spawnersPerNight != null
+            ? new List<int>(config.spawnersPerNight)
+            : new List<int>();
     }
 }

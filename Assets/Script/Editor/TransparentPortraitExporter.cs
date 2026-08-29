@@ -16,6 +16,11 @@ public static class TransparentPortraitExporter
         public float padding;
         public float yaw;
         public float pitch;
+        public float fieldOfView;
+        // 수직 프레이밍 오프셋(대상 높이 대비 비율). 양수면 시점이 위로 올라갑니다.
+        public float heightOffset;
+        // 대상 배율. 1보다 크면 크게(가깝게), 작으면 작게(멀리) 찍힙니다.
+        public float zoom;
         public bool orthographic;
         public bool hideGameplayUi;
         public bool importAsSprite;
@@ -56,6 +61,80 @@ public static class TransparentPortraitExporter
 
         Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), outputFolder));
 
+        Texture2D texture = RenderToTexture(prefabOrObject, settings, settings.width, settings.height, out string renderError);
+
+        if (texture == null)
+            return Fail(renderError ?? "렌더링에 실패했습니다.");
+
+        try
+        {
+            string assetPath = GetUniqueAssetPath(outputFolder, fileName);
+            File.WriteAllBytes(assetPath, texture.EncodeToPNG());
+
+            AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceUpdate);
+
+            if (settings.importAsSprite)
+                ApplySpriteImportSettings(assetPath);
+
+            SelectableEntity assignedEntity = null;
+
+            if (settings.assignPortrait)
+                assignedEntity = TryAssignPortrait(prefabOrObject, assetPath);
+
+            AssetDatabase.SaveAssets();
+
+            return new ExportResult
+            {
+                success = true,
+                assetPath = assetPath,
+                message = $"PNG 저장 완료: {assetPath}",
+                assignedEntity = assignedEntity
+            };
+        }
+        catch (Exception exception)
+        {
+            return Fail(exception.Message);
+        }
+        finally
+        {
+            Object.DestroyImmediate(texture);
+        }
+    }
+
+    // 지정한 설정으로 대상을 렌더링해 알파 텍스처를 반환합니다.
+    // 미리보기와 실제 내보내기 모두 이 코어를 사용합니다.
+    // 반환된 Texture2D의 소유권은 호출자에게 있으므로 사용 후 DestroyImmediate 해야 합니다.
+    public static Texture2D RenderPreview(Object source, ExportSettings settings, int width, int height, out string error)
+    {
+        error = null;
+
+        if (source == null)
+        {
+            error = "대상이 없습니다.";
+            return null;
+        }
+
+        GameObject prefabOrObject = ResolveSourceObject(source);
+
+        if (prefabOrObject == null)
+        {
+            error = "GameObject 또는 프리팹을 지정해 주세요.";
+            return null;
+        }
+
+        return RenderToTexture(prefabOrObject, settings, width, height, out error);
+    }
+
+    static Texture2D RenderToTexture(GameObject prefabOrObject, ExportSettings settings, int width, int height, out string error)
+    {
+        error = null;
+
+        if (width <= 0 || height <= 0)
+        {
+            error = "해상도는 1 이상이어야 합니다.";
+            return null;
+        }
+
         PreviewRenderUtility preview = new PreviewRenderUtility(true);
 
         try
@@ -63,7 +142,7 @@ public static class TransparentPortraitExporter
             preview.camera.clearFlags = CameraClearFlags.SolidColor;
             preview.camera.backgroundColor = Color.clear;
             preview.camera.orthographic = settings.orthographic;
-            preview.camera.aspect = (float)settings.width / settings.height;
+            preview.camera.aspect = (float)width / height;
             preview.camera.nearClipPlane = 0.01f;
             preview.camera.farClipPlane = 1000f;
 
@@ -72,7 +151,10 @@ public static class TransparentPortraitExporter
             GameObject instance = CreatePreviewInstance(preview, prefabOrObject);
 
             if (instance == null)
-                return Fail("미리보기 인스턴스를 만들지 못했습니다.");
+            {
+                error = "미리보기 인스턴스를 만들지 못했습니다.";
+                return null;
+            }
 
             List<DisabledComponentState> disabledStates = new List<DisabledComponentState>();
 
@@ -82,13 +164,17 @@ public static class TransparentPortraitExporter
             Bounds bounds = CalculateRenderableBounds(instance);
 
             if (bounds.size.sqrMagnitude <= 0.0001f)
-                return Fail("렌더러가 없어 캡처할 수 없습니다.");
+            {
+                error = "렌더러가 없어 캡처할 수 없습니다.";
+                RestoreDisabledComponents(disabledStates);
+                return null;
+            }
 
             FrameCamera(preview.camera, bounds, settings);
 
             RenderTexture renderTexture = RenderTexture.GetTemporary(
-                settings.width,
-                settings.height,
+                width,
+                height,
                 24,
                 RenderTextureFormat.ARGB32);
 
@@ -102,33 +188,11 @@ public static class TransparentPortraitExporter
 
                 RenderTexture.active = renderTexture;
 
-                Texture2D texture = new Texture2D(settings.width, settings.height, TextureFormat.RGBA32, false);
-                texture.ReadPixels(new Rect(0, 0, settings.width, settings.height), 0, 0);
+                Texture2D texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+                texture.ReadPixels(new Rect(0, 0, width, height), 0, 0);
                 texture.Apply();
 
-                string assetPath = GetUniqueAssetPath(outputFolder, fileName);
-                File.WriteAllBytes(assetPath, texture.EncodeToPNG());
-                Object.DestroyImmediate(texture);
-
-                AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceUpdate);
-
-                if (settings.importAsSprite)
-                    ApplySpriteImportSettings(assetPath);
-
-                SelectableEntity assignedEntity = null;
-
-                if (settings.assignPortrait)
-                    assignedEntity = TryAssignPortrait(prefabOrObject, assetPath);
-
-                AssetDatabase.SaveAssets();
-
-                return new ExportResult
-                {
-                    success = true,
-                    assetPath = assetPath,
-                    message = $"PNG 저장 완료: {assetPath}",
-                    assignedEntity = assignedEntity
-                };
+                return texture;
             }
             finally
             {
@@ -140,7 +204,8 @@ public static class TransparentPortraitExporter
         }
         catch (Exception exception)
         {
-            return Fail(exception.Message);
+            error = exception.Message;
+            return null;
         }
         finally
         {
@@ -248,20 +313,32 @@ public static class TransparentPortraitExporter
         float maxExtent = Mathf.Max(bounds.extents.x, bounds.extents.y, bounds.extents.z);
         maxExtent = Mathf.Max(maxExtent, 0.1f);
 
-        Quaternion rotation = Quaternion.Euler(settings.pitch, settings.yaw, 0f);
-        float distance = maxExtent * 3.5f;
+        // 카메라 높낮이: 대상 높이에 비례해 시점(주시점)을 위/아래로 이동한다.
+        // 양수면 주시점이 위로 올라가 대상이 프레임 아래쪽에 잡힌다.
+        center.y += settings.heightOffset * bounds.size.y;
 
+        // 여백(padding)으로 프레이밍 크기를 통일해 원근/직교 모두 같은 감각으로 조정한다.
+        // 배율(zoom)로 대상을 더 크게(가깝게)/작게(멀리) 잡는다. zoom>1이면 프레임을 좁혀 크게 찍는다.
+        float zoom = settings.zoom <= 0f ? 1f : settings.zoom;
+        float frameExtent = maxExtent * (1f + settings.padding) / zoom;
+
+        Quaternion rotation = Quaternion.Euler(settings.pitch, settings.yaw, 0f);
         camera.transform.rotation = rotation;
-        camera.transform.position = center + rotation * (Vector3.back * distance);
 
         if (camera.orthographic)
         {
-            camera.orthographicSize = maxExtent * (1f + settings.padding);
+            camera.orthographicSize = frameExtent;
+            // 직교 카메라는 거리와 무관하지만 클립 평면 안에 들어오도록 충분히 뒤로 뺀다.
+            camera.transform.position = center + rotation * (Vector3.back * (maxExtent * 4f));
             return;
         }
 
-        camera.fieldOfView = 30f;
-        camera.transform.position = center + rotation * (Vector3.back * (maxExtent * 2.8f));
+        float fov = Mathf.Clamp(settings.fieldOfView <= 0f ? 30f : settings.fieldOfView, 5f, 120f);
+        camera.fieldOfView = fov;
+
+        // 지정한 FOV에서 대상이 프레임에 꼭 맞도록 필요한 거리를 계산한다.
+        float distance = frameExtent / Mathf.Tan(fov * 0.5f * Mathf.Deg2Rad);
+        camera.transform.position = center + rotation * (Vector3.back * distance);
     }
 
     static Bounds CalculateRenderableBounds(GameObject root)

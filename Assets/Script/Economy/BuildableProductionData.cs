@@ -8,6 +8,9 @@ public class BuildableProductionData : ScriptableObject, IBuildablePlacementData
     [Header("Display")]
     public string displayName = "Barracks";
 
+    [Tooltip("빌드 버튼에 표시할 아이콘입니다. 비워두면 프리팹의 SelectableEntity.portrait를 사용합니다.")]
+    public Sprite icon;
+
     [TextArea]
     public string description;
 
@@ -31,6 +34,7 @@ public class BuildableProductionData : ScriptableObject, IBuildablePlacementData
     public GameObject Prefab => prefab;
     public int WattCost => wattCost;
     public int OwnerId => ownerId;
+    public Sprite Icon => icon != null ? icon : BuildableIconResolver.ResolvePrefabPortrait(prefab);
 
     public Vector2Int GetFootprintCells()
     {

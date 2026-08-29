@@ -1,0 +1,136 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b0d40424b541393498653c061965815b, type: 3}
+  m_Name: HillTileSet
+  m_EditorClassIdentifier: 
+  hill: {fileID: 2789491921621221193, guid: 434f5925574550c41b94b9396a6cf6f1, type: 3}
+  wxh: {fileID: 491562208318381342, guid: 8890ee13f24a7504298ff5ddfff497b6, type: 3}
+  hxw: {fileID: 6912534466893411057, guid: 6a47df1dece9b404399f0f98d129486f, type: 3}
+  flipWxhWhenHillOnLeft: 0
+  invertHxwLeftRight: 0
+  hxwOuter: {fileID: 8766927936405010649, guid: 8d8c4d8aa5f112b46bca9c47ffc6c59a, type: 3}
+  hxwInner: {fileID: 6912534466893411057, guid: 6a47df1dece9b404399f0f98d129486f, type: 3}
+  toOuterCorner: {fileID: 567166394882195498, guid: 2351eae2b55bc7e43b772369c3572936, type: 3}
+  toInnerCorner: {fileID: 8937513589664391530, guid: 587f518d616847d4f9b9fa247ac7e86c, type: 3}
+  hillHeightOffset: -6
+  connectorHeightOffset: -6
+  hillYawOffset: 0
+  wxhYawOffset: 180
+  hxwYawOffset: 90
+  toOuterCornerYawOffset: 90
+  toInnerCornerYawOffset: -90
+  hxwOuterCornerToCorner:
+    n:
+      yaw: 90
+      flipX: 0
+    ne:
+      yaw: 45
+      flipX: 0
+    e:
+      yaw: 0
+      flipX: 1
+    se:
+      yaw: 45
+      flipX: 0
+    s:
+      yaw: 0
+      flipX: 0
+    sw:
+      yaw: 0
+      flipX: 1
+    w:
+      yaw: 90
+      flipX: 0
+    nw:
+      yaw: 0
+      flipX: 0
+  hxwInnerCornerToCorner:
+    n:
+      yaw: 0
+      flipX: 0
+    ne:
+      yaw: 0
+      flipX: 0
+    e:
+      yaw: 180
+      flipX: 1
+    se:
+      yaw: 0
+      flipX: 0
+    s:
+      yaw: 180
+      flipX: 1
+    sw:
+      yaw: 0
+      flipX: 0
+    w:
+      yaw: 270
+      flipX: 0
+    nw:
+      yaw: 0
+      flipX: 0
+  hxwOuterNorth:
+    left:
+      yaw: 0
+      flipX: 1
+    right:
+      yaw: 90
+      flipX: 0
+  hxwOuterEast:
+    left:
+      yaw: 90
+      flipX: 1
+    right:
+      yaw: 0
+      flipX: 0
+  hxwOuterSouth:
+    left:
+      yaw: 180
+      flipX: 1
+    right:
+      yaw: 270
+      flipX: 0
+  hxwOuterWest:
+    left:
+      yaw: 270
+      flipX: 1
+    right:
+      yaw: 0
+      flipX: 0
+  hxwInnerNorth:
+    left:
+      yaw: 90
+      flipX: 0
+    right:
+      yaw: 270
+      flipX: 0
+  hxwInnerEast:
+    left:
+      yaw: 180
+      flipX: 1
+    right:
+      yaw: 0
+      flipX: 0
+  hxwInnerSouth:
+    left:
+      yaw: 270
+      flipX: 1
+    right:
+      yaw: 90
+      flipX: 0
+  hxwInnerWest:
+    left:
+      yaw: 90
+      flipX: 1
+    right:
+      yaw: 180
+      flipX: 0

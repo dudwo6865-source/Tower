@@ -11,7 +11,7 @@ public class BuildZoneVisualizer : MonoBehaviour
 
     public Color zoneEdgeColor = new Color(0.35f, 0.85f, 1f, 0.55f);
 
-    [Tooltip("지형 위로 띄울 높이입니다. Headquarters.buildZoneHeightOffset에 더해집니다.")]
+    [Tooltip("지형 위로 띄울 높이입니다. BuildZoneProvider.buildZoneHeightOffset에 더해집니다.")]
     public float heightOffset = 0f;
 
     [Tooltip("구역 가장자리 선 두께(월드 단위)입니다.")]
@@ -28,11 +28,30 @@ public class BuildZoneVisualizer : MonoBehaviour
     private Material fillMaterial;
     private Material edgeMaterial;
 
-    private Headquarters activeHeadquarters;
-    private Vector2Int lastCenterCell = new Vector2Int(int.MinValue, int.MinValue);
-    private int lastRadius = -1;
-    private float lastZoneHeightOffset = float.NaN;
+    private readonly List<BuildZoneProvider> displayProviders = new List<BuildZoneProvider>();
+    private readonly List<BuildZoneProvider> selectedProviders = new List<BuildZoneProvider>();
+    private readonly HashSet<Vector2Int> zoneCells = new HashSet<Vector2Int>();
+    private readonly HashSet<Vector2Int> radiusCellScratch = new HashSet<Vector2Int>();
+
+    // 칸마다 NavMesh를 17번 샘플링하므로, 고스트가 움직여도 바뀌지 않는
+    // 기존 구역과 매 칸 바뀌는 미리보기 구역을 따로 캐시합니다.
+    private readonly HashSet<Vector2Int> providerCells = new HashSet<Vector2Int>();
+    private readonly Dictionary<Vector2Int, float> providerCellHeights =
+        new Dictionary<Vector2Int, float>();
+    private readonly HashSet<Vector2Int> previewCells = new HashSet<Vector2Int>();
+    private readonly Dictionary<Vector2Int, float> previewCellHeights =
+        new Dictionary<Vector2Int, float>();
+
+    private int lastProviderSignature;
+    private int lastPreviewSignature;
     private bool wasVisible;
+
+    private bool previewActive;
+    private Vector2Int previewCenter;
+    private int previewRadius;
+    private float previewHeightOffset = 0.06f;
+
+    private Vector2Int placementFootprint = Vector2Int.one;
 
     void Awake()
     {
@@ -78,9 +97,11 @@ public class BuildZoneVisualizer : MonoBehaviour
             return;
         }
 
-        Headquarters headquarters = ResolveHeadquartersToDisplay();
+        ResolvePlacementPreview();
+        ResolvePlacementFootprint();
+        ResolveProvidersToDisplay();
 
-        if (headquarters == null)
+        if (displayProviders.Count == 0 && !previewActive)
         {
             SetVisualsActive(false);
             return;
@@ -89,43 +110,52 @@ public class BuildZoneVisualizer : MonoBehaviour
         SyncVisualsRoot();
         SetVisualsActive(true);
 
-        headquarters.RefreshCenterCell();
+        MapGrid grid = MapGrid.Instance;
+        int providerSignature = ComputeProviderSignature();
+        int previewSignature = ComputePreviewSignature();
+        bool dirty = false;
 
-        if (headquarters != activeHeadquarters ||
-            headquarters.CenterCell != lastCenterCell ||
-            headquarters.buildRadiusCells != lastRadius ||
-            !Mathf.Approximately(
-                headquarters.buildZoneHeightOffset,
-                lastZoneHeightOffset))
+        if (providerSignature != lastProviderSignature)
         {
-            RebuildZoneMesh(headquarters);
-            activeHeadquarters = headquarters;
-            lastCenterCell = headquarters.CenterCell;
-            lastRadius = headquarters.buildRadiusCells;
-            lastZoneHeightOffset = headquarters.buildZoneHeightOffset;
+            RebuildProviderCells(grid);
+            lastProviderSignature = providerSignature;
+            dirty = true;
         }
+
+        if (previewSignature != lastPreviewSignature)
+        {
+            RebuildPreviewCells(grid);
+            lastPreviewSignature = previewSignature;
+            dirty = true;
+        }
+
+        if (dirty)
+            RebuildZoneMesh(grid);
     }
 
-    Headquarters ResolveHeadquartersToDisplay()
+    void ResolveProvidersToDisplay()
     {
+        displayProviders.Clear();
         int localOwnerId = GetLocalOwnerId();
 
-        if (placementController != null &&
-            placementController.IsPlacing &&
-            BuildZoneManager.Instance.TryGetHeadquarters(
-                localOwnerId,
-                out Headquarters placementHq))
+        if (placementController != null && placementController.IsPlacing)
         {
-            return placementHq;
+            BuildZoneManager.Instance.GetProviders(localOwnerId, displayProviders);
+            return;
         }
 
-        return GetSelectedLocalHeadquarters(localOwnerId);
+        CollectSelectedLocalProviders(localOwnerId, selectedProviders);
+
+        if (selectedProviders.Count > 0)
+            displayProviders.AddRange(selectedProviders);
     }
 
-    Headquarters GetSelectedLocalHeadquarters(int localOwnerId)
+    void CollectSelectedLocalProviders(int localOwnerId, List<BuildZoneProvider> results)
     {
+        results.Clear();
+
         if (UnitSelectionManager.Instance == null)
-            return null;
+            return;
 
         foreach (SelectableEntity entity in
                  UnitSelectionManager.Instance.GetSelectedEntities())
@@ -136,13 +166,69 @@ public class BuildZoneVisualizer : MonoBehaviour
                 continue;
             }
 
-            Headquarters headquarters = entity.GetComponent<Headquarters>();
+            BuildZoneProvider provider = entity.GetComponent<BuildZoneProvider>();
 
-            if (headquarters != null && headquarters.OwnerId == localOwnerId)
-                return headquarters;
+            if (provider != null && provider.OwnerId == localOwnerId)
+                results.Add(provider);
+        }
+    }
+
+    void ResolvePlacementPreview()
+    {
+        previewActive = false;
+        previewRadius = 0;
+        previewCenter = Vector2Int.zero;
+        previewHeightOffset = 0.06f;
+
+        if (placementController == null ||
+            !placementController.IsPlacing ||
+            !placementController.HasPreviewPlacement)
+        {
+            return;
         }
 
-        return null;
+        IBuildablePlacementData data = placementController.PendingBuildData;
+
+        if (data == null || data.Prefab == null)
+            return;
+
+        BuildZoneProvider provider = data.Prefab.GetComponent<BuildZoneProvider>();
+
+        if (provider == null)
+            provider = data.Prefab.GetComponentInChildren<BuildZoneProvider>(true);
+
+        if (provider == null || provider.buildRadiusCells <= 0)
+            return;
+
+        previewActive = true;
+        previewRadius = provider.buildRadiusCells;
+        previewHeightOffset = provider.buildZoneHeightOffset;
+        previewCenter = BuildZoneProvider.GetFootprintCenterCell(
+            placementController.PreviewOriginCell,
+            placementController.PendingFootprintCells);
+    }
+
+    /// <summary>
+    /// 배치 중인 건물의 발자국입니다. 건설 판정(CanBuildFootprint)은 발자국 전체가
+    /// 한 구역 안에 들어와야 통과하므로, 표시도 이 크기만큼 좁혀야 실제와 맞습니다.
+    /// </summary>
+    void ResolvePlacementFootprint()
+    {
+        placementFootprint = Vector2Int.one;
+
+        if (placementController == null || !placementController.IsPlacing)
+            return;
+
+        IBuildablePlacementData data = placementController.PendingBuildData;
+
+        // 구역 밖에도 지을 수 있는 건물이면 구역이 배치를 막지 않으니 그대로 보여줍니다.
+        if (data == null || BuildZoneProvider.PrefabCanPlaceOutsideBuildZones(data.Prefab))
+            return;
+
+        Vector2Int footprint = placementController.PendingFootprintCells;
+
+        if (footprint.x > 0 && footprint.y > 0)
+            placementFootprint = footprint;
     }
 
     int GetLocalOwnerId()
@@ -154,6 +240,54 @@ public class BuildZoneVisualizer : MonoBehaviour
             return placementController.localPlayerOwnerId;
 
         return 1;
+    }
+
+    int ComputeProviderSignature()
+    {
+        unchecked
+        {
+            int hash = 17;
+            hash = hash * 31 + displayProviders.Count;
+
+            for (int i = 0; i < displayProviders.Count; i++)
+            {
+                BuildZoneProvider provider = displayProviders[i];
+
+                if (provider == null)
+                    continue;
+
+                provider.RefreshCenterCell();
+                Vector3 pos = provider.transform.position;
+
+                hash = hash * 31 + provider.GetInstanceID();
+                hash = hash * 31 + provider.CenterCell.x;
+                hash = hash * 31 + provider.CenterCell.y;
+                hash = hash * 31 + provider.buildRadiusCells;
+                hash = hash * 31 + Mathf.RoundToInt(provider.buildZoneHeightOffset * 1000f);
+                hash = hash * 31 + Mathf.RoundToInt(pos.x * 10f);
+                hash = hash * 31 + Mathf.RoundToInt(pos.z * 10f);
+            }
+
+            // 다른 건물을 고르면 발자국이 바뀌므로 구역도 다시 좁혀야 합니다.
+            hash = hash * 31 + placementFootprint.x;
+            hash = hash * 31 + placementFootprint.y;
+
+            return hash;
+        }
+    }
+
+    int ComputePreviewSignature()
+    {
+        unchecked
+        {
+            int hash = 17;
+            hash = hash * 31 + (previewActive ? 1 : 0);
+            hash = hash * 31 + previewCenter.x;
+            hash = hash * 31 + previewCenter.y;
+            hash = hash * 31 + previewRadius;
+
+            return hash;
+        }
     }
 
     void EnsureVisuals()
@@ -209,18 +343,24 @@ public class BuildZoneVisualizer : MonoBehaviour
             return;
 
         if (wasVisible == active)
+        {
+            if (!active)
+                InvalidateZoneCache();
+
             return;
+        }
 
         wasVisible = active;
         visualsRoot.gameObject.SetActive(active);
 
         if (!active)
-        {
-            activeHeadquarters = null;
-            lastCenterCell = new Vector2Int(int.MinValue, int.MinValue);
-            lastRadius = -1;
-            lastZoneHeightOffset = float.NaN;
-        }
+            InvalidateZoneCache();
+    }
+
+    void InvalidateZoneCache()
+    {
+        lastProviderSignature = 0;
+        lastPreviewSignature = 0;
     }
 
     void SyncVisualsRoot()
@@ -236,43 +376,37 @@ public class BuildZoneVisualizer : MonoBehaviour
         visualsRoot.localScale = Vector3.one;
     }
 
-    void RebuildZoneMesh(Headquarters headquarters)
+    void RebuildZoneMesh(MapGrid grid)
     {
-        MapGrid grid = MapGrid.Instance;
-        float zoneHeightOffset =
-            headquarters.buildZoneHeightOffset + heightOffset;
+        float zoneHeightOffset = ResolveZoneHeightOffset() + heightOffset;
         var fillVertices = new List<Vector3>();
         var fillTriangles = new List<int>();
         var edgeVertices = new List<Vector3>();
         var edgeTriangles = new List<int>();
 
-        Vector2Int center = headquarters.CenterCell;
-        int radius = headquarters.buildRadiusCells;
+        zoneCells.Clear();
+        zoneCells.UnionWith(providerCells);
+        zoneCells.UnionWith(previewCells);
 
-        for (int x = center.x - radius; x <= center.x + radius; x++)
+        foreach (Vector2Int cell in zoneCells)
         {
-            for (int z = center.y - radius; z <= center.y + radius; z++)
-            {
-                Vector2Int cell = new Vector2Int(x, z);
+            if (!TryGetCachedSurfaceHeight(cell, out float surfaceY))
+                continue;
 
-                if (!headquarters.ContainsCell(cell))
-                    continue;
-
-                if (!grid.IsFootprintInBounds(cell, Vector2Int.one))
-                    continue;
-
-                if (grid.UsesNavMesh && !grid.IsCellOnNavMesh(cell))
-                    continue;
-
-                AddCellQuad(fillVertices, fillTriangles, grid, cell, zoneHeightOffset);
-                AddBoundaryEdges(
-                    edgeVertices,
-                    edgeTriangles,
-                    grid,
-                    cell,
-                    headquarters,
-                    zoneHeightOffset);
-            }
+            AddCellQuad(
+                fillVertices,
+                fillTriangles,
+                grid,
+                cell,
+                surfaceY,
+                zoneHeightOffset);
+            AddBoundaryEdges(
+                edgeVertices,
+                edgeTriangles,
+                grid,
+                cell,
+                surfaceY,
+                zoneHeightOffset);
         }
 
         fillMesh.Clear();
@@ -291,33 +425,239 @@ public class BuildZoneVisualizer : MonoBehaviour
         edgeMaterial.color = zoneEdgeColor;
     }
 
+    bool TryGetCachedSurfaceHeight(Vector2Int cell, out float surfaceY)
+    {
+        return providerCellHeights.TryGetValue(cell, out surfaceY) ||
+               previewCellHeights.TryGetValue(cell, out surfaceY);
+    }
+
+    void RebuildProviderCells(MapGrid grid)
+    {
+        providerCells.Clear();
+        providerCellHeights.Clear();
+
+        for (int i = 0; i < displayProviders.Count; i++)
+        {
+            BuildZoneProvider provider = displayProviders[i];
+
+            if (provider == null || provider.buildRadiusCells <= 0)
+                continue;
+
+            provider.RefreshCenterCell();
+            AddPlaceableCells(
+                grid,
+                provider.CenterCell,
+                provider.buildRadiusCells,
+                placementFootprint,
+                providerCells,
+                providerCellHeights);
+        }
+    }
+
+    void RebuildPreviewCells(MapGrid grid)
+    {
+        previewCells.Clear();
+        previewCellHeights.Clear();
+
+        if (!previewActive || previewRadius <= 0)
+            return;
+
+        // 미리보기는 이 건물이 앞으로 만들 구역이라 지금 배치와 무관합니다.
+        // 발자국만큼 좁히면 안 되고 구역 자체를 그대로 보여줍니다.
+        AddPlaceableCells(
+            grid,
+            previewCenter,
+            previewRadius,
+            Vector2Int.one,
+            previewCells,
+            previewCellHeights);
+    }
+
+    /// <summary>
+    /// 반경 안의 칸 중, 주어진 발자국이 통째로 이 구역에 들어가는 배치가 실제로 존재하는
+    /// 칸만 모읍니다. 칸 하나씩만 검사하면 2x2 이상 건물에서 구역이 한 칸 넓게 보입니다.
+    /// </summary>
+    void AddPlaceableCells(
+        MapGrid grid,
+        Vector2Int center,
+        int radius,
+        Vector2Int footprint,
+        HashSet<Vector2Int> results,
+        Dictionary<Vector2Int, float> heights)
+    {
+        radiusCellScratch.Clear();
+
+        for (int x = center.x - radius; x <= center.x + radius; x++)
+        {
+            for (int z = center.y - radius; z <= center.y + radius; z++)
+            {
+                Vector2Int cell = new Vector2Int(x, z);
+
+                // 맵 격자 밖이거나 NavMesh가 없는 칸은 건설할 수 없으므로
+                // 발자국 검사 전에 빼야 구멍 주변에서도 표시가 맞습니다.
+                if (!grid.IsFootprintInRect(cell, Vector2Int.one))
+                    continue;
+
+                if (!BuildZoneProvider.ContainsCell(cell, center, radius))
+                    continue;
+
+                if (!TryGetBuildableSurfaceHeight(grid, cell, out float surfaceY))
+                    continue;
+
+                radiusCellScratch.Add(cell);
+                heights[cell] = surfaceY;
+            }
+        }
+
+        int width = Mathf.Max(1, footprint.x);
+        int depth = Mathf.Max(1, footprint.y);
+
+        if (width == 1 && depth == 1)
+        {
+            results.UnionWith(radiusCellScratch);
+            return;
+        }
+
+        float floorTolerance = grid.FloorHeightTolerance;
+
+        foreach (Vector2Int origin in radiusCellScratch)
+        {
+            if (!IsFootprintInside(radiusCellScratch, origin, width, depth))
+                continue;
+
+            // 건설 판정은 발자국 전체가 같은 층에 있어야 통과합니다.
+            if (!IsFootprintOnSharedFloor(heights, origin, width, depth, floorTolerance))
+                continue;
+
+            for (int x = 0; x < width; x++)
+            {
+                for (int z = 0; z < depth; z++)
+                    results.Add(new Vector2Int(origin.x + x, origin.y + z));
+            }
+        }
+    }
+
+    static bool IsFootprintInside(
+        HashSet<Vector2Int> cells,
+        Vector2Int origin,
+        int width,
+        int depth)
+    {
+        for (int x = 0; x < width; x++)
+        {
+            for (int z = 0; z < depth; z++)
+            {
+                if (!cells.Contains(new Vector2Int(origin.x + x, origin.y + z)))
+                    return false;
+            }
+        }
+
+        return true;
+    }
+
+    static bool IsFootprintOnSharedFloor(
+        Dictionary<Vector2Int, float> heights,
+        Vector2Int origin,
+        int width,
+        int depth,
+        float tolerance)
+    {
+        float min = float.MaxValue;
+        float max = float.MinValue;
+
+        for (int x = 0; x < width; x++)
+        {
+            for (int z = 0; z < depth; z++)
+            {
+                if (!heights.TryGetValue(
+                        new Vector2Int(origin.x + x, origin.y + z),
+                        out float y))
+                {
+                    return false;
+                }
+
+                min = Mathf.Min(min, y);
+                max = Mathf.Max(max, y);
+            }
+        }
+
+        return max - min <= tolerance;
+    }
+
+    float ResolveZoneHeightOffset()
+    {
+        for (int i = 0; i < displayProviders.Count; i++)
+        {
+            if (displayProviders[i] != null)
+                return displayProviders[i].buildZoneHeightOffset;
+        }
+
+        if (previewActive)
+            return previewHeightOffset;
+
+        return 0.06f;
+    }
+
+    bool IsCellInDisplayZone(Vector2Int cell)
+    {
+        return zoneCells.Contains(cell);
+    }
+
+    /// <summary>
+    /// 건설 판정과 같은 기준으로 칸을 거릅니다. 최상단 NavMesh 높이만 보면
+    /// 절벽이나 경사 옆처럼 칸이 일부만 덮인 자리까지 통과해서 구역이 넓게 보입니다.
+    /// </summary>
+    static bool TryGetBuildableSurfaceHeight(MapGrid grid, Vector2Int cell, out float surfaceY)
+    {
+        if (grid.UsesNavMesh)
+            return grid.TryGetBuildableNavMeshHeight(cell, out surfaceY);
+
+        Vector3 center = grid.GetCellCenterWorld(cell);
+        surfaceY = grid.SampleGroundHeight(center);
+        return true;
+    }
+
     void AddBoundaryEdges(
         List<Vector3> vertices,
         List<int> triangles,
         MapGrid grid,
         Vector2Int cell,
-        Headquarters headquarters,
+        float surfaceY,
         float zoneHeightOffset)
     {
         float size = grid.cellSize;
         Vector3 corner = grid.CellCornerToWorld(cell);
 
-        Vector3 bottomLeft = Lift(corner, zoneHeightOffset);
-        Vector3 bottomRight = Lift(corner + new Vector3(size, 0f, 0f), zoneHeightOffset);
-        Vector3 topRight = Lift(corner + new Vector3(size, 0f, size), zoneHeightOffset);
-        Vector3 topLeft = Lift(corner + new Vector3(0f, 0f, size), zoneHeightOffset);
+        Vector3 bottomLeft = LiftAtHeight(corner, surfaceY, zoneHeightOffset);
+        Vector3 bottomRight = LiftAtHeight(
+            corner + new Vector3(size, 0f, 0f),
+            surfaceY,
+            zoneHeightOffset);
+        Vector3 topRight = LiftAtHeight(
+            corner + new Vector3(size, 0f, size),
+            surfaceY,
+            zoneHeightOffset);
+        Vector3 topLeft = LiftAtHeight(
+            corner + new Vector3(0f, 0f, size),
+            surfaceY,
+            zoneHeightOffset);
 
-        if (!headquarters.ContainsCell(new Vector2Int(cell.x, cell.y - 1)))
+        if (ShouldDrawEdge(new Vector2Int(cell.x, cell.y - 1)))
             AddLineQuad(vertices, triangles, bottomLeft, bottomRight);
 
-        if (!headquarters.ContainsCell(new Vector2Int(cell.x + 1, cell.y)))
+        if (ShouldDrawEdge(new Vector2Int(cell.x + 1, cell.y)))
             AddLineQuad(vertices, triangles, bottomRight, topRight);
 
-        if (!headquarters.ContainsCell(new Vector2Int(cell.x, cell.y + 1)))
+        if (ShouldDrawEdge(new Vector2Int(cell.x, cell.y + 1)))
             AddLineQuad(vertices, triangles, topRight, topLeft);
 
-        if (!headquarters.ContainsCell(new Vector2Int(cell.x - 1, cell.y)))
+        if (ShouldDrawEdge(new Vector2Int(cell.x - 1, cell.y)))
             AddLineQuad(vertices, triangles, topLeft, bottomLeft);
+    }
+
+    bool ShouldDrawEdge(Vector2Int neighbor)
+    {
+        return !IsCellInDisplayZone(neighbor);
     }
 
     void AddCellQuad(
@@ -325,16 +665,26 @@ public class BuildZoneVisualizer : MonoBehaviour
         List<int> triangles,
         MapGrid grid,
         Vector2Int cell,
+        float surfaceY,
         float zoneHeightOffset)
     {
         Vector3 corner = grid.CellCornerToWorld(cell);
         float size = grid.cellSize;
         int start = vertices.Count;
 
-        vertices.Add(Lift(corner, zoneHeightOffset));
-        vertices.Add(Lift(corner + new Vector3(size, 0f, 0f), zoneHeightOffset));
-        vertices.Add(Lift(corner + new Vector3(size, 0f, size), zoneHeightOffset));
-        vertices.Add(Lift(corner + new Vector3(0f, 0f, size), zoneHeightOffset));
+        vertices.Add(LiftAtHeight(corner, surfaceY, zoneHeightOffset));
+        vertices.Add(LiftAtHeight(
+            corner + new Vector3(size, 0f, 0f),
+            surfaceY,
+            zoneHeightOffset));
+        vertices.Add(LiftAtHeight(
+            corner + new Vector3(size, 0f, size),
+            surfaceY,
+            zoneHeightOffset));
+        vertices.Add(LiftAtHeight(
+            corner + new Vector3(0f, 0f, size),
+            surfaceY,
+            zoneHeightOffset));
 
         triangles.Add(start);
         triangles.Add(start + 2);
@@ -373,14 +723,10 @@ public class BuildZoneVisualizer : MonoBehaviour
         triangles.Add(startIndex + 2);
     }
 
-    Vector3 Lift(Vector3 worldPoint, float zoneHeightOffset)
+    Vector3 LiftAtHeight(Vector3 worldPoint, float surfaceY, float zoneHeightOffset)
     {
         MapGrid grid = MapGrid.Instance;
-
-        if (grid != null)
-            worldPoint.y = grid.SampleGroundHeight(worldPoint);
-
-        worldPoint.y += zoneHeightOffset;
+        worldPoint.y = surfaceY + zoneHeightOffset;
 
         if (grid != null)
             worldPoint -= grid.MapOrigin;

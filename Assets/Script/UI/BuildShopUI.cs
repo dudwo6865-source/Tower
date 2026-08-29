@@ -14,6 +14,9 @@ public class BuildShopUI : MonoBehaviour
         public Button button;
         public TextMeshProUGUI label;
 
+        [Tooltip("건물 썸네일을 표시할 Image입니다. 비워두면 아이콘 표시를 건너뜁니다.")]
+        public Image icon;
+
         public IBuildablePlacementData GetBuildData()
         {
             return data as IBuildablePlacementData;
@@ -33,12 +36,19 @@ public class BuildShopUI : MonoBehaviour
     public string affordableFormat = "[{2}] {0}\n{1} W";
     public string unaffordableFormat = "[{2}] {0}\n{1} W";
 
+    [Header("Icon Tint")]
+    [Tooltip("구매 가능할 때 아이콘 색상입니다.")]
+    public Color iconAffordableTint = Color.white;
+
+    [Tooltip("구매 불가능(Watt 부족)할 때 아이콘 색상입니다.")]
+    public Color iconUnaffordableTint = new Color(1f, 1f, 1f, 0.4f);
+
     [Header("Hotkeys")]
-    [Tooltip("등록 순서대로 1~4 키로 구매·배치를 시작합니다.")]
+    [Tooltip("등록 순서대로 1~9 키로 구매·배치를 시작합니다.")]
     public bool enableHotkeys = true;
 
     [Tooltip("단축키로 사용할 최대 슬롯 수입니다.")]
-    public int maxHotkeySlots = 4;
+    public int maxHotkeySlots = 9;
 
     void Start()
     {
@@ -75,7 +85,8 @@ public class BuildShopUI : MonoBehaviour
 
         for (int i = 0; i < hotkeyCount; i++)
         {
-            if (!Input.GetKeyDown(KeyCode.Alpha1 + i))
+            if (!Input.GetKeyDown(KeyCode.Alpha1 + i) &&
+                !Input.GetKeyDown(KeyCode.Keypad1 + i))
                 continue;
 
             TryBeginPlacementByIndex(i);
@@ -91,10 +102,11 @@ public class BuildShopUI : MonoBehaviour
 
     void BindEntry(ShopEntry entry, int index)
     {
-        if (entry == null || entry.GetBuildData() == null || entry.button == null)
+        if (entry == null || entry.button == null)
             return;
 
-        entry.button.onClick.AddListener(() => TryBeginPlacementByIndex(index));
+        int capturedIndex = index;
+        entry.button.onClick.AddListener(() => TryBeginPlacementByIndex(capturedIndex));
     }
 
     void HandleWattChanged(float currentWatt)
@@ -122,6 +134,14 @@ public class BuildShopUI : MonoBehaviour
 
         bool canAfford = currentWatt >= buildData.WattCost;
 
+        if (entry.icon != null)
+        {
+            Sprite iconSprite = buildData.Icon;
+            entry.icon.sprite = iconSprite;
+            entry.icon.enabled = iconSprite != null;
+            entry.icon.color = canAfford ? iconAffordableTint : iconUnaffordableTint;
+        }
+
         if (entry.label != null)
         {
             if (index < maxHotkeySlots)
@@ -142,7 +162,7 @@ public class BuildShopUI : MonoBehaviour
         }
 
         if (entry.button != null)
-            entry.button.interactable = canAfford;
+            entry.button.interactable = true;
     }
 
     void TryBeginPlacementByIndex(int index)
@@ -154,6 +174,9 @@ public class BuildShopUI : MonoBehaviour
 
         if (entry == null || entry.GetBuildData() == null)
             return;
+
+        if (EventSystem.current != null)
+            EventSystem.current.SetSelectedGameObject(null);
 
         TryBeginPlacement(entry.GetBuildData());
     }

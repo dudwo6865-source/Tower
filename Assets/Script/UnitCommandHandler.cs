@@ -234,7 +234,7 @@ public static class UnitCommandHandler
             Vector2Int footprint = GridMovement.GetFootprintCells(unit);
             Vector3 destination = GridMovement.SnapMoveDestination(hitPoint, footprint);
 
-            if (!GridMovement.TrySetAgentDestination(agent, destination))
+            if (!GridMovement.TrySetAgentDestination(agent, destination, immediate: true))
                 continue;
 
             UnitCombatAI combatAI = unit.GetComponent<UnitCombatAI>();

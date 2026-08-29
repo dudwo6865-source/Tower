@@ -90,6 +90,13 @@ public abstract class CombatAIBase : MonoBehaviour
         damageFocusTarget = false;
     }
 
+    // 스폰 직후 전원 동시 재탐색으로 프레임이 멈추지 않도록 타이머를 흩뿌린다.
+    protected void StaggerStartupTimers()
+    {
+        float normalized = (GetInstanceID() & 0xFFFF) / 65535f;
+        retargetTimer = 0.05f + normalized * Mathf.Max(0.05f, retargetInterval);
+    }
+
     // 다음 프레임에 즉시 표적을 다시 탐색하도록 재탐색 타이머를 리셋한다.
     protected void ResetRetargetTimer()
     {
@@ -192,8 +199,8 @@ public abstract class CombatAIBase : MonoBehaviour
         currentTargetHealth =
             target != null ? target.GetComponent<EntityHealth>() : null;
 
-        UnitCombatAI combatAI = GetComponent<UnitCombatAI>();
-        combatAI?.LogTargetChange(previous, target);
+        MobileCombatAI mobileAI = GetComponent<MobileCombatAI>();
+        mobileAI?.LogTargetChange(previous, target);
 
         OnTargetChanged();
     }

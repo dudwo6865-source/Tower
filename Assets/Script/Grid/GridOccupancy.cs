@@ -69,11 +69,40 @@ public class GridOccupancy : MonoBehaviour
 
     public bool CanOccupy(Vector2Int originCell, Vector2Int footprintCells)
     {
+        return CanOccupy(originCell, footprintCells, float.NaN);
+    }
+
+    public bool CanOccupy(
+        Vector2Int originCell,
+        Vector2Int footprintCells,
+        float preferredY)
+    {
+        return CanOccupy(originCell, footprintCells, preferredY, false);
+    }
+
+    /// <summary>
+    /// skipTerrainChecks는 방금 같은 크기의 건물이 서 있던 칸을 그대로 다시 쓸 때만 켭니다.
+    /// 철거 직후에는 NavMesh carve 구멍이 아직 남아 있어 지형 검사가 실패하기 때문입니다.
+    /// </summary>
+    public bool CanOccupy(
+        Vector2Int originCell,
+        Vector2Int footprintCells,
+        float preferredY,
+        bool skipTerrainChecks)
+    {
         if (MapGrid.Instance == null)
             return true;
 
-        if (!MapGrid.Instance.IsFootprintInBounds(originCell, footprintCells))
+        if (skipTerrainChecks)
+        {
+            if (!MapGrid.Instance.IsFootprintInRect(originCell, footprintCells))
+                return false;
+        }
+        else if (!MapGrid.Instance.IsFootprintInBounds(originCell, footprintCells, preferredY) ||
+                 MapGrid.Instance.IsFootprintOnHill(originCell, footprintCells))
+        {
             return false;
+        }
 
         foreach (Vector2Int cell in IterateFootprint(originCell, footprintCells))
         {
@@ -89,7 +118,27 @@ public class GridOccupancy : MonoBehaviour
         Vector2Int footprintCells,
         GridFootprint owner)
     {
-        if (owner == null || !CanOccupy(originCell, footprintCells))
+        return TryOccupy(originCell, footprintCells, owner, float.NaN);
+    }
+
+    public bool TryOccupy(
+        Vector2Int originCell,
+        Vector2Int footprintCells,
+        GridFootprint owner,
+        float preferredY)
+    {
+        return TryOccupy(originCell, footprintCells, owner, preferredY, false);
+    }
+
+    public bool TryOccupy(
+        Vector2Int originCell,
+        Vector2Int footprintCells,
+        GridFootprint owner,
+        float preferredY,
+        bool skipTerrainChecks)
+    {
+        if (owner == null ||
+            !CanOccupy(originCell, footprintCells, preferredY, skipTerrainChecks))
             return false;
 
         foreach (Vector2Int cell in IterateFootprint(originCell, footprintCells))

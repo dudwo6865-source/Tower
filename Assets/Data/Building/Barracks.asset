@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: Barracks
   m_EditorClassIdentifier: 
   displayName: Barracks
+  icon: {fileID: 0}
   description: 
   prefab: {fileID: 4641212407630778950, guid: f8b2a6d15b22b0849bcce5dd2f988126, type: 3}
   wattCost: 150

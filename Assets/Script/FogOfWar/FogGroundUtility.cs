@@ -72,6 +72,12 @@ public static class FogGroundUtility
 
     static bool TrySampleNavMeshHeight(float worldX, float worldZ, out float surfaceY)
     {
+        if (UnitSpawnUtility.TrySampleTopmostAtXZ(worldX, worldZ, out Vector3 topmost))
+        {
+            surfaceY = topmost.y;
+            return true;
+        }
+
         Vector3 worldPoint = new Vector3(worldX, 0f, worldZ);
         MapGrid grid = MapGrid.Instance;
 

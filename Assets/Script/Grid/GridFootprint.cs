@@ -109,6 +109,15 @@ public class GridFootprint : MonoBehaviour
 
     public bool RegisterAtOriginCell(Vector2Int originCell)
     {
+        return RegisterAtOriginCell(originCell, false);
+    }
+
+    /// <summary>
+    /// skipTerrainChecks는 방금 철거한 같은 크기 건물의 칸을 그대로 이어받을 때만 켭니다.
+    /// NavMesh carve 구멍이 아직 복구되지 않아 지형 검사가 실패하기 때문입니다.
+    /// </summary>
+    public bool RegisterAtOriginCell(Vector2Int originCell, bool skipTerrainChecks)
+    {
         if (!blockCells)
             return true;
 
@@ -117,7 +126,12 @@ public class GridFootprint : MonoBehaviour
         if (MapGrid.Instance == null || GridOccupancy.Instance == null)
             return false;
 
-        if (!GridOccupancy.Instance.TryOccupy(originCell, footprintCells, this))
+        if (!GridOccupancy.Instance.TryOccupy(
+                originCell,
+                footprintCells,
+                this,
+                float.NaN,
+                skipTerrainChecks))
             return false;
 
         IsRegistered = true;
@@ -130,7 +144,8 @@ public class GridFootprint : MonoBehaviour
             Vector3 center =
                 MapGrid.Instance.GetFootprintCenterWorld(originCell, footprintCells);
 
-            center.y = MapGrid.Instance.SampleGroundHeight(center);
+            // 다층 맵: 이미 배치된 높이를 선호해 같은 XZ의 아래층 NavMesh로 내려가지 않게 합니다.
+            center.y = MapGrid.Instance.SampleGroundHeight(center, transform.position.y);
             transform.position = center;
         }
 

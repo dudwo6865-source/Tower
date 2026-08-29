@@ -107,6 +107,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 9972b390e5a3e7f4d8d059312675e55b, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2977381747772112668}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 9972b390e5a3e7f4d8d059312675e55b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 792713123392891263}
   m_SourcePrefab: {fileID: 100100000, guid: 9972b390e5a3e7f4d8d059312675e55b, type: 3}
 --- !u!4 &88262717573816882 stripped
 Transform:
@@ -140,3 +143,19 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 8216682668840135856, guid: 9eeb0b0eddbb4ba4192cc213efe0d324, type: 3}
+--- !u!208 &792713123392891263
+NavMeshObstacle:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 752737573764708488}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Shape: 1
+  m_Extents: {x: 1.5, y: 1.2080001, z: 1.5}
+  m_MoveThreshold: 0.1
+  m_Carve: 0
+  m_CarveOnlyStationary: 1
+  m_Center: {x: -0.5, y: 1.2030001, z: -0.5}
+  m_TimeToStationary: 0.5

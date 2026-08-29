@@ -15,6 +15,8 @@ MonoBehaviour:
   sceneDatas_byGuid:
     keys:
     - ac9ae30d24fc4d447ad7853076a11a42
+    - f67a07864b4119a43b2dcb3521fd46c7
+    - eab5c6cf15a351347b1b21df5be46640
     values:
     - goDatas_byGlobalId:
         keys:
@@ -130,6 +132,20 @@ MonoBehaviour:
         - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-807527895-0
         - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-1137902345-0
         - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-1570779533-0
+        - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-181352774-0
+        - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-1218879861-0
+        - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-1186648982-0
+        - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-365885297-0
+        - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-1012178796-0
+        - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-1923533959-0
+        - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-761162001-0
+        - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-715576825-0
+        - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-1024525494-0
+        - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-1215493024-0
+        - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-1997458409-0
+        - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-642031535-0
+        - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-1256662511-0
+        - globalObjectIdString: GlobalObjectId_V1-2-ac9ae30d24fc4d447ad7853076a11a42-205294706-0
         values:
         - colorIndex: 3
           iconNameOrGuid: 
@@ -576,6 +592,613 @@ MonoBehaviour:
           isIconRecursive: 0
           isColorRecursive: 0
         - colorIndex: 2
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 3
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 2
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 3
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 2
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 3
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 4
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 4
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 4
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 4
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 4
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 4
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 4
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 4
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 4
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+    - goDatas_byGlobalId:
+        keys:
+        - globalObjectIdString: GlobalObjectId_V1-2-f67a07864b4119a43b2dcb3521fd46c7-1852850651-0
+        - globalObjectIdString: GlobalObjectId_V1-2-f67a07864b4119a43b2dcb3521fd46c7-89755412-0
+        - globalObjectIdString: GlobalObjectId_V1-2-f67a07864b4119a43b2dcb3521fd46c7-1307300357-0
+        - globalObjectIdString: GlobalObjectId_V1-2-f67a07864b4119a43b2dcb3521fd46c7-1101356280-0
+        - globalObjectIdString: GlobalObjectId_V1-2-f67a07864b4119a43b2dcb3521fd46c7-1331901436-0
+        - globalObjectIdString: GlobalObjectId_V1-2-f67a07864b4119a43b2dcb3521fd46c7-1866348314-0
+        - globalObjectIdString: GlobalObjectId_V1-2-f67a07864b4119a43b2dcb3521fd46c7-421702669-0
+        - globalObjectIdString: GlobalObjectId_V1-2-f67a07864b4119a43b2dcb3521fd46c7-1685719546-0
+        - globalObjectIdString: GlobalObjectId_V1-2-f67a07864b4119a43b2dcb3521fd46c7-1408481861-0
+        - globalObjectIdString: GlobalObjectId_V1-2-f67a07864b4119a43b2dcb3521fd46c7-1298740858-0
+        - globalObjectIdString: GlobalObjectId_V1-2-f67a07864b4119a43b2dcb3521fd46c7-2117373333-0
+        - globalObjectIdString: GlobalObjectId_V1-2-f67a07864b4119a43b2dcb3521fd46c7-1899539526-0
+        - globalObjectIdString: GlobalObjectId_V1-2-f67a07864b4119a43b2dcb3521fd46c7-287188555-0
+        - globalObjectIdString: GlobalObjectId_V1-2-f67a07864b4119a43b2dcb3521fd46c7-1602162745-0
+        - globalObjectIdString: GlobalObjectId_V1-2-f67a07864b4119a43b2dcb3521fd46c7-279479054-0
+        - globalObjectIdString: GlobalObjectId_V1-2-f67a07864b4119a43b2dcb3521fd46c7-803593520-0
+        - globalObjectIdString: GlobalObjectId_V1-2-f67a07864b4119a43b2dcb3521fd46c7-1555289890-0
+        - globalObjectIdString: GlobalObjectId_V1-2-f67a07864b4119a43b2dcb3521fd46c7-734172693-0
+        - globalObjectIdString: GlobalObjectId_V1-2-f67a07864b4119a43b2dcb3521fd46c7-813754737-0
+        - globalObjectIdString: GlobalObjectId_V1-2-f67a07864b4119a43b2dcb3521fd46c7-600572670-0
+        - globalObjectIdString: GlobalObjectId_V1-2-f67a07864b4119a43b2dcb3521fd46c7-1513791046-0
+        - globalObjectIdString: GlobalObjectId_V1-2-f67a07864b4119a43b2dcb3521fd46c7-1328050192-0
+        - globalObjectIdString: GlobalObjectId_V1-2-f67a07864b4119a43b2dcb3521fd46c7-1905505144-0
+        - globalObjectIdString: GlobalObjectId_V1-2-f67a07864b4119a43b2dcb3521fd46c7-2081822770-0
+        - globalObjectIdString: GlobalObjectId_V1-2-f67a07864b4119a43b2dcb3521fd46c7-956586943-0
+        - globalObjectIdString: GlobalObjectId_V1-2-f67a07864b4119a43b2dcb3521fd46c7-239468855-0
+        - globalObjectIdString: GlobalObjectId_V1-2-f67a07864b4119a43b2dcb3521fd46c7-712695109-0
+        - globalObjectIdString: GlobalObjectId_V1-2-f67a07864b4119a43b2dcb3521fd46c7-205179979-0
+        - globalObjectIdString: GlobalObjectId_V1-2-f67a07864b4119a43b2dcb3521fd46c7-2108967868-0
+        - globalObjectIdString: GlobalObjectId_V1-2-f67a07864b4119a43b2dcb3521fd46c7-675923440-0
+        - globalObjectIdString: GlobalObjectId_V1-2-f67a07864b4119a43b2dcb3521fd46c7-2106620476-0
+        - globalObjectIdString: GlobalObjectId_V1-2-f67a07864b4119a43b2dcb3521fd46c7-184022914-0
+        - globalObjectIdString: GlobalObjectId_V1-2-f67a07864b4119a43b2dcb3521fd46c7-498563619-0
+        - globalObjectIdString: GlobalObjectId_V1-2-f67a07864b4119a43b2dcb3521fd46c7-685766863-0
+        - globalObjectIdString: GlobalObjectId_V1-2-f67a07864b4119a43b2dcb3521fd46c7-1295192934-0
+        values:
+        - colorIndex: 2
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 1
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 2
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 1
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 1
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 1
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 1
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 2
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 1
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 3
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 3
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 3
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 3
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 3
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 3
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 3
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 3
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 3
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 3
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 4
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 4
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 4
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 4
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 4
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 4
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 6
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 6
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 9
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 9
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 9
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 9
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 7
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 7
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 7
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 7
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+    - goDatas_byGlobalId:
+        keys:
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-1852850651-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-89755412-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-1307300357-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-1101356280-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-1331901436-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-1866348314-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-421702669-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-1685719546-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-1408481861-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-1298740858-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-2117373333-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-1899539526-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-287188555-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-1602162745-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-279479054-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-803593520-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-1555289890-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-734172693-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-813754737-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-600572670-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-1513791046-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-1328050192-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-1905505144-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-2081822770-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-956586943-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-239468855-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-712695109-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-205179979-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-2108967868-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-675923440-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-2106620476-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-184022914-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-498563619-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-685766863-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-1295192934-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-123574862-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-1580271303-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-357152160-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-691005256-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-1253425909-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-1380434363-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-1232197389-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-328969852-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-729454389-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-76772437-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-1676256354-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-1384387498-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-1304436211-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-841148963-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-919416286-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-2050787165-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-1123715596-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-583693467-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-838725400-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-1603436617-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-543550680-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-1716927143-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-1253159441-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-851118275-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-144432780-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-2117638676-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-1591268242-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-921413450-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-1186284883-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-408222997-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-1895731323-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-4046295-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-1155642117-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-950766194-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-675289265-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-2027770177-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-724037175-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-208316333-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-1637484517-0
+        values:
+        - colorIndex: 2
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 1
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 2
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 1
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 1
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 1
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 1
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 2
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 1
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 3
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 3
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 3
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 3
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 3
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 3
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 3
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 3
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 3
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 3
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 4
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 4
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 4
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 4
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 4
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 4
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 6
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 6
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 9
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 9
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 9
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 9
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 7
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 7
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 7
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 7
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 9
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 7
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 3
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 9
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 6
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 6
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 6
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 6
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 6
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 8
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 8
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 8
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 8
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 8
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 8
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 8
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 8
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 8
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 8
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 3
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 3
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 7
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 7
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 7
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 7
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 7
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 7
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 7
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 7
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 7
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 4
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 8
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 8
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 8
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 7
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 7
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 7
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 9
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 9
           iconNameOrGuid: 
           isIconRecursive: 0
           isColorRecursive: 0

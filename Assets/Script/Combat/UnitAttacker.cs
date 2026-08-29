@@ -33,6 +33,22 @@ public class UnitAttacker : MonoBehaviour
     [Tooltip("투사체가 발사될 위치 오브젝트입니다. 비워두면 이 오브젝트의 위치에서 발사합니다.")]
     public Transform firePoint;
 
+    [Header("Aim")]
+    [Tooltip("켜면 조준(바라보기)이 끝난 뒤에만 공격합니다.")]
+    public bool requireFacingToAttack = true;
+
+    [Tooltip("목표 방향과 조준 방향의 허용 각도(도)입니다. 이 안이면 조준 완료로 봅니다.")]
+    public float aimAngleTolerance = 8f;
+
+    [Tooltip("조준 기준 트랜스폼입니다. 비워두면 이 오브젝트(유닛) 또는 포탑 AI가 지정한 피벗을 사용합니다.")]
+    public Transform aimTransform;
+
+    [Tooltip("aimTransform forward에 더하는 Yaw 보정(도)입니다. 이동 유닛용입니다. 포탑은 aimAxisLocal을 씁니다.")]
+    public float aimYawOffset;
+
+    [HideInInspector]
+    public Vector3 aimAxisLocal;
+
     [Header("Visuals")]
     [Tooltip("공격 시 머즐 플래시·피격 이펙트를 표시합니다.")]
     public bool spawnVisualEffects = true;
@@ -65,6 +81,9 @@ public class UnitAttacker : MonoBehaviour
     public float AttackRange => attackRange;
     public bool IsReady => cooldownTimer <= 0f;
     public bool HasPendingAttack => pendingAttackActive;
+
+    // 업그레이드 보너스가 반영된 현재 공격력입니다. (UI 표시용)
+    public float EffectiveAttackDamage => GetEffectiveDamage();
 
     void Awake()
     {
@@ -116,16 +135,23 @@ public class UnitAttacker : MonoBehaviour
 
     public bool TryAttack(SelectableEntity target, EntityHealth targetHealth)
     {
+        if (BuildingConstructionGate.IsFeatureLockedOn(this))
+            return false;
+
         if (targetHealth == null || !targetHealth.IsAlive)
             return false;
 
         if (!IsInRange(target))
             return false;
 
+        // 쿨다운을 소모하기 전에 조준 여부를 먼저 검사한다.
+        if (requireFacingToAttack && !IsAimedAt(target))
+            return false;
+
         if (cooldownTimer > 0f)
             return false;
 
-        cooldownTimer = attackCooldown;
+        cooldownTimer = GetEffectiveCooldown();
 
         if (ShouldUseAttackAnimationEvent())
         {
@@ -141,6 +167,40 @@ public class UnitAttacker : MonoBehaviour
 
         ApplyAttackImpact(target, targetHealth);
         return true;
+    }
+
+    // 현재 조준 방향이 대상을 허용 각도 안으로 바라보는지 판정합니다.
+    public bool IsAimedAt(SelectableEntity target)
+    {
+        if (target == null)
+            return false;
+
+        Transform pivot = aimTransform != null ? aimTransform : transform;
+        Vector3 origin = firePoint != null ? firePoint.position : pivot.position;
+        Vector3 toTarget = target.SelectionBounds.center - origin;
+        toTarget.y = 0f;
+
+        if (toTarget.sqrMagnitude < 0.0001f)
+            return true;
+
+        Vector3 aimDir = GetAimWorldDirection(pivot);
+        aimDir.y = 0f;
+        if (aimDir.sqrMagnitude < 0.0001f)
+            return false;
+
+        float angle = Vector3.Angle(aimDir.normalized, toTarget.normalized);
+        return angle <= Mathf.Max(0.1f, aimAngleTolerance);
+    }
+
+    Vector3 GetAimWorldDirection(Transform pivot)
+    {
+        if (aimAxisLocal.sqrMagnitude > 0.0001f)
+            return pivot.TransformDirection(aimAxisLocal);
+
+        Vector3 aimDir = pivot.forward;
+        if (Mathf.Abs(aimYawOffset) > 0.01f)
+            aimDir = Quaternion.Euler(0f, aimYawOffset, 0f) * aimDir;
+        return aimDir;
     }
 
     public void ApplyAttackImpact()
@@ -185,7 +245,7 @@ public class UnitAttacker : MonoBehaviour
                 fireRotation,
                 target,
                 targetHealth,
-                attackDamage,
+                GetEffectiveDamage(),
                 projectileSpeed,
                 projectilePrefab,
                 hitEffectPrefab,
@@ -195,12 +255,13 @@ public class UnitAttacker : MonoBehaviour
         }
         else
         {
-            targetHealth.TakeDamage(attackDamage, selfEntity);
+            targetHealth.TakeDamage(GetEffectiveDamage(), selfEntity);
 
             if (spawnVisualEffects)
             {
                 AttackVisuals.SpawnHitEffect(
                     targetPoint,
+                    targetPoint - firePosition,
                     hitEffectPrefab,
                     hitColor);
             }
@@ -219,6 +280,31 @@ public class UnitAttacker : MonoBehaviour
             unitAnimator.PlayAttack();
 
         PlayAttackSound();
+    }
+
+    // 업그레이드 보너스를 반영한 실제 공격력입니다.
+    float GetEffectiveDamage()
+    {
+        if (UpgradeManager.Instance == null || selfEntity == null)
+            return attackDamage;
+
+        return UpgradeManager.Instance.GetModifiedAttackDamage(
+            selfEntity.entityType,
+            selfEntity.ownerId,
+            attackDamage);
+    }
+
+    // 업그레이드 공격속도 보너스를 반영한 실제 공격 쿨다운입니다.
+    // (공격속도 업그레이드는 유닛만 대상)
+    float GetEffectiveCooldown()
+    {
+        if (UpgradeManager.Instance == null || selfEntity == null)
+            return attackCooldown;
+
+        return UpgradeManager.Instance.GetModifiedAttackCooldown(
+            selfEntity.entityType,
+            selfEntity.ownerId,
+            attackCooldown);
     }
 
     void PlayAttackSound()

@@ -140,17 +140,30 @@ public class Unit : MonoBehaviour
 
     void ApplyCombatAI(UnitData source)
     {
-        UnitCombatAI target = AI;
-        if (target == null)
-            return;
+        UnitCombatAI playerAI = GetComponent<UnitCombatAI>();
+        if (playerAI != null)
+        {
+            playerAI.aggroRange = source.aggroRange;
+            playerAI.buildingDirectChaseRange = source.buildingDirectChaseRange;
+            playerAI.targetPriority = source.targetPriority;
+            playerAI.stoppingDistance = source.stoppingDistance;
+            playerAI.retargetInterval = source.retargetInterval;
+            playerAI.destinationRefreshInterval = source.destinationRefreshInterval;
+            playerAI.facingSpeed = source.facingSpeed;
+        }
 
-        target.aggroRange = source.aggroRange;
-        target.targetPriority = source.targetPriority;
-        target.advanceToEnemyBuildings = source.advanceToEnemyBuildings;
-        target.stoppingDistance = source.stoppingDistance;
-        target.retargetInterval = source.retargetInterval;
-        target.destinationRefreshInterval = source.destinationRefreshInterval;
-        target.facingSpeed = source.facingSpeed;
+        EnemyCombatAI enemyAI = GetComponent<EnemyCombatAI>();
+        if (enemyAI != null)
+        {
+            enemyAI.aggroRange = source.aggroRange;
+            enemyAI.buildingDirectChaseRange = source.buildingDirectChaseRange;
+            enemyAI.targetPriority = source.targetPriority;
+            enemyAI.advanceToEnemyBuildings = source.advanceToEnemyBuildings;
+            enemyAI.stoppingDistance = source.stoppingDistance;
+            enemyAI.retargetInterval = source.retargetInterval;
+            enemyAI.destinationRefreshInterval = source.destinationRefreshInterval;
+            enemyAI.facingSpeed = source.facingSpeed;
+        }
     }
 
     void ApplyHealthBar(UnitData source)

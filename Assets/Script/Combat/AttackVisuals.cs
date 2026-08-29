@@ -24,12 +24,37 @@ public static class AttackVisuals
         GameObject prefab,
         Color fallbackColor)
     {
-        if (CombatEffectSpawner.Spawn(prefab, position, Quaternion.identity) != null)
+        // 방향 정보가 없는 경우(예: 사망 이펙트)는 회전 없이 생성합니다.
+        SpawnHitEffect(position, Vector3.zero, prefab, fallbackColor);
+    }
+
+    public static void SpawnHitEffect(
+        Vector3 position,
+        Vector3 incomingDirection,
+        GameObject prefab,
+        Color fallbackColor)
+    {
+        // 입사각의 반대(= 날아온 쪽)를 바라보게 회전합니다.
+        Quaternion rotation = GetOppositeIncidenceRotation(incomingDirection);
+
+        if (CombatEffectSpawner.Spawn(prefab, position, rotation) != null)
             return;
 
         GameObject hit = CreateSphere("HitEffect", position, 0.3f, fallbackColor);
+        hit.transform.rotation = rotation;
         TempVisual temp = hit.AddComponent<TempVisual>();
         temp.Play(0.2f, 0.3f, 0.9f);
+    }
+
+    // 입사 방향(공격자 -> 피격 지점)의 반대 방향을 forward(+Z)로 하는 회전을 반환합니다.
+    static Quaternion GetOppositeIncidenceRotation(Vector3 incomingDirection)
+    {
+        Vector3 back = -incomingDirection;
+
+        if (back.sqrMagnitude < 0.0001f)
+            return Quaternion.identity;
+
+        return Quaternion.LookRotation(back.normalized, Vector3.up);
     }
 
     public static void SpawnProjectile(
@@ -45,12 +70,26 @@ public static class AttackVisuals
         Color fallbackHitColor,
         SelectableEntity attacker = null)
     {
+        if (ProjectileSimWorld.Spawn(
+                firePosition,
+                rotation,
+                target,
+                targetHealth,
+                damage,
+                speed,
+                prefab,
+                hitEffectPrefab,
+                fallbackProjectileColor,
+                fallbackHitColor,
+                attacker) != null)
+            return;
+
         GameObject projectileObject;
 
         if (prefab != null)
             projectileObject = CombatEffectSpawner.Spawn(prefab, firePosition, rotation);
         else
-            projectileObject = CreateSphere("Projectile", firePosition, 0.25f, fallbackProjectileColor);
+            projectileObject = CreateFallbackProjectile(firePosition, fallbackProjectileColor);
 
         if (projectileObject == null)
             return;
@@ -68,6 +107,11 @@ public static class AttackVisuals
             hitEffectPrefab,
             fallbackHitColor,
             attacker);
+    }
+
+    public static GameObject CreateFallbackProjectile(Vector3 position, Color color)
+    {
+        return CreateSphere("Projectile", position, 0.25f, color);
     }
 
     static GameObject CreateSphere(

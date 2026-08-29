@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bccf90df9d5a6d34084a1989ea65a024, type: 3}
+  m_Name: CliffTileSet 1
+  m_EditorClassIdentifier: 
+  top: {fileID: 2536450700051874940, guid: c06a5b0af34ff544c9e792a4d33057c2, type: 3}
+  ground: {fileID: 2536450700051874940, guid: efb980f826e39a64eb58488a3761d736, type: 3}
+  groundHeightOffset: 0
+  groundYawOffset: 0
+  straight: {fileID: 601861281179985610, guid: 24638a128d491914d8c1516743e5a302, type: 3}
+  outerCorner: {fileID: 2631841845138031280, guid: a81b53819a4684343a3a154c49d7038a, type: 3}
+  innerCorner: {fileID: 2699405105762726840, guid: 14f30b825e3d6044fa3636cbb5b1bec0, type: 3}
+  ramp: {fileID: 0}
+  tileSize: 7.9
+  cliffHeight: 0
+  topHeightOffset: -1.2
+  edgeHeightOffset: -6
+  straightYawOffset: 90
+  outerCornerYawOffset: 0
+  innerCornerYawOffset: 0
+  rampYawOffset: 0

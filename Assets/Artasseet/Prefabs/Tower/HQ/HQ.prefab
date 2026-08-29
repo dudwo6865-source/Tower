@@ -18,6 +18,7 @@ GameObject:
   - component: {fileID: 2238863894075100490}
   - component: {fileID: 8844226611335577990}
   - component: {fileID: 9223372036854775807}
+  - component: {fileID: 1292566576071216317}
   m_Layer: 0
   m_Name: HQ
   m_TagString: Biulding
@@ -34,7 +35,7 @@ Transform:
   m_GameObject: {fileID: 1362446224610192768}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0.2588191, z: 0, w: 0.9659258}
-  m_LocalPosition: {x: 0, y: 0.53, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
   m_Children: []
@@ -68,7 +69,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 5af3a10d130136941ab1319bca28be74, type: 2}
+  - {fileID: 2100000, guid: a49834d8fb083204a8291cd98860b9d0, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -109,7 +110,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 16.4, y: 8.49, z: 16.2}
+  m_Size: {x: 18, y: 8.49, z: 18}
   m_Center: {x: 0, y: 3.97, z: 0}
 --- !u!114 &5951804090492023698
 MonoBehaviour:
@@ -127,7 +128,7 @@ MonoBehaviour:
   ownerId: 1
   entityTypeId: Buliding
   selectionCollider: {fileID: 0}
-  portrait: {fileID: 0}
+  portrait: {fileID: 21300000, guid: 80dfcb4e921057a4e813d1af6a60c3be, type: 3}
   autoSetupHealth: 1
 --- !u!114 &7444597695745637919
 MonoBehaviour:
@@ -156,7 +157,7 @@ NavMeshObstacle:
   m_Enabled: 1
   serializedVersion: 3
   m_Shape: 1
-  m_Extents: {x: 6.8, y: 0.5, z: 5.9500003}
+  m_Extents: {x: 6.8, y: 0.5, z: 6.8}
   m_MoveThreshold: 0.1
   m_Carve: 1
   m_CarveOnlyStationary: 1
@@ -187,11 +188,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 06111e8d5f14f3b46a3c9a5a006c460d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  footprintCells: {x: 8, y: 7}
-  blockCells: 0
+  footprintCells: {x: 8, y: 8}
+  blockCells: 1
   carveNavMesh: 1
-  overrideNavObstacleSize: 0
-  navObstacleSize: {x: 2, y: 2}
   snapTransformOnRegister: 0
 --- !u!114 &9223372036854775807
 MonoBehaviour:
@@ -206,5 +205,27 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ownerId: 1
-  buildRadiusCells: 20
+  buildRadiusCells: 8
   buildZoneHeightOffset: 0.06
+  canPlaceOutsideBuildZones: 0
+--- !u!95 &1292566576071216317
+Animator:
+  serializedVersion: 5
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1362446224610192768}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: c36ce97cd5ac53b45af33831699b225d, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
