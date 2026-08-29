@@ -419,7 +419,7 @@ MonoBehaviour:
   aggroRange: 30
   targetPriority: 3
   retargetInterval: 0.5
-  damageFocusSwitchMargin: 1
+  damageFocusSwitchMargin: 10
   stoppingDistance: 1
   destinationRefreshInterval: 0.2
   destinationMoveThreshold: 1
@@ -427,12 +427,12 @@ MonoBehaviour:
   facingSpeed: 40
   avoidancePriorityMin: 30
   avoidancePriorityMax: 70
-  buildingDirectChaseRange: 0.5
+  buildingDirectChaseRange: 1
   shareAggroWithAllies: 1
   debugCommandLog: 1
   advanceToEnemyBuildings: 1
   shareTargetWithNearbyAllies: 1
-  squadRadius: 50
+  squadRadius: 20
   squadFollowSpread: 3
   squadFollowSpacing: 0
 --- !u!114 &2747854902334814809

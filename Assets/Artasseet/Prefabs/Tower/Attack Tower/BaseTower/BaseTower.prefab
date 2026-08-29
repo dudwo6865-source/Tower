@@ -19,7 +19,7 @@ GameObject:
   - component: {fileID: 7862676528947400863}
   - component: {fileID: 7431266829126842125}
   - component: {fileID: 9085166663070198596}
-  - component: {fileID: 7222556402491717478}
+  - component: {fileID: 5005036169690447732}
   m_Layer: 0
   m_Name: BaseTower
   m_TagString: Biulding
@@ -58,7 +58,7 @@ MonoBehaviour:
   entityType: 1
   ownerId: 1
   entityTypeId: BaseTower
-  selectionCollider: {fileID: 7222556402491717478}
+  selectionCollider: {fileID: 0}
   portrait: {fileID: 21300000, guid: 1b4ab1bcf4a21ff4f9832cbc36b939ef, type: 3}
   autoSetupHealth: 1
 --- !u!114 &2778462411958473515
@@ -239,8 +239,8 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
---- !u!65 &7222556402491717478
-BoxCollider:
+--- !u!136 &5005036169690447732
+CapsuleCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -257,9 +257,11 @@ BoxCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 5, y: 2.58, z: 5}
-  m_Center: {x: 0, y: 2, z: 0}
+  serializedVersion: 2
+  m_Radius: 3.1
+  m_Height: 1
+  m_Direction: 1
+  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &8066572779928077472
 GameObject:
   m_ObjectHideFlags: 0
