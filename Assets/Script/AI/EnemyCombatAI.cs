@@ -68,7 +68,7 @@ public class EnemyCombatAI : MobileCombatAI
         // true가 되어 버려서, 이 스킵이 없으면 매 프레임 follower가 false로 빠지고
         // TickRetarget이 돌아 공격 중에도 다른 표적으로 흔들릴 수 있다.)
         // 표적을 잃거나 사거리를 벗어나야만 다시 리더를 보거나 새로 찾는다.
-        if (HasValidTarget() && attacker.IsInRange(currentTarget))
+        if (IsBusyAttacking())
         {
             UpdateCombat();
             return;
@@ -143,7 +143,18 @@ public class EnemyCombatAI : MobileCombatAI
 
     bool LeaderCanBeFollowed(EnemyCombatAI leader)
     {
-        return IsUsableLeader(leader) && leader.HasValidTarget();
+        // 전투 중인(사거리 안에서 때리고 있는) 유닛은 리더로 못 삼는다.
+        // 안 그러면 이미 자리 잡고 싸우는 중인 유닛의 위치가, 전혀 다른 곳으로
+        // 이동해야 할 다른 유닛의 슬롯 기준점/표적으로 잘못 쓰일 수 있다.
+        return IsUsableLeader(leader) &&
+               leader.HasValidTarget() &&
+               !leader.IsBusyAttacking();
+    }
+
+    /// <summary>사거리 안에서 유효한 표적을 때리고 있는 중인지. Update()의 조기 반환과 같은 조건이다.</summary>
+    bool IsBusyAttacking()
+    {
+        return HasValidTarget() && attacker.IsInRange(currentTarget);
     }
 
     bool HasLocalEnemy()
