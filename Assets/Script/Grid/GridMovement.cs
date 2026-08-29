@@ -161,6 +161,10 @@ public static class GridMovement
         return false;
     }
 
+    /// <summary>
+    /// immediate는 플레이어 명령처럼 반응이 즉시 보여야 하는 경로입니다.
+    /// AI 추격은 프레임 예산을 넘기면 큐에 쌓아 다음 프레임으로 분산합니다.
+    /// </summary>
     public static bool TrySetAgentDestination(
         NavMeshAgent agent,
         Vector3 destination,
@@ -169,7 +173,11 @@ public static class GridMovement
         if (!EnsureAgentOnNavMesh(agent))
             return false;
 
-        return TrySetAgentDestinationImmediate(agent, destination);
+        if (immediate || AiPathBudget.TryAcquireHeavy())
+            return TrySetAgentDestinationImmediate(agent, destination);
+
+        AiPathBudget.EnqueueDestination(agent, destination);
+        return true;
     }
 
     public static bool TrySetAgentDestinationImmediate(

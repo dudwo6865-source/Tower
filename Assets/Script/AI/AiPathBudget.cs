@@ -32,6 +32,12 @@ public static class AiPathBudget
 
     public static bool TryAcquireHeavy()
     {
+        EnsureFrame();
+
+        if (s_HeavyUsed >= MaxHeavyPathRequestsPerFrame)
+            return false;
+
+        s_HeavyUsed++;
         return true;
     }
 

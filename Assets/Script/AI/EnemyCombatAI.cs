@@ -18,12 +18,37 @@ public class EnemyCombatAI : MobileCombatAI
     [Tooltip("이 거리 안의 같은 진영 적 유닛을 한 스쿼드로 봅니다.")]
     public float squadRadius = 12f;
 
+    [Tooltip("팔로워가 리더 기준 좌우로 벌어지는 폭(m)입니다. 0이면 리더 좌표로 몰립니다.")]
+    public float squadFollowSpread = 2.5f;
+
+    [Tooltip("팔로워가 리더 뒤로 물러나는 간격(m)입니다. 부채꼴 대형의 깊이입니다.")]
+    public float squadFollowSpacing = 2f;
+
+    const float SquadClaimInterval = 0.25f;
+
+    // 리더를 빼앗는 데 필요한 거리 우위(m)의 제곱입니다. 2m 마진.
+    const float SquadLeaderSwitchMarginSqr = 4f;
+
     static readonly List<SelectableEntity> squadBuffer = new List<SelectableEntity>(32);
 
     EnemyCombatAI squadLeader;
     int squadClaimFrame = -1;
     float localEnemyCheckTimer;
     bool hasLocalEnemy;
+    float squadClaimCheckTimer;
+    float squadOffsetFactor;
+
+    protected override void Awake()
+    {
+        base.Awake();
+
+        // 인스턴스마다 고정된 좌우 오프셋을 줘서 팔로워가 한 점으로 몰리지 않게 합니다.
+        float normalized = (GetInstanceID() & 0xFFFF) / 65535f;
+        squadOffsetFactor = normalized * 2f - 1f;
+
+        // 스폰 직후 전원이 같은 프레임에 팔로워를 긁지 않도록 흩뿌립니다.
+        squadClaimCheckTimer = normalized * SquadClaimInterval;
+    }
 
     void Update()
     {
@@ -155,6 +180,14 @@ public class EnemyCombatAI : MobileCombatAI
 
         squadLeader = this;
 
+        // 한 번 붙은 팔로워는 IsWithinSquadRange로 계속 유지되므로,
+        // 새로 들어오는 아군만 주기적으로 잡아주면 충분합니다.
+        squadClaimCheckTimer -= Time.deltaTime;
+        if (squadClaimCheckTimer > 0f)
+            return;
+
+        squadClaimCheckTimer = SquadClaimInterval;
+
         if (HasValidTarget())
             ClaimNearbyFollowers();
     }
@@ -190,12 +223,30 @@ public class EnemyCombatAI : MobileCombatAI
                 IsUsableLeader(ai.squadLeader) &&
                 ai.IsWithinSquadRange(ai.squadLeader, keep: true))
             {
-                continue;
+                if (!IsClearlyCloserToTargetThan(ai.squadLeader))
+                    continue;
             }
 
             ai.squadLeader = this;
             ai.squadClaimFrame = Time.frameCount;
         }
+    }
+
+    /// <summary>
+    /// "먼저 Update된 쪽이 리더"는 프레임마다 뒤집혀서 스쿼드가 계속 재편성됩니다.
+    /// 표적에 뚜렷하게 더 가까울 때만 기존 리더를 빼앗아 위치 기반으로 안정화합니다.
+    /// </summary>
+    bool IsClearlyCloserToTargetThan(EnemyCombatAI existingLeader)
+    {
+        if (!HasValidTarget() || existingLeader == null)
+            return false;
+
+        Vector3 targetPosition = currentTarget.transform.position;
+        float existingSqr =
+            (existingLeader.transform.position - targetPosition).sqrMagnitude;
+        float mySqr = (transform.position - targetPosition).sqrMagnitude;
+
+        return existingSqr > mySqr + SquadLeaderSwitchMarginSqr;
     }
 
     void CollectSquadAllies()
@@ -266,6 +317,10 @@ public class EnemyCombatAI : MobileCombatAI
         if (IsDirectBuildingChase)
             return false;
 
+        // 공유 경로로는 빠져나올 수 없는 자리에 끼면 스스로 경로를 잡는다.
+        if (IsPathStuck())
+            return false;
+
         if (!hasLocalEnemy)
             return true;
 
@@ -282,7 +337,13 @@ public class EnemyCombatAI : MobileCombatAI
 
     protected override bool TryFollowSquadFallback()
     {
+        // 리더의 경로를 그대로 따라가면 리더와 같은 좌표로 몰린다.
+        // 경로 계산은 아끼면서, 도착 지점만 인스턴스별로 벌려 놓는다.
+        if (TrySteerToSquadSlot())
+            return true;
+
         if (squadLeader != null &&
+            squadLeader != this &&
             squadLeader.TryGetFollowablePathCorners(out Vector3[] corners))
         {
             AdoptPathCorners(corners);
@@ -291,6 +352,36 @@ public class EnemyCombatAI : MobileCombatAI
         }
 
         return base.TryFollowSquadFallback();
+    }
+
+    /// <summary>
+    /// 리더를 기준으로 표적 반대쪽에 부채꼴로 벌어진 자리를 잡습니다.
+    /// 리더의 현재 위치를 기준점으로 쓰므로 직선 스티어링 거리가 스쿼드 반경 안으로 제한됩니다.
+    /// </summary>
+    bool TrySteerToSquadSlot()
+    {
+        if (squadLeader == null || squadLeader == this || currentTarget == null)
+            return false;
+
+        if (squadFollowSpread <= 0.01f && squadFollowSpacing <= 0.01f)
+            return false;
+
+        Vector3 anchor = squadLeader.transform.position;
+        Vector3 toTarget = currentTarget.transform.position - anchor;
+        toTarget.y = 0f;
+
+        Vector3 forward = toTarget.sqrMagnitude > 0.0001f
+            ? toTarget.normalized
+            : squadLeader.transform.forward;
+
+        Vector3 right = Vector3.Cross(Vector3.up, forward);
+
+        Vector3 slot =
+            anchor
+            + right * (squadOffsetFactor * squadFollowSpread)
+            - forward * (Mathf.Abs(squadOffsetFactor) * squadFollowSpacing);
+
+        return TrySteerToward(slot);
     }
 
     public void SetAdvanceToEnemyBuildings(bool enabled)
@@ -328,6 +419,22 @@ public class EnemyCombatAI : MobileCombatAI
         advanceToEnemyBuildings = true;
         shareTargetWithNearbyAllies = true;
         squadRadius = 12f;
+        squadFollowSpread = 2.5f;
+        squadFollowSpacing = 2f;
         targetPriority = CombatTargetPriority.UnitsFirst;
+    }
+
+    // Debug Command Log를 켜면 팔로워에서 리더로 선을 그어 스쿼드 재편성을 눈으로 확인합니다.
+    void OnDrawGizmos()
+    {
+        if (!debugCommandLog || squadLeader == null || squadLeader == this)
+            return;
+
+        Vector3 from = transform.position + Vector3.up * 0.5f;
+        Vector3 to = squadLeader.transform.position + Vector3.up * 0.5f;
+
+        Gizmos.color = new Color(1f, 0.65f, 0.1f, 0.9f);
+        Gizmos.DrawLine(from, to);
+        Gizmos.DrawSphere(to, 0.2f);
     }
 }

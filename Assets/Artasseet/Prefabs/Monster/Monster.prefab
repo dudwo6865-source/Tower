@@ -419,8 +419,8 @@ MonoBehaviour:
   aggroRange: 30
   targetPriority: 3
   retargetInterval: 0.5
-  damageFocusSwitchMargin: 3
-  stoppingDistance: 2
+  damageFocusSwitchMargin: 1
+  stoppingDistance: 1
   destinationRefreshInterval: 0.2
   destinationMoveThreshold: 1
   pathStuckTimeout: 0.75
@@ -433,6 +433,8 @@ MonoBehaviour:
   advanceToEnemyBuildings: 1
   shareTargetWithNearbyAllies: 1
   squadRadius: 50
+  squadFollowSpread: 3
+  squadFollowSpacing: 0
 --- !u!114 &2747854902334814809
 MonoBehaviour:
   m_ObjectHideFlags: 0

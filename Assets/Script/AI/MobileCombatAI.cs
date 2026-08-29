@@ -64,6 +64,7 @@ public abstract class MobileCombatAI : CombatAIBase
     float directChaseCheckTimer;
     bool cachedUseDirectChase;
     bool issuedDirectChase;
+    bool facedThisFrame;
 
     protected override void Awake()
     {
@@ -73,7 +74,10 @@ public abstract class MobileCombatAI : CombatAIBase
         // NavMesh carve(건물 설치) 때 전원 자동 재경로를 막고,
         // stuck / 표적 이동 / 목적지가 없을 때만 다시 찾는다.
         if (agent != null)
+        {
             agent.autoRepath = false;
+            ApplyManualRotationOwnership();
+        }
     }
 
     protected virtual void Start()
@@ -82,7 +86,10 @@ public abstract class MobileCombatAI : CombatAIBase
         ApplyRandomAvoidancePriority();
 
         if (agent != null)
+        {
             agent.autoRepath = false;
+            ApplyManualRotationOwnership();
+        }
 
         GridMovement.EnsureAgentOnNavMesh(agent);
         StaggerStartupTimers();
@@ -266,7 +273,7 @@ public abstract class MobileCombatAI : CombatAIBase
             pathStuckTimer += Time.deltaTime;
     }
 
-    bool IsPathStuck()
+    protected bool IsPathStuck()
     {
         float timeout = pathStuckTimeout > 0.05f ? pathStuckTimeout : 0.75f;
         return pathStuckTimer >= timeout;
@@ -401,15 +408,47 @@ public abstract class MobileCombatAI : CombatAIBase
 
     void FaceCachedMoveDirection(Vector3 direction)
     {
+        FaceDirection(direction, agent.angularSpeed * Time.deltaTime);
+    }
+
+    /// <summary>
+    /// 회전은 이 스크립트가 전담합니다. NavMeshAgent가 같은 프레임에 rotation을
+    /// 덮어쓰면 조준 방향(UnitAttacker.IsAimedAt)이 흔들려 공격이 나가지 않습니다.
+    /// </summary>
+    void ApplyManualRotationOwnership()
+    {
+        agent.updateRotation = false;
+    }
+
+    /// <summary>
+    /// Agent가 스스로 경로를 따라 걷는 구간에서는 아무도 회전을 시키지 않습니다.
+    /// updateRotation을 끈 대신 여기서 진행 방향을 바라보게 합니다.
+    /// </summary>
+    protected virtual void LateUpdate()
+    {
+        if (!facedThisFrame && agent != null && agent.isOnNavMesh)
+        {
+            Vector3 velocity = agent.velocity;
+            velocity.y = 0f;
+
+            if (velocity.sqrMagnitude >= 0.04f)
+                FaceDirection(velocity, agent.angularSpeed * Time.deltaTime);
+        }
+
+        facedThisFrame = false;
+    }
+
+    void FaceDirection(Vector3 direction, float maxDegreesDelta)
+    {
         if (direction.sqrMagnitude < 0.01f)
             return;
 
-        Quaternion targetRotation = Quaternion.LookRotation(direction);
-        float turn = agent.angularSpeed * Time.deltaTime;
+        facedThisFrame = true;
+
         transform.rotation = Quaternion.RotateTowards(
             transform.rotation,
-            targetRotation,
-            turn);
+            Quaternion.LookRotation(direction),
+            maxDegreesDelta);
     }
 
     void ClearCachedPath()
@@ -651,14 +690,7 @@ public abstract class MobileCombatAI : CombatAIBase
         Vector3 direction = aimPoint - transform.position;
         direction.y = 0f;
 
-        if (direction.sqrMagnitude < 0.01f)
-            return;
-
-        Quaternion targetRotation = Quaternion.LookRotation(direction);
-        transform.rotation = Quaternion.RotateTowards(
-            transform.rotation,
-            targetRotation,
-            facingSpeed * 90f * Time.deltaTime);
+        FaceDirection(direction, facingSpeed * 90f * Time.deltaTime);
     }
 
     protected void ApplyChaseStoppingDistance()
