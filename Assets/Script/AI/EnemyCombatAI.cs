@@ -641,6 +641,18 @@ public class EnemyCombatAI : MobileCombatAI
         base.HandleAttackedBy(attackerEntity);
     }
 
+    public override void JoinAttack(SelectableEntity enemy)
+    {
+        // 근처 아군이 맞아서 소집(RallyNearbyAllies)될 때도 마찬가지로,
+        // 이미 사거리 안에서 유효한 표적을 때리는 중이면 끌려가지 않는다.
+        // 이게 없으면 타워 여러 개가 서로 다른 몬스터를 때릴 때마다 근처
+        // 몬스터 전원이 그때그때 다른 타워로 강제 전환된다.
+        if (HasValidTarget() && attacker.IsInRange(currentTarget))
+            return;
+
+        base.JoinAttack(enemy);
+    }
+
     protected override SelectableEntity FindTarget()
     {
         SelectableEntity inAggro = base.FindTarget();
