@@ -19,9 +19,10 @@ public struct ProjectileSimData
     public byte Expired;
 
     // 화염방사기(관통) 투사체용입니다. 명중해도 사라지지 않고 사거리 끝까지 직진합니다.
+    // 실제 피해는 Projectile의 트리거 콜라이더(OnTriggerEnter)가 처리하며,
+    // 여기서는 이동 방식(추적 → 직진 전환, 사거리 소진)만 관리합니다.
     public byte Piercing;
-    public byte HitApplied;
-    public byte PierceHit;
+    public byte Locked;
     public float TraveledDistance;
     public float MaxTravelDistance;
 }
@@ -89,7 +90,8 @@ public class ProjectileSimWorld : MonoBehaviour
         Color fallbackHitColor,
         SelectableEntity attacker,
         bool piercing = false,
-        float maxTravelDistance = 0f)
+        float maxTravelDistance = 0f,
+        float pierceHitRadius = 0.5f)
     {
         ProjectileSimWorld world = Instance;
 
@@ -110,7 +112,8 @@ public class ProjectileSimWorld : MonoBehaviour
             fallbackHitColor,
             attacker,
             piercing,
-            maxTravelDistance);
+            maxTravelDistance,
+            pierceHitRadius);
 
         world.Register(projectile);
         return projectile;
@@ -254,8 +257,8 @@ public class ProjectileSimWorld : MonoBehaviour
 
             ProjectileSimData sim = data[i];
 
-            // 관통 투사체가 이미 한 번 명중했다면 더는 대상을 쫓지 않고 직진합니다.
-            if (sim.Piercing == 0 || sim.HitApplied == 0)
+            // 관통 투사체가 대상 근처에 도달해 직진 모드로 전환됐다면 더는 쫓지 않습니다.
+            if (sim.Piercing == 0 || sim.Locked == 0)
                 sim.TargetPosition = projectile.GetHomingPoint();
 
             data[i] = sim;
@@ -281,13 +284,6 @@ public class ProjectileSimWorld : MonoBehaviour
 
             ProjectileSimData sim = data[i];
             projectile.ApplySimState(sim);
-
-            if (sim.PierceHit != 0)
-            {
-                projectile.ApplyPierceHit();
-                sim.PierceHit = 0;
-                data[i] = sim;
-            }
 
             if (sim.Impacted != 0)
             {
@@ -368,9 +364,10 @@ public struct ProjectileMoveJob : IJobParallelFor
 
         float step = projectile.Speed * DeltaTime;
 
-        // 화염방사기 관통 투사체: 이미 한 번 명중했다면 마지막 방향으로 직진만 하다가
+        // 화염방사기 관통 투사체: 대상 근처에 도달했다면 마지막 방향으로 직진만 하다가
         // 사거리(MaxTravelDistance)에 도달하면 소멸합니다. 대상을 다시 쫓지 않습니다.
-        if (projectile.Piercing != 0 && projectile.HitApplied != 0)
+        // (실제 피해는 Projectile의 트리거 콜라이더가 처리합니다.)
+        if (projectile.Piercing != 0 && projectile.Locked != 0)
         {
             projectile.Position += projectile.LastMoveDirection * step;
             projectile.TraveledDistance += step;
@@ -405,8 +402,7 @@ public struct ProjectileMoveJob : IJobParallelFor
         {
             if (projectile.Piercing != 0)
             {
-                projectile.PierceHit = 1;
-                projectile.HitApplied = 1;
+                projectile.Locked = 1;
 
                 if (projectile.TraveledDistance >= projectile.MaxTravelDistance)
                     projectile.Expired = 1;

@@ -34,6 +34,10 @@ public class UnitAttacker : MonoBehaviour
     [Tooltip("투사체가 발사될 위치 오브젝트입니다. 비워두면 이 오브젝트의 위치에서 발사합니다.")]
     public Transform firePoint;
 
+    [Header("Flamethrower")]
+    [Tooltip("화염방사기 투사체의 명중 판정 반지름입니다. 이 범위(콜라이더)에 닿은 모든 적이 피해를 입습니다. 투사체 프리팹에 콜라이더가 있으면 그 크기를 그대로 쓰고, 없을 때만 이 값으로 새로 만듭니다. 화염방사기 공격일 때만 사용됩니다.")]
+    public float pierceHitRadius = 0.6f;
+
     [Header("Aim")]
     [Tooltip("켜면 조준(바라보기)이 끝난 뒤에만 공격합니다.")]
     public bool requireFacingToAttack = true;
@@ -302,7 +306,8 @@ public class UnitAttacker : MonoBehaviour
                 hitColor,
                 selfEntity,
                 piercing,
-                attackRange);
+                attackRange,
+                pierceHitRadius);
         }
         else
         {

@@ -70,7 +70,8 @@ public static class AttackVisuals
         Color fallbackHitColor,
         SelectableEntity attacker = null,
         bool piercing = false,
-        float maxTravelDistance = 0f)
+        float maxTravelDistance = 0f,
+        float pierceHitRadius = 0.5f)
     {
         if (ProjectileSimWorld.Spawn(
                 firePosition,
@@ -85,7 +86,8 @@ public static class AttackVisuals
                 fallbackHitColor,
                 attacker,
                 piercing,
-                maxTravelDistance) != null)
+                maxTravelDistance,
+                pierceHitRadius) != null)
             return;
 
         GameObject projectileObject;
@@ -112,7 +114,8 @@ public static class AttackVisuals
             fallbackHitColor,
             attacker,
             piercing,
-            maxTravelDistance);
+            maxTravelDistance,
+            pierceHitRadius);
     }
 
     public static GameObject CreateFallbackProjectile(Vector3 position, Color color)

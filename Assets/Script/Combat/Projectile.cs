@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Unity.Mathematics;
 using UnityEngine;
 
@@ -25,7 +26,12 @@ public class Projectile : MonoBehaviour
     private bool piercing;
     private float maxTravelDistance;
     private float traveledDistance;
-    private bool pierceHitApplied;
+    private bool pierceLocked;
+    private float pierceHitRadius;
+    private float fireHeight;
+    private Collider pierceCollider;
+    private Rigidbody pierceRigidbody;
+    private readonly HashSet<SelectableEntity> pierceHitEntities = new HashSet<SelectableEntity>();
 
     public int Slot { get; private set; } = -1;
     public int PoolKey { get; private set; }
@@ -55,8 +61,8 @@ public class Projectile : MonoBehaviour
 
         float step = speed * Time.deltaTime;
 
-        // 이미 한 번 명중한 관통 투사체는 대상을 더 쫓지 않고 마지막 방향으로 직진합니다.
-        if (piercing && pierceHitApplied)
+        // 이미 대상 근처에 도달한 관통 투사체는 더 쫓지 않고 마지막 방향으로 직진합니다.
+        if (piercing && pierceLocked)
         {
             transform.position += lastMoveDirection * step;
             traveledDistance += step;
@@ -81,8 +87,7 @@ public class Projectile : MonoBehaviour
         {
             if (piercing)
             {
-                ApplyPierceHit();
-                pierceHitApplied = true;
+                pierceLocked = true;
 
                 if (traveledDistance >= maxTravelDistance)
                     ReleaseOrDestroy();
@@ -94,6 +99,37 @@ public class Projectile : MonoBehaviour
         }
     }
 
+    // 화염방사기(관통) 투사체의 콜라이더에 닿은 모든 적에게 피해를 줍니다. (아군·중복 피격 제외)
+    void OnTriggerEnter(Collider other)
+    {
+        if (!piercing)
+            return;
+
+        SelectableEntity entity = other.GetComponentInParent<SelectableEntity>();
+
+        if (entity == null || entity == attacker)
+            return;
+
+        if (attacker != null && entity.ownerId == attacker.ownerId)
+            return;
+
+        if (!pierceHitEntities.Add(entity))
+            return;
+
+        EntityHealth health = entity.CachedHealth;
+
+        if (health == null || !health.IsAlive)
+            return;
+
+        health.TakeDamage(damage, attacker);
+
+        AttackVisuals.SpawnHitEffect(
+            transform.position,
+            lastMoveDirection,
+            hitEffectPrefab,
+            hitFallbackColor);
+    }
+
     public void Initialize(
         SelectableEntity target,
         EntityHealth targetHealth,
@@ -103,7 +139,8 @@ public class Projectile : MonoBehaviour
         Color hitFallbackColor,
         SelectableEntity attacker = null,
         bool piercing = false,
-        float maxTravelDistance = 0f)
+        float maxTravelDistance = 0f,
+        float pierceHitRadius = 0.5f)
     {
         this.target = target;
         this.targetHealth = targetHealth;
@@ -114,9 +151,13 @@ public class Projectile : MonoBehaviour
         this.attacker = attacker;
         this.piercing = piercing;
         this.maxTravelDistance = maxTravelDistance;
+        this.pierceHitRadius = pierceHitRadius;
         traveledDistance = 0f;
-        pierceHitApplied = false;
+        pierceLocked = false;
         lifeTimer = 0f;
+        fireHeight = transform.position.y;
+        pierceHitEntities.Clear();
+        ConfigurePierceCollision(piercing);
 
         lastKnownPosition = GetTargetPoint();
 
@@ -141,8 +182,7 @@ public class Projectile : MonoBehaviour
             Impacted = 0,
             Expired = 0,
             Piercing = (byte)(piercing ? 1 : 0),
-            HitApplied = 0,
-            PierceHit = 0,
+            Locked = 0,
             TraveledDistance = 0f,
             MaxTravelDistance = maxTravelDistance
         };
@@ -174,17 +214,41 @@ public class Projectile : MonoBehaviour
         ReleaseOrDestroy();
     }
 
-    // 화염방사기(관통) 투사체의 명중 처리입니다. 피해와 이펙트만 주고 사라지지 않습니다.
-    public void ApplyPierceHit()
+    // 화염방사기(관통) 투사체에 트리거 콜라이더를 붙이거나 켜고 끕니다.
+    // 콜라이더에 닿는 모든 적에게 OnTriggerEnter로 피해를 줍니다.
+    void ConfigurePierceCollision(bool active)
     {
-        if (targetHealth != null && targetHealth.IsAlive)
-            targetHealth.TakeDamage(damage, attacker);
+        if (!active)
+        {
+            if (pierceCollider != null)
+                pierceCollider.enabled = false;
 
-        AttackVisuals.SpawnHitEffect(
-            transform.position,
-            lastMoveDirection,
-            hitEffectPrefab,
-            hitFallbackColor);
+            return;
+        }
+
+        if (pierceCollider == null)
+        {
+            pierceCollider = GetComponentInChildren<Collider>();
+
+            if (pierceCollider == null)
+            {
+                SphereCollider sphere = gameObject.AddComponent<SphereCollider>();
+                sphere.radius = pierceHitRadius;
+                pierceCollider = sphere;
+            }
+        }
+
+        pierceCollider.isTrigger = true;
+        pierceCollider.enabled = true;
+
+        if (pierceRigidbody == null)
+            pierceRigidbody = GetComponent<Rigidbody>();
+
+        if (pierceRigidbody == null)
+            pierceRigidbody = gameObject.AddComponent<Rigidbody>();
+
+        pierceRigidbody.isKinematic = true;
+        pierceRigidbody.useGravity = false;
     }
 
     void ReleaseOrDestroy()
@@ -207,7 +271,9 @@ public class Projectile : MonoBehaviour
         piercing = false;
         maxTravelDistance = 0f;
         traveledDistance = 0f;
-        pierceHitApplied = false;
+        pierceLocked = false;
+        pierceHitEntities.Clear();
+        ConfigurePierceCollision(false);
         Slot = -1;
     }
 
@@ -245,10 +311,11 @@ public class Projectile : MonoBehaviour
     Vector3 GetTargetPoint()
     {
         if (target != null && (targetHealth == null || targetHealth.IsAlive))
-        {
             lastKnownPosition = target.SelectionBounds.center;
-            return lastKnownPosition;
-        }
+
+        // 화염방사기는 발사 높이를 그대로 유지합니다. 땅으로 파고들거나 위로 솟지 않습니다.
+        if (piercing)
+            lastKnownPosition.y = fireHeight;
 
         return lastKnownPosition;
     }
