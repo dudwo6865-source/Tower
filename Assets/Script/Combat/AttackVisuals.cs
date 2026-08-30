@@ -68,7 +68,9 @@ public static class AttackVisuals
         GameObject hitEffectPrefab,
         Color fallbackProjectileColor,
         Color fallbackHitColor,
-        SelectableEntity attacker = null)
+        SelectableEntity attacker = null,
+        bool piercing = false,
+        float maxTravelDistance = 0f)
     {
         if (ProjectileSimWorld.Spawn(
                 firePosition,
@@ -81,7 +83,9 @@ public static class AttackVisuals
                 hitEffectPrefab,
                 fallbackProjectileColor,
                 fallbackHitColor,
-                attacker) != null)
+                attacker,
+                piercing,
+                maxTravelDistance) != null)
             return;
 
         GameObject projectileObject;
@@ -106,7 +110,9 @@ public static class AttackVisuals
             speed,
             hitEffectPrefab,
             fallbackHitColor,
-            attacker);
+            attacker,
+            piercing,
+            maxTravelDistance);
     }
 
     public static GameObject CreateFallbackProjectile(Vector3 position, Color color)

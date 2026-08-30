@@ -21,6 +21,12 @@ public class Projectile : MonoBehaviour
     private bool visualsCached;
     private float lifeTimer;
 
+    // 화염방사기(관통) 투사체용입니다. 명중해도 사라지지 않고 사거리 끝까지 직진합니다.
+    private bool piercing;
+    private float maxTravelDistance;
+    private float traveledDistance;
+    private bool pierceHitApplied;
+
     public int Slot { get; private set; } = -1;
     public int PoolKey { get; private set; }
 
@@ -43,10 +49,20 @@ public class Projectile : MonoBehaviour
 
         if (lifeTimer >= maxLifeTime)
         {
-            if (ProjectileSimWorld.Instance != null)
-                ProjectileSimWorld.Instance.Release(this);
-            else
-                Destroy(gameObject);
+            ReleaseOrDestroy();
+            return;
+        }
+
+        float step = speed * Time.deltaTime;
+
+        // 이미 한 번 명중한 관통 투사체는 대상을 더 쫓지 않고 마지막 방향으로 직진합니다.
+        if (piercing && pierceHitApplied)
+        {
+            transform.position += lastMoveDirection * step;
+            traveledDistance += step;
+
+            if (traveledDistance >= maxTravelDistance)
+                ReleaseOrDestroy();
 
             return;
         }
@@ -57,13 +73,25 @@ public class Projectile : MonoBehaviour
         if (moveDelta.sqrMagnitude > 0.0001f)
             lastMoveDirection = moveDelta.normalized;
 
-        transform.position = Vector3.MoveTowards(
-            transform.position,
-            destination,
-            speed * Time.deltaTime);
+        Vector3 previousPosition = transform.position;
+        transform.position = Vector3.MoveTowards(transform.position, destination, step);
+        traveledDistance += Vector3.Distance(previousPosition, transform.position);
 
         if ((transform.position - destination).sqrMagnitude <= 0.09f)
-            Impact();
+        {
+            if (piercing)
+            {
+                ApplyPierceHit();
+                pierceHitApplied = true;
+
+                if (traveledDistance >= maxTravelDistance)
+                    ReleaseOrDestroy();
+            }
+            else
+            {
+                Impact();
+            }
+        }
     }
 
     public void Initialize(
@@ -73,7 +101,9 @@ public class Projectile : MonoBehaviour
         float speed,
         GameObject hitEffectPrefab,
         Color hitFallbackColor,
-        SelectableEntity attacker = null)
+        SelectableEntity attacker = null,
+        bool piercing = false,
+        float maxTravelDistance = 0f)
     {
         this.target = target;
         this.targetHealth = targetHealth;
@@ -82,6 +112,10 @@ public class Projectile : MonoBehaviour
         this.hitEffectPrefab = hitEffectPrefab;
         this.hitFallbackColor = hitFallbackColor;
         this.attacker = attacker;
+        this.piercing = piercing;
+        this.maxTravelDistance = maxTravelDistance;
+        traveledDistance = 0f;
+        pierceHitApplied = false;
         lifeTimer = 0f;
 
         lastKnownPosition = GetTargetPoint();
@@ -105,7 +139,12 @@ public class Projectile : MonoBehaviour
             ImpactDistanceSq = impactDistanceSq,
             Active = 1,
             Impacted = 0,
-            Expired = 0
+            Expired = 0,
+            Piercing = (byte)(piercing ? 1 : 0),
+            HitApplied = 0,
+            PierceHit = 0,
+            TraveledDistance = 0f,
+            MaxTravelDistance = maxTravelDistance
         };
     }
 
@@ -132,6 +171,24 @@ public class Projectile : MonoBehaviour
             hitEffectPrefab,
             hitFallbackColor);
 
+        ReleaseOrDestroy();
+    }
+
+    // 화염방사기(관통) 투사체의 명중 처리입니다. 피해와 이펙트만 주고 사라지지 않습니다.
+    public void ApplyPierceHit()
+    {
+        if (targetHealth != null && targetHealth.IsAlive)
+            targetHealth.TakeDamage(damage, attacker);
+
+        AttackVisuals.SpawnHitEffect(
+            transform.position,
+            lastMoveDirection,
+            hitEffectPrefab,
+            hitFallbackColor);
+    }
+
+    void ReleaseOrDestroy()
+    {
         if (ProjectileSimWorld.Instance != null)
             ProjectileSimWorld.Instance.Release(this);
         else
@@ -147,6 +204,10 @@ public class Projectile : MonoBehaviour
         attacker = null;
         hitEffectPrefab = null;
         lifeTimer = 0f;
+        piercing = false;
+        maxTravelDistance = 0f;
+        traveledDistance = 0f;
+        pierceHitApplied = false;
         Slot = -1;
     }
 

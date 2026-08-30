@@ -3,14 +3,15 @@ using UnityEngine;
 public enum AttackType
 {
     Melee,
-    Ranged
+    Ranged,
+    Flamethrower
 }
 
 [DisallowMultipleComponent]
 public class UnitAttacker : MonoBehaviour
 {
     [Header("Attack")]
-    [Tooltip("근접은 즉시 피해(투사체 없음), 원거리는 투사체 발사. 사거리 규칙은 동일합니다.")]
+    [Tooltip("근접은 즉시 피해(투사체 없음), 원거리는 투사체 발사, 화염방사기는 명중해도 사라지지 않고 사거리 끝까지 직진하는 관통 투사체를 발사합니다. 사거리 규칙은 동일합니다.")]
     public AttackType attackType = AttackType.Melee;
 
     [Tooltip("한 번 공격할 때 주는 피해량입니다.")]
@@ -27,7 +28,7 @@ public class UnitAttacker : MonoBehaviour
     public bool useAttackAnimationEvent = true;
 
     [Header("Ranged")]
-    [Tooltip("투사체 속도입니다. 원거리 공격일 때만 사용됩니다.")]
+    [Tooltip("투사체 속도입니다. 원거리·화염방사기 공격일 때만 사용됩니다.")]
     public float projectileSpeed = 25f;
 
     [Tooltip("투사체가 발사될 위치 오브젝트입니다. 비워두면 이 오브젝트의 위치에서 발사합니다.")]
@@ -284,8 +285,10 @@ public class UnitAttacker : MonoBehaviour
         Quaternion fireRotation =
             CombatEffectSpawner.GetFlatLookRotation(firePosition, targetPoint);
 
-        if (attackType == AttackType.Ranged)
+        if (attackType == AttackType.Ranged || attackType == AttackType.Flamethrower)
         {
+            bool piercing = attackType == AttackType.Flamethrower;
+
             AttackVisuals.SpawnProjectile(
                 firePosition,
                 fireRotation,
@@ -297,7 +300,9 @@ public class UnitAttacker : MonoBehaviour
                 hitEffectPrefab,
                 projectileColor,
                 hitColor,
-                selfEntity);
+                selfEntity,
+                piercing,
+                attackRange);
         }
         else
         {

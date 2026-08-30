@@ -17,6 +17,13 @@ public struct ProjectileSimData
     public byte Active;
     public byte Impacted;
     public byte Expired;
+
+    // 화염방사기(관통) 투사체용입니다. 명중해도 사라지지 않고 사거리 끝까지 직진합니다.
+    public byte Piercing;
+    public byte HitApplied;
+    public byte PierceHit;
+    public float TraveledDistance;
+    public float MaxTravelDistance;
 }
 
 [DefaultExecutionOrder(50)]
@@ -80,7 +87,9 @@ public class ProjectileSimWorld : MonoBehaviour
         GameObject hitEffectPrefab,
         Color fallbackProjectileColor,
         Color fallbackHitColor,
-        SelectableEntity attacker)
+        SelectableEntity attacker,
+        bool piercing = false,
+        float maxTravelDistance = 0f)
     {
         ProjectileSimWorld world = Instance;
 
@@ -99,7 +108,9 @@ public class ProjectileSimWorld : MonoBehaviour
             speed,
             hitEffectPrefab,
             fallbackHitColor,
-            attacker);
+            attacker,
+            piercing,
+            maxTravelDistance);
 
         world.Register(projectile);
         return projectile;
@@ -242,7 +253,11 @@ public class ProjectileSimWorld : MonoBehaviour
                 continue;
 
             ProjectileSimData sim = data[i];
-            sim.TargetPosition = projectile.GetHomingPoint();
+
+            // 관통 투사체가 이미 한 번 명중했다면 더는 대상을 쫓지 않고 직진합니다.
+            if (sim.Piercing == 0 || sim.HitApplied == 0)
+                sim.TargetPosition = projectile.GetHomingPoint();
+
             data[i] = sim;
         }
 
@@ -266,6 +281,13 @@ public class ProjectileSimWorld : MonoBehaviour
 
             ProjectileSimData sim = data[i];
             projectile.ApplySimState(sim);
+
+            if (sim.PierceHit != 0)
+            {
+                projectile.ApplyPierceHit();
+                sim.PierceHit = 0;
+                data[i] = sim;
+            }
 
             if (sim.Impacted != 0)
             {
@@ -344,22 +366,56 @@ public struct ProjectileMoveJob : IJobParallelFor
             return;
         }
 
+        float step = projectile.Speed * DeltaTime;
+
+        // 화염방사기 관통 투사체: 이미 한 번 명중했다면 마지막 방향으로 직진만 하다가
+        // 사거리(MaxTravelDistance)에 도달하면 소멸합니다. 대상을 다시 쫓지 않습니다.
+        if (projectile.Piercing != 0 && projectile.HitApplied != 0)
+        {
+            projectile.Position += projectile.LastMoveDirection * step;
+            projectile.TraveledDistance += step;
+
+            if (projectile.TraveledDistance >= projectile.MaxTravelDistance)
+                projectile.Expired = 1;
+
+            Data[index] = projectile;
+            return;
+        }
+
         float3 toTarget = projectile.TargetPosition - projectile.Position;
         float distanceSq = math.lengthsq(toTarget);
 
         if (distanceSq > 0.0001f)
             projectile.LastMoveDirection = math.normalize(toTarget);
 
-        float step = projectile.Speed * DeltaTime;
         float distance = math.sqrt(math.max(distanceSq, 0f));
 
         if (distance <= step)
+        {
+            projectile.TraveledDistance += distance;
             projectile.Position = projectile.TargetPosition;
+        }
         else
+        {
             projectile.Position += projectile.LastMoveDirection * step;
+            projectile.TraveledDistance += step;
+        }
 
         if (math.distancesq(projectile.Position, projectile.TargetPosition) <= projectile.ImpactDistanceSq)
-            projectile.Impacted = 1;
+        {
+            if (projectile.Piercing != 0)
+            {
+                projectile.PierceHit = 1;
+                projectile.HitApplied = 1;
+
+                if (projectile.TraveledDistance >= projectile.MaxTravelDistance)
+                    projectile.Expired = 1;
+            }
+            else
+            {
+                projectile.Impacted = 1;
+            }
+        }
 
         Data[index] = projectile;
     }
