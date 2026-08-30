@@ -105,7 +105,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   attackType: 1
-  attackDamage: 15
+  attackDamage: 20
   attackRange: 20
   attackCooldown: 1
   useAttackAnimationEvent: 1
@@ -119,7 +119,7 @@ MonoBehaviour:
   spawnVisualEffects: 1
   projectileColor: {r: 1, g: 0.85, b: 0.3, a: 1}
   hitColor: {r: 1, g: 0.5, b: 0.2, a: 1}
-  muzzleFlashPrefab: {fileID: 304414178702807373, guid: b9a62cef32ff6da49b88cd5572caba55, type: 3}
+  muzzleFlashPrefab: {fileID: 304414178702807373, guid: dcb22a441d571114e9cfd66094d3ff9f, type: 3}
   hitEffectPrefab: {fileID: 1598268965855006841, guid: 1817cfabe570b924c88af259660671a3, type: 3}
   projectilePrefab: {fileID: 6820024759759233777, guid: 91e780efda7994440a23cebbb9636401, type: 3}
 --- !u!114 &853810235908710514
@@ -138,6 +138,7 @@ MonoBehaviour:
   targetPriority: 0
   retargetInterval: 0.5
   damageFocusSwitchMargin: 2
+  debugCommandLog: 1
   turretPivot: {fileID: 7929785070303197606}
   facingSpeed: 5
   aimYawOffset: 0

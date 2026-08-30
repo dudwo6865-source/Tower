@@ -427,14 +427,16 @@ MonoBehaviour:
   facingSpeed: 40
   avoidancePriorityMin: 30
   avoidancePriorityMax: 70
-  buildingDirectChaseRange: 1
+  buildingDirectChaseRange: 2
   shareAggroWithAllies: 1
-  debugCommandLog: 1
+  debugCommandLog: 0
   advanceToEnemyBuildings: 1
   shareTargetWithNearbyAllies: 1
   squadRadius: 20
   squadFollowSpread: 3
   squadFollowSpacing: 0
+  detourRedirectMultiplier: 2
+  detourCheckInterval: 1
 --- !u!114 &2747854902334814809
 MonoBehaviour:
   m_ObjectHideFlags: 0

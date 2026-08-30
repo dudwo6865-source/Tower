@@ -115,7 +115,7 @@ GameObject:
   m_Component:
   - component: {fileID: 9068115341724477891}
   m_Layer: 0
-  m_Name: ProjackTile
+  m_Name: DobleShot
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

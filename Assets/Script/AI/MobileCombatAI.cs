@@ -39,10 +39,6 @@ public abstract class MobileCombatAI : CombatAIBase
     [Tooltip("켜면 이 유닛이나 같은 오너 건물이 공격받았을 때, 어그로 범위 안의 아군 유닛들이 같은 적을 함께 공격합니다.")]
     public bool shareAggroWithAllies = true;
 
-    [Header("Debug")]
-    [Tooltip("전투 AI 결정을 Console에 출력합니다.")]
-    public bool debugCommandLog;
-
     static readonly List<SelectableEntity> rallyBuffer = new List<SelectableEntity>(32);
 
     protected NavMeshAgent agent;
@@ -874,24 +870,6 @@ public abstract class MobileCombatAI : CombatAIBase
         hasDestination = false;
         destinationTimer = 0f;
         CommandAttackTarget(enemy);
-    }
-
-    public virtual void LogTargetChange(SelectableEntity previous, SelectableEntity next)
-    {
-        if (!debugCommandLog || previous == next)
-            return;
-
-        UnitCommandDebugLog.Log(
-            this,
-            $"타겟 변경 {DescribeTarget(previous)} -> {DescribeTarget(next)}");
-    }
-
-    protected static string DescribeTarget(SelectableEntity target)
-    {
-        if (target == null)
-            return "없음";
-
-        return $"{target.name}({target.entityType})";
     }
 
     protected static string FormatVector(Vector3 value)

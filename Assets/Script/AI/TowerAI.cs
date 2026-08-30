@@ -67,6 +67,52 @@ public class TowerAI : CombatAIBase
         // 삼지 않고, 항상 일반 표적 탐색(TickRetarget/우선순위)으로만 고른다.
     }
 
+    protected override void LogTargetChange(
+        SelectableEntity previous,
+        SelectableEntity next)
+    {
+        if (!debugCommandLog || previous == next)
+            return;
+
+        UnitCommandDebugLog.Log(
+            this,
+            $"타겟 변경({DescribeDropReason(previous)}) " +
+            $"{DescribeTarget(previous)} -> {DescribeTargetGap(next)}");
+    }
+
+    // 타워는 사거리 안의 유효한 표적을 쏘는 동안 재탐색하지 않는다.
+    // 그래서 표적이 바뀌었다는 건 이전 표적을 놓쳤다는 뜻이고, 그 이유를 같이 남긴다.
+    string DescribeDropReason(SelectableEntity previous)
+    {
+        if (ReferenceEquals(previous, null))
+            return "신규";
+
+        // Unity의 == 오버로드라 파괴된 오브젝트도 여기서 걸린다.
+        if (previous == null)
+            return "소멸";
+
+        EntityHealth health = previous.CachedHealth;
+
+        if (health == null || !health.IsAlive)
+            return "처치";
+
+        if (attacker == null)
+            return "재탐색";
+
+        return attacker.IsInRange(previous)
+            ? $"우선순위({targetPriority})"
+            : $"사거리 이탈 {attacker.GetRangeGap(previous):0.0}";
+    }
+
+    string DescribeTargetGap(SelectableEntity target)
+    {
+        if (target == null || attacker == null)
+            return DescribeTarget(target);
+
+        return $"{DescribeTarget(target)} " +
+               $"간격 {attacker.GetRangeGap(target):0.0}/{attacker.AttackRange:0.0}";
+    }
+
     Vector3 ResolveBarrelLocal()
     {
         Vector3 local = Vector3.forward;
@@ -92,23 +138,14 @@ public class TowerAI : CombatAIBase
         return local.sqrMagnitude > 0.0001f ? local.normalized : Vector3.forward;
     }
 
+    // 조준각 계산은 UnitAttacker가 전담합니다. 여기서 따로 재면 발사 판정(IsAimedAt)과
+    // 어긋나서, 다 돌았는데도 공격이 안 나가는 상황이 생깁니다.
     void FaceTarget()
     {
-        Vector3 origin = attacker != null && attacker.firePoint != null
-            ? attacker.firePoint.position
-            : turretPivot.position;
-        Vector3 toTarget = currentTarget.SelectionBounds.center - origin;
-        toTarget.y = 0f;
-
-        if (toTarget.sqrMagnitude < 0.01f)
+        if (attacker == null ||
+            !attacker.TryGetAimYawDelta(turretPivot, currentTarget, out float deltaYaw))
             return;
 
-        Vector3 barrelWorld = turretPivot.TransformDirection(barrelLocal);
-        barrelWorld.y = 0f;
-        if (barrelWorld.sqrMagnitude < 0.0001f)
-            return;
-
-        float deltaYaw = Vector3.SignedAngle(barrelWorld, toTarget, Vector3.up);
         ApplyYaw(deltaYaw);
     }
 

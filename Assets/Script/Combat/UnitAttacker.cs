@@ -116,6 +116,12 @@ public class UnitAttacker : MonoBehaviour
         return GetHorizontalBoundsGap(target) <= attackRange;
     }
 
+    // 디버그 표시용입니다. 사거리 판정에 쓰는 것과 같은 외곽 간격을 돌려줍니다.
+    public float GetRangeGap(SelectableEntity target)
+    {
+        return target != null ? GetHorizontalBoundsGap(target) : float.PositiveInfinity;
+    }
+
     float GetHorizontalBoundsGap(SelectableEntity target)
     {
         Bounds targetBounds = target.SelectionBounds;
@@ -176,20 +182,60 @@ public class UnitAttacker : MonoBehaviour
             return false;
 
         Transform pivot = aimTransform != null ? aimTransform : transform;
-        Vector3 origin = firePoint != null ? firePoint.position : pivot.position;
-        Vector3 toTarget = target.SelectionBounds.center - origin;
-        toTarget.y = 0f;
 
-        if (toTarget.sqrMagnitude < 0.0001f)
+        // 각도를 잴 수 없는 퇴화 상황(대상이 피벗과 같은 자리)에서는 통과시킵니다.
+        // 여기서 막으면 공격이 영영 안 나가는 쪽으로 실패합니다.
+        if (!TryGetAimYawDelta(pivot, target, out float yawDelta))
             return true;
+
+        return Mathf.Abs(yawDelta) <= Mathf.Max(0.1f, aimAngleTolerance);
+    }
+
+    /// <summary>
+    /// 포신 선이 대상을 지나려면 pivot이 Y축으로 얼마나 더 돌아야 하는지(도)를 구합니다.
+    /// 회전이 일어나는 축은 pivot이므로 각도도 pivot 기준으로 재야 합니다.
+    /// firePoint를 원점으로 잡으면 포탑이 돌 때 firePoint도 pivot 주위를 함께 돌아,
+    /// 대상이 가까울수록 오차가 증폭되고(이득 r/(r-d)) 좌우로 떨리게 됩니다.
+    /// </summary>
+    public bool TryGetAimYawDelta(Transform pivot, SelectableEntity target, out float yawDelta)
+    {
+        yawDelta = 0f;
+
+        if (pivot == null || target == null)
+            return false;
+
+        Vector3 toTarget = target.SelectionBounds.center - pivot.position;
+        toTarget.y = 0f;
 
         Vector3 aimDir = GetAimWorldDirection(pivot);
         aimDir.y = 0f;
-        if (aimDir.sqrMagnitude < 0.0001f)
+
+        if (toTarget.sqrMagnitude < 0.0001f || aimDir.sqrMagnitude < 0.0001f)
             return false;
 
-        float angle = Vector3.Angle(aimDir.normalized, toTarget.normalized);
-        return angle <= Mathf.Max(0.1f, aimAngleTolerance);
+        aimDir.Normalize();
+
+        // 포신 축에서 옆으로 벗어난 firePoint는 아무리 돌려도 그 어긋남(시차)이 남습니다.
+        // 그만큼 미리 틀어 두면 포신 선이 대상을 정확히 지납니다.
+        // firePoint가 포신 축 위에 있으면 0이 되어, 포신 길이는 결과에 영향을 주지 않습니다.
+        float lateral = GetFirePointLateralOffset(pivot, aimDir);
+        float distance = toTarget.magnitude;
+        float parallax = Mathf.Asin(Mathf.Clamp(lateral / distance, -1f, 1f)) * Mathf.Rad2Deg;
+
+        yawDelta = Vector3.SignedAngle(aimDir, toTarget, Vector3.up) - parallax;
+        return true;
+    }
+
+    // 조준 방향 기준으로 firePoint가 오른쪽으로 얼마나 치우쳐 있는지입니다.
+    float GetFirePointLateralOffset(Transform pivot, Vector3 aimDir)
+    {
+        if (firePoint == null)
+            return 0f;
+
+        Vector3 offset = firePoint.position - pivot.position;
+        offset.y = 0f;
+
+        return Vector3.Dot(Vector3.Cross(Vector3.up, aimDir), offset);
     }
 
     Vector3 GetAimWorldDirection(Transform pivot)

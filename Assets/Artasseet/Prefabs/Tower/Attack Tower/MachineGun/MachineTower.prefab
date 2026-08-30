@@ -138,6 +138,7 @@ MonoBehaviour:
   targetPriority: 0
   retargetInterval: 0.5
   damageFocusSwitchMargin: 2
+  debugCommandLog: 0
   turretPivot: {fileID: 4681029919457907283}
   facingSpeed: 5
   aimYawOffset: 0

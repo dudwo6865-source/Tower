@@ -74,7 +74,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   attackType: 1
-  attackDamage: 1
+  attackDamage: 10
   attackRange: 20
   attackCooldown: 1
   useAttackAnimationEvent: 1
@@ -107,6 +107,7 @@ MonoBehaviour:
   targetPriority: 0
   retargetInterval: 0.5
   damageFocusSwitchMargin: 2
+  debugCommandLog: 0
   turretPivot: {fileID: 4142917584617082630}
   facingSpeed: 5
   aimYawOffset: 0
