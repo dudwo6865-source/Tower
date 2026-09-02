@@ -13,6 +13,7 @@
 #undef LitPassFragment
 
 #include "BaseShaderPackedMask.hlsl"
+#include "BaseShaderAlbedoRecolor.hlsl"
 #include "BaseShaderDissolve.hlsl"
 
 void LitPassFragment(
@@ -29,6 +30,7 @@ void LitPassFragment(
     SurfaceData surfaceData;
     InitializeStandardLitSurfaceData(input.uv, surfaceData);
     BaseShader_ApplyPackedMask(input.uv, surfaceData);
+    BaseShader_ApplyAlbedoRecolor(surfaceData);
 
 #if defined(_DISSOLVE_ON)
     half3 dissolveViewDirWS = GetWorldSpaceNormalizeViewDir(input.positionWS);

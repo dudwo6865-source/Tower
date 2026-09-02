@@ -12,6 +12,7 @@ public class TankBaseShaderGUI : ShaderGUI
     static readonly GUIContent OutlineLabel = new GUIContent("Outline");
     static readonly GUIContent DissolveLabel = new GUIContent("Dissolve");
     static readonly GUIContent SurfaceLabel = new GUIContent("Surface");
+    static readonly GUIContent AlbedoRecolorLabel = new GUIContent("Albedo Recolor");
     static readonly GUIContent NormalLabel = new GUIContent("Normal Map");
     static readonly GUIContent EmissionLabel = new GUIContent("Emission");
     static readonly GUIContent AdvancedLabel = new GUIContent("Advanced");
@@ -23,6 +24,7 @@ public class TankBaseShaderGUI : ShaderGUI
     };
 
     static bool showDissolve = true;
+    static bool showAlbedoRecolor = false;
     static bool showNormal = false;
     static bool showEmission = false;
     static bool showAdvanced = false;
@@ -50,6 +52,12 @@ public class TankBaseShaderGUI : ShaderGUI
 
         EditorGUILayout.Space(6f);
         DrawSurface(materialEditor, p);
+
+        EditorGUILayout.Space(6f);
+        showAlbedoRecolor = EditorGUILayout.BeginFoldoutHeaderGroup(showAlbedoRecolor, AlbedoRecolorLabel);
+        if (showAlbedoRecolor)
+            DrawAlbedoRecolor(materialEditor, material, p);
+        EditorGUILayout.EndFoldoutHeaderGroup();
 
         EditorGUILayout.Space(8f);
         showNormal = EditorGUILayout.BeginFoldoutHeaderGroup(showNormal, NormalLabel);
@@ -93,6 +101,11 @@ public class TankBaseShaderGUI : ShaderGUI
         public MaterialProperty dissolveFresnelColor;
         public MaterialProperty baseMap;
         public MaterialProperty baseColor;
+        public MaterialProperty albedoRecolorEnabled;
+        public MaterialProperty albedoKeyColor;
+        public MaterialProperty albedoRecolorColor;
+        public MaterialProperty albedoRecolorRange;
+        public MaterialProperty albedoRecolorSmoothness;
         public MaterialProperty smoothness;
         public MaterialProperty metallic;
         public MaterialProperty metallicMap;
@@ -128,6 +141,11 @@ public class TankBaseShaderGUI : ShaderGUI
             dissolveFresnelColor = FindProperty("_DissolveFresnelColor", properties, false),
             baseMap = FindProperty("_BaseMap", properties, false),
             baseColor = FindProperty("_BaseColor", properties, false),
+            albedoRecolorEnabled = FindProperty("_AlbedoRecolorEnabled", properties, false),
+            albedoKeyColor = FindProperty("_AlbedoKeyColor", properties, false),
+            albedoRecolorColor = FindProperty("_AlbedoRecolorColor", properties, false),
+            albedoRecolorRange = FindProperty("_AlbedoRecolorRange", properties, false),
+            albedoRecolorSmoothness = FindProperty("_AlbedoRecolorSmoothness", properties, false),
             smoothness = FindProperty("_Smoothness", properties, false),
             metallic = FindProperty("_Metallic", properties, false),
             metallicMap = FindProperty("_MetallicGlossMap", properties, false),
@@ -267,6 +285,49 @@ public class TankBaseShaderGUI : ShaderGUI
         }
     }
 
+    static void DrawAlbedoRecolor(MaterialEditor editor, Material material, Props p)
+    {
+        bool enabled = material.IsKeywordEnabled("_ALBEDO_RECOLOR");
+        EditorGUI.BeginChangeCheck();
+        enabled = EditorGUILayout.Toggle(
+            new GUIContent("Enable Albedo Recolor", "알베도맵에서 Key Color와 색상(Hue)이 비슷한 영역을 Recolor Color로 바꿔칠합니다."),
+            enabled);
+        if (EditorGUI.EndChangeCheck())
+        {
+            SetKeyword(material, "_ALBEDO_RECOLOR", enabled);
+            if (p.albedoRecolorEnabled != null)
+                p.albedoRecolorEnabled.floatValue = enabled ? 1f : 0f;
+        }
+
+        using (new EditorGUI.DisabledScope(!enabled))
+        {
+            if (p.albedoKeyColor != null)
+            {
+                editor.ShaderProperty(
+                    p.albedoKeyColor,
+                    new GUIContent("Key Color", "알베도맵에서 바꾸고 싶은 원본 색(예: 파란색)을 지정하세요."));
+            }
+            if (p.albedoRecolorColor != null)
+            {
+                editor.ShaderProperty(
+                    p.albedoRecolorColor,
+                    new GUIContent("Recolor Color", "Key Color 영역을 대체할 색입니다."));
+            }
+            if (p.albedoRecolorRange != null)
+            {
+                editor.ShaderProperty(
+                    p.albedoRecolorRange,
+                    new GUIContent("Range", "Key Color와 색상이 얼마나 비슷해야 바뀌는지(허용 범위)."));
+            }
+            if (p.albedoRecolorSmoothness != null)
+            {
+                editor.ShaderProperty(
+                    p.albedoRecolorSmoothness,
+                    new GUIContent("Edge Softness", "바뀌는 영역 경계를 부드럽게 만듭니다."));
+            }
+        }
+    }
+
     static void DrawNormal(MaterialEditor editor, Material material, Props p)
     {
         if (p.bumpMap != null && p.bumpScale != null)
@@ -332,6 +393,9 @@ public class TankBaseShaderGUI : ShaderGUI
     {
         if (material.HasProperty("_DissolveEnabled"))
             SetKeyword(material, "_DISSOLVE_ON", material.GetFloat("_DissolveEnabled") > 0.5f);
+
+        if (material.HasProperty("_AlbedoRecolorEnabled"))
+            SetKeyword(material, "_ALBEDO_RECOLOR", material.GetFloat("_AlbedoRecolorEnabled") > 0.5f);
 
         SetKeyword(material, "_NORMALMAP", material.GetTexture("_BumpMap") != null);
         SetKeyword(material, "_PARALLAXMAP", false);

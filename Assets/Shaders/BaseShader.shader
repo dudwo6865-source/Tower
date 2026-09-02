@@ -24,6 +24,14 @@ Shader "Base Shader"
         [MainTexture] _BaseMap("Albedo", 2D) = "white" {}
         [MainColor] _BaseColor("Color", Color) = (1,1,1,1)
 
+        // ===== Albedo Recolor (알베도맵의 특정 색상 영역을 다른 색으로 교체) =====
+        [Header(Albedo Recolor)]
+        [Toggle(_ALBEDO_RECOLOR)] _AlbedoRecolorEnabled("Enable Albedo Recolor", Float) = 0
+        _AlbedoKeyColor("Key Color (바꿀 원본 색)", Color) = (0.1, 0.35, 1.0, 1)
+        _AlbedoRecolorColor("Recolor Color (교체할 색)", Color) = (1.0, 0.0, 0.0, 1)
+        _AlbedoRecolorRange("Range", Range(0.0, 0.5)) = 0.08
+        _AlbedoRecolorSmoothness("Edge Softness", Range(0.0, 0.5)) = 0.05
+
         _Smoothness("Smoothness", Range(0.0, 1.0)) = 0.5
         _Metallic("Metallic", Range(0.0, 1.0)) = 0.0
         [HideInInspector] _MetallicGlossMap("Mask Map", 2D) = "white" {}
@@ -210,6 +218,7 @@ Shader "Base Shader"
             #pragma shader_feature_local_fragment _ENVIRONMENTREFLECTIONS_OFF
             #pragma shader_feature_local_fragment _SPECULAR_SETUP
             #pragma shader_feature_local _DISSOLVE_ON
+            #pragma shader_feature_local_fragment _ALBEDO_RECOLOR
 
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
@@ -308,6 +317,7 @@ Shader "Base Shader"
             #pragma shader_feature_local_fragment _ENVIRONMENTREFLECTIONS_OFF
             #pragma shader_feature_local_fragment _SPECULAR_SETUP
             #pragma shader_feature_local _RECEIVE_SHADOWS_OFF
+            #pragma shader_feature_local_fragment _ALBEDO_RECOLOR
 
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile_fragment _ _REFLECTION_PROBE_BLENDING
@@ -422,6 +432,7 @@ Shader "Base Shader"
             #pragma shader_feature_local_fragment _ALPHATEST_ON
             #pragma shader_feature_local_fragment _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
             #pragma shader_feature_local_fragment _SPECGLOSSMAP
+            #pragma shader_feature_local_fragment _ALBEDO_RECOLOR
             #pragma shader_feature EDITOR_VISUALIZATION
 
             #include "Packages/com.unity.render-pipelines.universal/Shaders/LitInput.hlsl"
