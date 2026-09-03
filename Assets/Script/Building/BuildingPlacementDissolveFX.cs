@@ -3,11 +3,12 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// 건물 설치 시 Base Shader의 Dissolve 프로퍼티(_DissolveHeight)를
-/// MaterialPropertyBlock으로 애니메이션해, 아래에서 위로 차오르며 나타나는
-/// 연출을 재생합니다. 머티리얼 인스턴스를 만들지 않으므로(배칭 유지),
-/// 프리팹마다 Animator나 별도 머티리얼 없이 모든 건물에 재사용 가능합니다.
-/// 목표 높이/엣지 컬러는 각 Base.mat에 이미 세팅된 값을 그대로 사용합니다.
+/// 건물 설치 시 Base Shader의 Dissolve 프로퍼티(_DissolveHeight)와 아웃라인 컬러를
+/// MaterialPropertyBlock으로 애니메이션해, 아래에서 위로 차오르며 나타나고
+/// 아웃라인이 디졸브 엣지 색에서 원래 색(검정)으로 식어가는 연출을 재생합니다.
+/// 머티리얼 인스턴스를 만들지 않으므로(배칭 유지), 프리팹마다 Animator나
+/// 별도 머티리얼 없이 모든 건물에 재사용 가능합니다. 목표 높이/컬러는 각
+/// Base.mat에 이미 세팅된 값을 그대로 사용합니다.
 /// </summary>
 [DisallowMultipleComponent]
 public class BuildingPlacementDissolveFX : MonoBehaviour
@@ -21,12 +22,17 @@ public class BuildingPlacementDissolveFX : MonoBehaviour
     public AnimationCurve easing = AnimationCurve.EaseInOut(0, 0, 1, 1);
 
     static readonly int DissolveHeightId = Shader.PropertyToID("_DissolveHeight");
+    static readonly int DissolveEdgeColorId = Shader.PropertyToID("_DissolveEdgeColor");
+    static readonly int OutlineColorId = Shader.PropertyToID("_OutlineColor");
 
     struct RendererSweep
     {
         public Renderer renderer;
         public float startHeight;
         public float endHeight;
+        public bool animateOutline;
+        public Color outlineStartColor;
+        public Color outlineEndColor;
     }
 
     readonly List<RendererSweep> sweeps = new List<RendererSweep>();
@@ -54,11 +60,17 @@ public class BuildingPlacementDissolveFX : MonoBehaviour
             if (!renderer.sharedMaterial.HasProperty(DissolveHeightId))
                 continue;
 
+            bool animateOutline = renderer.sharedMaterial.HasProperty(DissolveEdgeColorId)
+                && renderer.sharedMaterial.HasProperty(OutlineColorId);
+
             sweeps.Add(new RendererSweep
             {
                 renderer = renderer,
                 startHeight = meshFilter.sharedMesh.bounds.min.y - startMargin,
-                endHeight = renderer.sharedMaterial.GetFloat(DissolveHeightId)
+                endHeight = renderer.sharedMaterial.GetFloat(DissolveHeightId),
+                animateOutline = animateOutline,
+                outlineStartColor = animateOutline ? renderer.sharedMaterial.GetColor(DissolveEdgeColorId) : default,
+                outlineEndColor = animateOutline ? renderer.sharedMaterial.GetColor(OutlineColorId) : default
             });
         }
 
@@ -110,6 +122,10 @@ public class BuildingPlacementDissolveFX : MonoBehaviour
 
             sweep.renderer.GetPropertyBlock(propertyBlock);
             propertyBlock.SetFloat(DissolveHeightId, Mathf.Lerp(sweep.startHeight, sweep.endHeight, t));
+
+            if (sweep.animateOutline)
+                propertyBlock.SetColor(OutlineColorId, Color.Lerp(sweep.outlineStartColor, sweep.outlineEndColor, t));
+
             sweep.renderer.SetPropertyBlock(propertyBlock);
         }
     }
