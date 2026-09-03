@@ -65,7 +65,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BaseMap:
-        m_Texture: {fileID: 2800000, guid: 329150b02e8eee243b056982dace71b1, type: 3}
+        m_Texture: {fileID: 2800000, guid: 868e009a765330d4795c7f40ac6613ba, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BentNormalMap:
@@ -77,7 +77,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BumpMap:
-        m_Texture: {fileID: 2800000, guid: caa1d41dca06e5d4b8911d313da12868, type: 3}
+        m_Texture: {fileID: 2800000, guid: 1a6b6e9e602d8424ebf8ba3ce5b007cf, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _ClippingMask:
@@ -149,7 +149,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MetallicGlossMap:
-        m_Texture: {fileID: 2800000, guid: 55ef0ee61e38eae40acd5b8828c4b757, type: 3}
+        m_Texture: {fileID: 2800000, guid: 653c9f5946542cc478c33d11035d2747, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _NormalMap:
@@ -264,6 +264,9 @@ Material:
     - _AddPrecomputedVelocity: 0
     - _Add_Antipodean_RimLight: 0
     - _AlbedoAffectEmissive: 0
+    - _AlbedoRecolorEnabled: 0
+    - _AlbedoRecolorRange: 0.08
+    - _AlbedoRecolorSmoothness: 0.05
     - _AlphaClip: 0
     - _AlphaCutoff: 0.5
     - _AlphaCutoffEnable: 0
@@ -292,7 +295,7 @@ Material:
     - _BlendModePreserveSpecular: 1
     - _BlurLevelMatcap: 0
     - _BlurLevelSGM: 0
-    - _BumpScale: 0.1
+    - _BumpScale: 3
     - _BumpScaleMatcap: 1
     - _CameraRolling_Stabilizer: 0
     - _ClearCoatMask: 0
@@ -458,7 +461,7 @@ Material:
     - _SecondShadeVisible: 1
     - _Set_SystemShadowsToBase: 1
     - _ShadeColor_Step: 0.469
-    - _Smoothness: 0.849
+    - _Smoothness: 0.5
     - _SmoothnessRemapMax: 1
     - _SmoothnessRemapMin: 0
     - _SmoothnessTextureChannel: 0
@@ -548,6 +551,8 @@ Material:
     m_Colors:
     - _1st_ShadeColor: {r: 0.6698113, g: 0.6698113, b: 0.6698113, a: 1}
     - _2nd_ShadeColor: {r: 0.4433962, g: 0.4433962, b: 0.4433962, a: 1}
+    - _AlbedoKeyColor: {r: 0.09999997, g: 0.34999996, b: 1, a: 1}
+    - _AlbedoRecolorColor: {r: 1, g: 0, b: 0, a: 1}
     - _AngelRingMaskColor: {r: 0, g: 1, b: 0, a: 1}
     - _AngelRing_Color: {r: 1, g: 1, b: 1, a: 1}
     - _Ap_RimLightColor: {r: 1, g: 1, b: 1, a: 1}

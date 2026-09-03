@@ -20,6 +20,7 @@ GameObject:
   - component: {fileID: 7431266829126842125}
   - component: {fileID: 9085166663070198596}
   - component: {fileID: 7222556402491717478}
+  - component: {fileID: 3433100028922866364}
   m_Layer: 0
   m_Name: HeavyCannonTower
   m_TagString: Biulding
@@ -220,6 +221,7 @@ MonoBehaviour:
   featureLockDuration: 2
   animator: {fileID: 9085166663070198596}
   placeAnimationTrigger: Place
+  dissolveFX: {fileID: 0}
 --- !u!95 &9085166663070198596
 Animator:
   serializedVersion: 5
@@ -262,6 +264,44 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 5, y: 2.58, z: 5}
   m_Center: {x: 0, y: 2, z: 0}
+--- !u!114 &3433100028922866364
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6894192069859626715}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 62dcbb6dbc19e3b4eb97433bd9090c0f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  duration: 2.5
+  startMargin: 0.25
+  easing:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
 --- !u!1001 &4925014463516700533
 PrefabInstance:
   m_ObjectHideFlags: 0
