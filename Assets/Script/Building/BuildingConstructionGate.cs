@@ -21,6 +21,10 @@ public class BuildingConstructionGate : MonoBehaviour
     [Tooltip("설치 시 재생할 Animator 트리거 이름입니다. 비우면 애니는 생략합니다.")]
     public string placeAnimationTrigger = "Place";
 
+    [Header("Place Shader FX")]
+    [Tooltip("비워두면 자식에서 찾거나 없으면 자동으로 추가합니다.")]
+    public BuildingPlacementDissolveFX dissolveFX;
+
     public bool IsFeatureLocked { get; private set; }
 
     public event Action OnFeatureUnlocked;
@@ -31,6 +35,12 @@ public class BuildingConstructionGate : MonoBehaviour
     {
         if (animator == null)
             animator = GetComponentInChildren<Animator>(true);
+
+        if (dissolveFX == null)
+            dissolveFX = GetComponentInChildren<BuildingPlacementDissolveFX>(true);
+
+        if (dissolveFX == null)
+            dissolveFX = gameObject.AddComponent<BuildingPlacementDissolveFX>();
     }
 
     void OnDestroy()
@@ -42,6 +52,7 @@ public class BuildingConstructionGate : MonoBehaviour
     public void BeginAfterPlacement()
     {
         PlayPlaceAnimation();
+        dissolveFX?.Play();
         BeginFeatureLock();
     }
 

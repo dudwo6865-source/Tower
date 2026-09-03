@@ -1,0 +1,116 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+/// <summary>
+/// 건물 설치 시 Base Shader의 Dissolve 프로퍼티(_DissolveHeight)를
+/// MaterialPropertyBlock으로 애니메이션해, 아래에서 위로 차오르며 나타나는
+/// 연출을 재생합니다. 머티리얼 인스턴스를 만들지 않으므로(배칭 유지),
+/// 프리팹마다 Animator나 별도 머티리얼 없이 모든 건물에 재사용 가능합니다.
+/// 목표 높이/엣지 컬러는 각 Base.mat에 이미 세팅된 값을 그대로 사용합니다.
+/// </summary>
+[DisallowMultipleComponent]
+public class BuildingPlacementDissolveFX : MonoBehaviour
+{
+    [Tooltip("디졸브가 아래에서 위로 차오르는 시간(초)입니다.")]
+    public float duration = 0.8f;
+
+    [Tooltip("메시 하단 경계보다 얼마나 더 아래에서 시작할지(오브젝트 공간 단위)입니다.")]
+    public float startMargin = 0.25f;
+
+    public AnimationCurve easing = AnimationCurve.EaseInOut(0, 0, 1, 1);
+
+    static readonly int DissolveHeightId = Shader.PropertyToID("_DissolveHeight");
+
+    struct RendererSweep
+    {
+        public Renderer renderer;
+        public float startHeight;
+        public float endHeight;
+    }
+
+    readonly List<RendererSweep> sweeps = new List<RendererSweep>();
+    MaterialPropertyBlock propertyBlock;
+    Coroutine playRoutine;
+    bool cached;
+
+    void Awake()
+    {
+        propertyBlock = new MaterialPropertyBlock();
+        CacheSweeps();
+    }
+
+    void CacheSweeps()
+    {
+        sweeps.Clear();
+
+        foreach (Renderer renderer in GetComponentsInChildren<Renderer>(true))
+        {
+            MeshFilter meshFilter = renderer.GetComponent<MeshFilter>();
+
+            if (meshFilter == null || meshFilter.sharedMesh == null || renderer.sharedMaterial == null)
+                continue;
+
+            if (!renderer.sharedMaterial.HasProperty(DissolveHeightId))
+                continue;
+
+            sweeps.Add(new RendererSweep
+            {
+                renderer = renderer,
+                startHeight = meshFilter.sharedMesh.bounds.min.y - startMargin,
+                endHeight = renderer.sharedMaterial.GetFloat(DissolveHeightId)
+            });
+        }
+
+        cached = true;
+    }
+
+    public void Play()
+    {
+        if (!cached)
+            CacheSweeps();
+
+        if (sweeps.Count == 0)
+            return;
+
+        if (playRoutine != null)
+            StopCoroutine(playRoutine);
+
+        Apply(0f);
+        playRoutine = StartCoroutine(PlayRoutine());
+    }
+
+    IEnumerator PlayRoutine()
+    {
+        float t = 0f;
+
+        while (t < duration)
+        {
+            t += Time.deltaTime;
+            Apply(easing.Evaluate(Mathf.Clamp01(t / duration)));
+            yield return null;
+        }
+
+        // 원래 머티리얼 값으로 완전히 되돌려, 이후엔 프로퍼티 블록 오버라이드를 남기지 않습니다.
+        foreach (RendererSweep sweep in sweeps)
+        {
+            if (sweep.renderer != null)
+                sweep.renderer.SetPropertyBlock(null);
+        }
+
+        playRoutine = null;
+    }
+
+    void Apply(float t)
+    {
+        foreach (RendererSweep sweep in sweeps)
+        {
+            if (sweep.renderer == null)
+                continue;
+
+            sweep.renderer.GetPropertyBlock(propertyBlock);
+            propertyBlock.SetFloat(DissolveHeightId, Mathf.Lerp(sweep.startHeight, sweep.endHeight, t));
+            sweep.renderer.SetPropertyBlock(propertyBlock);
+        }
+    }
+}
