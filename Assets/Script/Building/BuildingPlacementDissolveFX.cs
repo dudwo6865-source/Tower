@@ -6,6 +6,8 @@ using UnityEngine;
 /// 건물 설치 시 Base Shader의 Dissolve 프로퍼티(_DissolveHeight)와 아웃라인 컬러를
 /// MaterialPropertyBlock으로 애니메이션해, 아래에서 위로 차오르며 나타나고
 /// 아웃라인이 디졸브 엣지 색에서 원래 색(검정)으로 식어가는 연출을 재생합니다.
+/// 디졸브 프레넬 컬러(_DissolveFresnelColor)는 매 프레임 아웃라인 컬러를
+/// 그대로 따라가도록 동일 값으로 맞춰줍니다.
 /// 머티리얼 인스턴스를 만들지 않으므로(배칭 유지), 프리팹마다 Animator나
 /// 별도 머티리얼 없이 모든 건물에 재사용 가능합니다. 목표 높이/컬러는 각
 /// Base.mat에 이미 세팅된 값을 그대로 사용합니다.
@@ -23,6 +25,7 @@ public class BuildingPlacementDissolveFX : MonoBehaviour
 
     static readonly int DissolveHeightId = Shader.PropertyToID("_DissolveHeight");
     static readonly int DissolveEdgeColorId = Shader.PropertyToID("_DissolveEdgeColor");
+    static readonly int DissolveFresnelColorId = Shader.PropertyToID("_DissolveFresnelColor");
     static readonly int OutlineColorId = Shader.PropertyToID("_OutlineColor");
 
     struct RendererSweep
@@ -61,7 +64,8 @@ public class BuildingPlacementDissolveFX : MonoBehaviour
                 continue;
 
             bool animateOutline = renderer.sharedMaterial.HasProperty(DissolveEdgeColorId)
-                && renderer.sharedMaterial.HasProperty(OutlineColorId);
+                && renderer.sharedMaterial.HasProperty(OutlineColorId)
+                && renderer.sharedMaterial.HasProperty(DissolveFresnelColorId);
 
             sweeps.Add(new RendererSweep
             {
@@ -124,7 +128,12 @@ public class BuildingPlacementDissolveFX : MonoBehaviour
             propertyBlock.SetFloat(DissolveHeightId, Mathf.Lerp(sweep.startHeight, sweep.endHeight, t));
 
             if (sweep.animateOutline)
-                propertyBlock.SetColor(OutlineColorId, Color.Lerp(sweep.outlineStartColor, sweep.outlineEndColor, t));
+            {
+                Color outlineColor = Color.Lerp(sweep.outlineStartColor, sweep.outlineEndColor, t);
+                propertyBlock.SetColor(OutlineColorId, outlineColor);
+                // 디졸브 프레넬 컬러가 아웃라인 컬러를 그대로 따라가게 합니다.
+                propertyBlock.SetColor(DissolveFresnelColorId, outlineColor);
+            }
 
             sweep.renderer.SetPropertyBlock(propertyBlock);
         }
