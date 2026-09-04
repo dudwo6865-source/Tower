@@ -257,7 +257,7 @@ public class ProjectileSimWorld : MonoBehaviour
 
             ProjectileSimData sim = data[i];
 
-            // 관통 투사체가 대상 근처에 도달해 직진 모드로 전환됐다면 더는 쫓지 않습니다.
+            // 관통(화염방사기) 투사체는 논타겟입니다. 발사 즉시 Locked 상태로 시작해 대상을 쫓지 않습니다.
             if (sim.Piercing == 0 || sim.Locked == 0)
                 sim.TargetPosition = projectile.GetHomingPoint();
 
