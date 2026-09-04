@@ -4,14 +4,15 @@ public enum AttackType
 {
     Melee,
     Ranged,
-    Flamethrower
+    Flamethrower,
+    Cannon
 }
 
 [DisallowMultipleComponent]
 public class UnitAttacker : MonoBehaviour
 {
     [Header("Attack")]
-    [Tooltip("근접은 즉시 피해(투사체 없음), 원거리는 투사체 발사, 화염방사기는 논타겟(대상을 쫓지 않고 발사 시점 방향으로 직진)으로 명중해도 사라지지 않고 사거리 끝까지 직진하는 관통 투사체를 발사합니다. 사거리 규칙은 동일합니다.")]
+    [Tooltip("근접은 즉시 피해(투사체 없음), 원거리는 투사체 발사, 화염방사기는 명중해도 사라지지 않고 사거리 끝까지 직진하는 관통 투사체를 발사합니다. 대포는 포물선을 그리며 날아가 착탄 지점 주변에 범위 피해를 줍니다(중심에서 멀수록 피해 감소). 사거리 규칙은 동일합니다.")]
     public AttackType attackType = AttackType.Melee;
 
     [Tooltip("한 번 공격할 때 주는 피해량입니다.")]
@@ -37,6 +38,17 @@ public class UnitAttacker : MonoBehaviour
     [Header("Flamethrower")]
     [Tooltip("화염방사기 투사체의 명중 판정 반지름입니다. 이 범위(콜라이더)에 닿은 모든 적이 피해를 입습니다. 투사체 프리팹에 콜라이더가 있으면 그 크기를 그대로 쓰고, 없을 때만 이 값으로 새로 만듭니다. 화염방사기 공격일 때만 사용됩니다.")]
     public float pierceHitRadius = 0.6f;
+
+    [Header("Cannon")]
+    [Tooltip("대포 투사체가 그리는 포물선의 최고 높이(m)입니다. 대포 공격일 때만 사용됩니다.")]
+    public float arcHeight = 4f;
+
+    [Tooltip("착탄 지점 기준 범위 피해 반경입니다. 이 안의 적(아군 제외)이 모두 피해를 입습니다. 대포 공격일 때만 사용됩니다.")]
+    public float splashRadius = 3f;
+
+    [Tooltip("범위 피해 감쇠 비율입니다. 착탄 중심은 100% 피해, 반경 끝은 이 비율(0~1)만큼만 피해를 입습니다. 대포 공격일 때만 사용됩니다.")]
+    [Range(0f, 1f)]
+    public float splashMinDamageRatio = 0.3f;
 
     [Header("Aim")]
     [Tooltip("켜면 조준(바라보기)이 끝난 뒤에만 공격합니다.")]
@@ -294,9 +306,10 @@ public class UnitAttacker : MonoBehaviour
         Quaternion fireRotation =
             CombatEffectSpawner.GetFlatLookRotation(firePosition, targetPoint);
 
-        if (attackType == AttackType.Ranged || attackType == AttackType.Flamethrower)
+        if (attackType == AttackType.Ranged || attackType == AttackType.Flamethrower || attackType == AttackType.Cannon)
         {
             bool piercing = attackType == AttackType.Flamethrower;
+            bool arcing = attackType == AttackType.Cannon;
 
             AttackVisuals.SpawnProjectile(
                 firePosition,
@@ -312,7 +325,11 @@ public class UnitAttacker : MonoBehaviour
                 selfEntity,
                 piercing,
                 attackRange,
-                pierceHitRadius);
+                pierceHitRadius,
+                arcing,
+                arcHeight,
+                splashRadius,
+                splashMinDamageRatio);
         }
         else
         {

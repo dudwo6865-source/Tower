@@ -1,5 +1,36 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!1 &2576851166301526731
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1073154435222840426}
+  m_Layer: 0
+  m_Name: FirePoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1073154435222840426
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2576851166301526731}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0.27289164, y: -0, z: -0, w: 0.96204484}
+  m_LocalPosition: {x: 0, y: 3.25, z: 2.08}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1589236503864947742}
+  m_LocalEulerAnglesHint: {x: -31.673, y: 0, z: 0}
 --- !u!1 &6894192069859626715
 GameObject:
   m_ObjectHideFlags: 0
@@ -17,10 +48,10 @@ GameObject:
   - component: {fileID: 655912731553113735}
   - component: {fileID: 6189108068416331313}
   - component: {fileID: 7862676528947400863}
-  - component: {fileID: 7431266829126842125}
   - component: {fileID: 9085166663070198596}
   - component: {fileID: 7222556402491717478}
   - component: {fileID: -1496962703188040564}
+  - component: {fileID: 1908274658732626749}
   m_Layer: 0
   m_Name: Cannon Tower
   m_TagString: Biulding
@@ -75,16 +106,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   attackType: 1
-  attackDamage: 12
-  attackRange: 20
-  attackCooldown: 0.3
+  attackDamage: 20
+  attackRange: 35
+  attackCooldown: 3
   useAttackAnimationEvent: 1
   projectileSpeed: 50
-  firePoint: {fileID: 0}
+  firePoint: {fileID: 1073154435222840426}
   pierceHitRadius: 0.6
   requireFacingToAttack: 1
   aimAngleTolerance: 8
-  aimTransform: {fileID: 0}
+  aimTransform: {fileID: 1073154435222840426}
   aimYawOffset: 0
   aimAxisLocal: {x: 0, y: 0, z: 0}
   spawnVisualEffects: 1
@@ -110,7 +141,7 @@ MonoBehaviour:
   retargetInterval: 0.5
   damageFocusSwitchMargin: 2
   debugCommandLog: 0
-  turretPivot: {fileID: 0}
+  turretPivot: {fileID: 7171137324973552307}
   facingSpeed: 5
   aimYawOffset: 0
   returnToIdleWhenNoTarget: 1
@@ -206,22 +237,6 @@ NavMeshObstacle:
   m_CarveOnlyStationary: 1
   m_Center: {x: 0, y: 1.23, z: 0}
   m_TimeToStationary: 0.5
---- !u!114 &7431266829126842125
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6894192069859626715}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c3d4e5f60718293a4b5c6d7e8f901a2b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  featureLockDuration: 2
-  animator: {fileID: 9085166663070198596}
-  placeAnimationTrigger: Place
-  dissolveFX: {fileID: 0}
 --- !u!95 &9085166663070198596
 Animator:
   serializedVersion: 5
@@ -302,6 +317,23 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!114 &1908274658732626749
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6894192069859626715}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b7b8cba007bb2241b4075737aae6f54, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  recoilTarget: {fileID: 1589236503864947742}
+  distance: 1
+  kickTime: 0.1
+  returnTime: 0.3
+  recoilAxisLocal: {x: 0, y: 0, z: -1}
 --- !u!1001 &987797282151259596
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -310,6 +342,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 7296272137357327206}
     m_Modifications:
+    - target: {fileID: -8863667214212606868, guid: c106b51137e1ff1419193272c17f74f7, type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: 35017c7be0f2ecf439f9799cc992952a, type: 2}
     - target: {fileID: -8679921383154817045, guid: c106b51137e1ff1419193272c17f74f7, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -350,6 +386,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: -4795160085687874365, guid: c106b51137e1ff1419193272c17f74f7, type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: 35017c7be0f2ecf439f9799cc992952a, type: 2}
     - target: {fileID: -4683669308469848369, guid: c106b51137e1ff1419193272c17f74f7, type: 3}
       propertyPath: m_Materials.Array.data[0]
       value: 
@@ -362,13 +402,30 @@ PrefabInstance:
       propertyPath: m_Materials.Array.data[0]
       value: 
       objectReference: {fileID: 2100000, guid: 35017c7be0f2ecf439f9799cc992952a, type: 2}
+    - target: {fileID: 8922536257493858541, guid: c106b51137e1ff1419193272c17f74f7, type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: 35017c7be0f2ecf439f9799cc992952a, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: -7225103888774534702, guid: c106b51137e1ff1419193272c17f74f7, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1073154435222840426}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: c106b51137e1ff1419193272c17f74f7, type: 3}
 --- !u!4 &738560757268331047 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: c106b51137e1ff1419193272c17f74f7, type: 3}
+  m_PrefabInstance: {fileID: 987797282151259596}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &1589236503864947742 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -7225103888774534702, guid: c106b51137e1ff1419193272c17f74f7, type: 3}
+  m_PrefabInstance: {fileID: 987797282151259596}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &7171137324973552307 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 7940306847455457151, guid: c106b51137e1ff1419193272c17f74f7, type: 3}
   m_PrefabInstance: {fileID: 987797282151259596}
   m_PrefabAsset: {fileID: 0}
