@@ -94,6 +94,8 @@ public class ProjectileSimWorld : MonoBehaviour
         float pierceHitRadius = 0.5f,
         bool arcing = false,
         float arcHeight = 0f,
+        float arcHeightRatio = 0f,
+        float minArcHeight = 0f,
         float splashRadius = 0f,
         float splashMinDamageRatio = 1f)
     {
@@ -120,6 +122,8 @@ public class ProjectileSimWorld : MonoBehaviour
             pierceHitRadius,
             arcing,
             arcHeight,
+            arcHeightRatio,
+            minArcHeight,
             splashRadius,
             splashMinDamageRatio);
 

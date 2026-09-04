@@ -40,8 +40,14 @@ public class UnitAttacker : MonoBehaviour
     public float pierceHitRadius = 0.6f;
 
     [Header("Cannon")]
-    [Tooltip("대포 투사체가 그리는 포물선의 최고 높이(m)입니다. 대포 공격일 때만 사용됩니다.")]
+    [Tooltip("포물선 높이의 상한(m)입니다. 실제 높이는 '발사~착탄 거리 × Arc Height Ratio'로 계산한 뒤 Min~이 값 사이로 clamp됩니다. 대포 공격일 때만 사용됩니다.")]
     public float arcHeight = 4f;
+
+    [Tooltip("거리 대비 포물선 높이 비율입니다. 값이 클수록 가까운 거리에서도 높이 솟아오릅니다. 대포 공격일 때만 사용됩니다.")]
+    public float arcHeightRatio = 0.3f;
+
+    [Tooltip("포물선 높이의 하한(m)입니다. 아주 가까운 거리에서도 최소한 이만큼은 솟아오릅니다. 대포 공격일 때만 사용됩니다.")]
+    public float minArcHeight = 0.5f;
 
     [Tooltip("착탄 지점 기준 범위 피해 반경입니다. 이 안의 적(아군 제외)이 모두 피해를 입습니다. 대포 공격일 때만 사용됩니다.")]
     public float splashRadius = 3f;
@@ -328,6 +334,8 @@ public class UnitAttacker : MonoBehaviour
                 pierceHitRadius,
                 arcing,
                 arcHeight,
+                arcHeightRatio,
+                minArcHeight,
                 splashRadius,
                 splashMinDamageRatio);
         }

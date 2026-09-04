@@ -159,6 +159,8 @@ public class Projectile : MonoBehaviour
         float pierceHitRadius = 0.5f,
         bool arcing = false,
         float arcHeight = 0f,
+        float arcHeightRatio = 0f,
+        float minArcHeight = 0f,
         float splashRadius = 0f,
         float splashMinDamageRatio = 1f)
     {
@@ -200,6 +202,11 @@ public class Projectile : MonoBehaviour
             Vector3 flatStart = new Vector3(arcStartPosition.x, 0f, arcStartPosition.z);
             Vector3 flatImpact = new Vector3(arcImpactPosition.x, 0f, arcImpactPosition.z);
             float horizontalDistance = Vector3.Distance(flatStart, flatImpact);
+
+            // 가까운 거리에서 너무 빠르게 솟았다 내려오지 않도록, 거리에 비례한 높이를
+            // Min~Max(arcHeight) 사이로 clamp합니다.
+            float requestedHeight = horizontalDistance * arcHeightRatio;
+            this.arcHeight = Mathf.Clamp(requestedHeight, minArcHeight, Mathf.Max(minArcHeight, arcHeight));
 
             arcDuration = speed > 0.01f
                 ? Mathf.Max(0.05f, horizontalDistance / speed)
