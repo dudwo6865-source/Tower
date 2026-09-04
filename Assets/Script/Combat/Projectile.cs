@@ -61,7 +61,7 @@ public class Projectile : MonoBehaviour
 
         float step = speed * Time.deltaTime;
 
-        // 이미 대상 근처에 도달한 관통 투사체는 더 쫓지 않고 마지막 방향으로 직진합니다.
+        // 화염방사기(관통) 투사체는 논타겟입니다. 발사 즉시 대상을 쫓지 않고 발사 방향으로 직진합니다.
         if (piercing && pierceLocked)
         {
             transform.position += lastMoveDirection * step;
@@ -165,6 +165,10 @@ public class Projectile : MonoBehaviour
         lastMoveDirection = initialDir.sqrMagnitude > 0.0001f
             ? initialDir.normalized
             : transform.forward;
+
+        // 화염방사기는 논타겟입니다. 대상을 쫓지 않고 발사 시점 방향으로 즉시 직진합니다.
+        if (piercing)
+            pierceLocked = true;
     }
 
     public ProjectileSimData CreateSimData(float impactDistanceSq)
@@ -182,7 +186,7 @@ public class Projectile : MonoBehaviour
             Impacted = 0,
             Expired = 0,
             Piercing = (byte)(piercing ? 1 : 0),
-            Locked = 0,
+            Locked = (byte)(piercing ? 1 : 0),
             TraveledDistance = 0f,
             MaxTravelDistance = maxTravelDistance
         };

@@ -11,7 +11,7 @@ public enum AttackType
 public class UnitAttacker : MonoBehaviour
 {
     [Header("Attack")]
-    [Tooltip("근접은 즉시 피해(투사체 없음), 원거리는 투사체 발사, 화염방사기는 명중해도 사라지지 않고 사거리 끝까지 직진하는 관통 투사체를 발사합니다. 사거리 규칙은 동일합니다.")]
+    [Tooltip("근접은 즉시 피해(투사체 없음), 원거리는 투사체 발사, 화염방사기는 논타겟(대상을 쫓지 않고 발사 시점 방향으로 직진)으로 명중해도 사라지지 않고 사거리 끝까지 직진하는 관통 투사체를 발사합니다. 사거리 규칙은 동일합니다.")]
     public AttackType attackType = AttackType.Melee;
 
     [Tooltip("한 번 공격할 때 주는 피해량입니다.")]
