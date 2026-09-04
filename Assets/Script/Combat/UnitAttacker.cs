@@ -78,6 +78,7 @@ public class UnitAttacker : MonoBehaviour
     private UnitAnimator unitAnimator;
     private UnitSound unitSound;
     private SelectableEntity selfEntity;
+    private AttackRecoilFX recoilFX;
 
     private SelectableEntity pendingTarget;
     private EntityHealth pendingTargetHealth;
@@ -95,6 +96,10 @@ public class UnitAttacker : MonoBehaviour
         unitAnimator = GetComponent<UnitAnimator>();
         unitSound = GetComponent<UnitSound>();
         selfEntity = GetComponent<SelectableEntity>();
+
+        recoilFX = GetComponent<AttackRecoilFX>();
+        if (recoilFX == null)
+            recoilFX = gameObject.AddComponent<AttackRecoilFX>();
     }
 
     void Update()
@@ -331,6 +336,8 @@ public class UnitAttacker : MonoBehaviour
                 muzzleFlashPrefab,
                 projectileColor);
         }
+
+        recoilFX?.Play();
 
         if (!ShouldUseAttackAnimationEvent() && unitAnimator != null)
             unitAnimator.PlayAttack();
