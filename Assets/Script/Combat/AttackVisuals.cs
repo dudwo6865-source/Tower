@@ -74,6 +74,8 @@ public static class AttackVisuals
         float pierceHitRadius = 0.5f,
         bool arcing = false,
         float arcHeight = 0f,
+        float arcHeightRatio = 0f,
+        float minArcHeight = 0f,
         float splashRadius = 0f,
         float splashMinDamageRatio = 1f)
     {
@@ -94,6 +96,8 @@ public static class AttackVisuals
                 pierceHitRadius,
                 arcing,
                 arcHeight,
+                arcHeightRatio,
+                minArcHeight,
                 splashRadius,
                 splashMinDamageRatio) != null)
             return;
@@ -126,6 +130,8 @@ public static class AttackVisuals
             pierceHitRadius,
             arcing,
             arcHeight,
+            arcHeightRatio,
+            minArcHeight,
             splashRadius,
             splashMinDamageRatio);
     }
