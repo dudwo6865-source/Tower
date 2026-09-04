@@ -29,7 +29,7 @@ public class UnitAttacker : MonoBehaviour
     public bool useAttackAnimationEvent = true;
 
     [Header("Ranged")]
-    [Tooltip("투사체 속도입니다. 원거리·화염방사기 공격일 때만 사용됩니다.")]
+    [Tooltip("투사체 속도입니다. 원거리·화염방사기·대포 공격일 때만 사용됩니다. 대포는 이 값을 착탄 지점까지의 수평 이동 속도로 씁니다.")]
     public float projectileSpeed = 25f;
 
     [Tooltip("투사체가 발사될 위치 오브젝트입니다. 비워두면 이 오브젝트의 위치에서 발사합니다.")]
@@ -409,5 +409,35 @@ public class UnitAttacker : MonoBehaviour
         pendingAttackActive = false;
         pendingTarget = null;
         pendingTargetHealth = null;
+    }
+
+    // Scene 뷰에서 사거리·범위 피해 크기를 감으로 넣지 않고 눈으로 보면서 조정할 수 있도록,
+    // 선택 시 사거리(노랑)와 공격 타입별 범위(대포: 착탄 예상 지점의 빨강, 화염방사기: 발사 지점의 주황)를 그립니다.
+    void OnDrawGizmosSelected()
+    {
+        Vector3 origin = transform.position;
+
+        Gizmos.color = new Color(1f, 0.92f, 0.16f, 0.4f);
+        Gizmos.DrawWireSphere(origin, attackRange);
+
+        if (attackType != AttackType.Cannon && attackType != AttackType.Flamethrower)
+            return;
+
+        Transform pivot = aimTransform != null ? aimTransform : transform;
+        Vector3 aimOrigin = firePoint != null ? firePoint.position : origin;
+        Vector3 aimDir = GetAimWorldDirection(pivot);
+
+        if (attackType == AttackType.Cannon)
+        {
+            // 실제 착탄 지점은 타겟 위치에 달려 있으므로, 최대 사거리 지점을 기준으로
+            // 범위 피해 반경의 상대적인 크기만 참고용으로 보여줍니다.
+            Gizmos.color = new Color(1f, 0.3f, 0.1f, 0.5f);
+            Gizmos.DrawWireSphere(aimOrigin + aimDir * attackRange, splashRadius);
+        }
+        else
+        {
+            Gizmos.color = new Color(1f, 0.55f, 0.15f, 0.5f);
+            Gizmos.DrawWireSphere(aimOrigin, pierceHitRadius);
+        }
     }
 }
