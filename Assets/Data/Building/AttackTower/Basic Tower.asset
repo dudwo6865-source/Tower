@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7a4c2e91b8d3f4a6e9c1d0523f7b8e4a, type: 3}
   m_Name: Basic Tower
   m_EditorClassIdentifier: 
-  displayName: Basic Tower
+  displayName: Gun Tower
   icon: {fileID: 21300000, guid: 1b4ab1bcf4a21ff4f9832cbc36b939ef, type: 3}
   description: Standard defensive tower.
   prefab: {fileID: 6894192069859626715, guid: 5e3a77b413b91f448bd9c241e2a9fa8b, type: 3}
@@ -21,4 +21,8 @@ MonoBehaviour:
   entityTypeId: 
   upgradeOptions:
   - tier: {fileID: 11400000, guid: 8fb7ff2c7d84157478aceb871ca67310, type: 2}
+    wattCost: 0
+  - tier: {fileID: 11400000, guid: 19111d6a08a83344eafe1c99a5e6dc4d, type: 2}
+    wattCost: 0
+  - tier: {fileID: 11400000, guid: 4c0633ff798888b4ea74951dcfe4b71a, type: 2}
     wattCost: 0

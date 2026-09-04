@@ -20,9 +20,9 @@ GameObject:
   - component: {fileID: 7431266829126842125}
   - component: {fileID: 9085166663070198596}
   - component: {fileID: 7222556402491717478}
-  - component: {fileID: -1496962703188040564}
+  - component: {fileID: 6784219505600378055}
   m_Layer: 0
-  m_Name: MachineTower
+  m_Name: RaileGun Tower
   m_TagString: Biulding
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -41,7 +41,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 738560757268331047}
+  - {fileID: 6542814494364135380}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
 --- !u!114 &3810098509326162617
@@ -264,7 +264,7 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 5, y: 2.58, z: 5}
   m_Center: {x: 0, y: 2, z: 0}
---- !u!114 &-1496962703188040564
+--- !u!114 &6784219505600378055
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -302,7 +302,7 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
---- !u!1001 &987797282151259596
+--- !u!1001 &6721066518205204543
 PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
@@ -310,65 +310,65 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 7296272137357327206}
     m_Modifications:
-    - target: {fileID: -8679921383154817045, guid: c106b51137e1ff1419193272c17f74f7, type: 3}
+    - target: {fileID: -8679921383154817045, guid: 9670e86a936cc4444828d827fd625e92, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: c106b51137e1ff1419193272c17f74f7, type: 3}
+    - target: {fileID: -8679921383154817045, guid: 9670e86a936cc4444828d827fd625e92, type: 3}
       propertyPath: m_LocalPosition.y
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: c106b51137e1ff1419193272c17f74f7, type: 3}
+    - target: {fileID: -8679921383154817045, guid: 9670e86a936cc4444828d827fd625e92, type: 3}
       propertyPath: m_LocalPosition.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: c106b51137e1ff1419193272c17f74f7, type: 3}
+    - target: {fileID: -8679921383154817045, guid: 9670e86a936cc4444828d827fd625e92, type: 3}
       propertyPath: m_LocalRotation.w
       value: 1
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: c106b51137e1ff1419193272c17f74f7, type: 3}
+    - target: {fileID: -8679921383154817045, guid: 9670e86a936cc4444828d827fd625e92, type: 3}
       propertyPath: m_LocalRotation.x
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: c106b51137e1ff1419193272c17f74f7, type: 3}
+    - target: {fileID: -8679921383154817045, guid: 9670e86a936cc4444828d827fd625e92, type: 3}
       propertyPath: m_LocalRotation.y
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: c106b51137e1ff1419193272c17f74f7, type: 3}
+    - target: {fileID: -8679921383154817045, guid: 9670e86a936cc4444828d827fd625e92, type: 3}
       propertyPath: m_LocalRotation.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: c106b51137e1ff1419193272c17f74f7, type: 3}
+    - target: {fileID: -8679921383154817045, guid: 9670e86a936cc4444828d827fd625e92, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: c106b51137e1ff1419193272c17f74f7, type: 3}
+    - target: {fileID: -8679921383154817045, guid: 9670e86a936cc4444828d827fd625e92, type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: c106b51137e1ff1419193272c17f74f7, type: 3}
+    - target: {fileID: -8679921383154817045, guid: 9670e86a936cc4444828d827fd625e92, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: -4683669308469848369, guid: c106b51137e1ff1419193272c17f74f7, type: 3}
+    - target: {fileID: -4683669308469848369, guid: 9670e86a936cc4444828d827fd625e92, type: 3}
       propertyPath: m_Materials.Array.data[0]
       value: 
-      objectReference: {fileID: 2100000, guid: 35017c7be0f2ecf439f9799cc992952a, type: 2}
-    - target: {fileID: 919132149155446097, guid: c106b51137e1ff1419193272c17f74f7, type: 3}
+      objectReference: {fileID: 2100000, guid: c04ad6b334e06fb489fcc8206dd40517, type: 2}
+    - target: {fileID: 919132149155446097, guid: 9670e86a936cc4444828d827fd625e92, type: 3}
       propertyPath: m_Name
-      value: Cannon Tower
+      value: RaiiGunTowr 2
       objectReference: {fileID: 0}
-    - target: {fileID: 7202271454713460447, guid: c106b51137e1ff1419193272c17f74f7, type: 3}
+    - target: {fileID: 7202271454713460447, guid: 9670e86a936cc4444828d827fd625e92, type: 3}
       propertyPath: m_Materials.Array.data[0]
       value: 
-      objectReference: {fileID: 2100000, guid: 35017c7be0f2ecf439f9799cc992952a, type: 2}
+      objectReference: {fileID: 2100000, guid: c04ad6b334e06fb489fcc8206dd40517, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: c106b51137e1ff1419193272c17f74f7, type: 3}
---- !u!4 &738560757268331047 stripped
+  m_SourcePrefab: {fileID: 100100000, guid: 9670e86a936cc4444828d827fd625e92, type: 3}
+--- !u!4 &6542814494364135380 stripped
 Transform:
-  m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: c106b51137e1ff1419193272c17f74f7, type: 3}
-  m_PrefabInstance: {fileID: 987797282151259596}
+  m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 9670e86a936cc4444828d827fd625e92, type: 3}
+  m_PrefabInstance: {fileID: 6721066518205204543}
   m_PrefabAsset: {fileID: 0}

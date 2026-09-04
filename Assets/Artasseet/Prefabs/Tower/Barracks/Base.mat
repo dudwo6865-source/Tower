@@ -27,7 +27,6 @@ Material:
   m_ValidKeywords:
   - _DISSOLVE_ON
   - _METALLICSPECGLOSSMAP
-  - _PARALLAXMAP
   m_InvalidKeywords: []
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 1
@@ -264,6 +263,9 @@ Material:
     - _AddPrecomputedVelocity: 0
     - _Add_Antipodean_RimLight: 0
     - _AlbedoAffectEmissive: 0
+    - _AlbedoRecolorEnabled: 0
+    - _AlbedoRecolorRange: 0.08
+    - _AlbedoRecolorSmoothness: 0.05
     - _AlphaClip: 0
     - _AlphaCutoff: 0.5
     - _AlphaCutoffEnable: 0
@@ -320,7 +322,7 @@ Material:
     - _DisplacementMode: 3
     - _DissolveEdge: 0.72
     - _DissolveEnabled: 1
-    - _DissolveHeight: 6.71
+    - _DissolveHeight: 11
     - _DissolveNoiseScale: 50
     - _DissolveNoiseStrength: 1
     - _DistortionBlendMode: 0
@@ -411,6 +413,7 @@ Material:
     - _Is_ViewShift: 0
     - _LightDirection_MaskOn: 0
     - _LinkDetailsWithBase: 1
+    - _MaskPackMode: 0
     - _MatCap: 0
     - _MaterialID: 1
     - _Metallic: 1
@@ -526,6 +529,7 @@ Material:
     - _UVEmissive: 0
     - _Unlit_Intensity: 0
     - _UseEmissiveIntensity: 0
+    - _UseMaskOcclusion: 0
     - _UseShadowThreshold: 0
     - _Use_1stAs2nd: 0
     - _Use_BaseAs1st: 0
@@ -546,6 +550,8 @@ Material:
     m_Colors:
     - _1st_ShadeColor: {r: 0.6698113, g: 0.6698113, b: 0.6698113, a: 1}
     - _2nd_ShadeColor: {r: 0.4433962, g: 0.4433962, b: 0.4433962, a: 1}
+    - _AlbedoKeyColor: {r: 0.09999997, g: 0.34999996, b: 1, a: 1}
+    - _AlbedoRecolorColor: {r: 1, g: 0, b: 0, a: 1}
     - _AngelRingMaskColor: {r: 0, g: 1, b: 0, a: 1}
     - _AngelRing_Color: {r: 1, g: 1, b: 1, a: 1}
     - _Ap_RimLightColor: {r: 1, g: 1, b: 1, a: 1}
@@ -555,7 +561,7 @@ Material:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _ColorShift: {r: 0, g: 0, b: 0, a: 1}
     - _DiffusionProfileAsset: {r: 0, g: 0, b: 0, a: 0}
-    - _DissolveEdgeColor: {r: 0, g: 5.9921575, b: 5.846867, a: 1}
+    - _DissolveEdgeColor: {r: 0, g: 2.1132076, b: 1.9700394, a: 1}
     - _DissolveFresnelColor: {r: 0, g: 0, b: 0, a: 1}
     - _DoubleSidedConstants: {r: 1, g: 1, b: -1, a: 0}
     - _EmissionColor: {r: 0.4716981, g: 0, b: 0, a: 1}

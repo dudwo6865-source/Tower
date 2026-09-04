@@ -24,12 +24,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 374577403455599148}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.5, y: -0.49999994, z: 0.5, w: 0.5}
-  m_LocalPosition: {x: 1.7641623, y: -2.0900009, z: 0.15437388}
+  m_LocalRotation: {x: -0, y: 0.000000014901163, z: 0.000000029802326, w: 1}
+  m_LocalPosition: {x: 0, y: 1.75, z: 2.08}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 6109740876719592833}
+  m_Father: {fileID: 2375171875443392716}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &6894192069859626715
 GameObject:
@@ -48,7 +48,6 @@ GameObject:
   - component: {fileID: 655912731553113735}
   - component: {fileID: 6189108068416331313}
   - component: {fileID: 7862676528947400863}
-  - component: {fileID: 7431266829126842125}
   - component: {fileID: 9085166663070198596}
   - component: {fileID: 7222556402491717478}
   - component: {fileID: 3749726835292435601}
@@ -72,7 +71,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 6434697974741897903}
+  - {fileID: 3274334079485069282}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
 --- !u!114 &3810098509326162617
@@ -123,7 +122,7 @@ MonoBehaviour:
   hitColor: {r: 1, g: 0.5, b: 0.2, a: 1}
   muzzleFlashPrefab: {fileID: 304414178702807373, guid: dcb22a441d571114e9cfd66094d3ff9f, type: 3}
   hitEffectPrefab: {fileID: 1598268965855006841, guid: 1817cfabe570b924c88af259660671a3, type: 3}
-  projectilePrefab: {fileID: 6820024759759233777, guid: 91e780efda7994440a23cebbb9636401, type: 3}
+  projectilePrefab: {fileID: 6820024759759233777, guid: 0e2600169663718468a7157f455f21d5, type: 3}
 --- !u!114 &853810235908710514
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -237,22 +236,6 @@ NavMeshObstacle:
   m_CarveOnlyStationary: 1
   m_Center: {x: 0, y: 1.23, z: 0}
   m_TimeToStationary: 0.5
---- !u!114 &7431266829126842125
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6894192069859626715}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c3d4e5f60718293a4b5c6d7e8f901a2b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  featureLockDuration: 2
-  animator: {fileID: 9085166663070198596}
-  placeAnimationTrigger: Place
-  dissolveFX: {fileID: 0}
 --- !u!95 &9085166663070198596
 Animator:
   serializedVersion: 5
@@ -333,7 +316,7 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
---- !u!1001 &6829175341246313796
+--- !u!1001 &3096924042827177993
 PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
@@ -393,7 +376,7 @@ PrefabInstance:
       propertyPath: m_Name
       value: DoublerTower
       objectReference: {fileID: 0}
-    - target: {fileID: 7202271454713460447, guid: 0f496aa313f003c40ba5a3c38b767a70, type: 3}
+    - target: {fileID: 7071182760956848314, guid: 0f496aa313f003c40ba5a3c38b767a70, type: 3}
       propertyPath: m_Materials.Array.data[0]
       value: 
       objectReference: {fileID: 2100000, guid: ecb8beb8a2e182749b3e4f08f9c35205, type: 2}
@@ -405,13 +388,13 @@ PrefabInstance:
       addedObject: {fileID: 6988503337949376820}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 0f496aa313f003c40ba5a3c38b767a70, type: 3}
---- !u!4 &6109740876719592833 stripped
+--- !u!4 &2375171875443392716 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 724008884944625861, guid: 0f496aa313f003c40ba5a3c38b767a70, type: 3}
-  m_PrefabInstance: {fileID: 6829175341246313796}
+  m_PrefabInstance: {fileID: 3096924042827177993}
   m_PrefabAsset: {fileID: 0}
---- !u!4 &6434697974741897903 stripped
+--- !u!4 &3274334079485069282 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 0f496aa313f003c40ba5a3c38b767a70, type: 3}
-  m_PrefabInstance: {fileID: 6829175341246313796}
+  m_PrefabInstance: {fileID: 3096924042827177993}
   m_PrefabAsset: {fileID: 0}

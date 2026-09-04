@@ -324,7 +324,7 @@ Material:
     - _DisplacementMode: 3
     - _DissolveEdge: 0.72
     - _DissolveEnabled: 1
-    - _DissolveHeight: 6.71
+    - _DissolveHeight: 11
     - _DissolveNoiseScale: 50
     - _DissolveNoiseStrength: 1
     - _DistortionBlendMode: 0
@@ -563,7 +563,7 @@ Material:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _ColorShift: {r: 0, g: 0, b: 0, a: 1}
     - _DiffusionProfileAsset: {r: 0, g: 0, b: 0, a: 0}
-    - _DissolveEdgeColor: {r: 0, g: 5.9921575, b: 5.846867, a: 1}
+    - _DissolveEdgeColor: {r: 0, g: 2.1132076, b: 1.9700394, a: 1}
     - _DissolveFresnelColor: {r: 0, g: 0, b: 0, a: 1}
     - _DoubleSidedConstants: {r: 1, g: 1, b: -1, a: 0}
     - _EmissionColor: {r: 0.4716981, g: 0, b: 0, a: 1}
