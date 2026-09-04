@@ -71,7 +71,11 @@ public static class AttackVisuals
         SelectableEntity attacker = null,
         bool piercing = false,
         float maxTravelDistance = 0f,
-        float pierceHitRadius = 0.5f)
+        float pierceHitRadius = 0.5f,
+        bool arcing = false,
+        float arcHeight = 0f,
+        float splashRadius = 0f,
+        float splashMinDamageRatio = 1f)
     {
         if (ProjectileSimWorld.Spawn(
                 firePosition,
@@ -87,7 +91,11 @@ public static class AttackVisuals
                 attacker,
                 piercing,
                 maxTravelDistance,
-                pierceHitRadius) != null)
+                pierceHitRadius,
+                arcing,
+                arcHeight,
+                splashRadius,
+                splashMinDamageRatio) != null)
             return;
 
         GameObject projectileObject;
@@ -115,7 +123,11 @@ public static class AttackVisuals
             attacker,
             piercing,
             maxTravelDistance,
-            pierceHitRadius);
+            pierceHitRadius,
+            arcing,
+            arcHeight,
+            splashRadius,
+            splashMinDamageRatio);
     }
 
     public static GameObject CreateFallbackProjectile(Vector3 position, Color color)

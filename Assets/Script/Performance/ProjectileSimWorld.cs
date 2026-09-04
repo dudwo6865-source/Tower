@@ -91,7 +91,11 @@ public class ProjectileSimWorld : MonoBehaviour
         SelectableEntity attacker,
         bool piercing = false,
         float maxTravelDistance = 0f,
-        float pierceHitRadius = 0.5f)
+        float pierceHitRadius = 0.5f,
+        bool arcing = false,
+        float arcHeight = 0f,
+        float splashRadius = 0f,
+        float splashMinDamageRatio = 1f)
     {
         ProjectileSimWorld world = Instance;
 
@@ -113,9 +117,16 @@ public class ProjectileSimWorld : MonoBehaviour
             attacker,
             piercing,
             maxTravelDistance,
-            pierceHitRadius);
+            pierceHitRadius,
+            arcing,
+            arcHeight,
+            splashRadius,
+            splashMinDamageRatio);
 
-        world.Register(projectile);
+        // 대포(포물선) 투사체는 자체 Update()에서 직접 움직이므로 Burst 이동 Job에는 등록하지 않습니다.
+        if (!arcing)
+            world.Register(projectile);
+
         return projectile;
     }
 
