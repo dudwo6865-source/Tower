@@ -1012,7 +1012,7 @@ ParticleSystem:
       countCurve:
         serializedVersion: 2
         minMaxState: 0
-        scalar: 3
+        scalar: 1
         minScalar: 30
         maxCurve:
           serializedVersion: 2
@@ -1077,22 +1077,13 @@ ParticleSystem:
         m_Curve:
         - serializedVersion: 3
           time: 0
-          value: 0.37041667
-          inSlope: 3.5759146
-          outSlope: 3.5759146
+          value: 0
+          inSlope: 2.283424
+          outSlope: 2.283424
           tangentMode: 0
           weightedMode: 0
           inWeight: 0.33333334
-          outWeight: 0.19633928
-        - serializedVersion: 3
-          time: 0.10633035
-          value: 0.60159105
-          inSlope: 1.0553406
-          outSlope: 1.0553406
-          tangentMode: 0
-          weightedMode: 0
-          inWeight: 0.52878577
-          outWeight: 0.33333334
+          outWeight: 0.02713987
         - serializedVersion: 3
           time: 1
           value: 1
@@ -1408,7 +1399,7 @@ ParticleSystem:
       maxGradient:
         serializedVersion: 2
         key0: {r: 1, g: 1, b: 1, a: 1}
-        key1: {r: 1, g: 1, b: 1, a: 1}
+        key1: {r: 0.009433985, g: 0, b: 0, a: 1}
         key2: {r: 0, g: 0, b: 0, a: 0}
         key3: {r: 0, g: 0, b: 0, a: 0}
         key4: {r: 0, g: 0, b: 0, a: 0}
