@@ -38,6 +38,7 @@ public class Projectile : MonoBehaviour
     private float arcHeight;
     private float splashRadius;
     private float splashMinDamageRatio;
+    private float hitEffectScale = 1f;
     private Vector3 arcStartPosition;
     private Vector3 arcImpactPosition;
     private float arcDuration;
@@ -162,7 +163,8 @@ public class Projectile : MonoBehaviour
         float arcHeightRatio = 0f,
         float minArcHeight = 0f,
         float splashRadius = 0f,
-        float splashMinDamageRatio = 1f)
+        float splashMinDamageRatio = 1f,
+        float hitEffectScale = 1f)
     {
         this.target = target;
         this.targetHealth = targetHealth;
@@ -178,6 +180,7 @@ public class Projectile : MonoBehaviour
         this.arcHeight = arcHeight;
         this.splashRadius = splashRadius;
         this.splashMinDamageRatio = splashMinDamageRatio;
+        this.hitEffectScale = hitEffectScale;
         traveledDistance = 0f;
         pierceLocked = false;
         lifeTimer = 0f;
@@ -290,7 +293,8 @@ public class Projectile : MonoBehaviour
             transform.position,
             lastMoveDirection,
             hitEffectPrefab,
-            hitFallbackColor);
+            hitFallbackColor,
+            hitEffectScale);
 
         ReleaseOrDestroy();
     }
@@ -402,6 +406,7 @@ public class Projectile : MonoBehaviour
         arcHeight = 0f;
         splashRadius = 0f;
         splashMinDamageRatio = 1f;
+        hitEffectScale = 1f;
         arcElapsed = 0f;
         arcDuration = 0f;
         Slot = -1;

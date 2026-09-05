@@ -56,6 +56,9 @@ public class UnitAttacker : MonoBehaviour
     [Range(0f, 1f)]
     public float splashMinDamageRatio = 0.3f;
 
+    [Tooltip("히트 이펙트가 원래 크기(1배)로 보이는 기준 스플래시 반경입니다. Splash Radius가 이 값보다 크면 이펙트가 커지고, 작으면 작아집니다. 대포 공격일 때만 사용됩니다.")]
+    public float hitEffectBaseRadius = 3f;
+
     [Header("Aim")]
     [Tooltip("켜면 조준(바라보기)이 끝난 뒤에만 공격합니다.")]
     public bool requireFacingToAttack = true;
@@ -317,6 +320,11 @@ public class UnitAttacker : MonoBehaviour
             bool piercing = attackType == AttackType.Flamethrower;
             bool arcing = attackType == AttackType.Cannon;
 
+            // 스플래시 범위가 기준 반경보다 크면 히트 이펙트도 함께 커지고, 작으면 함께 작아집니다.
+            float hitEffectScale = (arcing && hitEffectBaseRadius > 0f)
+                ? splashRadius / hitEffectBaseRadius
+                : 1f;
+
             AttackVisuals.SpawnProjectile(
                 firePosition,
                 fireRotation,
@@ -337,7 +345,8 @@ public class UnitAttacker : MonoBehaviour
                 arcHeightRatio,
                 minArcHeight,
                 splashRadius,
-                splashMinDamageRatio);
+                splashMinDamageRatio,
+                hitEffectScale);
         }
         else
         {

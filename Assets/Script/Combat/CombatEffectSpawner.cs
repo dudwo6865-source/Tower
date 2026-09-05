@@ -6,14 +6,36 @@ public static class CombatEffectSpawner
         GameObject prefab,
         Vector3 position,
         Quaternion rotation,
-        Transform parent = null)
+        Transform parent = null,
+        float scale = 1f)
     {
         if (prefab == null)
             return null;
 
         GameObject instance = Object.Instantiate(prefab, position, rotation, parent);
+
+        if (!Mathf.Approximately(scale, 1f))
+        {
+            instance.transform.localScale *= scale;
+            ForceHierarchyScaling(instance);
+        }
+
         ScheduleAutoDestroy(instance);
         return instance;
+    }
+
+    // Scaling Mode가 Local/Shape인 파티클 시스템은 부모(루트) 오브젝트의 스케일을 무시합니다.
+    // 스폰된 이 인스턴스에 한해 Hierarchy로 강제해, 위에서 적용한 스케일이 실제로 반영되게 합니다.
+    // (원본 프리팹 에셋은 건드리지 않습니다.)
+    static void ForceHierarchyScaling(GameObject instance)
+    {
+        ParticleSystem[] particleSystems = instance.GetComponentsInChildren<ParticleSystem>(true);
+
+        foreach (ParticleSystem particleSystem in particleSystems)
+        {
+            ParticleSystem.MainModule main = particleSystem.main;
+            main.scalingMode = ParticleSystemScalingMode.Hierarchy;
+        }
     }
 
     public static Quaternion GetFlatLookRotation(Vector3 from, Vector3 to)
