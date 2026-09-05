@@ -105,14 +105,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 427917cfdedb0234db32bcd33f7328a2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  attackType: 1
+  attackType: 3
   attackDamage: 20
   attackRange: 35
   attackCooldown: 3
-  useAttackAnimationEvent: 1
+  useAttackAnimationEvent: 0
   projectileSpeed: 50
   firePoint: {fileID: 1073154435222840426}
   pierceHitRadius: 0.6
+  arcHeight: 4
+  arcHeightRatio: 0.3
+  minArcHeight: 0.5
+  splashRadius: 3
+  splashMinDamageRatio: 0.3
   requireFacingToAttack: 1
   aimAngleTolerance: 8
   aimTransform: {fileID: 1073154435222840426}
@@ -122,7 +127,7 @@ MonoBehaviour:
   projectileColor: {r: 1, g: 0.85, b: 0.3, a: 1}
   hitColor: {r: 1, g: 0.5, b: 0.2, a: 1}
   muzzleFlashPrefab: {fileID: 304414178702807373, guid: b9a62cef32ff6da49b88cd5572caba55, type: 3}
-  hitEffectPrefab: {fileID: 1598268965855006841, guid: 1817cfabe570b924c88af259660671a3, type: 3}
+  hitEffectPrefab: {fileID: 2669821138424738530, guid: 1d8f093d07512134584cb78ba292707c, type: 3}
   projectilePrefab: {fileID: 6820024759759233777, guid: bc69c5e6048d32a418aa86c3557719e6, type: 3}
 --- !u!114 &853810235908710514
 MonoBehaviour:

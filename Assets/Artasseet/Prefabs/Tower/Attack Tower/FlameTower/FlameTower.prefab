@@ -114,6 +114,11 @@ MonoBehaviour:
   projectileSpeed: 10
   firePoint: {fileID: 7518304296636600780}
   pierceHitRadius: 1
+  arcHeight: 4
+  arcHeightRatio: 0.3
+  minArcHeight: 0.5
+  splashRadius: 3
+  splashMinDamageRatio: 0.3
   requireFacingToAttack: 1
   aimAngleTolerance: 8
   aimTransform: {fileID: 0}
