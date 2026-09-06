@@ -7,8 +7,9 @@ using UnityEngine.UI;
 public class WorldHealthBar : MonoBehaviour
 {
     [Header("Layout")]
-    [Tooltip("콜라이더 위쪽에서 체력바가 떠 있는 추가 높이입니다.")]
-    public float heightOffset = 3f;
+    [Tooltip("체력바가 바닥(콜라이더 아래쪽)에서 떠 있는 높이입니다. 지면과 겹쳐 Z-fighting이 나지 " +
+        "않을 정도로만 작게 두면 됩니다.")]
+    public float heightOffset = 0.05f;
 
     [Tooltip("체력바의 월드 기준 높이입니다.")]
     public float barHeight = 0.5f;
@@ -70,6 +71,12 @@ public class WorldHealthBar : MonoBehaviour
     private Color baseFillColor;
     private Sprite defaultSprite;
     private Material overlayMaterial;
+    private int lastSegmentCount = -1;
+
+    // 체력바를 지면과 수평으로 눕히는 고정 회전값입니다. 카메라를 따라 도는 세로 빌보드가
+    // 아니라 발밑 바닥에 놓이는 데칼 형태라, 한 번만 정하면 갱신할 필요가 없습니다.
+    // UI/Default 셰이더는 Cull Off라 위/아래 어느 쪽에서 봐도 보입니다.
+    private static readonly Quaternion FlatRotation = Quaternion.Euler(90f, 0f, 0f);
 
     void Awake()
     {
@@ -87,22 +94,11 @@ public class WorldHealthBar : MonoBehaviour
 
     void Start()
     {
-        ApplyDefaultLayout();
-
         if (barAnchor == null)
             BuildHealthBarUI();
 
         UpdateFill(entityHealth.CurrentHealth, entityHealth.MaxHealth);
         RefreshVisibility();
-    }
-
-    void ApplyDefaultLayout()
-    {
-        if (selectableEntity.entityType == SelectableEntityType.Building &&
-            heightOffset < 0.5f)
-        {
-            heightOffset = 0.5f;
-        }
     }
 
     void OnDestroy()
@@ -147,13 +143,8 @@ public class WorldHealthBar : MonoBehaviour
         if (!CameraVisibility.IsVisible(visibilityBounds))
             return;
 
-        Camera camera = Camera.main;
-
-        if (camera == null)
-            return;
-
+        // 바닥에 눕혀진 데칼이라 회전은 생성 시 한 번만 정하면 되고, 위치만 따라가면 됩니다.
         barAnchor.position = GetBarWorldPosition();
-        barAnchor.rotation = camera.transform.rotation;
     }
 
     void BuildHealthBarUI()
@@ -164,10 +155,7 @@ public class WorldHealthBar : MonoBehaviour
         anchorObject.transform.SetParent(WorldHealthBarRoot.Transform, false);
 
         barAnchor = anchorObject.transform;
-        barAnchor.position = GetBarWorldPosition();
-
-        if (Camera.main != null)
-            barAnchor.rotation = Camera.main.transform.rotation;
+        barAnchor.SetPositionAndRotation(GetBarWorldPosition(), FlatRotation);
 
         GameObject canvasObject = new GameObject("HealthBarCanvas");
         canvasObject.transform.SetParent(anchorObject.transform, false);
@@ -292,12 +280,12 @@ public class WorldHealthBar : MonoBehaviour
         Collider collider = selectableEntity.SelectionCollider;
 
         if (collider == null)
-            return transform.position + Vector3.up * (1f + heightOffset);
+            return transform.position + Vector3.up * heightOffset;
 
         Bounds bounds = collider.bounds;
         return new Vector3(
             bounds.center.x,
-            bounds.max.y + heightOffset,
+            bounds.min.y + heightOffset,
             bounds.center.z);
     }
 
@@ -370,8 +358,15 @@ public class WorldHealthBar : MonoBehaviour
             ratio <= lowHealthThreshold ? lowHealthColor : baseFillColor;
 
         int segmentCount = GetSegmentCount(maxHealth);
-        EnsureSegmentCount(segmentCount);
-        ApplyBarSize(segmentCount);
+
+        // 칸 개수가 바뀔 때만 그리드/크기를 다시 계산합니다. 칸 수가 그대로인 잦은 피격에는
+        // 매번 GridLayoutGroup을 다시 세팅하고 레이아웃을 강제로 재계산할 필요가 없습니다.
+        if (segmentCount != lastSegmentCount)
+        {
+            EnsureSegmentCount(segmentCount);
+            ApplyBarSize(segmentCount);
+            lastSegmentCount = segmentCount;
+        }
 
         for (int i = 0; i < segmentCount; i++)
         {
@@ -435,12 +430,6 @@ public class WorldHealthBar : MonoBehaviour
 
         for (int i = 0; i < segmentImages.Count; i++)
             segmentImages[i].gameObject.SetActive(i < count);
-    }
-
-    void UpdateVisibility(bool visible)
-    {
-        if (canvasGroup != null)
-            canvasGroup.alpha = visible ? 1f : 0f;
     }
 
     Color GetBaseFillColor()
