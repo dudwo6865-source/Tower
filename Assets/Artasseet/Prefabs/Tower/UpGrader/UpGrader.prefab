@@ -109,6 +109,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   heightOffset: 0.05
+  viewDownOffset: 0
   barHeight: 0.5
   worldScale: 0.07
   segmentWorldWidth: 0.4

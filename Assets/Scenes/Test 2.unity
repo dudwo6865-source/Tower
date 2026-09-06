@@ -1300,7 +1300,8 @@ PrefabInstance:
       propertyPath: distance
       value: 0.7
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 8580367225277791086, guid: 5e3a77b413b91f448bd9c241e2a9fa8b, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
@@ -17361,6 +17362,39 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1464680541}
   m_CullTransparentMesh: 1
+--- !u!1 &1466029949 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4697029455683187683, guid: 819e706f8f24e334da3f97fc8b7c955c, type: 3}
+  m_PrefabInstance: {fileID: 1865362270}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1466029964
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1466029949}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cb8a6c9de3fe8b1458e4548a1aea8319, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  heightOffset: 0.05
+  viewDownOffset: 2
+  barHeight: 0.5
+  worldScale: 0.07
+  segmentWorldWidth: 0.4
+  localPlayerOwnerId: 1
+  alwaysShowEnemyBar: 0
+  showWhenSelected: 1
+  showAfterDamageDuration: 3
+  allyFillColor: {r: 0.2, g: 0.9, b: 0.3, a: 1}
+  enemyFillColor: {r: 0.95, g: 0.2, b: 0.2, a: 1}
+  lowHealthColor: {r: 0.95, g: 0.55, b: 0.1, a: 1}
+  lowHealthThreshold: 0.35
+  healthPerSegment: 10
+  segmentSpacing: 3
+  maxSegmentsPerRow: 15
 --- !u!1 &1469251634
 GameObject:
   m_ObjectHideFlags: 0
@@ -18920,8 +18954,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cb8a6c9de3fe8b1458e4548a1aea8319, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  heightOffset: 0.05
-  barHeight: 0.5
+  heightOffset: -3.28
+  viewDownOffset: 0
+  barHeight: 0
   worldScale: 0.1
   segmentWorldWidth: 0.4
   localPlayerOwnerId: 1
@@ -20916,7 +20951,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 4697029455683187683, guid: 819e706f8f24e334da3f97fc8b7c955c, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1466029964}
   m_SourcePrefab: {fileID: 100100000, guid: 819e706f8f24e334da3f97fc8b7c955c, type: 3}
 --- !u!1 &1866348314
 GameObject:
