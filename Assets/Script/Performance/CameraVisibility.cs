@@ -9,6 +9,17 @@ public static class CameraVisibility
     static Camera cachedCamera;
     static bool hasPlanes;
 
+    // Camera.main을 프레임당 한 번만 조회해 캐시한 값입니다. 여러 컴포넌트가 매 프레임
+    // 각자 Camera.main을 호출하는 대신 이걸 재사용하면 됩니다.
+    public static Camera MainCamera
+    {
+        get
+        {
+            EnsureFrustum();
+            return cachedCamera;
+        }
+    }
+
     public static bool IsVisible(Vector3 worldPosition, float radius = DefaultRadius)
     {
         float size = Mathf.Max(0.5f, radius) * 2f;
