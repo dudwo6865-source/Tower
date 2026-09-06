@@ -100,7 +100,9 @@ public class ProjectileSimWorld : MonoBehaviour
         float splashMinDamageRatio = 1f,
         float arcClimbPower = 1f,
         float arcDivePower = 1f,
-        float impactOffsetRadius = 0f)
+        float impactOffsetRadius = 0f,
+        float arcPeakTime = 0.5f,
+        float lateralWobbleAmount = 0f)
     {
         ProjectileSimWorld world = Instance;
 
@@ -131,7 +133,9 @@ public class ProjectileSimWorld : MonoBehaviour
             splashMinDamageRatio,
             arcClimbPower,
             arcDivePower,
-            impactOffsetRadius);
+            impactOffsetRadius,
+            arcPeakTime,
+            lateralWobbleAmount);
 
         // 대포(포물선) 투사체는 자체 Update()에서 직접 움직이므로 Burst 이동 Job에는 등록하지 않습니다.
         if (!arcing)

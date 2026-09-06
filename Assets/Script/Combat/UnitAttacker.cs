@@ -52,14 +52,21 @@ public class UnitAttacker : MonoBehaviour
     [Tooltip("포물선 높이의 하한(m)입니다. 아주 가까운 거리에서도 최소한 이만큼은 솟아오릅니다. 대포 공격일 때만 사용됩니다.")]
     public float minArcHeight = 0.5f;
 
-    [Tooltip("상승 구간의 완만함(지수)입니다. 1이면 일반 포물선처럼 대칭으로 오르내립니다. 값을 낮추면(예: 0.5) 미사일처럼 빠르게 솟아오릅니다. 대포 공격일 때만 사용됩니다.")]
+    [Tooltip("포물선 정점(가장 높은 지점)이 발사~착탄 구간 중 어디에서 나오는지(0~1)입니다. 0.5면 정중앙이고, 값을 낮추면 정점이 발사 쪽으로 당겨져 빨리 솟았다가 오래 하강합니다. 대포 공격일 때만 사용됩니다.")]
+    [Range(0.05f, 0.95f)]
+    public float arcPeakTime = 0.5f;
+
+    [Tooltip("정점에 도달하기 전 상승 구간의 형태입니다. 값을 높이면 발사 직후 빠르게 솟아오른 뒤 정점 근처에서는 완만해집니다. 대포 공격일 때만 사용됩니다.")]
     public float arcClimbPower = 1f;
 
-    [Tooltip("하강 구간의 급격함(지수)입니다. 값을 높이면(예: 2) 미사일처럼 가파르게 내리꽂힙니다. 대포 공격일 때만 사용됩니다.")]
+    [Tooltip("정점을 지난 뒤 하강 구간의 형태입니다. 값을 높이면 정점 높이를 오래 유지하다가 착탄 '직전'에 갑자기 급강하합니다(미사일처럼). 낮추면 하강이 완만하고 고르게 이어집니다. 대포 공격일 때만 사용됩니다.")]
     public float arcDivePower = 1f;
 
     [Tooltip("착탄 지점에 더하는 랜덤 오차 반경(m)입니다. 0이면 항상 타겟 중심에 정확히 착탄합니다. 대포 공격일 때만 사용됩니다.")]
     public float impactOffsetRadius = 0f;
+
+    [Tooltip("비행 정점 부근에서 좌우로 치우치는 최대 오프셋(m)입니다. 매 발사마다 이 범위 안에서 방향·크기가 무작위로 정해져 경로가 살짝 구불거리며 더 지저분해 보입니다. 0이면 완전한 직선 경로입니다. 대포 공격일 때만 사용됩니다.")]
+    public float lateralWobbleAmount = 0f;
 
     [Tooltip("착탄 지점 기준 범위 피해 반경입니다. 이 안의 적(아군 제외)이 모두 피해를 입습니다. 대포 공격일 때만 사용됩니다.")]
     public float splashRadius = 3f;
@@ -370,7 +377,9 @@ public class UnitAttacker : MonoBehaviour
                 splashMinDamageRatio,
                 arcClimbPower,
                 arcDivePower,
-                impactOffsetRadius);
+                impactOffsetRadius,
+                arcPeakTime,
+                lateralWobbleAmount);
         }
         else
         {

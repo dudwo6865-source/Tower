@@ -80,7 +80,9 @@ public static class AttackVisuals
         float splashMinDamageRatio = 1f,
         float arcClimbPower = 1f,
         float arcDivePower = 1f,
-        float impactOffsetRadius = 0f)
+        float impactOffsetRadius = 0f,
+        float arcPeakTime = 0.5f,
+        float lateralWobbleAmount = 0f)
     {
         if (ProjectileSimWorld.Spawn(
                 firePosition,
@@ -105,7 +107,9 @@ public static class AttackVisuals
                 splashMinDamageRatio,
                 arcClimbPower,
                 arcDivePower,
-                impactOffsetRadius) != null)
+                impactOffsetRadius,
+                arcPeakTime,
+                lateralWobbleAmount) != null)
             return;
 
         GameObject projectileObject;
@@ -142,7 +146,9 @@ public static class AttackVisuals
             splashMinDamageRatio,
             arcClimbPower,
             arcDivePower,
-            impactOffsetRadius);
+            impactOffsetRadius,
+            arcPeakTime,
+            lateralWobbleAmount);
     }
 
     public static GameObject CreateFallbackProjectile(Vector3 position, Color color)

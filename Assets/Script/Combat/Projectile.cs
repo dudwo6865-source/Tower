@@ -43,11 +43,14 @@ public class Projectile : MonoBehaviour
     private float arcDuration;
     private float arcElapsed;
 
-    // 상승/하강 구간을 비대칭으로 만들어 미사일처럼 보이게 하는 지수와,
-    // 정점에서 높이가 정확히 arcHeight가 되도록 미리 계산해 둔 배율입니다.
+    // 상승/하강 구간을 비대칭으로 만들어 미사일처럼 보이게 하는 값들입니다.
     private float arcClimbPower;
     private float arcDivePower;
-    private float arcHeightScale;
+    private float arcPeakTime;
+
+    // 비행 중 좌우로 살짝 구불거리게 하는 값입니다(정점에서 최대, 시작·끝점에서는 0).
+    private float arcLateralOffset;
+    private Vector3 arcRightAxis;
 
     public int Slot { get; private set; } = -1;
     public int PoolKey { get; private set; }
@@ -171,7 +174,9 @@ public class Projectile : MonoBehaviour
         float splashMinDamageRatio = 1f,
         float arcClimbPower = 1f,
         float arcDivePower = 1f,
-        float impactOffsetRadius = 0f)
+        float impactOffsetRadius = 0f,
+        float arcPeakTime = 0.5f,
+        float lateralWobbleAmount = 0f)
     {
         this.target = target;
         this.targetHealth = targetHealth;
@@ -217,22 +222,26 @@ public class Projectile : MonoBehaviour
 
             Vector3 flatStart = new Vector3(arcStartPosition.x, 0f, arcStartPosition.z);
             Vector3 flatImpact = new Vector3(arcImpactPosition.x, 0f, arcImpactPosition.z);
-            float horizontalDistance = Vector3.Distance(flatStart, flatImpact);
+            Vector3 flatDelta = flatImpact - flatStart;
+            float horizontalDistance = flatDelta.magnitude;
 
             // 가까운 거리에서 너무 빠르게 솟았다 내려오지 않도록, 거리에 비례한 높이를
             // Min~Max(arcHeight) 사이로 clamp합니다.
             float requestedHeight = horizontalDistance * arcHeightRatio;
             this.arcHeight = Mathf.Clamp(requestedHeight, minArcHeight, Mathf.Max(minArcHeight, arcHeight));
 
-            // 상승/하강 지수가 같으면(기본값) 기존과 동일한 대칭 포물선입니다.
-            // 지수를 다르게 주면 정점이 한쪽으로 쏠려 미사일처럼 빠르게 솟았다 급하게
-            // 내리꽂히는 비대칭 궤적이 됩니다. peakValue로 정규화해 정점 높이가 항상
-            // arcHeight가 되도록 맞춥니다.
-            this.arcClimbPower = Mathf.Max(0.01f, arcClimbPower);
-            this.arcDivePower = Mathf.Max(0.01f, arcDivePower);
-            float peakT = this.arcClimbPower / (this.arcClimbPower + this.arcDivePower);
-            float peakValue = Mathf.Pow(peakT, this.arcClimbPower) * Mathf.Pow(1f - peakT, this.arcDivePower);
-            arcHeightScale = peakValue > 0.0001f ? this.arcHeight / peakValue : 0f;
+            this.arcClimbPower = Mathf.Max(0f, arcClimbPower);
+            this.arcDivePower = Mathf.Max(0f, arcDivePower);
+            this.arcPeakTime = Mathf.Clamp(arcPeakTime, 0.05f, 0.95f);
+
+            // 비행 정점 부근에서 좌우로 치우치는 오프셋입니다. 시작/끝점에서는 0이 되도록
+            // Update에서 sin(pi*t)로 감싸므로, 여기서는 최대 치우침 크기만 무작위로 정합니다.
+            arcRightAxis = flatDelta.sqrMagnitude > 0.0001f
+                ? Vector3.Cross(Vector3.up, flatDelta.normalized)
+                : Vector3.right;
+            arcLateralOffset = lateralWobbleAmount > 0f
+                ? UnityEngine.Random.Range(-lateralWobbleAmount, lateralWobbleAmount)
+                : 0f;
 
             arcDuration = speed > 0.01f
                 ? Mathf.Max(0.05f, horizontalDistance / speed)
@@ -248,7 +257,11 @@ public class Projectile : MonoBehaviour
         float t = arcDuration > 0f ? Mathf.Clamp01(arcElapsed / arcDuration) : 1f;
 
         Vector3 position = Vector3.Lerp(arcStartPosition, arcImpactPosition, t);
-        position.y += arcHeightScale * Mathf.Pow(t, arcClimbPower) * Mathf.Pow(1f - t, arcDivePower);
+        position.y += EvaluateArcHeight(t);
+
+        if (arcLateralOffset != 0f)
+            position += arcRightAxis * (arcLateralOffset * Mathf.Sin(t * Mathf.PI));
+
         transform.position = position;
 
         Vector3 direction = arcImpactPosition - arcStartPosition;
@@ -257,6 +270,24 @@ public class Projectile : MonoBehaviour
 
         if (t >= 1f)
             ImpactArea();
+    }
+
+    // arcPeakTime 이전은 상승, 이후는 하강 구간입니다. 두 구간 모두 정점에서 기울기가 0이라
+    // 이어붙여도 매끄럽습니다(arcClimbPower=arcDivePower=1, arcPeakTime=0.5일 때는
+    // 기존의 대칭 포물선 4t(1-t)와 완전히 같은 모양입니다). climb/dive power를 키우면
+    // 그 구간의 '먼 쪽 끝'(발사 직후 / 착탄 직전)에서 변화가 가팔라집니다 — dive power를
+    // 높이면 정점 높이를 오래 유지하다가 착탄 직전에야 급격히 떨어집니다.
+    float EvaluateArcHeight(float t)
+    {
+        if (t <= arcPeakTime)
+        {
+            float x = arcPeakTime > 0.0001f ? t / arcPeakTime : 1f;
+            return arcHeight * (1f - Mathf.Pow(1f - x, arcClimbPower + 1f));
+        }
+
+        float span = 1f - arcPeakTime;
+        float y = span > 0.0001f ? (t - arcPeakTime) / span : 1f;
+        return arcHeight * (1f - Mathf.Pow(y, arcDivePower + 1f));
     }
 
     public ProjectileSimData CreateSimData(float impactDistanceSq)
@@ -432,7 +463,9 @@ public class Projectile : MonoBehaviour
         arcDuration = 0f;
         arcClimbPower = 1f;
         arcDivePower = 1f;
-        arcHeightScale = 0f;
+        arcPeakTime = 0.5f;
+        arcLateralOffset = 0f;
+        arcRightAxis = Vector3.zero;
         Slot = -1;
     }
 

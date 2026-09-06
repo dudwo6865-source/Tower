@@ -22,9 +22,11 @@ public class UnitAttackerEditor : Editor
     SerializedProperty arcHeight;
     SerializedProperty arcHeightRatio;
     SerializedProperty minArcHeight;
+    SerializedProperty arcPeakTime;
     SerializedProperty arcClimbPower;
     SerializedProperty arcDivePower;
     SerializedProperty impactOffsetRadius;
+    SerializedProperty lateralWobbleAmount;
     SerializedProperty splashRadius;
     SerializedProperty splashMinDamageRatio;
 
@@ -59,9 +61,11 @@ public class UnitAttackerEditor : Editor
         arcHeight = serializedObject.FindProperty("arcHeight");
         arcHeightRatio = serializedObject.FindProperty("arcHeightRatio");
         minArcHeight = serializedObject.FindProperty("minArcHeight");
+        arcPeakTime = serializedObject.FindProperty("arcPeakTime");
         arcClimbPower = serializedObject.FindProperty("arcClimbPower");
         arcDivePower = serializedObject.FindProperty("arcDivePower");
         impactOffsetRadius = serializedObject.FindProperty("impactOffsetRadius");
+        lateralWobbleAmount = serializedObject.FindProperty("lateralWobbleAmount");
         splashRadius = serializedObject.FindProperty("splashRadius");
         splashMinDamageRatio = serializedObject.FindProperty("splashMinDamageRatio");
 
@@ -127,9 +131,11 @@ public class UnitAttackerEditor : Editor
             EditorGUILayout.PropertyField(arcHeight);
             EditorGUILayout.PropertyField(arcHeightRatio);
             EditorGUILayout.PropertyField(minArcHeight);
+            EditorGUILayout.PropertyField(arcPeakTime);
             EditorGUILayout.PropertyField(arcClimbPower);
             EditorGUILayout.PropertyField(arcDivePower);
             EditorGUILayout.PropertyField(impactOffsetRadius);
+            EditorGUILayout.PropertyField(lateralWobbleAmount);
             EditorGUILayout.PropertyField(splashRadius);
             EditorGUILayout.PropertyField(splashMinDamageRatio);
         }
