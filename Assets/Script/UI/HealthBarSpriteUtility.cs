@@ -37,7 +37,7 @@ public static class HealthBarSpriteUtility
         overlayMaterial = new Material(shader);
         overlayMaterial.SetInt(
             "unity_GUIZTestMode",
-            (int)CompareFunction.Always);
+            (int)CompareFunction.LessEqual);
 
         return overlayMaterial;
     }
