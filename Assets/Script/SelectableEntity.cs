@@ -31,11 +31,18 @@ public class SelectableEntity : MonoBehaviour
 
     public bool IsSelected { get; private set; }
 
+    static readonly Color AttackRangeRingColor = new Color(1f, 1f, 1f, 0.35f);
+    static readonly Color MinAttackRangeRingColor = new Color(0.05f, 0.05f, 0.05f, 0.55f);
+
     private SelectionRingIndicator ringIndicator;
+    private SelectionRingIndicator attackRangeRingIndicator;
+    private SelectionRingIndicator minAttackRangeRingIndicator;
     private EntityHealth cachedHealth;
     private CombatAIBase cachedCombatAI;
+    private UnitAttacker cachedAttacker;
     private bool healthCached;
     private bool combatAICached;
+    private bool attackerCached;
 
     public EntityHealth CachedHealth
     {
@@ -62,6 +69,20 @@ public class SelectableEntity : MonoBehaviour
             }
 
             return cachedCombatAI;
+        }
+    }
+
+    public UnitAttacker CachedAttacker
+    {
+        get
+        {
+            if (!attackerCached)
+            {
+                cachedAttacker = GetComponent<UnitAttacker>();
+                attackerCached = true;
+            }
+
+            return cachedAttacker;
         }
     }
 
@@ -110,6 +131,12 @@ public class SelectableEntity : MonoBehaviour
         if (ringIndicator != null)
             ringIndicator.SetVisible(false);
 
+        if (attackRangeRingIndicator != null)
+            attackRangeRingIndicator.SetVisible(false);
+
+        if (minAttackRangeRingIndicator != null)
+            minAttackRangeRingIndicator.SetVisible(false);
+
         if (UnitSelectionManager.Instance != null)
             UnitSelectionManager.Instance.NotifyEntityRemoved(this);
 
@@ -131,10 +158,63 @@ public class SelectableEntity : MonoBehaviour
             : SelectionRingIndicator.AllyRingColor);
         ring.SetVisible(selected);
 
+        UpdateAttackRangeRings(selected);
+
         WorldHealthBar healthBar = GetComponent<WorldHealthBar>();
 
         if (healthBar != null)
             healthBar.RefreshVisibility();
+    }
+
+    // 선택 시 이 대상의 공격 사거리(그리고 대포의 최소 사격 거리)를 바닥에 원으로 표시합니다.
+    void UpdateAttackRangeRings(bool selected)
+    {
+        UnitAttacker attacker = CachedAttacker;
+
+        if (attacker == null)
+            return;
+
+        bool showRange = selected && attacker.AttackRange > 0f;
+
+        if (showRange || attackRangeRingIndicator != null)
+            GetOrCreateAttackRangeRing().SetVisible(showRange);
+
+        bool showMinRange = selected &&
+            attacker.attackType == AttackType.Cannon &&
+            attacker.minAttackRange > 0f;
+
+        if (showMinRange || minAttackRangeRingIndicator != null)
+            GetOrCreateMinAttackRangeRing().SetVisible(showMinRange);
+    }
+
+    SelectionRingIndicator GetOrCreateAttackRangeRing()
+    {
+        if (attackRangeRingIndicator != null)
+            return attackRangeRingIndicator;
+
+        GameObject ringObject = new GameObject("AttackRangeRing");
+        ringObject.transform.SetParent(transform, false);
+
+        attackRangeRingIndicator = ringObject.AddComponent<SelectionRingIndicator>();
+        attackRangeRingIndicator.Initialize(CachedAttacker.AttackRange);
+        attackRangeRingIndicator.SetColor(AttackRangeRingColor);
+
+        return attackRangeRingIndicator;
+    }
+
+    SelectionRingIndicator GetOrCreateMinAttackRangeRing()
+    {
+        if (minAttackRangeRingIndicator != null)
+            return minAttackRangeRingIndicator;
+
+        GameObject ringObject = new GameObject("MinAttackRangeRing");
+        ringObject.transform.SetParent(transform, false);
+
+        minAttackRangeRingIndicator = ringObject.AddComponent<SelectionRingIndicator>();
+        minAttackRangeRingIndicator.Initialize(CachedAttacker.minAttackRange);
+        minAttackRangeRingIndicator.SetColor(MinAttackRangeRingColor);
+
+        return minAttackRangeRingIndicator;
     }
 
     bool IsEnemyOfLocalPlayer()
