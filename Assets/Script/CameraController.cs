@@ -65,6 +65,15 @@ public class RTSCameraPivotController : MonoBehaviour
     [Tooltip("Home 키를 눌렀을 때 카메라가 이동할 월드 좌표입니다. Use Custom Home Position이 켜져 있을 때만 사용됩니다.")]
     public Vector3 customHomePosition;
 
+    [Header("Lock")]
+    [Tooltip("켜져 있으면 카메라 이동/줌/드래그가 모두 막혀 화면이 고정됩니다. 런타임에 Lock Key로 켜고 끌 수 있습니다.")]
+    public bool isLocked;
+
+    [Tooltip("화면 고정을 켜고 끄는 키입니다. H는 유닛 Hold 명령 단축키와 겹쳐서 기본값을 L로 뒀습니다.")]
+    public KeyCode lockKey = KeyCode.L;
+
+    public bool IsLocked => isLocked;
+
     [Header("Map Bounds")]
     [Tooltip("Auto: MapGrid(NavMesh) → Manual 순으로 맵 크기를 찾습니다.")]
     public MapPlayBoundsSource boundsSource = MapPlayBoundsSource.Auto;
@@ -222,6 +231,15 @@ public class RTSCameraPivotController : MonoBehaviour
         if (!mapBoundsValid)
             return;
 
+        if (Input.GetKeyDown(lockKey))
+            ToggleLock();
+
+        if (isLocked)
+        {
+            ApplySmoothMovement();
+            return;
+        }
+
         bool pointerOverUI = IsPointerOverUI();
 
         if (!pointerOverUI)
@@ -236,6 +254,17 @@ public class RTSCameraPivotController : MonoBehaviour
             FocusHome();
 
         ApplySmoothMovement();
+    }
+
+    public void ToggleLock()
+    {
+        SetLocked(!isLocked);
+    }
+
+    public void SetLocked(bool locked)
+    {
+        isLocked = locked;
+        Debug.Log($"카메라 화면 고정: {(isLocked ? $"켜짐 ({lockKey}로 해제)" : "꺼짐")}");
     }
 
     void EnsureEventSystem()
