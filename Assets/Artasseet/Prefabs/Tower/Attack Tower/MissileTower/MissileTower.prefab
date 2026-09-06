@@ -90,7 +90,8 @@ MonoBehaviour:
   arcClimbPower: 0.5
   arcDivePower: 5
   impactOffsetRadius: 2
-  lateralWobbleAmount: 0
+  lateralWobbleRatio: 0.15
+  lateralWobbleAmount: 1.5
   splashRadius: 4
   splashMinDamageRatio: 0.3
   requireFacingToAttack: 1
