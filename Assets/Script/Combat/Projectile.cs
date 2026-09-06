@@ -102,7 +102,10 @@ public class Projectile : MonoBehaviour
         Vector3 moveDelta = destination - transform.position;
 
         if (moveDelta.sqrMagnitude > 0.0001f)
+        {
             lastMoveDirection = moveDelta.normalized;
+            FaceMoveDirection();
+        }
 
         Vector3 previousPosition = transform.position;
         transform.position = Vector3.MoveTowards(transform.position, destination, step);
@@ -206,6 +209,7 @@ public class Projectile : MonoBehaviour
         lastMoveDirection = initialDir.sqrMagnitude > 0.0001f
             ? initialDir.normalized
             : transform.forward;
+        FaceMoveDirection();
 
         if (arcing)
         {
@@ -261,6 +265,8 @@ public class Projectile : MonoBehaviour
     // 발사 지점 -> 착탄 지점을 포물선(비대칭 지원)으로 이동합니다. 도착하면 범위 피해를 적용합니다.
     void UpdateArcMovement()
     {
+        Vector3 previousPosition = transform.position;
+
         arcElapsed += Time.deltaTime;
         float t = arcDuration > 0f ? Mathf.Clamp01(arcElapsed / arcDuration) : 1f;
 
@@ -272,12 +278,25 @@ public class Projectile : MonoBehaviour
 
         transform.position = position;
 
-        Vector3 direction = arcImpactPosition - arcStartPosition;
-        if (direction.sqrMagnitude > 0.0001f)
-            lastMoveDirection = direction.normalized;
+        // 발사~착탄 직선이 아니라, 실제 이번 프레임에 움직인 방향(오르내림·좌우 흔들림 포함)을
+        // 그대로 바라보게 합니다. 그래야 포물선을 오르내리거나 옆으로 흔들릴 때도 모델이
+        // 진행 방향을 향해 자연스럽게 기울어집니다.
+        Vector3 frameDelta = position - previousPosition;
+        if (frameDelta.sqrMagnitude > 0.000001f)
+        {
+            lastMoveDirection = frameDelta.normalized;
+            FaceMoveDirection();
+        }
 
         if (t >= 1f)
             ImpactArea();
+    }
+
+    // lastMoveDirection이 바뀔 때마다 호출해, 투사체가 항상 실제 이동 방향을 바라보게 합니다.
+    void FaceMoveDirection()
+    {
+        if (lastMoveDirection.sqrMagnitude > 0.000001f)
+            transform.rotation = Quaternion.LookRotation(lastMoveDirection, Vector3.up);
     }
 
     // arcPeakTime 이전은 상승, 이후는 하강 구간입니다. 두 구간 모두 정점에서 기울기가 0이라
@@ -329,6 +348,7 @@ public class Projectile : MonoBehaviour
     {
         transform.position = sim.Position;
         lastMoveDirection = sim.LastMoveDirection;
+        FaceMoveDirection();
     }
 
     public void Impact()
