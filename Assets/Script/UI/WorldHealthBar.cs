@@ -11,6 +11,12 @@ public class WorldHealthBar : MonoBehaviour
         "않을 정도로만 작게 두면 됩니다.")]
     public float heightOffset = 0.05f;
 
+    [Tooltip("카메라 시점 기준으로 체력바를 유닛보다 얼마나 아래쪽(화면 아래 방향)에 표시할지 " +
+        "정하는 월드 거리입니다. heightOffset(수직 높이)과 달리 카메라가 보는 방향(화면 아래쪽 " +
+        "지면 방향)으로 밀어내므로, 카메라 각도가 바뀌어도 항상 유닛보다 아래로 보이게 만들 수 " +
+        "있습니다. 0이면 유닛 발밑에 그대로 표시됩니다.")]
+    public float viewDownOffset = 0f;
+
     [Tooltip("체력바의 월드 기준 높이입니다.")]
     public float barHeight = 0.5f;
 
@@ -279,14 +285,36 @@ public class WorldHealthBar : MonoBehaviour
     {
         Collider collider = selectableEntity.SelectionCollider;
 
-        if (collider == null)
-            return transform.position + Vector3.up * heightOffset;
+        Vector3 basePosition = collider == null
+            ? transform.position + Vector3.up * heightOffset
+            : new Vector3(
+                collider.bounds.center.x,
+                collider.bounds.min.y + heightOffset,
+                collider.bounds.center.z);
 
-        Bounds bounds = collider.bounds;
-        return new Vector3(
-            bounds.center.x,
-            bounds.min.y + heightOffset,
-            bounds.center.z);
+        return basePosition + GetViewDownOffset();
+    }
+
+    // 카메라가 바라보는 방향을 지면(XZ)에 투영해, 그 반대쪽(카메라 쪽, 화면상 아래 방향)으로
+    // viewDownOffset만큼 미는 벡터입니다. 순수 수직 높이(heightOffset)와 달리 카메라 각도에
+    // 따라 방향이 달라지므로, 카메라가 회전해도 체력바가 항상 유닛보다 화면 아래쪽에 보입니다.
+    Vector3 GetViewDownOffset()
+    {
+        if (Mathf.Approximately(viewDownOffset, 0f))
+            return Vector3.zero;
+
+        Camera camera = CameraVisibility.MainCamera;
+
+        if (camera == null)
+            return Vector3.zero;
+
+        Vector3 towardCamera = -camera.transform.forward;
+        towardCamera.y = 0f;
+
+        if (towardCamera.sqrMagnitude < 0.0001f)
+            return Vector3.zero;
+
+        return towardCamera.normalized * viewDownOffset;
     }
 
     public void RefreshVisibility()
