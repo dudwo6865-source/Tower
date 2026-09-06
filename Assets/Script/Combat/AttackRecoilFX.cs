@@ -26,8 +26,7 @@ public class AttackRecoilFX : MonoBehaviour
     [Tooltip("recoilTarget의 로컬 공간 기준 반동 축입니다. 기본은 뒤쪽(-Z)입니다.")]
     public Vector3 recoilAxisLocal = Vector3.back;
 
-    Vector3 restLocalPosition;
-    bool hasRest;
+    Vector3 currentOffset;
     Coroutine playRoutine;
 
     void Start()
@@ -41,26 +40,12 @@ public class AttackRecoilFX : MonoBehaviour
                 ? attacker.aimTransform
                 : transform;
         }
-
-        CacheRest();
-    }
-
-    void CacheRest()
-    {
-        if (recoilTarget == null)
-            return;
-
-        restLocalPosition = recoilTarget.localPosition;
-        hasRest = true;
     }
 
     public void Play()
     {
         if (recoilTarget == null)
             return;
-
-        if (!hasRest)
-            CacheRest();
 
         if (playRoutine != null)
             StopCoroutine(playRoutine);
@@ -92,13 +77,20 @@ public class AttackRecoilFX : MonoBehaviour
             yield return null;
         }
 
-        recoilTarget.localPosition = restLocalPosition;
+        Apply(axis, 0f);
         playRoutine = null;
     }
 
     void Apply(Vector3 axisLocal, float amount)
     {
-        recoilTarget.localPosition = restLocalPosition;
-        recoilTarget.Translate(axisLocal * (distance * amount), Space.Self);
+        // recoilTarget의 절대 위치를 캐시된 값으로 되돌리는 대신, 매 프레임
+        // 목표 오프셋과 직전 오프셋의 '차이'만큼만 이동시킨다. 이동 유닛처럼
+        // recoilTarget(자기 자신)이 NavMeshAgent 등으로 계속 움직이는 경우에도
+        // 그 움직임 위에 반동만 얹히므로, 반동이 끝난 뒤 스폰 시점 위치로
+        // 스냅되는 문제가 생기지 않는다.
+        Vector3 targetOffset = axisLocal * (distance * amount);
+        Vector3 delta = targetOffset - currentOffset;
+        recoilTarget.Translate(delta, Space.Self);
+        currentOffset = targetOffset;
     }
 }
