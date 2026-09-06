@@ -49,6 +49,58 @@ public class UnitCommandController : MonoBehaviour
         {
             CancelMode();
         }
+
+        UpdateAttackCursorIndicator();
+    }
+
+    // Attack 모드일 때 마우스 아래 지면 위치에 공격 범위 미리보기 원을 표시한다.
+    void UpdateAttackCursorIndicator()
+    {
+        if (ActiveMode != UnitCommandMode.Attack)
+            return;
+
+        if (Camera.main == null ||
+            (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()))
+        {
+            AttackCommandCursorIndicator.HideIndicator();
+            return;
+        }
+
+        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+
+        if (!Physics.Raycast(ray, out RaycastHit hit))
+        {
+            AttackCommandCursorIndicator.HideIndicator();
+            return;
+        }
+
+        AttackCommandCursorIndicator.ShowAt(hit.point, GetAttackCursorRadius());
+    }
+
+    // 선택 중인 유닛이 대포(Cannon)라면 스플래시 범위만큼 미리보기 원을 키운다.
+    float GetAttackCursorRadius()
+    {
+        float radius = AttackCommandCursorIndicator.DefaultRadius;
+
+        if (UnitSelectionManager.Instance == null)
+            return radius;
+
+        int localOwnerId = UnitSelectionManager.Instance.localPlayerOwnerId;
+
+        foreach (SelectableEntity entity in UnitSelectionManager.Instance.GetSelectedEntities())
+        {
+            if (entity == null || entity.ownerId != localOwnerId)
+                continue;
+
+            UnitAttacker attacker = entity.GetComponent<UnitAttacker>();
+
+            if (attacker == null || attacker.attackType != AttackType.Cannon)
+                continue;
+
+            radius = Mathf.Max(radius, attacker.splashRadius);
+        }
+
+        return radius;
     }
 
     public bool ShouldBlockSelectionInput()
@@ -98,6 +150,9 @@ public class UnitCommandController : MonoBehaviour
 
         ActiveMode = mode;
         OnModeChanged?.Invoke(ActiveMode);
+
+        if (ActiveMode != UnitCommandMode.Attack)
+            AttackCommandCursorIndicator.HideIndicator();
     }
 
     public void CancelMode()
