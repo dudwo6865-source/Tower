@@ -353,6 +353,19 @@ MonoBehaviour:
   useAttackAnimationEvent: 1
   projectileSpeed: 25
   firePoint: {fileID: 0}
+  pierceHitRadius: 0.6
+  minAttackRange: 0
+  arcHeight: 4
+  arcHeightRatio: 0.3
+  minArcHeight: 0.5
+  arcPeakTime: 0.5
+  arcClimbPower: 1
+  arcDivePower: 1
+  impactOffsetRadius: 0
+  lateralWobbleRatio: 0.15
+  lateralWobbleAmount: 0
+  splashRadius: 3
+  splashMinDamageRatio: 0.3
   requireFacingToAttack: 1
   aimAngleTolerance: 8
   aimTransform: {fileID: 0}
@@ -420,6 +433,7 @@ MonoBehaviour:
   targetPriority: 3
   retargetInterval: 0.5
   damageFocusSwitchMargin: 10
+  debugCommandLog: 0
   stoppingDistance: 1
   destinationRefreshInterval: 0.2
   destinationMoveThreshold: 1
@@ -429,7 +443,6 @@ MonoBehaviour:
   avoidancePriorityMax: 70
   buildingDirectChaseRange: 2
   shareAggroWithAllies: 1
-  debugCommandLog: 0
   advanceToEnemyBuildings: 1
   shareTargetWithNearbyAllies: 1
   squadRadius: 20
