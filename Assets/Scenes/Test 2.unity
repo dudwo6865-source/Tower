@@ -131,13 +131,37 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 2778462411958473515, guid: 0c002a2bf59777942a401ff96d369898, type: 3}
+      propertyPath: arcPeakTime
+      value: 0.812
+      objectReference: {fileID: 0}
+    - target: {fileID: 2778462411958473515, guid: 0c002a2bf59777942a401ff96d369898, type: 3}
+      propertyPath: minArcHeight
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 2778462411958473515, guid: 0c002a2bf59777942a401ff96d369898, type: 3}
+      propertyPath: attackCooldown
+      value: 0.8
+      objectReference: {fileID: 0}
+    - target: {fileID: 2778462411958473515, guid: 0c002a2bf59777942a401ff96d369898, type: 3}
+      propertyPath: projectileSpeed
+      value: 35
+      objectReference: {fileID: 0}
+    - target: {fileID: 2778462411958473515, guid: 0c002a2bf59777942a401ff96d369898, type: 3}
+      propertyPath: impactOffsetRadius
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 2778462411958473515, guid: 0c002a2bf59777942a401ff96d369898, type: 3}
+      propertyPath: lateralWobbleAmount
+      value: 10
+      objectReference: {fileID: 0}
     - target: {fileID: 6894192069859626715, guid: 0c002a2bf59777942a401ff96d369898, type: 3}
       propertyPath: m_Name
       value: MissileTower
       objectReference: {fileID: 0}
     - target: {fileID: 7296272137357327206, guid: 0c002a2bf59777942a401ff96d369898, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 102.07091
+      value: 94.93
       objectReference: {fileID: 0}
     - target: {fileID: 7296272137357327206, guid: 0c002a2bf59777942a401ff96d369898, type: 3}
       propertyPath: m_LocalPosition.y
@@ -15096,6 +15120,8 @@ MonoBehaviour:
   homeReturnsToStartFocus: 1
   useCustomHomePosition: 1
   customHomePosition: {x: 0, y: 0, z: 0}
+  isLocked: 0
+  lockKey: 108
   boundsSource: 0
   manualMapOrigin: {x: 0, y: 0, z: 0}
   manualMapSize: {x: 256, y: 256}
