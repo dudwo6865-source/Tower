@@ -176,7 +176,8 @@ public class Projectile : MonoBehaviour
         float arcDivePower = 1f,
         float impactOffsetRadius = 0f,
         float arcPeakTime = 0.5f,
-        float lateralWobbleAmount = 0f)
+        float lateralWobbleAmount = 0f,
+        float lateralWobbleRatio = 0f)
     {
         this.target = target;
         this.targetHealth = targetHealth;
@@ -236,11 +237,18 @@ public class Projectile : MonoBehaviour
 
             // 비행 정점 부근에서 좌우로 치우치는 오프셋입니다. 시작/끝점에서는 0이 되도록
             // Update에서 sin(pi*t)로 감싸므로, 여기서는 최대 치우침 크기만 무작위로 정합니다.
+            // 거리에 비례(lateralWobbleRatio)해 계산한 뒤 상한(lateralWobbleAmount)으로 clamp합니다.
+            // 가까운 적을 쏠 때는 비례값이 작아져 흔들림이 자동으로 줄어듭니다.
             arcRightAxis = flatDelta.sqrMagnitude > 0.0001f
                 ? Vector3.Cross(Vector3.up, flatDelta.normalized)
                 : Vector3.right;
-            arcLateralOffset = lateralWobbleAmount > 0f
-                ? UnityEngine.Random.Range(-lateralWobbleAmount, lateralWobbleAmount)
+
+            float wobbleRange = horizontalDistance * Mathf.Max(0f, lateralWobbleRatio);
+            if (lateralWobbleAmount > 0f)
+                wobbleRange = Mathf.Min(wobbleRange, lateralWobbleAmount);
+
+            arcLateralOffset = wobbleRange > 0f
+                ? UnityEngine.Random.Range(-wobbleRange, wobbleRange)
                 : 0f;
 
             arcDuration = speed > 0.01f

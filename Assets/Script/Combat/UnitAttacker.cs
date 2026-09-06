@@ -65,7 +65,10 @@ public class UnitAttacker : MonoBehaviour
     [Tooltip("착탄 지점에 더하는 랜덤 오차 반경(m)입니다. 0이면 항상 타겟 중심에 정확히 착탄합니다. 대포 공격일 때만 사용됩니다.")]
     public float impactOffsetRadius = 0f;
 
-    [Tooltip("비행 정점 부근에서 좌우로 치우치는 최대 오프셋(m)입니다. 매 발사마다 이 범위 안에서 방향·크기가 무작위로 정해져 경로가 살짝 구불거리며 더 지저분해 보입니다. 0이면 완전한 직선 경로입니다. 대포 공격일 때만 사용됩니다.")]
+    [Tooltip("거리 대비 좌우 흔들림 비율입니다. 실제 흔들림 폭은 '발사~착탄 거리 × 이 비율'로 계산한 뒤 Lateral Wobble Amount(상한) 이하로 clamp됩니다. 가까운 적을 쏠 때는 거리에 비례해 자동으로 작아지므로 너무 급하게 움직이지 않습니다. 대포 공격일 때만 사용됩니다.")]
+    public float lateralWobbleRatio = 0.15f;
+
+    [Tooltip("비행 정점 부근에서 좌우로 치우치는 흔들림 폭의 상한(m)입니다. 매 발사마다 이 범위 안에서 방향·크기가 무작위로 정해져 경로가 살짝 구불거리며 더 지저분해 보입니다. 0이면 완전한 직선 경로입니다. 대포 공격일 때만 사용됩니다.")]
     public float lateralWobbleAmount = 0f;
 
     [Tooltip("착탄 지점 기준 범위 피해 반경입니다. 이 안의 적(아군 제외)이 모두 피해를 입습니다. 대포 공격일 때만 사용됩니다.")]
@@ -379,7 +382,8 @@ public class UnitAttacker : MonoBehaviour
                 arcDivePower,
                 impactOffsetRadius,
                 arcPeakTime,
-                lateralWobbleAmount);
+                lateralWobbleAmount,
+                lateralWobbleRatio);
         }
         else
         {

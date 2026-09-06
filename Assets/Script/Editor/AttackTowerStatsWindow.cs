@@ -27,6 +27,7 @@ public class AttackTowerStatsWindow : EditorWindow
         public SerializedProperty arcClimbPower;
         public SerializedProperty arcDivePower;
         public SerializedProperty impactOffsetRadius;
+        public SerializedProperty lateralWobbleRatio;
         public SerializedProperty lateralWobbleAmount;
         public SerializedProperty splashRadius;
         public SerializedProperty splashMinDamageRatio;
@@ -92,6 +93,7 @@ public class AttackTowerStatsWindow : EditorWindow
                 arcClimbPower = so.FindProperty("arcClimbPower"),
                 arcDivePower = so.FindProperty("arcDivePower"),
                 impactOffsetRadius = so.FindProperty("impactOffsetRadius"),
+                lateralWobbleRatio = so.FindProperty("lateralWobbleRatio"),
                 lateralWobbleAmount = so.FindProperty("lateralWobbleAmount"),
                 splashRadius = so.FindProperty("splashRadius"),
                 splashMinDamageRatio = so.FindProperty("splashMinDamageRatio"),
@@ -159,7 +161,8 @@ public class AttackTowerStatsWindow : EditorWindow
             HeaderLabel("상승지수", NumWidth);
             HeaderLabel("하강지수", NumWidth);
             HeaderLabel("착탄오차", NumWidth);
-            HeaderLabel("좌우흔들림", NumWidth);
+            HeaderLabel("흔들림비율", NumWidth);
+            HeaderLabel("흔들림상한", NumWidth);
             HeaderLabel("범위반경", NumWidth);
             HeaderLabel("범위감쇠", NumWidth);
             HeaderLabel("관통반경", NumWidth);
@@ -213,6 +216,7 @@ public class AttackTowerStatsWindow : EditorWindow
                 Field(entry.arcClimbPower);
                 Field(entry.arcDivePower);
                 Field(entry.impactOffsetRadius);
+                Field(entry.lateralWobbleRatio);
                 Field(entry.lateralWobbleAmount);
                 Field(entry.splashRadius);
                 Field(entry.splashMinDamageRatio);
