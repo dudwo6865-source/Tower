@@ -52,15 +52,21 @@ public class UnitAttacker : MonoBehaviour
     [Tooltip("포물선 높이의 하한(m)입니다. 아주 가까운 거리에서도 최소한 이만큼은 솟아오릅니다. 대포 공격일 때만 사용됩니다.")]
     public float minArcHeight = 0.5f;
 
+    [Tooltip("상승 구간의 완만함(지수)입니다. 1이면 일반 포물선처럼 대칭으로 오르내립니다. 값을 낮추면(예: 0.5) 미사일처럼 빠르게 솟아오릅니다. 대포 공격일 때만 사용됩니다.")]
+    public float arcClimbPower = 1f;
+
+    [Tooltip("하강 구간의 급격함(지수)입니다. 값을 높이면(예: 2) 미사일처럼 가파르게 내리꽂힙니다. 대포 공격일 때만 사용됩니다.")]
+    public float arcDivePower = 1f;
+
+    [Tooltip("착탄 지점에 더하는 랜덤 오차 반경(m)입니다. 0이면 항상 타겟 중심에 정확히 착탄합니다. 대포 공격일 때만 사용됩니다.")]
+    public float impactOffsetRadius = 0f;
+
     [Tooltip("착탄 지점 기준 범위 피해 반경입니다. 이 안의 적(아군 제외)이 모두 피해를 입습니다. 대포 공격일 때만 사용됩니다.")]
     public float splashRadius = 3f;
 
     [Tooltip("범위 피해 감쇠 비율입니다. 착탄 중심은 100% 피해, 반경 끝은 이 비율(0~1)만큼만 피해를 입습니다. 대포 공격일 때만 사용됩니다.")]
     [Range(0f, 1f)]
     public float splashMinDamageRatio = 0.3f;
-
-    [Tooltip("히트 이펙트가 원래 크기(1배)로 보이는 기준 스플래시 반경입니다. Splash Radius가 이 값보다 크면 이펙트가 커지고, 작으면 작아집니다. 대포 공격일 때만 사용됩니다.")]
-    public float hitEffectBaseRadius = 3f;
 
     [Header("Aim")]
     [Tooltip("켜면 조준(바라보기)이 끝난 뒤에만 공격합니다.")]
@@ -341,11 +347,6 @@ public class UnitAttacker : MonoBehaviour
             bool piercing = attackType == AttackType.Flamethrower;
             bool arcing = attackType == AttackType.Cannon;
 
-            // 스플래시 범위가 기준 반경보다 크면 히트 이펙트도 함께 커지고, 작으면 함께 작아집니다.
-            float hitEffectScale = (arcing && hitEffectBaseRadius > 0f)
-                ? splashRadius / hitEffectBaseRadius
-                : 1f;
-
             AttackVisuals.SpawnProjectile(
                 firePosition,
                 fireRotation,
@@ -367,7 +368,9 @@ public class UnitAttacker : MonoBehaviour
                 minArcHeight,
                 splashRadius,
                 splashMinDamageRatio,
-                hitEffectScale);
+                arcClimbPower,
+                arcDivePower,
+                impactOffsetRadius);
         }
         else
         {
