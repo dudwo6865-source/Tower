@@ -18920,7 +18920,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cb8a6c9de3fe8b1458e4548a1aea8319, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  heightOffset: 3
+  heightOffset: 0.05
   barHeight: 0.5
   worldScale: 0.1
   segmentWorldWidth: 0.4
