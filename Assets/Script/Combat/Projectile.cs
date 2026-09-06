@@ -43,6 +43,12 @@ public class Projectile : MonoBehaviour
     private float arcDuration;
     private float arcElapsed;
 
+    // 상승/하강 구간을 비대칭으로 만들어 미사일처럼 보이게 하는 지수와,
+    // 정점에서 높이가 정확히 arcHeight가 되도록 미리 계산해 둔 배율입니다.
+    private float arcClimbPower;
+    private float arcDivePower;
+    private float arcHeightScale;
+
     public int Slot { get; private set; } = -1;
     public int PoolKey { get; private set; }
 
@@ -162,7 +168,10 @@ public class Projectile : MonoBehaviour
         float arcHeightRatio = 0f,
         float minArcHeight = 0f,
         float splashRadius = 0f,
-        float splashMinDamageRatio = 1f)
+        float splashMinDamageRatio = 1f,
+        float arcClimbPower = 1f,
+        float arcDivePower = 1f,
+        float impactOffsetRadius = 0f)
     {
         this.target = target;
         this.targetHealth = targetHealth;
@@ -199,6 +208,13 @@ public class Projectile : MonoBehaviour
             arcStartPosition = transform.position;
             arcImpactPosition = lastKnownPosition;
 
+            // 착탄 지점에 랜덤 오차를 더해, 매번 타겟 중심에 정확히 꽂히지 않게 합니다.
+            if (impactOffsetRadius > 0f)
+            {
+                Vector2 offset2D = UnityEngine.Random.insideUnitCircle * impactOffsetRadius;
+                arcImpactPosition += new Vector3(offset2D.x, 0f, offset2D.y);
+            }
+
             Vector3 flatStart = new Vector3(arcStartPosition.x, 0f, arcStartPosition.z);
             Vector3 flatImpact = new Vector3(arcImpactPosition.x, 0f, arcImpactPosition.z);
             float horizontalDistance = Vector3.Distance(flatStart, flatImpact);
@@ -208,6 +224,16 @@ public class Projectile : MonoBehaviour
             float requestedHeight = horizontalDistance * arcHeightRatio;
             this.arcHeight = Mathf.Clamp(requestedHeight, minArcHeight, Mathf.Max(minArcHeight, arcHeight));
 
+            // 상승/하강 지수가 같으면(기본값) 기존과 동일한 대칭 포물선입니다.
+            // 지수를 다르게 주면 정점이 한쪽으로 쏠려 미사일처럼 빠르게 솟았다 급하게
+            // 내리꽂히는 비대칭 궤적이 됩니다. peakValue로 정규화해 정점 높이가 항상
+            // arcHeight가 되도록 맞춥니다.
+            this.arcClimbPower = Mathf.Max(0.01f, arcClimbPower);
+            this.arcDivePower = Mathf.Max(0.01f, arcDivePower);
+            float peakT = this.arcClimbPower / (this.arcClimbPower + this.arcDivePower);
+            float peakValue = Mathf.Pow(peakT, this.arcClimbPower) * Mathf.Pow(1f - peakT, this.arcDivePower);
+            arcHeightScale = peakValue > 0.0001f ? this.arcHeight / peakValue : 0f;
+
             arcDuration = speed > 0.01f
                 ? Mathf.Max(0.05f, horizontalDistance / speed)
                 : 0.05f;
@@ -215,14 +241,14 @@ public class Projectile : MonoBehaviour
         }
     }
 
-    // 발사 지점 -> 착탄 지점을 포물선으로 이동합니다. 도착하면 범위 피해를 적용합니다.
+    // 발사 지점 -> 착탄 지점을 포물선(비대칭 지원)으로 이동합니다. 도착하면 범위 피해를 적용합니다.
     void UpdateArcMovement()
     {
         arcElapsed += Time.deltaTime;
         float t = arcDuration > 0f ? Mathf.Clamp01(arcElapsed / arcDuration) : 1f;
 
         Vector3 position = Vector3.Lerp(arcStartPosition, arcImpactPosition, t);
-        position.y += arcHeight * 4f * t * (1f - t);
+        position.y += arcHeightScale * Mathf.Pow(t, arcClimbPower) * Mathf.Pow(1f - t, arcDivePower);
         transform.position = position;
 
         Vector3 direction = arcImpactPosition - arcStartPosition;
@@ -404,6 +430,9 @@ public class Projectile : MonoBehaviour
         splashMinDamageRatio = 1f;
         arcElapsed = 0f;
         arcDuration = 0f;
+        arcClimbPower = 1f;
+        arcDivePower = 1f;
+        arcHeightScale = 0f;
         Slot = -1;
     }
 

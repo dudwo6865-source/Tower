@@ -23,6 +23,9 @@ public class AttackTowerStatsWindow : EditorWindow
         public SerializedProperty arcHeight;
         public SerializedProperty arcHeightRatio;
         public SerializedProperty minArcHeight;
+        public SerializedProperty arcClimbPower;
+        public SerializedProperty arcDivePower;
+        public SerializedProperty impactOffsetRadius;
         public SerializedProperty splashRadius;
         public SerializedProperty splashMinDamageRatio;
         public SerializedProperty pierceHitRadius;
@@ -83,6 +86,9 @@ public class AttackTowerStatsWindow : EditorWindow
                 arcHeight = so.FindProperty("arcHeight"),
                 arcHeightRatio = so.FindProperty("arcHeightRatio"),
                 minArcHeight = so.FindProperty("minArcHeight"),
+                arcClimbPower = so.FindProperty("arcClimbPower"),
+                arcDivePower = so.FindProperty("arcDivePower"),
+                impactOffsetRadius = so.FindProperty("impactOffsetRadius"),
                 splashRadius = so.FindProperty("splashRadius"),
                 splashMinDamageRatio = so.FindProperty("splashMinDamageRatio"),
                 pierceHitRadius = so.FindProperty("pierceHitRadius"),
@@ -145,6 +151,9 @@ public class AttackTowerStatsWindow : EditorWindow
             HeaderLabel("포물선높이", NumWidth);
             HeaderLabel("높이비율", NumWidth);
             HeaderLabel("최소높이", NumWidth);
+            HeaderLabel("상승지수", NumWidth);
+            HeaderLabel("하강지수", NumWidth);
+            HeaderLabel("착탄오차", NumWidth);
             HeaderLabel("범위반경", NumWidth);
             HeaderLabel("범위감쇠", NumWidth);
             HeaderLabel("관통반경", NumWidth);
@@ -194,6 +203,9 @@ public class AttackTowerStatsWindow : EditorWindow
                 Field(entry.arcHeight);
                 Field(entry.arcHeightRatio);
                 Field(entry.minArcHeight);
+                Field(entry.arcClimbPower);
+                Field(entry.arcDivePower);
+                Field(entry.impactOffsetRadius);
                 Field(entry.splashRadius);
                 Field(entry.splashMinDamageRatio);
             }
