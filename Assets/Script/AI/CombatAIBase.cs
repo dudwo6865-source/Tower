@@ -145,11 +145,13 @@ public abstract class CombatAIBase : MonoBehaviour
 
         retargetTimer -= Time.deltaTime;
 
-        // 현재 표적이 죽었거나 사라졌으면 타이머를 기다리지 않고 즉시 재탐색한다.
+        // 현재 표적이 죽었거나 사라졌거나(더 이상 교전 불가, 예: 대포 최소 사거리 안으로
+        // 파고든 경우) 타이머를 기다리지 않고 즉시 재탐색한다.
         // (여러 마리가 같은 대상을 공격하다 죽으면 동시에 다음 표적으로 전환되도록)
         bool targetLost =
             currentTarget != null &&
-            (currentTargetHealth == null || !currentTargetHealth.IsAlive);
+            (currentTargetHealth == null || !currentTargetHealth.IsAlive ||
+             (attacker != null && !attacker.CanEngage(currentTarget)));
 
         if (damageFocusTarget)
         {
