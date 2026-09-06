@@ -40,6 +40,9 @@ public class UnitAttacker : MonoBehaviour
     public float pierceHitRadius = 0.6f;
 
     [Header("Cannon")]
+    [Tooltip("이 거리보다 가까운 적은 사격할 수 없습니다(사각지대). 0이면 제한이 없습니다. 대포 공격일 때만 사용됩니다.")]
+    public float minAttackRange = 0f;
+
     [Tooltip("포물선 높이의 상한(m)입니다. 실제 높이는 '발사~착탄 거리 × Arc Height Ratio'로 계산한 뒤 Min~이 값 사이로 clamp됩니다. 대포 공격일 때만 사용됩니다.")]
     public float arcHeight = 4f;
 
@@ -133,7 +136,13 @@ public class UnitAttacker : MonoBehaviour
 
     public bool CanEngage(SelectableEntity target)
     {
-        return target != null;
+        if (target == null)
+            return false;
+
+        if (IsTooCloseToEngage(target))
+            return false;
+
+        return true;
     }
 
     public bool IsWithinHorizontalRange(SelectableEntity target)
@@ -141,7 +150,19 @@ public class UnitAttacker : MonoBehaviour
         if (target == null)
             return false;
 
+        if (IsTooCloseToEngage(target))
+            return false;
+
         return GetHorizontalBoundsGap(target) <= attackRange;
+    }
+
+    // 대포는 착탄이 포물선이라 아주 가까운 적은 맞힐 수 없습니다(사각지대).
+    bool IsTooCloseToEngage(SelectableEntity target)
+    {
+        if (attackType != AttackType.Cannon || minAttackRange <= 0f)
+            return false;
+
+        return GetHorizontalBoundsGap(target) < minAttackRange;
     }
 
     // 디버그 표시용입니다. 사거리 판정에 쓰는 것과 같은 외곽 간격을 돌려줍니다.
@@ -433,6 +454,13 @@ public class UnitAttacker : MonoBehaviour
             // 범위 피해 반경의 상대적인 크기만 참고용으로 보여줍니다.
             Gizmos.color = new Color(1f, 0.3f, 0.1f, 0.5f);
             Gizmos.DrawWireSphere(aimOrigin + aimDir * attackRange, splashRadius);
+
+            if (minAttackRange > 0f)
+            {
+                // 사각지대(이 안의 적은 쏠 수 없음)입니다.
+                Gizmos.color = new Color(0.2f, 0.2f, 0.2f, 0.6f);
+                Gizmos.DrawWireSphere(origin, minAttackRange);
+            }
         }
         else
         {
