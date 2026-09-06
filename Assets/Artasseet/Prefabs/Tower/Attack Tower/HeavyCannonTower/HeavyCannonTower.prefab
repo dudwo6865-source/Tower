@@ -120,7 +120,7 @@ MonoBehaviour:
   minArcHeight: 0.5
   splashRadius: 5
   splashMinDamageRatio: 0.75
-  hitEffectBaseRadius: 3
+  hitEffectBaseRadius: 4
   requireFacingToAttack: 1
   aimAngleTolerance: 8
   aimTransform: {fileID: 0}

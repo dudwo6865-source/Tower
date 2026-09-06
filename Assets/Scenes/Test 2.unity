@@ -14551,6 +14551,10 @@ PrefabInstance:
       value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 2778462411958473515, guid: d2a14a5e6f7319f45b4797aeb1e0fdd1, type: 3}
+      propertyPath: hitEffectBaseRadius
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 2778462411958473515, guid: d2a14a5e6f7319f45b4797aeb1e0fdd1, type: 3}
       propertyPath: splashMinDamageRatio
       value: 1
       objectReference: {fileID: 0}
