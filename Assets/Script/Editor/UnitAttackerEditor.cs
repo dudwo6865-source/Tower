@@ -18,6 +18,7 @@ public class UnitAttackerEditor : Editor
 
     SerializedProperty pierceHitRadius;
 
+    SerializedProperty minAttackRange;
     SerializedProperty arcHeight;
     SerializedProperty arcHeightRatio;
     SerializedProperty minArcHeight;
@@ -52,6 +53,7 @@ public class UnitAttackerEditor : Editor
 
         pierceHitRadius = serializedObject.FindProperty("pierceHitRadius");
 
+        minAttackRange = serializedObject.FindProperty("minAttackRange");
         arcHeight = serializedObject.FindProperty("arcHeight");
         arcHeightRatio = serializedObject.FindProperty("arcHeightRatio");
         minArcHeight = serializedObject.FindProperty("minArcHeight");
@@ -117,6 +119,7 @@ public class UnitAttackerEditor : Editor
         {
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Cannon", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(minAttackRange);
             EditorGUILayout.PropertyField(arcHeight);
             EditorGUILayout.PropertyField(arcHeightRatio);
             EditorGUILayout.PropertyField(minArcHeight);
