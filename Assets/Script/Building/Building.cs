@@ -85,7 +85,9 @@ public class Building : MonoBehaviour
 
         target.entityType = SelectableEntityType.Building;
         target.ownerId = source.ownerId;
-        target.entityTypeId = source.entityTypeId;
+
+        if (!string.IsNullOrWhiteSpace(source.entityTypeId))
+            target.entityTypeId = source.entityTypeId;
     }
 
     void ApplyHealth(UnitData source)
