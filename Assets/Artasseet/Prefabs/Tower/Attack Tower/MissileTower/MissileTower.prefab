@@ -79,7 +79,7 @@ MonoBehaviour:
   attackRange: 30
   attackCooldown: 0.8
   useAttackAnimationEvent: 1
-  projectileSpeed: 35
+  projectileSpeed: 25
   firePoint: {fileID: 1028585949954494764}
   pierceHitRadius: 0.6
   minAttackRange: 0
@@ -89,11 +89,14 @@ MonoBehaviour:
   arcPeakTime: 0.812
   arcClimbPower: 0.5
   arcDivePower: 5
+  useBallisticArc: 0
+  ballisticGravity: 20
   impactOffsetRadius: 3
   lateralWobbleRatio: 0.15
-  lateralWobbleAmount: 10
+  lateralWobbleAmount: 20
   splashRadius: 4
   splashMinDamageRatio: 0.3
+  hitEffectBaseRadius: 3
   requireFacingToAttack: 1
   aimAngleTolerance: 8
   aimTransform: {fileID: 0}
@@ -258,8 +261,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 5, y: 2.58, z: 5}
-  m_Center: {x: 0, y: 2, z: 0}
+  m_Size: {x: 3.82, y: 2.99, z: 3.91}
+  m_Center: {x: 0, y: 1.48, z: 0}
 --- !u!114 &3433100028922866364
 MonoBehaviour:
   m_ObjectHideFlags: 0

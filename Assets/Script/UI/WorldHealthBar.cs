@@ -15,7 +15,7 @@ public class WorldHealthBar : MonoBehaviour
         "정하는 월드 거리입니다. heightOffset(수직 높이)과 달리 카메라가 보는 방향(화면 아래쪽 " +
         "지면 방향)으로 밀어내므로, 카메라 각도가 바뀌어도 항상 유닛보다 아래로 보이게 만들 수 " +
         "있습니다. 0이면 유닛 발밑에 그대로 표시됩니다.")]
-    public float viewDownOffset = 0f;
+    public float viewDownOffset = 3f;
 
     [Tooltip("체력바의 월드 기준 높이입니다.")]
     public float barHeight = 0.5f;

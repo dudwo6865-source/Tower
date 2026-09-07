@@ -7,6 +7,14 @@ public class Projectile : MonoBehaviour
     [Tooltip("투사체가 사라지기까지의 최대 생존 시간(초)입니다.")]
     public float maxLifeTime = 5f;
 
+    [Header("회전(스핀) 연출")]
+    [Tooltip("비행 중 초당 회전 각도입니다. 0이면 회전하지 않습니다.")]
+    public float spinSpeed = 900f;
+
+    [Tooltip("회전축(로컬 좌표)입니다. 발사 방향은 로컬 Z(forward)이므로, 기본값인 로컬 X(오른쪽)처럼 " +
+        "forward와 수직한 축을 쓰면 총알이 옆으로 텀블링하며 날아가는 것처럼 보입니다.")]
+    public Vector3 spinAxisLocal = Vector3.right;
+
     private SelectableEntity target;
     private SelectableEntity attacker;
     private EntityHealth targetHealth;
@@ -21,6 +29,12 @@ public class Projectile : MonoBehaviour
     private Renderer cachedRenderer;
     private bool visualsCached;
     private float lifeTimer;
+
+    // 비행 중 발사체를 따라다니는 연기 트레일입니다. 발사체가 풀에 반환되거나 파괴될 때
+    // 이 자식만 부모에서 분리해 남겨두고, 자체적으로 잦아들며 사라지게 합니다
+    // (연기 프리팹의 ParticleSystem Main 모듈에서 Stop Action을 Destroy로 설정해두면
+    // 남은 입자가 다 사라진 뒤 자동으로 파괴되어 따로 정리 코드가 필요 없습니다).
+    private GameObject trailEffectInstance;
 
     // 화염방사기(관통) 투사체용입니다. 명중해도 사라지지 않고 사거리 끝까지 직진합니다.
     private bool piercing;
@@ -38,10 +52,17 @@ public class Projectile : MonoBehaviour
     private float arcHeight;
     private float splashRadius;
     private float splashMinDamageRatio;
+    private float hitEffectScale = 1f;
     private Vector3 arcStartPosition;
     private Vector3 arcImpactPosition;
     private float arcDuration;
     private float arcElapsed;
+
+    // 켜져 있으면 arcHeight류 값을 무시하고, 발사 속도 + 중력만으로 실제 탄도학 공식에 따라
+    // 발사각을 계산합니다. 사거리와 무관하게 항상 같은 '무게감'으로 보이게 하기 위한 값입니다.
+    private bool ballisticArc;
+    private float ballisticGravity;
+    private float ballisticInitialVerticalSpeed;
 
     // 상승/하강 구간을 비대칭으로 만들어 미사일처럼 보이게 하는 값들입니다.
     private float arcClimbPower;
@@ -67,6 +88,10 @@ public class Projectile : MonoBehaviour
 
     void Update()
     {
+        // 이동 로직(Slot 유무, 관통/포물선 여부)과 무관하게 항상 적용되는 순수 시각 연출입니다.
+        if (spinSpeed != 0f)
+            transform.Rotate(spinAxisLocal, spinSpeed * Time.deltaTime, Space.Self);
+
         if (Slot >= 0)
             return;
 
@@ -180,7 +205,11 @@ public class Projectile : MonoBehaviour
         float impactOffsetRadius = 0f,
         float arcPeakTime = 0.5f,
         float lateralWobbleAmount = 0f,
-        float lateralWobbleRatio = 0f)
+        float lateralWobbleRatio = 0f,
+        bool ballisticArc = false,
+        float ballisticGravity = 20f,
+        float hitEffectScale = 1f,
+        GameObject trailEffectPrefab = null)
     {
         this.target = target;
         this.targetHealth = targetHealth;
@@ -196,12 +225,21 @@ public class Projectile : MonoBehaviour
         this.arcHeight = arcHeight;
         this.splashRadius = splashRadius;
         this.splashMinDamageRatio = splashMinDamageRatio;
+        this.hitEffectScale = hitEffectScale;
+        this.ballisticArc = ballisticArc;
+        this.ballisticGravity = Mathf.Max(0.01f, ballisticGravity);
         traveledDistance = 0f;
         pierceLocked = false;
         lifeTimer = 0f;
         fireHeight = transform.position.y;
         pierceHitEntities.Clear();
         ConfigurePierceCollision(piercing);
+
+        // 매 발사마다 새로 생성해 자식으로 붙입니다(비행 중 위치를 자동으로 따라오게).
+        // CacheVisuals()가 이미 한 번 실행된 뒤에 붙으므로, 재사용 시 초기화 로직
+        // (StopVisuals 등)이 이 인스턴스를 건드리지 않습니다 — 명중/소멸 시 따로 뗍니다.
+        if (trailEffectPrefab != null)
+            trailEffectInstance = Instantiate(trailEffectPrefab, transform);
 
         lastKnownPosition = GetTargetPoint();
 
@@ -255,11 +293,47 @@ public class Projectile : MonoBehaviour
                 ? UnityEngine.Random.Range(-wobbleRange, wobbleRange)
                 : 0f;
 
-            arcDuration = speed > 0.01f
-                ? Mathf.Max(0.05f, horizontalDistance / speed)
-                : 0.05f;
+            if (this.ballisticArc)
+                ComputeBallisticTrajectory(horizontalDistance, arcImpactPosition.y - arcStartPosition.y, speed);
+            else
+                arcDuration = speed > 0.01f
+                    ? Mathf.Max(0.05f, horizontalDistance / speed)
+                    : 0.05f;
+
             arcElapsed = 0f;
         }
+    }
+
+    // 발사 속도(v)와 중력(g)만으로 목표를 맞히는 발사각을 계산합니다. arcHeight/Ratio 같은 수동 값
+    // 없이도, 물리적으로 일관된(사거리와 무관하게 항상 같은 '무게감'의) 포물선이 나오도록 합니다.
+    // 낮은 각/높은 각 두 해가 나오는데, 대포처럼 눈에 띄는 곡선을 그리도록 항상 높은 각을 씁니다.
+    void ComputeBallisticTrajectory(float horizontalDistance, float heightDelta, float launchSpeed)
+    {
+        float g = ballisticGravity;
+        float v = Mathf.Max(0.01f, launchSpeed);
+        float x = Mathf.Max(0.05f, horizontalDistance);
+
+        float a = g * x * x / (2f * v * v);
+        float c = heightDelta + a;
+        float discriminant = x * x - 4f * a * c;
+
+        if (discriminant < 0f)
+        {
+            // 이 속도로는 물리적으로 도달 불가능한 거리입니다. 정확히 도달 가능한 최소 속도로 대체합니다.
+            float minSpeedSq = g * (heightDelta + Mathf.Sqrt(x * x + heightDelta * heightDelta));
+            v = Mathf.Sqrt(Mathf.Max(minSpeedSq, 0.01f));
+            a = g * x * x / (2f * v * v);
+            c = heightDelta + a;
+            discriminant = Mathf.Max(0f, x * x - 4f * a * c);
+        }
+
+        float sqrtDiscriminant = Mathf.Sqrt(discriminant);
+        float tanAngle = (x + sqrtDiscriminant) / (2f * a);
+
+        float vx = v / Mathf.Sqrt(1f + tanAngle * tanAngle);
+        ballisticInitialVerticalSpeed = vx * tanAngle;
+
+        arcDuration = vx > 0.01f ? Mathf.Max(0.05f, x / vx) : Mathf.Max(0.05f, 2f * ballisticInitialVerticalSpeed / g);
     }
 
     // 발사 지점 -> 착탄 지점을 포물선(비대칭 지원)으로 이동합니다. 도착하면 범위 피해를 적용합니다.
@@ -271,7 +345,7 @@ public class Projectile : MonoBehaviour
         float t = arcDuration > 0f ? Mathf.Clamp01(arcElapsed / arcDuration) : 1f;
 
         Vector3 position = Vector3.Lerp(arcStartPosition, arcImpactPosition, t);
-        position.y += EvaluateArcHeight(t);
+        position.y += ballisticArc ? EvaluateBallisticHeightOffset(Mathf.Min(arcElapsed, arcDuration)) : EvaluateArcHeight(t);
 
         if (arcLateralOffset != 0f)
             position += arcRightAxis * (arcLateralOffset * Mathf.Sin(t * Mathf.PI));
@@ -315,6 +389,14 @@ public class Projectile : MonoBehaviour
         float span = 1f - arcPeakTime;
         float y = span > 0.0001f ? (t - arcPeakTime) / span : 1f;
         return arcHeight * (1f - Mathf.Pow(y, arcDivePower + 1f));
+    }
+
+    // 발사~착탄을 잇는 직선을 기준으로, 진짜 중력 포물선이 그 위로 얼마나 부풀어 오르는지를
+    // 구합니다(직선 자체는 이미 Lerp로 처리되므로 여기서는 '더해지는 여분의 높이'만 반환).
+    // 0.5*g*t*(T-t) 형태로, 시작·끝(t=0, t=T)에서 정확히 0이 되어 Lerp와 매끄럽게 이어집니다.
+    float EvaluateBallisticHeightOffset(float elapsed)
+    {
+        return 0.5f * ballisticGravity * elapsed * (arcDuration - elapsed);
     }
 
     public ProjectileSimData CreateSimData(float impactDistanceSq)
@@ -375,7 +457,8 @@ public class Projectile : MonoBehaviour
             transform.position,
             lastMoveDirection,
             hitEffectPrefab,
-            hitFallbackColor);
+            hitFallbackColor,
+            hitEffectScale);
 
         ReleaseOrDestroy();
     }
@@ -462,10 +545,29 @@ public class Projectile : MonoBehaviour
 
     void ReleaseOrDestroy()
     {
+        DetachTrailEffect();
+
         if (ProjectileSimWorld.Instance != null)
             ProjectileSimWorld.Instance.Release(this);
         else
             Destroy(gameObject);
+    }
+
+    // 연기 트레일을 발사체에서 분리해 그 자리에 남깁니다. 새 입자 생성만 멈추고(Clear는 하지
+    // 않음) 이미 나온 연기는 계속 퍼지다 자연스럽게 사라지게 둡니다. 발사체가 풀에 반환되거나
+    // 파괴되어도 트레일은 영향받지 않고, 자체 Stop Action(Destroy) 설정으로 알아서 정리됩니다.
+    void DetachTrailEffect()
+    {
+        if (trailEffectInstance == null)
+            return;
+
+        trailEffectInstance.transform.SetParent(null, true);
+
+        ParticleSystem[] trailParticles = trailEffectInstance.GetComponentsInChildren<ParticleSystem>(true);
+        for (int i = 0; i < trailParticles.Length; i++)
+            trailParticles[i].Stop(true, ParticleSystemStopBehavior.StopEmitting);
+
+        trailEffectInstance = null;
     }
 
     public void PrepareForPool()
@@ -487,8 +589,12 @@ public class Projectile : MonoBehaviour
         arcHeight = 0f;
         splashRadius = 0f;
         splashMinDamageRatio = 1f;
+        hitEffectScale = 1f;
         arcElapsed = 0f;
         arcDuration = 0f;
+        ballisticArc = false;
+        ballisticGravity = 20f;
+        ballisticInitialVerticalSpeed = 0f;
         arcClimbPower = 1f;
         arcDivePower = 1f;
         arcPeakTime = 0.5f;

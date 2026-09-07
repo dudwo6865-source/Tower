@@ -101,6 +101,15 @@ public class SpatialQueryWorld : MonoBehaviour
         if (entryCount <= 0)
             return null;
 
+        // 대포처럼 최소 사거리(사각지대)가 있는 공격자는, Job 단계에서부터 그 안의 대상을
+        // 후보에서 빼야 합니다. 안 그러면 '가장 가까운 적'이 사각지대 안으로 들어왔을 때
+        // 계속 그 적만 최적 후보로 뽑고(그 뒤 CanEngage에서 걸러져 결과가 null이 됨),
+        // 실제로 교전 가능한 더 먼 다른 적은 아예 못 찾습니다.
+        float minRange = (engageFilter != null &&
+            engageFilter.attackType == AttackType.Cannon)
+            ? engageFilter.minAttackRange
+            : 0f;
+
         var job = new FindBestEnemyJob
         {
             Entries = entries,
@@ -108,6 +117,7 @@ public class SpatialQueryWorld : MonoBehaviour
             Next = next,
             Origin = fromPosition,
             RangeSqr = range * range,
+            MinRangeSqr = minRange > 0f ? minRange * minRange : 0f,
             MyOwnerId = myOwnerId,
             CellSize = math.max(0.5f, cellSize),
             TableMask = TableMask,
@@ -424,6 +434,11 @@ public struct FindBestEnemyJob : IJob
     [ReadOnly] public NativeArray<int> Next;
     public float3 Origin;
     public float RangeSqr;
+
+    // 대포 최소 사거리(사각지대) 등, 이 거리보다 가까운 대상은 후보에서 아예 제외합니다.
+    // 이게 없으면 '가장 가까운 적'이 사각지대 안으로 들어왔을 때도 계속 그 적을 최적
+    // 후보로 뽑아버려서, 실제로는 교전 가능한 더 먼 다른 적이 있어도 못 찾습니다.
+    public float MinRangeSqr;
     public int MyOwnerId;
     public float CellSize;
     public int TableMask;
@@ -467,7 +482,7 @@ public struct FindBestEnemyJob : IJob
                         delta.y = 0f;
                         float sqrDistance = math.lengthsq(delta);
 
-                        if (sqrDistance <= RangeSqr)
+                        if (sqrDistance <= RangeSqr && sqrDistance >= MinRangeSqr)
                         {
                             if (sqrDistance < minAny)
                             {

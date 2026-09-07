@@ -89,11 +89,14 @@ MonoBehaviour:
   arcPeakTime: 0.5
   arcClimbPower: 1
   arcDivePower: 1
+  useBallisticArc: 0
+  ballisticGravity: 20
   impactOffsetRadius: 0
   lateralWobbleRatio: 0.15
   lateralWobbleAmount: 0
   splashRadius: 3
   splashMinDamageRatio: 0.3
+  hitEffectBaseRadius: 3
   requireFacingToAttack: 1
   aimAngleTolerance: 8
   aimTransform: {fileID: 0}
@@ -274,8 +277,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 5, y: 2.58, z: 5}
-  m_Center: {x: 0, y: 2, z: 0}
+  m_Size: {x: 3.82, y: 2.99, z: 3.91}
+  m_Center: {x: 0, y: 1.48, z: 0}
 --- !u!114 &6784219505600378055
 MonoBehaviour:
   m_ObjectHideFlags: 0
