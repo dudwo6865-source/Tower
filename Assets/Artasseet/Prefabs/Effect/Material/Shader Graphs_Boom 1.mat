@@ -21,7 +21,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: Shader Graphs_Boom 1
-  m_Shader: {fileID: -6465566751694194690, guid: 9ea91e219add5a743aec93f3f26aef1f, type: 3}
+  m_Shader: {fileID: -6465566751694194690, guid: 25656cfbbbcdaac4fab482c0d1b27d24, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -54,6 +54,6 @@ Material:
     - _QueueControl: 0
     - _QueueOffset: 0
     m_Colors:
-    - _Color: {r: 0.4056604, g: 0.2818945, b: 0.26980242, a: 0}
+    - _Color: {r: 1, g: 0.89698327, b: 0.6745283, a: 0}
     - _Emission: {r: 0, g: 0, b: 0, a: 0}
   m_BuildTextureStacks: []

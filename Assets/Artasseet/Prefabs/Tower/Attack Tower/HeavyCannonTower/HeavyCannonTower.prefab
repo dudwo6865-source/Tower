@@ -110,21 +110,24 @@ MonoBehaviour:
   attackRange: 50
   attackCooldown: 3
   useAttackAnimationEvent: 0
-  projectileSpeed: 25
+  projectileSpeed: 15
   firePoint: {fileID: 7970280450915493451}
   pierceHitRadius: 0.6
   minAttackRange: 5
-  arcHeight: 20
-  arcHeightRatio: 1
+  arcHeight: 30
+  arcHeightRatio: 0.5
   minArcHeight: 1
   arcPeakTime: 0.5
   arcClimbPower: 1
   arcDivePower: 1
-  impactOffsetRadius: 0
-  lateralWobbleRatio: 0.15
+  useBallisticArc: 0
+  ballisticGravity: 20
+  impactOffsetRadius: 0.2
+  lateralWobbleRatio: 0
   lateralWobbleAmount: 0
-  splashRadius: 3
-  splashMinDamageRatio: 0.3
+  splashRadius: 5
+  splashMinDamageRatio: 0.699
+  hitEffectBaseRadius: 3
   requireFacingToAttack: 1
   aimAngleTolerance: 8
   aimTransform: {fileID: 0}

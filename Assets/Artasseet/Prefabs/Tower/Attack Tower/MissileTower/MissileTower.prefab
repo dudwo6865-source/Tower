@@ -89,11 +89,14 @@ MonoBehaviour:
   arcPeakTime: 0.812
   arcClimbPower: 0.5
   arcDivePower: 5
+  useBallisticArc: 0
+  ballisticGravity: 20
   impactOffsetRadius: 3
   lateralWobbleRatio: 0.15
   lateralWobbleAmount: 20
   splashRadius: 4
   splashMinDamageRatio: 0.3
+  hitEffectBaseRadius: 3
   requireFacingToAttack: 1
   aimAngleTolerance: 8
   aimTransform: {fileID: 0}

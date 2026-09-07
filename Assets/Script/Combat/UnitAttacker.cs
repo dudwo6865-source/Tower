@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public enum AttackType
 {
@@ -89,7 +89,7 @@ public class UnitAttacker : MonoBehaviour
     public float splashMinDamageRatio = 0.3f;
 
     [Tooltip("히트 이펙트가 원래 크기(1배)로 보이는 기준 스플래시 반경입니다. Splash Radius가 이 값보다 크면 이펙트가 커지고, 작으면 작아집니다. 대포 공격일 때만 사용됩니다.")]
-    public float hitEffectBaseRadius = 3f;
+    public float hitEffectBaseRadius = 4f;
 
     [Header("Aim")]
     [Tooltip("켜면 조준(바라보기)이 끝난 뒤에만 공격합니다.")]
