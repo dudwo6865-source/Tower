@@ -30,6 +30,12 @@ public class Projectile : MonoBehaviour
     private bool visualsCached;
     private float lifeTimer;
 
+    // 비행 중 발사체를 따라다니는 연기 트레일입니다. 발사체가 풀에 반환되거나 파괴될 때
+    // 이 자식만 부모에서 분리해 남겨두고, 자체적으로 잦아들며 사라지게 합니다
+    // (연기 프리팹의 ParticleSystem Main 모듈에서 Stop Action을 Destroy로 설정해두면
+    // 남은 입자가 다 사라진 뒤 자동으로 파괴되어 따로 정리 코드가 필요 없습니다).
+    private GameObject trailEffectInstance;
+
     // 화염방사기(관통) 투사체용입니다. 명중해도 사라지지 않고 사거리 끝까지 직진합니다.
     private bool piercing;
     private float maxTravelDistance;
@@ -202,7 +208,8 @@ public class Projectile : MonoBehaviour
         float lateralWobbleRatio = 0f,
         bool ballisticArc = false,
         float ballisticGravity = 20f,
-        float hitEffectScale = 1f)
+        float hitEffectScale = 1f,
+        GameObject trailEffectPrefab = null)
     {
         this.target = target;
         this.targetHealth = targetHealth;
@@ -227,6 +234,12 @@ public class Projectile : MonoBehaviour
         fireHeight = transform.position.y;
         pierceHitEntities.Clear();
         ConfigurePierceCollision(piercing);
+
+        // 매 발사마다 새로 생성해 자식으로 붙입니다(비행 중 위치를 자동으로 따라오게).
+        // CacheVisuals()가 이미 한 번 실행된 뒤에 붙으므로, 재사용 시 초기화 로직
+        // (StopVisuals 등)이 이 인스턴스를 건드리지 않습니다 — 명중/소멸 시 따로 뗍니다.
+        if (trailEffectPrefab != null)
+            trailEffectInstance = Instantiate(trailEffectPrefab, transform);
 
         lastKnownPosition = GetTargetPoint();
 
@@ -532,10 +545,29 @@ public class Projectile : MonoBehaviour
 
     void ReleaseOrDestroy()
     {
+        DetachTrailEffect();
+
         if (ProjectileSimWorld.Instance != null)
             ProjectileSimWorld.Instance.Release(this);
         else
             Destroy(gameObject);
+    }
+
+    // 연기 트레일을 발사체에서 분리해 그 자리에 남깁니다. 새 입자 생성만 멈추고(Clear는 하지
+    // 않음) 이미 나온 연기는 계속 퍼지다 자연스럽게 사라지게 둡니다. 발사체가 풀에 반환되거나
+    // 파괴되어도 트레일은 영향받지 않고, 자체 Stop Action(Destroy) 설정으로 알아서 정리됩니다.
+    void DetachTrailEffect()
+    {
+        if (trailEffectInstance == null)
+            return;
+
+        trailEffectInstance.transform.SetParent(null, true);
+
+        ParticleSystem[] trailParticles = trailEffectInstance.GetComponentsInChildren<ParticleSystem>(true);
+        for (int i = 0; i < trailParticles.Length; i++)
+            trailParticles[i].Stop(true, ParticleSystemStopBehavior.StopEmitting);
+
+        trailEffectInstance = null;
     }
 
     public void PrepareForPool()

@@ -46,6 +46,7 @@ public class UnitAttackerEditor : Editor
     SerializedProperty muzzleFlashPrefab;
     SerializedProperty hitEffectPrefab;
     SerializedProperty projectilePrefab;
+    SerializedProperty trailEffectPrefab;
 
     void OnEnable()
     {
@@ -89,6 +90,7 @@ public class UnitAttackerEditor : Editor
         muzzleFlashPrefab = serializedObject.FindProperty("muzzleFlashPrefab");
         hitEffectPrefab = serializedObject.FindProperty("hitEffectPrefab");
         projectilePrefab = serializedObject.FindProperty("projectilePrefab");
+        trailEffectPrefab = serializedObject.FindProperty("trailEffectPrefab");
     }
 
     public override void OnInspectorGUI()
@@ -183,7 +185,10 @@ public class UnitAttackerEditor : Editor
         EditorGUILayout.PropertyField(hitEffectPrefab);
 
         if (showProjectile)
+        {
             EditorGUILayout.PropertyField(projectilePrefab);
+            EditorGUILayout.PropertyField(trailEffectPrefab);
+        }
 
         serializedObject.ApplyModifiedProperties();
     }
