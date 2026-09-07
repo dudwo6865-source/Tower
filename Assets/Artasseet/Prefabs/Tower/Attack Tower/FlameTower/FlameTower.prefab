@@ -108,10 +108,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   attackType: 2
   attackDamage: 5
-  attackRange: 10
+  attackRange: 20
   attackCooldown: 0.2
   useAttackAnimationEvent: 1
-  projectileSpeed: 10
+  projectileSpeed: 12
   firePoint: {fileID: 7518304296636600780}
   pierceHitRadius: 1
   minAttackRange: 0
@@ -248,7 +248,7 @@ NavMeshObstacle:
   m_Enabled: 1
   serializedVersion: 3
   m_Shape: 1
-  m_Extents: {x: 0.85, y: 1.23, z: 0.85}
+  m_Extents: {x: 2.25, y: 1.23, z: 2.25}
   m_MoveThreshold: 0.1
   m_Carve: 1
   m_CarveOnlyStationary: 1
