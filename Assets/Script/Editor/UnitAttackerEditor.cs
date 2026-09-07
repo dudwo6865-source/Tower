@@ -32,6 +32,7 @@ public class UnitAttackerEditor : Editor
     SerializedProperty lateralWobbleAmount;
     SerializedProperty splashRadius;
     SerializedProperty splashMinDamageRatio;
+    SerializedProperty hitEffectBaseRadius;
 
     SerializedProperty requireFacingToAttack;
     SerializedProperty aimAngleTolerance;
@@ -74,6 +75,7 @@ public class UnitAttackerEditor : Editor
         lateralWobbleAmount = serializedObject.FindProperty("lateralWobbleAmount");
         splashRadius = serializedObject.FindProperty("splashRadius");
         splashMinDamageRatio = serializedObject.FindProperty("splashMinDamageRatio");
+        hitEffectBaseRadius = serializedObject.FindProperty("hitEffectBaseRadius");
 
         requireFacingToAttack = serializedObject.FindProperty("requireFacingToAttack");
         aimAngleTolerance = serializedObject.FindProperty("aimAngleTolerance");
@@ -159,6 +161,7 @@ public class UnitAttackerEditor : Editor
             EditorGUILayout.PropertyField(lateralWobbleAmount);
             EditorGUILayout.PropertyField(splashRadius);
             EditorGUILayout.PropertyField(splashMinDamageRatio);
+            EditorGUILayout.PropertyField(hitEffectBaseRadius);
         }
 
         EditorGUILayout.Space();

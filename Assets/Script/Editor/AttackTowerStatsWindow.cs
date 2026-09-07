@@ -33,6 +33,7 @@ public class AttackTowerStatsWindow : EditorWindow
         public SerializedProperty lateralWobbleAmount;
         public SerializedProperty splashRadius;
         public SerializedProperty splashMinDamageRatio;
+        public SerializedProperty hitEffectBaseRadius;
         public SerializedProperty pierceHitRadius;
     }
 
@@ -101,6 +102,7 @@ public class AttackTowerStatsWindow : EditorWindow
                 lateralWobbleAmount = so.FindProperty("lateralWobbleAmount"),
                 splashRadius = so.FindProperty("splashRadius"),
                 splashMinDamageRatio = so.FindProperty("splashMinDamageRatio"),
+                hitEffectBaseRadius = so.FindProperty("hitEffectBaseRadius"),
                 pierceHitRadius = so.FindProperty("pierceHitRadius"),
             });
         }
@@ -171,6 +173,7 @@ public class AttackTowerStatsWindow : EditorWindow
             HeaderLabel("흔들림상한", NumWidth);
             HeaderLabel("범위반경", NumWidth);
             HeaderLabel("범위감쇠", NumWidth);
+            HeaderLabel("이펙트기준반경", NumWidth);
             HeaderLabel("관통반경", NumWidth);
             HeaderLabel("", ButtonWidth);
         }
@@ -238,6 +241,7 @@ public class AttackTowerStatsWindow : EditorWindow
                 Field(entry.lateralWobbleAmount);
                 Field(entry.splashRadius);
                 Field(entry.splashMinDamageRatio);
+                Field(entry.hitEffectBaseRadius);
             }
 
             using (new EditorGUI.DisabledScope(!isFlame))

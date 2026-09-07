@@ -105,7 +105,8 @@ public class ProjectileSimWorld : MonoBehaviour
         float lateralWobbleAmount = 0f,
         float lateralWobbleRatio = 0f,
         bool useBallisticArc = false,
-        float ballisticGravity = 20f)
+        float ballisticGravity = 20f,
+        float hitEffectScale = 1f)
     {
         ProjectileSimWorld world = Instance;
 
@@ -141,7 +142,8 @@ public class ProjectileSimWorld : MonoBehaviour
             lateralWobbleAmount,
             lateralWobbleRatio,
             useBallisticArc,
-            ballisticGravity);
+            ballisticGravity,
+            hitEffectScale);
 
         // 대포(포물선) 투사체는 자체 Update()에서 직접 움직이므로 Burst 이동 Job에는 등록하지 않습니다.
         if (!arcing)
