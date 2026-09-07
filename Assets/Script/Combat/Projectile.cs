@@ -40,8 +40,15 @@ public class Projectile : MonoBehaviour
     private float splashMinDamageRatio;
     private Vector3 arcStartPosition;
     private Vector3 arcImpactPosition;
-    private float arcDuration;
-    private float arcElapsed;
+
+    // 포물선 경로를 따라 '일정 속도'로 움직이기 위한 호(arc-length) 테이블입니다.
+    // 시간 t를 그대로 진행률로 쓰면 오르내리는 구간에서 실제 이동 속도가 빨라지거나
+    // 느려져 보이므로(수평 이동은 일정해도 수직 성분이 더해지므로), 경로 길이를 미리
+    // 샘플링해 '이동한 거리 -> t' 로 변환합니다.
+    private const int ArcSampleCount = 24;
+    private float[] arcCumulativeDistance;
+    private float arcTotalLength;
+    private float arcTraveledDistance;
 
     // 상승/하강 구간을 비대칭으로 만들어 미사일처럼 보이게 하는 값들입니다.
     private float arcClimbPower;
@@ -255,11 +262,68 @@ public class Projectile : MonoBehaviour
                 ? UnityEngine.Random.Range(-wobbleRange, wobbleRange)
                 : 0f;
 
-            arcDuration = speed > 0.01f
-                ? Mathf.Max(0.05f, horizontalDistance / speed)
-                : 0.05f;
-            arcElapsed = 0f;
+            arcTraveledDistance = 0f;
+            BuildArcLengthTable();
         }
+    }
+
+    // EvaluateArcPosition(t)을 0~1 구간에서 균일하게 샘플링해 누적 경로 길이 테이블을 만듭니다.
+    // UpdateArcMovement는 이 테이블로 '이동한 거리'를 t로 변환하므로, 오르내리는 구간이 있어도
+    // 실제 이동 속도(초당 이동 거리)가 항상 speed로 일정하게 유지됩니다.
+    void BuildArcLengthTable()
+    {
+        if (arcCumulativeDistance == null || arcCumulativeDistance.Length != ArcSampleCount + 1)
+            arcCumulativeDistance = new float[ArcSampleCount + 1];
+
+        Vector3 previous = EvaluateArcPosition(0f);
+        arcCumulativeDistance[0] = 0f;
+
+        for (int i = 1; i <= ArcSampleCount; i++)
+        {
+            float t = (float)i / ArcSampleCount;
+            Vector3 current = EvaluateArcPosition(t);
+            arcCumulativeDistance[i] = arcCumulativeDistance[i - 1] + Vector3.Distance(previous, current);
+            previous = current;
+        }
+
+        arcTotalLength = arcCumulativeDistance[ArcSampleCount];
+    }
+
+    // 누적 이동 거리(distance)를 곡선 위 진행률 t(0~1)로 변환합니다.
+    float SampleArcParameter(float distance)
+    {
+        if (arcTotalLength <= 0.0001f || distance >= arcTotalLength)
+            return 1f;
+
+        if (distance <= 0f)
+            return 0f;
+
+        for (int i = 1; i <= ArcSampleCount; i++)
+        {
+            if (distance <= arcCumulativeDistance[i])
+            {
+                float segStart = arcCumulativeDistance[i - 1];
+                float segLength = arcCumulativeDistance[i] - segStart;
+                float localT = segLength > 0.0001f ? (distance - segStart) / segLength : 0f;
+                float t0 = (float)(i - 1) / ArcSampleCount;
+                float t1 = (float)i / ArcSampleCount;
+                return Mathf.Lerp(t0, t1, localT);
+            }
+        }
+
+        return 1f;
+    }
+
+    // 포물선 경로 위에서 진행률 t(0~1)에 해당하는 월드 좌표를 계산합니다.
+    Vector3 EvaluateArcPosition(float t)
+    {
+        Vector3 position = Vector3.Lerp(arcStartPosition, arcImpactPosition, t);
+        position.y += EvaluateArcHeight(t);
+
+        if (arcLateralOffset != 0f)
+            position += arcRightAxis * (arcLateralOffset * Mathf.Sin(t * Mathf.PI));
+
+        return position;
     }
 
     // 발사 지점 -> 착탄 지점을 포물선(비대칭 지원)으로 이동합니다. 도착하면 범위 피해를 적용합니다.
@@ -267,14 +331,9 @@ public class Projectile : MonoBehaviour
     {
         Vector3 previousPosition = transform.position;
 
-        arcElapsed += Time.deltaTime;
-        float t = arcDuration > 0f ? Mathf.Clamp01(arcElapsed / arcDuration) : 1f;
-
-        Vector3 position = Vector3.Lerp(arcStartPosition, arcImpactPosition, t);
-        position.y += EvaluateArcHeight(t);
-
-        if (arcLateralOffset != 0f)
-            position += arcRightAxis * (arcLateralOffset * Mathf.Sin(t * Mathf.PI));
+        arcTraveledDistance += speed * Time.deltaTime;
+        float t = SampleArcParameter(arcTraveledDistance);
+        Vector3 position = EvaluateArcPosition(t);
 
         transform.position = position;
 
@@ -487,8 +546,8 @@ public class Projectile : MonoBehaviour
         arcHeight = 0f;
         splashRadius = 0f;
         splashMinDamageRatio = 1f;
-        arcElapsed = 0f;
-        arcDuration = 0f;
+        arcTraveledDistance = 0f;
+        arcTotalLength = 0f;
         arcClimbPower = 1f;
         arcDivePower = 1f;
         arcPeakTime = 0.5f;
