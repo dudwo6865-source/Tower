@@ -111,10 +111,10 @@ MonoBehaviour:
   attackCooldown: 3
   useAttackAnimationEvent: 0
   projectileSpeed: 25
-  firePoint: {fileID: 0}
+  firePoint: {fileID: 7970280450915493451}
   pierceHitRadius: 0.6
   minAttackRange: 5
-  arcHeight: 6
+  arcHeight: 20
   arcHeightRatio: 1
   minArcHeight: 1
   arcPeakTime: 0.5
@@ -289,8 +289,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 5, y: 2.58, z: 5}
-  m_Center: {x: 0, y: 2, z: 0}
+  m_Size: {x: 3.82, y: 2.99, z: 3.91}
+  m_Center: {x: 0, y: 1.48, z: 0}
 --- !u!114 &7689188167501311624
 MonoBehaviour:
   m_ObjectHideFlags: 0
