@@ -88,7 +88,8 @@ public static class AttackVisuals
         float lateralWobbleRatio = 0f,
         bool useBallisticArc = false,
         float ballisticGravity = 20f,
-        float hitEffectScale = 1f)
+        float hitEffectScale = 1f,
+        GameObject trailEffectPrefab = null)
     {
         if (ProjectileSimWorld.Spawn(
                 firePosition,
@@ -119,7 +120,8 @@ public static class AttackVisuals
                 lateralWobbleRatio,
                 useBallisticArc,
                 ballisticGravity,
-                hitEffectScale) != null)
+                hitEffectScale,
+                trailEffectPrefab) != null)
             return;
 
         GameObject projectileObject;
@@ -162,7 +164,8 @@ public static class AttackVisuals
             lateralWobbleRatio,
             useBallisticArc,
             ballisticGravity,
-            hitEffectScale);
+            hitEffectScale,
+            trailEffectPrefab);
     }
 
     public static GameObject CreateFallbackProjectile(Vector3 position, Color color)

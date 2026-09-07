@@ -127,6 +127,12 @@ public class UnitAttacker : MonoBehaviour
     [Tooltip("원거리 공격 투사체 프리팹입니다.")]
     public GameObject projectilePrefab;
 
+    [Tooltip("투사체가 비행하는 동안 뒤에 남기는 연기·트레일 파티클 프리팹입니다. 발사 때마다 " +
+        "새로 생성되어 투사체를 따라다니다가, 명중/소멸 시 자동으로 분리되어 그 자리에서 " +
+        "자연스럽게 사라집니다(프리팹의 ParticleSystem Main 모듈에서 Stop Action을 Destroy로 " +
+        "설정해두세요). 비워두면 트레일을 만들지 않습니다. 원거리·화염방사기·대포 공격일 때만 사용됩니다.")]
+    public GameObject trailEffectPrefab;
+
     private float cooldownTimer;
     private UnitAnimator unitAnimator;
     private UnitSound unitSound;
@@ -404,7 +410,8 @@ public class UnitAttacker : MonoBehaviour
                 lateralWobbleRatio,
                 useBallisticArc,
                 ballisticGravity,
-                hitEffectScale);
+                hitEffectScale,
+                trailEffectPrefab);
         }
         else
         {
