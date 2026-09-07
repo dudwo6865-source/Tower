@@ -111,10 +111,10 @@ MonoBehaviour:
   attackCooldown: 3
   useAttackAnimationEvent: 0
   projectileSpeed: 25
-  firePoint: {fileID: 0}
+  firePoint: {fileID: 7970280450915493451}
   pierceHitRadius: 0.6
   minAttackRange: 5
-  arcHeight: 6
+  arcHeight: 20
   arcHeightRatio: 1
   minArcHeight: 1
   arcPeakTime: 0.5
