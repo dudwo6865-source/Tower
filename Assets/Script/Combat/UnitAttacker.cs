@@ -62,6 +62,16 @@ public class UnitAttacker : MonoBehaviour
     [Tooltip("정점을 지난 뒤 하강 구간의 형태입니다. 값을 높이면 정점 높이를 오래 유지하다가 착탄 '직전'에 갑자기 급강하합니다(미사일처럼). 낮추면 하강이 완만하고 고르게 이어집니다. 대포 공격일 때만 사용됩니다.")]
     public float arcDivePower = 1f;
 
+    [Tooltip("켜면 Arc Height/Ratio/Climb/Dive/Peak Time 값을 무시하고, 발사 속도(Projectile Speed)와 아래 " +
+        "Ballistic Gravity만으로 실제 탄도학 공식(등가속도 중력)에 따라 발사각을 자동 계산합니다. 사거리마다 " +
+        "체감 중력이 들쭉날쭉해지지 않고 항상 일관되게 무거워 보입니다. 미사일처럼 일부러 비대칭 궤적을 쓰려면 꺼두세요.")]
+    public bool useBallisticArc = false;
+
+    [Tooltip("탄도 계산에 쓰는 중력 가속도(m/s²)입니다. 실제 지구 중력은 9.8이지만, 값이 작을수록 궤적이 " +
+        "느긋하고 붕 뜨는 느낌이, 클수록 빠르고 묵직하게 내리꽂히는 느낌이 납니다. Use Ballistic Arc가 켜져 " +
+        "있을 때만 사용됩니다.")]
+    public float ballisticGravity = 20f;
+
     [Tooltip("착탄 지점에 더하는 랜덤 오차 반경(m)입니다. 0이면 항상 타겟 중심에 정확히 착탄합니다. 대포 공격일 때만 사용됩니다.")]
     public float impactOffsetRadius = 0f;
 
@@ -383,7 +393,9 @@ public class UnitAttacker : MonoBehaviour
                 impactOffsetRadius,
                 arcPeakTime,
                 lateralWobbleAmount,
-                lateralWobbleRatio);
+                lateralWobbleRatio,
+                useBallisticArc,
+                ballisticGravity);
         }
         else
         {

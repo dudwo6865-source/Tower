@@ -83,7 +83,9 @@ public static class AttackVisuals
         float impactOffsetRadius = 0f,
         float arcPeakTime = 0.5f,
         float lateralWobbleAmount = 0f,
-        float lateralWobbleRatio = 0f)
+        float lateralWobbleRatio = 0f,
+        bool useBallisticArc = false,
+        float ballisticGravity = 20f)
     {
         if (ProjectileSimWorld.Spawn(
                 firePosition,
@@ -111,7 +113,9 @@ public static class AttackVisuals
                 impactOffsetRadius,
                 arcPeakTime,
                 lateralWobbleAmount,
-                lateralWobbleRatio) != null)
+                lateralWobbleRatio,
+                useBallisticArc,
+                ballisticGravity) != null)
             return;
 
         GameObject projectileObject;
@@ -151,7 +155,9 @@ public static class AttackVisuals
             impactOffsetRadius,
             arcPeakTime,
             lateralWobbleAmount,
-            lateralWobbleRatio);
+            lateralWobbleRatio,
+            useBallisticArc,
+            ballisticGravity);
     }
 
     public static GameObject CreateFallbackProjectile(Vector3 position, Color color)

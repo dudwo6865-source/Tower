@@ -51,6 +51,12 @@ public class Projectile : MonoBehaviour
     private float arcDuration;
     private float arcElapsed;
 
+    // 켜져 있으면 arcHeight류 값을 무시하고, 발사 속도 + 중력만으로 실제 탄도학 공식에 따라
+    // 발사각을 계산합니다. 사거리와 무관하게 항상 같은 '무게감'으로 보이게 하기 위한 값입니다.
+    private bool ballisticArc;
+    private float ballisticGravity;
+    private float ballisticInitialVerticalSpeed;
+
     // 상승/하강 구간을 비대칭으로 만들어 미사일처럼 보이게 하는 값들입니다.
     private float arcClimbPower;
     private float arcDivePower;
@@ -192,7 +198,9 @@ public class Projectile : MonoBehaviour
         float impactOffsetRadius = 0f,
         float arcPeakTime = 0.5f,
         float lateralWobbleAmount = 0f,
-        float lateralWobbleRatio = 0f)
+        float lateralWobbleRatio = 0f,
+        bool ballisticArc = false,
+        float ballisticGravity = 20f)
     {
         this.target = target;
         this.targetHealth = targetHealth;
@@ -208,6 +216,8 @@ public class Projectile : MonoBehaviour
         this.arcHeight = arcHeight;
         this.splashRadius = splashRadius;
         this.splashMinDamageRatio = splashMinDamageRatio;
+        this.ballisticArc = ballisticArc;
+        this.ballisticGravity = Mathf.Max(0.01f, ballisticGravity);
         traveledDistance = 0f;
         pierceLocked = false;
         lifeTimer = 0f;
@@ -267,11 +277,47 @@ public class Projectile : MonoBehaviour
                 ? UnityEngine.Random.Range(-wobbleRange, wobbleRange)
                 : 0f;
 
-            arcDuration = speed > 0.01f
-                ? Mathf.Max(0.05f, horizontalDistance / speed)
-                : 0.05f;
+            if (this.ballisticArc)
+                ComputeBallisticTrajectory(horizontalDistance, arcImpactPosition.y - arcStartPosition.y, speed);
+            else
+                arcDuration = speed > 0.01f
+                    ? Mathf.Max(0.05f, horizontalDistance / speed)
+                    : 0.05f;
+
             arcElapsed = 0f;
         }
+    }
+
+    // 발사 속도(v)와 중력(g)만으로 목표를 맞히는 발사각을 계산합니다. arcHeight/Ratio 같은 수동 값
+    // 없이도, 물리적으로 일관된(사거리와 무관하게 항상 같은 '무게감'의) 포물선이 나오도록 합니다.
+    // 낮은 각/높은 각 두 해가 나오는데, 대포처럼 눈에 띄는 곡선을 그리도록 항상 높은 각을 씁니다.
+    void ComputeBallisticTrajectory(float horizontalDistance, float heightDelta, float launchSpeed)
+    {
+        float g = ballisticGravity;
+        float v = Mathf.Max(0.01f, launchSpeed);
+        float x = Mathf.Max(0.05f, horizontalDistance);
+
+        float a = g * x * x / (2f * v * v);
+        float c = heightDelta + a;
+        float discriminant = x * x - 4f * a * c;
+
+        if (discriminant < 0f)
+        {
+            // 이 속도로는 물리적으로 도달 불가능한 거리입니다. 정확히 도달 가능한 최소 속도로 대체합니다.
+            float minSpeedSq = g * (heightDelta + Mathf.Sqrt(x * x + heightDelta * heightDelta));
+            v = Mathf.Sqrt(Mathf.Max(minSpeedSq, 0.01f));
+            a = g * x * x / (2f * v * v);
+            c = heightDelta + a;
+            discriminant = Mathf.Max(0f, x * x - 4f * a * c);
+        }
+
+        float sqrtDiscriminant = Mathf.Sqrt(discriminant);
+        float tanAngle = (x + sqrtDiscriminant) / (2f * a);
+
+        float vx = v / Mathf.Sqrt(1f + tanAngle * tanAngle);
+        ballisticInitialVerticalSpeed = vx * tanAngle;
+
+        arcDuration = vx > 0.01f ? Mathf.Max(0.05f, x / vx) : Mathf.Max(0.05f, 2f * ballisticInitialVerticalSpeed / g);
     }
 
     // 발사 지점 -> 착탄 지점을 포물선(비대칭 지원)으로 이동합니다. 도착하면 범위 피해를 적용합니다.
@@ -283,7 +329,7 @@ public class Projectile : MonoBehaviour
         float t = arcDuration > 0f ? Mathf.Clamp01(arcElapsed / arcDuration) : 1f;
 
         Vector3 position = Vector3.Lerp(arcStartPosition, arcImpactPosition, t);
-        position.y += EvaluateArcHeight(t);
+        position.y += ballisticArc ? EvaluateBallisticHeightOffset(Mathf.Min(arcElapsed, arcDuration)) : EvaluateArcHeight(t);
 
         if (arcLateralOffset != 0f)
             position += arcRightAxis * (arcLateralOffset * Mathf.Sin(t * Mathf.PI));
@@ -327,6 +373,14 @@ public class Projectile : MonoBehaviour
         float span = 1f - arcPeakTime;
         float y = span > 0.0001f ? (t - arcPeakTime) / span : 1f;
         return arcHeight * (1f - Mathf.Pow(y, arcDivePower + 1f));
+    }
+
+    // 발사~착탄을 잇는 직선을 기준으로, 진짜 중력 포물선이 그 위로 얼마나 부풀어 오르는지를
+    // 구합니다(직선 자체는 이미 Lerp로 처리되므로 여기서는 '더해지는 여분의 높이'만 반환).
+    // 0.5*g*t*(T-t) 형태로, 시작·끝(t=0, t=T)에서 정확히 0이 되어 Lerp와 매끄럽게 이어집니다.
+    float EvaluateBallisticHeightOffset(float elapsed)
+    {
+        return 0.5f * ballisticGravity * elapsed * (arcDuration - elapsed);
     }
 
     public ProjectileSimData CreateSimData(float impactDistanceSq)
@@ -501,6 +555,9 @@ public class Projectile : MonoBehaviour
         splashMinDamageRatio = 1f;
         arcElapsed = 0f;
         arcDuration = 0f;
+        ballisticArc = false;
+        ballisticGravity = 20f;
+        ballisticInitialVerticalSpeed = 0f;
         arcClimbPower = 1f;
         arcDivePower = 1f;
         arcPeakTime = 0.5f;
