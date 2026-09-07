@@ -139,6 +139,7 @@ MonoBehaviour:
   muzzleFlashPrefab: {fileID: 304414178702807373, guid: b9a62cef32ff6da49b88cd5572caba55, type: 3}
   hitEffectPrefab: {fileID: 2669821138424738530, guid: 1d8f093d07512134584cb78ba292707c, type: 3}
   projectilePrefab: {fileID: 6820024759759233777, guid: bc69c5e6048d32a418aa86c3557719e6, type: 3}
+  trailEffectPrefab: {fileID: 0}
 --- !u!114 &853810235908710514
 MonoBehaviour:
   m_ObjectHideFlags: 0
