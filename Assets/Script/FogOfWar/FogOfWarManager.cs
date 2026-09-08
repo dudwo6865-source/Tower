@@ -103,6 +103,8 @@ public class FogOfWarManager : MonoBehaviour
     private Texture2D fogTexture;
     private Color32[] fogPixels;
     private bool[] visionBlocked;
+    private int[] blockerIdByCell;
+    private readonly List<List<int>> blockerCells = new List<List<int>>();
 
     private Material worldFogMaterial;
     private Material uiFogMaterial;
@@ -496,7 +498,14 @@ public class FogOfWarManager : MonoBehaviour
 
     void BuildVisionBlockerGrid()
     {
-        visionBlocked = new bool[gridWidth * gridHeight];
+        int cellCount = gridWidth * gridHeight;
+        visionBlocked = new bool[cellCount];
+        blockerIdByCell = new int[cellCount];
+
+        for (int i = 0; i < cellCount; i++)
+            blockerIdByCell[i] = -1;
+
+        blockerCells.Clear();
 
         if (!enableVisionBlocking || mapSize.x <= 0f || mapSize.y <= 0f)
             return;
@@ -507,6 +516,10 @@ public class FogOfWarManager : MonoBehaviour
             MarkBlockerBounds(blocker.GetWorldBounds());
     }
 
+    /// <summary>
+    /// 이 오브젝트가 차지하는 칸들을 하나의 "블로커"로 등록한다.
+    /// 같은 블로커에 속한 칸끼리는 서로를 가리지 않는다(오브젝트 자신은 항상 온전히 밝혀짐).
+    /// </summary>
     void MarkBlockerBounds(Bounds worldBounds)
     {
         int minX = WorldToGridX(worldBounds.min.x);
@@ -514,11 +527,21 @@ public class FogOfWarManager : MonoBehaviour
         int minZ = WorldToGridZ(worldBounds.min.z);
         int maxZ = WorldToGridZ(worldBounds.max.z);
 
+        int blockerId = blockerCells.Count;
+        List<int> cells = new List<int>();
+
         for (int z = minZ; z <= maxZ; z++)
         {
             for (int x = minX; x <= maxX; x++)
-                visionBlocked[z * gridWidth + x] = true;
+            {
+                int index = z * gridWidth + x;
+                visionBlocked[index] = true;
+                blockerIdByCell[index] = blockerId;
+                cells.Add(index);
+            }
         }
+
+        blockerCells.Add(cells);
     }
 
     public void Register(FogOfWarVisionSource source)
@@ -674,11 +697,18 @@ public class FogOfWarManager : MonoBehaviour
 
         int x = x0;
         int z = z0;
+        bool isSourceCell = true;
 
         while (true)
         {
-            if (!StampVisionCell(x, z, sourceWorldPos, radius, edgeSoftness))
+            bool canContinue = StampVisionCell(x, z, sourceWorldPos, radius, edgeSoftness);
+
+            // 소스 자신의 칸(광선의 첫 걸음)이 차단 칸이어도 광선은 계속 나가야 한다.
+            // 그래야 벽 옆·위에 선 유닛이 스스로의 시야까지 막아버리지 않는다.
+            if (!canContinue && !isSourceCell)
                 return;
+
+            isSourceCell = false;
 
             if (x == x1 && z == z1)
                 return;
@@ -699,6 +729,16 @@ public class FogOfWarManager : MonoBehaviour
         }
     }
 
+    Vector2 GetCellWorldXZ(int x, int z)
+    {
+        float cellSizeX = mapSize.x / gridWidth;
+        float cellSizeZ = mapSize.y / gridHeight;
+
+        return new Vector2(
+            mapOrigin.x + (x + 0.5f) * cellSizeX,
+            mapOrigin.z + (z + 0.5f) * cellSizeZ);
+    }
+
     /// <returns>이 칸을 지나 광선을 계속 진행해도 되면 true, 여기서 멈춰야 하면 false.</returns>
     bool StampVisionCell(
         int x,
@@ -710,13 +750,10 @@ public class FogOfWarManager : MonoBehaviour
         if (x < 0 || x >= gridWidth || z < 0 || z >= gridHeight)
             return false;
 
-        float cellSizeX = mapSize.x / gridWidth;
-        float cellSizeZ = mapSize.y / gridHeight;
-        float worldX = mapOrigin.x + (x + 0.5f) * cellSizeX;
-        float worldZ = mapOrigin.z + (z + 0.5f) * cellSizeZ;
+        Vector2 worldXZ = GetCellWorldXZ(x, z);
 
-        float dx = worldX - sourceWorldPos.x;
-        float dz = worldZ - sourceWorldPos.z;
+        float dx = worldXZ.x - sourceWorldPos.x;
+        float dz = worldXZ.y - sourceWorldPos.z;
         float distSqr = dx * dx + dz * dz;
 
         if (distSqr > radius * radius)
@@ -734,9 +771,63 @@ public class FogOfWarManager : MonoBehaviour
             fogPixels[index].g = value;
 
         if (visionBlocked != null && visionBlocked[index])
+        {
+            IlluminateBlockerFootprint(index, sourceWorldPos, radius, edgeSoftness);
             return false;
+        }
 
         return true;
+    }
+
+    /// <summary>
+    /// 광선이 이 블로커 칸에서 멈췄을 때, 같은 블로커에 속한 나머지 칸도 함께 밝힌다.
+    /// 즉 FogOfWarVisionBlocker가 붙은 오브젝트 자신은 시야 범위 안에서 항상 온전히 보이고,
+    /// 그 오브젝트를 지나 뒤쪽으로 향하는 시야만 막힌다.
+    /// </summary>
+    void IlluminateBlockerFootprint(
+        int hitCellIndex,
+        Vector3 sourceWorldPos,
+        float radius,
+        float edgeSoftness)
+    {
+        if (blockerIdByCell == null)
+            return;
+
+        int blockerId = blockerIdByCell[hitCellIndex];
+
+        if (blockerId < 0)
+            return;
+
+        List<int> cells = blockerCells[blockerId];
+
+        for (int i = 0; i < cells.Count; i++)
+        {
+            int index = cells[i];
+
+            if (index == hitCellIndex)
+                continue;
+
+            int x = index % gridWidth;
+            int z = index / gridWidth;
+            Vector2 worldXZ = GetCellWorldXZ(x, z);
+
+            float dx = worldXZ.x - sourceWorldPos.x;
+            float dz = worldXZ.y - sourceWorldPos.z;
+            float distSqr = dx * dx + dz * dz;
+
+            if (distSqr > radius * radius)
+                continue;
+
+            float strength = CalculateVisionStrength(
+                Mathf.Sqrt(distSqr),
+                radius,
+                edgeSoftness);
+
+            byte value = (byte)(strength * 255f);
+
+            if (value > fogPixels[index].g)
+                fogPixels[index].g = value;
+        }
     }
 
     float CalculateVisionStrength(float distance, float radius, float edgeSoftness)
