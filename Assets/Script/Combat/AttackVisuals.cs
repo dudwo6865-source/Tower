@@ -173,6 +173,46 @@ public static class AttackVisuals
         return CreateSphere("Projectile", position, 0.25f, color);
     }
 
+    // 투사체 이동 없이 발사 지점에서 명중 지점까지 순간적으로 그리는 빛줄기(히트스캔 트레일)입니다.
+    // 풀링 없이 짧게 재생 후 파괴합니다(머즐 플래시/피격 이펙트와 동일한 방식, 빈도가 낮아 충분히 저렴합니다).
+    public static void SpawnHitscanTrail(
+        Vector3 start,
+        Vector3 end,
+        GameObject prefab,
+        Color fallbackColor,
+        float duration,
+        float width)
+    {
+        GameObject trailObject = prefab != null
+            ? Object.Instantiate(prefab)
+            : CreateFallbackHitscanTrail(fallbackColor, width);
+
+        if (trailObject == null)
+            return;
+
+        HitscanTrail trail = trailObject.GetComponent<HitscanTrail>();
+        if (trail == null)
+            trail = trailObject.AddComponent<HitscanTrail>();
+
+        trail.Play(start, end, duration, fallbackColor, width);
+    }
+
+    static GameObject CreateFallbackHitscanTrail(Color color, float width)
+    {
+        GameObject trailObject = new GameObject("HitscanTrail");
+        LineRenderer line = trailObject.AddComponent<LineRenderer>();
+
+        line.material = GetMaterial();
+        line.positionCount = 2;
+        line.useWorldSpace = true;
+        line.startWidth = width;
+        line.endWidth = width;
+        line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        line.receiveShadows = false;
+
+        return trailObject;
+    }
+
     static GameObject CreateSphere(
         string objectName,
         Vector3 position,
