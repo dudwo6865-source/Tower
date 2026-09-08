@@ -115,6 +115,7 @@ public class FogOfWarManager : MonoBehaviour
     private bool[] visionBlocked;
     private int[] blockerIdByCell;
     private readonly List<List<int>> blockerCells = new List<List<int>>();
+    private readonly List<float> blockerTopHeight = new List<float>();
 
     // 안개 그리드와 같은 해상도로 미리 펼쳐둔 지형 높이(칸당 값 1개). 레이마칭 중에는
     // 나눗셈·보간 없이 배열 조회 한 번으로 끝나도록 Start()에서 한 번만 굽는다.
@@ -125,6 +126,7 @@ public class FogOfWarManager : MonoBehaviour
 
     const float MinElevationSampleDistance = 0.5f;
     const float ElevationSlopeEpsilon = 0.01f;
+    const float BlockerLookOverMargin = 0.1f;
 
     private Material worldFogMaterial;
     private Material uiFogMaterial;
@@ -534,6 +536,7 @@ public class FogOfWarManager : MonoBehaviour
             blockerIdByCell[i] = -1;
 
         blockerCells.Clear();
+        blockerTopHeight.Clear();
 
         if (!enableVisionBlocking || mapSize.x <= 0f || mapSize.y <= 0f)
             return;
@@ -547,6 +550,9 @@ public class FogOfWarManager : MonoBehaviour
     /// <summary>
     /// 이 오브젝트가 차지하는 칸들을 하나의 "블로커"로 등록한다.
     /// 같은 블로커에 속한 칸끼리는 서로를 가리지 않는다(오브젝트 자신은 항상 온전히 밝혀짐).
+    /// 블로커의 꼭대기 높이(worldBounds.max.y)도 같이 기록해서, 눈높이가 그보다 높은
+    /// 시야 소스는 이 블로커를 내려다보며 넘어갈 수 있게 한다(언덕 위에서 절벽 아래를
+    /// 내려다보는 경우 등).
     /// </summary>
     void MarkBlockerBounds(Bounds worldBounds)
     {
@@ -557,6 +563,7 @@ public class FogOfWarManager : MonoBehaviour
 
         int blockerId = blockerCells.Count;
         List<int> cells = new List<int>();
+        blockerTopHeight.Add(worldBounds.max.y);
 
         for (int z = minZ; z <= maxZ; z++)
         {
@@ -884,6 +891,7 @@ public class FogOfWarManager : MonoBehaviour
             return false;
 
         float distance = Mathf.Sqrt(distSqr);
+        float eyeY = sourceWorldPos.y + eyeHeight;
         bool elevationVisible = true;
 
         // 아주 가까운 칸(소스 자신의 칸 등)은 거리가 0에 가까워 고도각이 불안정해지므로
@@ -891,7 +899,6 @@ public class FogOfWarManager : MonoBehaviour
         if (enableElevationVision && distance >= MinElevationSampleDistance)
         {
             float cellHeight = SampleTerrainHeightAtCell(x, z);
-            float eyeY = sourceWorldPos.y + eyeHeight;
             float slope = (cellHeight - eyeY) / distance;
 
             // 눈높이보다 낮거나 같은 지형은 "지평선"에 걸리지 않고 항상 보인다 — 언덕
@@ -918,10 +925,22 @@ public class FogOfWarManager : MonoBehaviour
 
         if (visionBlocked != null && visionBlocked[index])
         {
-            if (elevationVisible)
-                IlluminateBlockerFootprint(index, sourceWorldPos, radius, edgeSoftness);
+            int blockerId = blockerIdByCell[index];
 
-            return false;
+            // 눈높이가 이 블로커(벽·절벽)의 꼭대기보다 높으면 그 위를 내려다보는 것으로
+            // 보고 막지 않는다 — 언덕 위에서 절벽 너머 낮은 바닥이 보여야 하기 때문이다.
+            bool seesOverBlocker =
+                enableElevationVision &&
+                blockerId >= 0 &&
+                eyeY >= blockerTopHeight[blockerId] - BlockerLookOverMargin;
+
+            if (!seesOverBlocker)
+            {
+                if (elevationVisible)
+                    IlluminateBlockerFootprint(index, sourceWorldPos, radius, edgeSoftness);
+
+                return false;
+            }
         }
 
         return true;
