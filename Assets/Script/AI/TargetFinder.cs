@@ -50,6 +50,9 @@ public static class TargetFinder
             if (sqrDistance > rangeSqr)
                 continue;
 
+            if (!IsVisibleToSeeker(myOwnerId, entity.transform.position))
+                continue;
+
             if (sqrDistance < minAny)
             {
                 minAny = sqrDistance;
@@ -95,6 +98,21 @@ public static class TargetFinder
             default:
                 return bestAny;
         }
+    }
+
+    /// <summary>
+    /// 탐색 주체가 로컬 플레이어일 때만 안개 시야를 검사해서, 시야가 밝혀진 대상만
+    /// 어그로 탐지되도록 한다. 적 AI 등 다른 소속이 찾을 때는 그대로 통과시킨다
+    /// (안개는 로컬 플레이어 한쪽 시야만 나타내기 때문).
+    /// </summary>
+    static bool IsVisibleToSeeker(int myOwnerId, Vector3 position)
+    {
+        FogOfWarManager fog = FogOfWarManager.Instance;
+
+        if (fog == null || myOwnerId != fog.LocalPlayerOwnerId)
+            return true;
+
+        return fog.IsVisible(position);
     }
 
     static bool IsAttackingAlly(SelectableEntity enemy, int myOwnerId)

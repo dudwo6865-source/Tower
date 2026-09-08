@@ -126,10 +126,10 @@ public class SpatialQueryWorld : MonoBehaviour
         };
         job.Run();
 
-        SelectableEntity bestAny = ResolveCandidate(bestIndices[0], engageFilter);
-        SelectableEntity bestUnit = ResolveCandidate(bestIndices[1], engageFilter);
-        SelectableEntity bestBuilding = ResolveCandidate(bestIndices[2], engageFilter);
-        SelectableEntity bestAttackerOfAlly = ResolveCandidate(bestIndices[3], engageFilter);
+        SelectableEntity bestAny = FilterByVision(ResolveCandidate(bestIndices[0], engageFilter), myOwnerId);
+        SelectableEntity bestUnit = FilterByVision(ResolveCandidate(bestIndices[1], engageFilter), myOwnerId);
+        SelectableEntity bestBuilding = FilterByVision(ResolveCandidate(bestIndices[2], engageFilter), myOwnerId);
+        SelectableEntity bestAttackerOfAlly = FilterByVision(ResolveCandidate(bestIndices[3], engageFilter), myOwnerId);
 
         switch (priority)
         {
@@ -255,6 +255,25 @@ public class SpatialQueryWorld : MonoBehaviour
             return null;
 
         return entity;
+    }
+
+    /// <summary>
+    /// 어그로 탐지가 안개 시야에 밝혀진 대상만 찾도록 거른다. Burst Job 안에서는
+    /// FogOfWarManager를 직접 호출할 수 없어서, Job이 찾은 최적 후보를 여기서 한 번 더
+    /// 검사한다. 탐색 주체가 로컬 플레이어일 때만 적용하고, 적 AI 등 다른 소속이 찾을
+    /// 때는 그대로 통과시킨다(안개는 로컬 플레이어 한쪽 시야만 나타내기 때문).
+    /// </summary>
+    static SelectableEntity FilterByVision(SelectableEntity entity, int myOwnerId)
+    {
+        if (entity == null)
+            return null;
+
+        FogOfWarManager fog = FogOfWarManager.Instance;
+
+        if (fog == null || myOwnerId != fog.LocalPlayerOwnerId)
+            return entity;
+
+        return fog.IsVisible(entity.transform.position) ? entity : null;
     }
 
     SelectableEntity GetEntity(int snapshotIndex)
