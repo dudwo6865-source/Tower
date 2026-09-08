@@ -202,6 +202,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   visionRange: 12
+  edgeSoftnessOverride: -1
 --- !u!114 &1228195416886952615
 MonoBehaviour:
   m_ObjectHideFlags: 0
