@@ -19,6 +19,8 @@ public class UnitAttackerEditor : Editor
     SerializedProperty pierceHitRadius;
 
     SerializedProperty minAttackRange;
+    SerializedProperty useBallisticArc;
+    SerializedProperty ballisticGravity;
     SerializedProperty arcHeight;
     SerializedProperty arcHeightRatio;
     SerializedProperty minArcHeight;
@@ -30,6 +32,7 @@ public class UnitAttackerEditor : Editor
     SerializedProperty lateralWobbleAmount;
     SerializedProperty splashRadius;
     SerializedProperty splashMinDamageRatio;
+    SerializedProperty hitEffectBaseRadius;
 
     SerializedProperty requireFacingToAttack;
     SerializedProperty aimAngleTolerance;
@@ -43,6 +46,7 @@ public class UnitAttackerEditor : Editor
     SerializedProperty muzzleFlashPrefab;
     SerializedProperty hitEffectPrefab;
     SerializedProperty projectilePrefab;
+    SerializedProperty trailEffectPrefab;
 
     void OnEnable()
     {
@@ -59,6 +63,8 @@ public class UnitAttackerEditor : Editor
         pierceHitRadius = serializedObject.FindProperty("pierceHitRadius");
 
         minAttackRange = serializedObject.FindProperty("minAttackRange");
+        useBallisticArc = serializedObject.FindProperty("useBallisticArc");
+        ballisticGravity = serializedObject.FindProperty("ballisticGravity");
         arcHeight = serializedObject.FindProperty("arcHeight");
         arcHeightRatio = serializedObject.FindProperty("arcHeightRatio");
         minArcHeight = serializedObject.FindProperty("minArcHeight");
@@ -70,6 +76,7 @@ public class UnitAttackerEditor : Editor
         lateralWobbleAmount = serializedObject.FindProperty("lateralWobbleAmount");
         splashRadius = serializedObject.FindProperty("splashRadius");
         splashMinDamageRatio = serializedObject.FindProperty("splashMinDamageRatio");
+        hitEffectBaseRadius = serializedObject.FindProperty("hitEffectBaseRadius");
 
         requireFacingToAttack = serializedObject.FindProperty("requireFacingToAttack");
         aimAngleTolerance = serializedObject.FindProperty("aimAngleTolerance");
@@ -83,6 +90,7 @@ public class UnitAttackerEditor : Editor
         muzzleFlashPrefab = serializedObject.FindProperty("muzzleFlashPrefab");
         hitEffectPrefab = serializedObject.FindProperty("hitEffectPrefab");
         projectilePrefab = serializedObject.FindProperty("projectilePrefab");
+        trailEffectPrefab = serializedObject.FindProperty("trailEffectPrefab");
     }
 
     public override void OnInspectorGUI()
@@ -130,17 +138,32 @@ public class UnitAttackerEditor : Editor
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Cannon", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(minAttackRange);
-            EditorGUILayout.PropertyField(arcHeight);
-            EditorGUILayout.PropertyField(arcHeightRatio);
-            EditorGUILayout.PropertyField(minArcHeight);
-            EditorGUILayout.PropertyField(arcPeakTime);
-            EditorGUILayout.PropertyField(arcClimbPower);
-            EditorGUILayout.PropertyField(arcDivePower);
+            EditorGUILayout.PropertyField(useBallisticArc);
+
+            bool mixedBallistic = useBallisticArc.hasMultipleDifferentValues;
+            bool ballistic = mixedBallistic || useBallisticArc.boolValue;
+
+            if (ballistic)
+            {
+                EditorGUILayout.PropertyField(ballisticGravity);
+            }
+
+            if (mixedBallistic || !useBallisticArc.boolValue)
+            {
+                EditorGUILayout.PropertyField(arcHeight);
+                EditorGUILayout.PropertyField(arcHeightRatio);
+                EditorGUILayout.PropertyField(minArcHeight);
+                EditorGUILayout.PropertyField(arcPeakTime);
+                EditorGUILayout.PropertyField(arcClimbPower);
+                EditorGUILayout.PropertyField(arcDivePower);
+            }
+
             EditorGUILayout.PropertyField(impactOffsetRadius);
             EditorGUILayout.PropertyField(lateralWobbleRatio);
             EditorGUILayout.PropertyField(lateralWobbleAmount);
             EditorGUILayout.PropertyField(splashRadius);
             EditorGUILayout.PropertyField(splashMinDamageRatio);
+            EditorGUILayout.PropertyField(hitEffectBaseRadius);
         }
 
         EditorGUILayout.Space();
@@ -162,7 +185,10 @@ public class UnitAttackerEditor : Editor
         EditorGUILayout.PropertyField(hitEffectPrefab);
 
         if (showProjectile)
+        {
             EditorGUILayout.PropertyField(projectilePrefab);
+            EditorGUILayout.PropertyField(trailEffectPrefab);
+        }
 
         serializedObject.ApplyModifiedProperties();
     }

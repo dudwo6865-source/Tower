@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public enum AttackType
 {
@@ -62,6 +62,16 @@ public class UnitAttacker : MonoBehaviour
     [Tooltip("정점을 지난 뒤 하강 구간의 형태입니다. 값을 높이면 정점 높이를 오래 유지하다가 착탄 '직전'에 갑자기 급강하합니다(미사일처럼). 낮추면 하강이 완만하고 고르게 이어집니다. 대포 공격일 때만 사용됩니다.")]
     public float arcDivePower = 1f;
 
+    [Tooltip("켜면 Arc Height/Ratio/Climb/Dive/Peak Time 값을 무시하고, 발사 속도(Projectile Speed)와 아래 " +
+        "Ballistic Gravity만으로 실제 탄도학 공식(등가속도 중력)에 따라 발사각을 자동 계산합니다. 사거리마다 " +
+        "체감 중력이 들쭉날쭉해지지 않고 항상 일관되게 무거워 보입니다. 미사일처럼 일부러 비대칭 궤적을 쓰려면 꺼두세요.")]
+    public bool useBallisticArc = false;
+
+    [Tooltip("탄도 계산에 쓰는 중력 가속도(m/s²)입니다. 실제 지구 중력은 9.8이지만, 값이 작을수록 궤적이 " +
+        "느긋하고 붕 뜨는 느낌이, 클수록 빠르고 묵직하게 내리꽂히는 느낌이 납니다. Use Ballistic Arc가 켜져 " +
+        "있을 때만 사용됩니다.")]
+    public float ballisticGravity = 20f;
+
     [Tooltip("착탄 지점에 더하는 랜덤 오차 반경(m)입니다. 0이면 항상 타겟 중심에 정확히 착탄합니다. 대포 공격일 때만 사용됩니다.")]
     public float impactOffsetRadius = 0f;
 
@@ -77,6 +87,9 @@ public class UnitAttacker : MonoBehaviour
     [Tooltip("범위 피해 감쇠 비율입니다. 착탄 중심은 100% 피해, 반경 끝은 이 비율(0~1)만큼만 피해를 입습니다. 대포 공격일 때만 사용됩니다.")]
     [Range(0f, 1f)]
     public float splashMinDamageRatio = 0.3f;
+
+    [Tooltip("히트 이펙트가 원래 크기(1배)로 보이는 기준 스플래시 반경입니다. Splash Radius가 이 값보다 크면 이펙트가 커지고, 작으면 작아집니다. 대포 공격일 때만 사용됩니다.")]
+    public float hitEffectBaseRadius = 4f;
 
     [Header("Aim")]
     [Tooltip("켜면 조준(바라보기)이 끝난 뒤에만 공격합니다.")]
@@ -113,6 +126,12 @@ public class UnitAttacker : MonoBehaviour
 
     [Tooltip("원거리 공격 투사체 프리팹입니다.")]
     public GameObject projectilePrefab;
+
+    [Tooltip("투사체가 비행하는 동안 뒤에 남기는 연기·트레일 파티클 프리팹입니다. 발사 때마다 " +
+        "새로 생성되어 투사체를 따라다니다가, 명중/소멸 시 자동으로 분리되어 그 자리에서 " +
+        "자연스럽게 사라집니다(프리팹의 ParticleSystem Main 모듈에서 Stop Action을 Destroy로 " +
+        "설정해두세요). 비워두면 트레일을 만들지 않습니다. 원거리·화염방사기·대포 공격일 때만 사용됩니다.")]
+    public GameObject trailEffectPrefab;
 
     private float cooldownTimer;
     private UnitAnimator unitAnimator;
@@ -357,6 +376,11 @@ public class UnitAttacker : MonoBehaviour
             bool piercing = attackType == AttackType.Flamethrower;
             bool arcing = attackType == AttackType.Cannon;
 
+            // 스플래시 범위가 기준 반경보다 크면 히트 이펙트도 함께 커지고, 작으면 함께 작아집니다.
+            float hitEffectScale = (arcing && hitEffectBaseRadius > 0f)
+                ? splashRadius / hitEffectBaseRadius
+                : 1f;
+
             AttackVisuals.SpawnProjectile(
                 firePosition,
                 fireRotation,
@@ -383,7 +407,11 @@ public class UnitAttacker : MonoBehaviour
                 impactOffsetRadius,
                 arcPeakTime,
                 lateralWobbleAmount,
-                lateralWobbleRatio);
+                lateralWobbleRatio,
+                useBallisticArc,
+                ballisticGravity,
+                hitEffectScale,
+                trailEffectPrefab);
         }
         else
         {

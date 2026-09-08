@@ -20,6 +20,8 @@ public class AttackTowerStatsWindow : EditorWindow
         public SerializedProperty attackCooldown;
         public SerializedProperty projectileSpeed;
         public SerializedProperty minAttackRange;
+        public SerializedProperty useBallisticArc;
+        public SerializedProperty ballisticGravity;
         public SerializedProperty arcHeight;
         public SerializedProperty arcHeightRatio;
         public SerializedProperty minArcHeight;
@@ -31,6 +33,7 @@ public class AttackTowerStatsWindow : EditorWindow
         public SerializedProperty lateralWobbleAmount;
         public SerializedProperty splashRadius;
         public SerializedProperty splashMinDamageRatio;
+        public SerializedProperty hitEffectBaseRadius;
         public SerializedProperty pierceHitRadius;
     }
 
@@ -86,6 +89,8 @@ public class AttackTowerStatsWindow : EditorWindow
                 attackCooldown = so.FindProperty("attackCooldown"),
                 projectileSpeed = so.FindProperty("projectileSpeed"),
                 minAttackRange = so.FindProperty("minAttackRange"),
+                useBallisticArc = so.FindProperty("useBallisticArc"),
+                ballisticGravity = so.FindProperty("ballisticGravity"),
                 arcHeight = so.FindProperty("arcHeight"),
                 arcHeightRatio = so.FindProperty("arcHeightRatio"),
                 minArcHeight = so.FindProperty("minArcHeight"),
@@ -97,6 +102,7 @@ public class AttackTowerStatsWindow : EditorWindow
                 lateralWobbleAmount = so.FindProperty("lateralWobbleAmount"),
                 splashRadius = so.FindProperty("splashRadius"),
                 splashMinDamageRatio = so.FindProperty("splashMinDamageRatio"),
+                hitEffectBaseRadius = so.FindProperty("hitEffectBaseRadius"),
                 pierceHitRadius = so.FindProperty("pierceHitRadius"),
             });
         }
@@ -154,6 +160,8 @@ public class AttackTowerStatsWindow : EditorWindow
             HeaderLabel("최소사거리", NumWidth);
             HeaderLabel("쿨다운", NumWidth);
             HeaderLabel("투사체속도", NumWidth);
+            HeaderLabel("탄도계산", NumWidth);
+            HeaderLabel("중력", NumWidth);
             HeaderLabel("포물선높이", NumWidth);
             HeaderLabel("높이비율", NumWidth);
             HeaderLabel("최소높이", NumWidth);
@@ -165,6 +173,7 @@ public class AttackTowerStatsWindow : EditorWindow
             HeaderLabel("흔들림상한", NumWidth);
             HeaderLabel("범위반경", NumWidth);
             HeaderLabel("범위감쇠", NumWidth);
+            HeaderLabel("이펙트기준반경", NumWidth);
             HeaderLabel("관통반경", NumWidth);
             HeaderLabel("", ButtonWidth);
         }
@@ -208,6 +217,14 @@ public class AttackTowerStatsWindow : EditorWindow
                 Field(entry.projectileSpeed);
 
             using (new EditorGUI.DisabledScope(!isCannon))
+                Field(entry.useBallisticArc);
+
+            bool ballistic = isCannon && entry.useBallisticArc.boolValue;
+
+            using (new EditorGUI.DisabledScope(!ballistic))
+                Field(entry.ballisticGravity);
+
+            using (new EditorGUI.DisabledScope(!isCannon || ballistic))
             {
                 Field(entry.arcHeight);
                 Field(entry.arcHeightRatio);
@@ -215,11 +232,16 @@ public class AttackTowerStatsWindow : EditorWindow
                 Field(entry.arcPeakTime);
                 Field(entry.arcClimbPower);
                 Field(entry.arcDivePower);
+            }
+
+            using (new EditorGUI.DisabledScope(!isCannon))
+            {
                 Field(entry.impactOffsetRadius);
                 Field(entry.lateralWobbleRatio);
                 Field(entry.lateralWobbleAmount);
                 Field(entry.splashRadius);
                 Field(entry.splashMinDamageRatio);
+                Field(entry.hitEffectBaseRadius);
             }
 
             using (new EditorGUI.DisabledScope(!isFlame))

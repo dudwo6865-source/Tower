@@ -57,7 +57,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   entityType: 1
   ownerId: 1
-  entityTypeId: Outpost
+  entityTypeId: Box
+  autoAssignEntityTypeId: 1
   selectionCollider: {fileID: 0}
   portrait: {fileID: 0}
   autoSetupHealth: 1
@@ -109,6 +110,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   heightOffset: 0.05
+  viewDownOffset: 0
   barHeight: 0.5
   worldScale: 0.07
   segmentWorldWidth: 0.4

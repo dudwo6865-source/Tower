@@ -95,7 +95,9 @@ public class Unit : MonoBehaviour
 
         target.entityType = source.entityType;
         target.ownerId = source.ownerId;
-        target.entityTypeId = source.entityTypeId;
+
+        if (!string.IsNullOrWhiteSpace(source.entityTypeId))
+            target.entityTypeId = source.entityTypeId;
     }
 
     void ApplyHealth(UnitData source)

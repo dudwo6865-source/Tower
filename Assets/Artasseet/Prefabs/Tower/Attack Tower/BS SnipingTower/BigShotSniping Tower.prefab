@@ -58,7 +58,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   entityType: 1
   ownerId: 1
-  entityTypeId: MachineTower
+  entityTypeId: BigShotSniping Tower
+  autoAssignEntityTypeId: 1
   selectionCollider: {fileID: 7222556402491717478}
   portrait: {fileID: 21300000, guid: 1b4ab1bcf4a21ff4f9832cbc36b939ef, type: 3}
   autoSetupHealth: 1
@@ -89,11 +90,14 @@ MonoBehaviour:
   arcPeakTime: 0.5
   arcClimbPower: 1
   arcDivePower: 1
+  useBallisticArc: 0
+  ballisticGravity: 20
   impactOffsetRadius: 0
   lateralWobbleRatio: 0.15
   lateralWobbleAmount: 0
   splashRadius: 3
   splashMinDamageRatio: 0.3
+  hitEffectBaseRadius: 3
   requireFacingToAttack: 1
   aimAngleTolerance: 8
   aimTransform: {fileID: 0}
@@ -105,6 +109,7 @@ MonoBehaviour:
   muzzleFlashPrefab: {fileID: 304414178702807373, guid: b9a62cef32ff6da49b88cd5572caba55, type: 3}
   hitEffectPrefab: {fileID: 1598268965855006841, guid: 1817cfabe570b924c88af259660671a3, type: 3}
   projectilePrefab: {fileID: 6820024759759233777, guid: bc69c5e6048d32a418aa86c3557719e6, type: 3}
+  trailEffectPrefab: {fileID: 0}
 --- !u!114 &853810235908710514
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -274,8 +279,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 5, y: 2.58, z: 5}
-  m_Center: {x: 0, y: 2, z: 0}
+  m_Size: {x: 3.82, y: 2.99, z: 3.91}
+  m_Center: {x: 0, y: 1.48, z: 0}
 --- !u!114 &6691114476439597761
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -1,4 +1,8 @@
 using UnityEngine;
+#if UNITY_EDITOR
+using System.IO;
+using UnityEditor;
+#endif
 
 public enum SelectableEntityType
 {
@@ -17,6 +21,11 @@ public class SelectableEntity : MonoBehaviour
 
     [Tooltip("같은 타입 전체 선택(더블클릭)에 사용되는 타입 ID입니다. 예: tank, barracks")]
     public string entityTypeId = "unit";
+
+    [Tooltip("체크하면 entityTypeId를 이 프리팹의 이름으로 자동 설정합니다. " +
+        "직접 다른 값을 쓰고 싶다면(예: 여러 프리팹을 같은 그룹으로 묶기) 체크를 해제하세요. " +
+        "UnitData의 entityTypeId가 채워져 있으면 런타임에는 그 값이 우선 적용됩니다.")]
+    public bool autoAssignEntityTypeId = true;
 
     [Tooltip("선택/체력바 기준이 되는 콜라이더입니다. 비워두면 자식에서 자동으로 찾습니다. (Root 본의 콜라이더 등)")]
     public Collider selectionCollider;
@@ -115,6 +124,33 @@ public class SelectableEntity : MonoBehaviour
         if (autoSetupHealth)
             EnsureHealthComponents();
     }
+
+#if UNITY_EDITOR
+    void OnValidate()
+    {
+        if (!autoAssignEntityTypeId)
+            return;
+
+        string prefabName = ResolvePrefabAssetName(gameObject);
+
+        if (!string.IsNullOrEmpty(prefabName))
+            entityTypeId = prefabName;
+    }
+
+    static string ResolvePrefabAssetName(GameObject target)
+    {
+        // 프리팹 에셋을 직접 편집 중이거나(프리팹 모드/프로젝트 창),
+        // 씬에 배치된 프리팹 인스턴스인 경우 모두 원본 프리팹 에셋 경로를 찾는다.
+        string assetPath = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(target);
+
+        if (string.IsNullOrEmpty(assetPath))
+            assetPath = AssetDatabase.GetAssetPath(target);
+
+        return string.IsNullOrEmpty(assetPath)
+            ? null
+            : Path.GetFileNameWithoutExtension(assetPath);
+    }
+#endif
 
     void OnEnable()
     {

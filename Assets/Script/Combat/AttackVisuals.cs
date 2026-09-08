@@ -22,28 +22,30 @@ public static class AttackVisuals
     public static void SpawnHitEffect(
         Vector3 position,
         GameObject prefab,
-        Color fallbackColor)
+        Color fallbackColor,
+        float scale = 1f)
     {
         // 방향 정보가 없는 경우(예: 사망 이펙트)는 회전 없이 생성합니다.
-        SpawnHitEffect(position, Vector3.zero, prefab, fallbackColor);
+        SpawnHitEffect(position, Vector3.zero, prefab, fallbackColor, scale);
     }
 
     public static void SpawnHitEffect(
         Vector3 position,
         Vector3 incomingDirection,
         GameObject prefab,
-        Color fallbackColor)
+        Color fallbackColor,
+        float scale = 1f)
     {
         // 입사각의 반대(= 날아온 쪽)를 바라보게 회전합니다.
         Quaternion rotation = GetOppositeIncidenceRotation(incomingDirection);
 
-        if (CombatEffectSpawner.Spawn(prefab, position, rotation) != null)
+        if (CombatEffectSpawner.Spawn(prefab, position, rotation, null, scale) != null)
             return;
 
-        GameObject hit = CreateSphere("HitEffect", position, 0.3f, fallbackColor);
+        GameObject hit = CreateSphere("HitEffect", position, 0.3f * scale, fallbackColor);
         hit.transform.rotation = rotation;
         TempVisual temp = hit.AddComponent<TempVisual>();
-        temp.Play(0.2f, 0.3f, 0.9f);
+        temp.Play(0.2f, 0.3f * scale, 0.9f);
     }
 
     // 입사 방향(공격자 -> 피격 지점)의 반대 방향을 forward(+Z)로 하는 회전을 반환합니다.
@@ -83,7 +85,11 @@ public static class AttackVisuals
         float impactOffsetRadius = 0f,
         float arcPeakTime = 0.5f,
         float lateralWobbleAmount = 0f,
-        float lateralWobbleRatio = 0f)
+        float lateralWobbleRatio = 0f,
+        bool useBallisticArc = false,
+        float ballisticGravity = 20f,
+        float hitEffectScale = 1f,
+        GameObject trailEffectPrefab = null)
     {
         if (ProjectileSimWorld.Spawn(
                 firePosition,
@@ -111,7 +117,11 @@ public static class AttackVisuals
                 impactOffsetRadius,
                 arcPeakTime,
                 lateralWobbleAmount,
-                lateralWobbleRatio) != null)
+                lateralWobbleRatio,
+                useBallisticArc,
+                ballisticGravity,
+                hitEffectScale,
+                trailEffectPrefab) != null)
             return;
 
         GameObject projectileObject;
@@ -151,7 +161,11 @@ public static class AttackVisuals
             impactOffsetRadius,
             arcPeakTime,
             lateralWobbleAmount,
-            lateralWobbleRatio);
+            lateralWobbleRatio,
+            useBallisticArc,
+            ballisticGravity,
+            hitEffectScale,
+            trailEffectPrefab);
     }
 
     public static GameObject CreateFallbackProjectile(Vector3 position, Color color)

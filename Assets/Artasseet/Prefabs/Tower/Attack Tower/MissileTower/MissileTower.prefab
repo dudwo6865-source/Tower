@@ -58,7 +58,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   entityType: 1
   ownerId: 1
-  entityTypeId: MachineTower
+  entityTypeId: MissileTower
+  autoAssignEntityTypeId: 1
   selectionCollider: {fileID: 7222556402491717478}
   portrait: {fileID: 21300000, guid: 1b4ab1bcf4a21ff4f9832cbc36b939ef, type: 3}
   autoSetupHealth: 1
@@ -76,10 +77,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   attackType: 3
   attackDamage: 12
-  attackRange: 30
+  attackRange: 40
   attackCooldown: 0.8
   useAttackAnimationEvent: 1
-  projectileSpeed: 35
+  projectileSpeed: 25
   firePoint: {fileID: 1028585949954494764}
   pierceHitRadius: 0.6
   minAttackRange: 0
@@ -89,11 +90,14 @@ MonoBehaviour:
   arcPeakTime: 0.812
   arcClimbPower: 0.5
   arcDivePower: 5
+  useBallisticArc: 0
+  ballisticGravity: 20
   impactOffsetRadius: 3
   lateralWobbleRatio: 0.15
-  lateralWobbleAmount: 10
+  lateralWobbleAmount: 20
   splashRadius: 4
   splashMinDamageRatio: 0.3
+  hitEffectBaseRadius: 3
   requireFacingToAttack: 1
   aimAngleTolerance: 8
   aimTransform: {fileID: 0}
@@ -105,6 +109,7 @@ MonoBehaviour:
   muzzleFlashPrefab: {fileID: 304414178702807373, guid: b9a62cef32ff6da49b88cd5572caba55, type: 3}
   hitEffectPrefab: {fileID: 2669821138424738530, guid: 1d8f093d07512134584cb78ba292707c, type: 3}
   projectilePrefab: {fileID: 4819288716161820942, guid: 3da41c2562fef6645998020932b34b8b, type: 3}
+  trailEffectPrefab: {fileID: 3528572042786672934, guid: afc7b0b814c1142479197052123f05f4, type: 3}
 --- !u!114 &853810235908710514
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -258,8 +263,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 5, y: 2.58, z: 5}
-  m_Center: {x: 0, y: 2, z: 0}
+  m_Size: {x: 3.82, y: 2.99, z: 3.91}
+  m_Center: {x: 0, y: 1.48, z: 0}
 --- !u!114 &3433100028922866364
 MonoBehaviour:
   m_ObjectHideFlags: 0
