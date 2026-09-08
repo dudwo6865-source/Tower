@@ -9,7 +9,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1318032474236850572}
-  - component: {fileID: 5038814651342892252}
   m_Layer: 0
   m_Name: HXW_Out
   m_TagString: Untagged
@@ -148,18 +147,3 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 32194c57bf6806140b82a27287628eec, type: 3}
   m_PrefabInstance: {fileID: 9207002330579497031}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &5038814651342892252
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8766927936405010649}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 17c270a4359f4ba399ed6ae0754019d1, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
-  useManualBounds: 0
-  manualBoundsCenter: {x: 0, y: 0, z: 0}
-  manualBoundsSize: {x: 2, y: 4, z: 2}

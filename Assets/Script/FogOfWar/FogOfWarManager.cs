@@ -49,10 +49,6 @@ public class FogOfWarManager : MonoBehaviour
     [Tooltip("자동 해상도의 최소/최대 한 변 칸 수입니다.")]
     public Vector2Int autoGridResolutionRange = new Vector2Int(64, 512);
 
-    [Header("Vision Blocking")]
-    [Tooltip("FogOfWarVisionBlocker가 있는 오브젝트(예: 벽) 뒤로는 시야가 뚫고 나가지 못하게 막습니다.")]
-    public bool enableVisionBlocking = true;
-
     [Header("Elevation Vision")]
     [Tooltip("켜면 지형 높이 차이로 시야가 가려집니다(고지대 유리): 높은 곳에서는 낮은 곳이 보이고, 낮은 곳에서는 앞을 가로막는 높은 지형 너머가 안 보입니다.")]
     public bool enableElevationVision = true;
@@ -112,10 +108,6 @@ public class FogOfWarManager : MonoBehaviour
 
     private Texture2D fogTexture;
     private Color32[] fogPixels;
-    private bool[] visionBlocked;
-    private int[] blockerIdByCell;
-    private readonly List<List<int>> blockerCells = new List<List<int>>();
-    private readonly List<float> blockerTopHeight = new List<float>();
 
     // 안개 그리드와 같은 해상도로 미리 펼쳐둔 지형 높이(칸당 값 1개). 레이마칭 중에는
     // 나눗셈·보간 없이 배열 조회 한 번으로 끝나도록 Start()에서 한 번만 굽는다.
@@ -126,7 +118,6 @@ public class FogOfWarManager : MonoBehaviour
 
     const float MinElevationSampleDistance = 0.5f;
     const float ElevationSlopeEpsilon = 0.01f;
-    const float BlockerLookOverMargin = 0.1f;
 
     private Material worldFogMaterial;
     private Material uiFogMaterial;
@@ -164,7 +155,6 @@ public class FogOfWarManager : MonoBehaviour
         if (createWorldOverlay)
             CreateWorldOverlay();
 
-        BuildVisionBlockerGrid();
         BuildElevationHeightGrid();
 
         FogOfWarVisionSource[] existingSources =
@@ -526,59 +516,6 @@ public class FogOfWarManager : MonoBehaviour
         return localVertex.y <= sinkLocalY + 0.01f;
     }
 
-    void BuildVisionBlockerGrid()
-    {
-        int cellCount = gridWidth * gridHeight;
-        visionBlocked = new bool[cellCount];
-        blockerIdByCell = new int[cellCount];
-
-        for (int i = 0; i < cellCount; i++)
-            blockerIdByCell[i] = -1;
-
-        blockerCells.Clear();
-        blockerTopHeight.Clear();
-
-        if (!enableVisionBlocking || mapSize.x <= 0f || mapSize.y <= 0f)
-            return;
-
-        FogOfWarVisionBlocker[] blockers = FindObjectsOfType<FogOfWarVisionBlocker>();
-
-        foreach (FogOfWarVisionBlocker blocker in blockers)
-            MarkBlockerBounds(blocker.GetWorldBounds());
-    }
-
-    /// <summary>
-    /// 이 오브젝트가 차지하는 칸들을 하나의 "블로커"로 등록한다.
-    /// 같은 블로커에 속한 칸끼리는 서로를 가리지 않는다(오브젝트 자신은 항상 온전히 밝혀짐).
-    /// 블로커의 꼭대기 높이(worldBounds.max.y)도 같이 기록해서, 눈높이가 그보다 높은
-    /// 시야 소스는 이 블로커를 내려다보며 넘어갈 수 있게 한다(언덕 위에서 절벽 아래를
-    /// 내려다보는 경우 등).
-    /// </summary>
-    void MarkBlockerBounds(Bounds worldBounds)
-    {
-        int minX = WorldToGridX(worldBounds.min.x);
-        int maxX = WorldToGridX(worldBounds.max.x);
-        int minZ = WorldToGridZ(worldBounds.min.z);
-        int maxZ = WorldToGridZ(worldBounds.max.z);
-
-        int blockerId = blockerCells.Count;
-        List<int> cells = new List<int>();
-        blockerTopHeight.Add(worldBounds.max.y);
-
-        for (int z = minZ; z <= maxZ; z++)
-        {
-            for (int x = minX; x <= maxX; x++)
-            {
-                int index = z * gridWidth + x;
-                visionBlocked[index] = true;
-                blockerIdByCell[index] = blockerId;
-                cells.Add(index);
-            }
-        }
-
-        blockerCells.Add(cells);
-    }
-
     /// <summary>
     /// 지형 표면 높이를 낮은 해상도 그리드로 한 번만 레이캐스트/NavMesh 샘플링해서 구운 뒤,
     /// 그 결과를 안개 그리드와 같은 해상도로 한 번에 확장해둔다(둘 다 Start()에서 1회만
@@ -759,11 +696,10 @@ public class FogOfWarManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 시야 반경(radius) 안을 원형으로 채우되, FogOfWarVisionBlocker가 있는 칸(벽 등)을 만나면
-    /// 그 칸까지만 밝히고 뒤쪽으로는 더 이상 뻗어나가지 않습니다(레이마칭 기반 Line-of-Sight).
-    /// 지형 높이 차도 광선을 따라 고도각으로 추적합니다: 눈높이보다 낮거나 같은 지형은
-    /// 항상 보이므로 높은 곳에서는 아래가 전부 보이고, 눈높이보다 높은(오르막) 지형만
-    /// 지평선 규칙을 적용해서 낮은 곳에서는 가까운 높은 지형 너머가 안 보이게 합니다.
+    /// 시야 반경(radius) 안을 원형으로 채우되, 지형 높이 차를 광선을 따라 고도각으로
+    /// 추적합니다(레이마칭 기반): 눈높이보다 낮거나 같은 지형은 항상 보이므로 높은 곳에서는
+    /// 아래가 전부 보이고, 눈높이보다 높은(오르막) 지형만 지평선 규칙을 적용해서 낮은
+    /// 곳에서는 가까운 높은 지형 너머가 안 보이게 합니다.
     /// </summary>
     void StampVision(Vector3 worldPosition, float radius, float edgeSoftness, float eyeHeight)
     {
@@ -782,8 +718,8 @@ public class FogOfWarManager : MonoBehaviour
         float centerSlope = float.NegativeInfinity;
         StampVisionCell(centerX, centerZ, worldPosition, eyeHeight, radius, edgeSoftness, ref centerSlope);
 
-        // 경계 상자의 테두리 칸으로만 광선을 쏘고, 각 광선은 시야를 막는 칸을 만나면 멈춘다.
-        // (박스 전체를 채우는 것과 점근적으로 같은 비용이면서 차단 여부를 반영할 수 있다.)
+        // 경계 상자의 테두리 칸으로만 광선을 쏜다. 박스 전체를 채우는 것과 점근적으로
+        // 같은 비용이면서, 광선을 따라 고도각(지평선)을 추적할 수 있다.
         for (int x = minX; x <= maxX; x++)
         {
             CastVisionRay(centerX, centerZ, x, minZ, worldPosition, eyeHeight, radius, edgeSoftness);
@@ -819,7 +755,6 @@ public class FogOfWarManager : MonoBehaviour
 
         int x = x0;
         int z = z0;
-        bool isSourceCell = true;
 
         // 광선을 따라 지금까지 관측된 가장 높은 고도각(지평선). 눈높이보다 높은(오르막)
         // 칸 중 이 각도를 못 넘는 칸만 가려진 것으로 보고 밝히지 않는다(광선 자체는 계속
@@ -828,14 +763,8 @@ public class FogOfWarManager : MonoBehaviour
 
         while (true)
         {
-            bool canContinue = StampVisionCell(x, z, sourceWorldPos, eyeHeight, radius, edgeSoftness, ref maxSlope);
-
-            // 소스 자신의 칸(광선의 첫 걸음)이 차단 칸이어도 광선은 계속 나가야 한다.
-            // 그래야 벽 옆·위에 선 유닛이 스스로의 시야까지 막아버리지 않는다.
-            if (!canContinue && !isSourceCell)
+            if (!StampVisionCell(x, z, sourceWorldPos, eyeHeight, radius, edgeSoftness, ref maxSlope))
                 return;
-
-            isSourceCell = false;
 
             if (x == x1 && z == z1)
                 return;
@@ -864,9 +793,9 @@ public class FogOfWarManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 이 칸을 밝히고(고도각·차단 여부에 따라 밝히지 않을 수도 있음) 광선을 계속 진행해도
-    /// 되는지 돌려준다. maxSlope는 이 광선이 지금까지 지나온 지형 중 가장 높게 보인
-    /// 고도각으로, 호출할 때마다 갱신된다(광선 하나당 하나씩 유지).
+    /// 이 칸을 밝히고(고도각에 따라 밝히지 않을 수도 있음) 광선을 계속 진행해도 되는지
+    /// 돌려준다. maxSlope는 이 광선이 지금까지 지나온 지형 중 가장 높게 보인 고도각으로,
+    /// 호출할 때마다 갱신된다(광선 하나당 하나씩 유지).
     /// </summary>
     /// <returns>이 칸을 지나 광선을 계속 진행해도 되면 true, 여기서 멈춰야 하면 false.</returns>
     bool StampVisionCell(
@@ -912,10 +841,9 @@ public class FogOfWarManager : MonoBehaviour
             maxSlope = Mathf.Max(maxSlope, slope);
         }
 
-        int index = z * gridWidth + x;
-
         if (elevationVisible)
         {
+            int index = z * gridWidth + x;
             float strength = CalculateVisionStrength(distance, radius, edgeSoftness);
             byte value = (byte)(strength * 255f);
 
@@ -923,78 +851,7 @@ public class FogOfWarManager : MonoBehaviour
                 fogPixels[index].g = value;
         }
 
-        if (visionBlocked != null && visionBlocked[index])
-        {
-            int blockerId = blockerIdByCell[index];
-
-            // 눈높이가 이 블로커(벽·절벽)의 꼭대기보다 높으면 그 위를 내려다보는 것으로
-            // 보고 막지 않는다 — 언덕 위에서 절벽 너머 낮은 바닥이 보여야 하기 때문이다.
-            bool seesOverBlocker =
-                enableElevationVision &&
-                blockerId >= 0 &&
-                eyeY >= blockerTopHeight[blockerId] - BlockerLookOverMargin;
-
-            if (!seesOverBlocker)
-            {
-                if (elevationVisible)
-                    IlluminateBlockerFootprint(index, sourceWorldPos, radius, edgeSoftness);
-
-                return false;
-            }
-        }
-
         return true;
-    }
-
-    /// <summary>
-    /// 광선이 이 블로커 칸에서 멈췄을 때, 같은 블로커에 속한 나머지 칸도 함께 밝힌다.
-    /// 즉 FogOfWarVisionBlocker가 붙은 오브젝트 자신은 시야 범위 안에서 항상 온전히 보이고,
-    /// 그 오브젝트를 지나 뒤쪽으로 향하는 시야만 막힌다.
-    /// </summary>
-    void IlluminateBlockerFootprint(
-        int hitCellIndex,
-        Vector3 sourceWorldPos,
-        float radius,
-        float edgeSoftness)
-    {
-        if (blockerIdByCell == null)
-            return;
-
-        int blockerId = blockerIdByCell[hitCellIndex];
-
-        if (blockerId < 0)
-            return;
-
-        List<int> cells = blockerCells[blockerId];
-
-        for (int i = 0; i < cells.Count; i++)
-        {
-            int index = cells[i];
-
-            if (index == hitCellIndex)
-                continue;
-
-            int x = index % gridWidth;
-            int z = index / gridWidth;
-            Vector2 worldXZ = GetCellWorldXZ(x, z);
-
-            float dx = worldXZ.x - sourceWorldPos.x;
-            float dz = worldXZ.y - sourceWorldPos.z;
-            float distSqr = dx * dx + dz * dz;
-
-            if (distSqr > radius * radius)
-                continue;
-
-            float strength = CalculateVisionStrength(
-                Mathf.Sqrt(distSqr),
-                radius,
-                edgeSoftness);
-
-            byte value = (byte)(strength * 255f);
-
-            if (value > fogPixels[index].g)
-                fogPixels[index].g = value;
-        }
     }
 
     float CalculateVisionStrength(float distance, float radius, float edgeSoftness)

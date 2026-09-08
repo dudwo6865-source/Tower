@@ -9,7 +9,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6292921306285814955}
-  - component: {fileID: 6889208886032341177}
   m_Layer: 0
   m_Name: WxW_In
   m_TagString: Untagged
@@ -148,18 +147,3 @@ NavMeshObstacle:
   m_CarveOnlyStationary: 1
   m_Center: {x: -0.5, y: 1.192, z: -0.5}
   m_TimeToStationary: 0.5
---- !u!114 &6889208886032341177
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2699405105762726840}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 17c270a4359f4ba399ed6ae0754019d1, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
-  useManualBounds: 0
-  manualBoundsCenter: {x: 0, y: 0, z: 0}
-  manualBoundsSize: {x: 2, y: 4, z: 2}
