@@ -194,7 +194,10 @@ public static class AttackVisuals
         if (trail == null)
             trail = trailObject.AddComponent<HitscanTrail>();
 
-        trail.Play(start, end, duration, fallbackColor, width);
+        // 프리팹을 지정했다면 그 프리팹에 만들어둔 색상 그라디언트/두께 커브를 그대로 씁니다.
+        // 프리팹이 없어 기본 라인을 만든 경우에만 UnitAttacker 값(색상/두께)으로 채웁니다.
+        bool overrideColorAndWidth = prefab == null;
+        trail.Play(start, end, duration, fallbackColor, width, overrideColorAndWidth);
     }
 
     static GameObject CreateFallbackHitscanTrail(Color color, float width)
