@@ -170,7 +170,9 @@ public static class AttackVisuals
 
     public static GameObject CreateFallbackProjectile(Vector3 position, Color color)
     {
-        return CreateSphere("Projectile", position, 0.25f, color);
+        GameObject projectile = CreateSphere("Projectile", position, 0.25f, color);
+        ApplyAlwaysOnTopLayer(projectile);
+        return projectile;
     }
 
     // 투사체 이동 없이 발사 지점에서 명중 지점까지 순간적으로 그리는 빛줄기(히트스캔 트레일)입니다.
@@ -213,7 +215,18 @@ public static class AttackVisuals
         line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         line.receiveShadows = false;
 
+        ApplyAlwaysOnTopLayer(trailObject);
         return trailObject;
+    }
+
+    // "Effect" 레이어를 URP Renderer의 Render Objects 기능(Depth Test: Always)과 짝지어두면
+    // 이 오브젝트가 지형 등에 가려지지 않고 항상 위에 그려집니다. 레이어가 없는 프로젝트에서는
+    // 조용히 무시합니다(에러 없이 기본 레이어로 남음).
+    static void ApplyAlwaysOnTopLayer(GameObject target)
+    {
+        int effectLayer = LayerMask.NameToLayer("Effect");
+        if (effectLayer >= 0)
+            target.layer = effectLayer;
     }
 
     static GameObject CreateSphere(
