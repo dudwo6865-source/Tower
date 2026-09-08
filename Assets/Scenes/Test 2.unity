@@ -780,6 +780,10 @@ PrefabInstance:
       propertyPath: m_NavMeshData
       value: 
       objectReference: {fileID: 23800000, guid: d8522601decb5fb4c9aacf12e96dfcbf, type: 2}
+    - target: {fileID: 7657235952112075079, guid: e5dc0c86e3046704a89d275482820c10, type: 3}
+      propertyPath: useManualBounds
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 8098669722882859227, guid: e5dc0c86e3046704a89d275482820c10, type: 3}
       propertyPath: m_Name
       value: 1Stage
@@ -15103,14 +15107,20 @@ MonoBehaviour:
   entityVisibilityPadding: 2
   entityShowThreshold: 0.1
   entityHideThreshold: 0.1
+  autoGridResolution: 1
+  autoGridCellSize: 1
+  autoGridResolutionRange: {x: 64, y: 512}
+  enableElevationVision: 1
+  elevationGridResolution: 64
+  defaultEyeHeight: 2.5
   updateInterval: 0.1
   createWorldOverlay: 1
   useMapGridWhenAvailable: 1
   overlaySampleMode: 2
   groundRaycastMask:
     serializedVersion: 2
-    m_Bits: 64
-  surfaceRaycastHeightPadding: 5
+    m_Bits: 65
+  surfaceRaycastHeightPadding: 1
   hideOverlayWithoutSurface: 1
   overlayMeshSegments: 64
   overlayHeightOffset: 10
