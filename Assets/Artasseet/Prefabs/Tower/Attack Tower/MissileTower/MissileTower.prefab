@@ -58,7 +58,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   entityType: 1
   ownerId: 1
-  entityTypeId: MachineTower
+  entityTypeId: MissileTower
+  autoAssignEntityTypeId: 1
   selectionCollider: {fileID: 7222556402491717478}
   portrait: {fileID: 21300000, guid: 1b4ab1bcf4a21ff4f9832cbc36b939ef, type: 3}
   autoSetupHealth: 1
@@ -216,7 +217,7 @@ NavMeshObstacle:
   m_Enabled: 1
   serializedVersion: 3
   m_Shape: 1
-  m_Extents: {x: 2.25, y: 1.23, z: 2.25}
+  m_Extents: {x: 0.85, y: 1.23, z: 0.85}
   m_MoveThreshold: 0.1
   m_Carve: 1
   m_CarveOnlyStationary: 1
