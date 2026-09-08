@@ -39,6 +39,20 @@ public class FogOfWarManager : MonoBehaviour
     [Range(0f, 1f)]
     public float entityHideThreshold = 0.02f;
 
+    [Header("Auto Grid Resolution")]
+    [Tooltip("켜면 gridWidth/gridHeight 대신 맵 크기와 Auto Grid Cell Size로 해상도를 자동 계산합니다.")]
+    public bool autoGridResolution;
+
+    [Tooltip("자동 해상도 사용 시, 안개 그리드 한 칸이 덮는 월드 크기(미터)입니다. 작을수록 정밀하지만 무거워집니다.")]
+    public float autoGridCellSize = 1f;
+
+    [Tooltip("자동 해상도의 최소/최대 한 변 칸 수입니다.")]
+    public Vector2Int autoGridResolutionRange = new Vector2Int(64, 512);
+
+    [Header("Vision Blocking")]
+    [Tooltip("FogOfWarVisionBlocker가 있는 오브젝트(예: 벽) 뒤로는 시야가 뚫고 나가지 못하게 막습니다.")]
+    public bool enableVisionBlocking = true;
+
     [Header("Update")]
     [Tooltip("안개 텍스처를 갱신하는 간격(초)입니다.")]
     public float updateInterval = 0.1f;
@@ -88,6 +102,7 @@ public class FogOfWarManager : MonoBehaviour
 
     private Texture2D fogTexture;
     private Color32[] fogPixels;
+    private bool[] visionBlocked;
 
     private Material worldFogMaterial;
     private Material uiFogMaterial;
@@ -113,12 +128,18 @@ public class FogOfWarManager : MonoBehaviour
     void Start()
     {
         InitializeMap();
+
+        if (autoGridResolution)
+            ApplyAutoGridResolution();
+
         ApplySurfaceSamplingSettings();
         ApplyMaterialSettings(worldFogMaterial);
         ApplyMaterialSettings(uiFogMaterial);
 
         if (createWorldOverlay)
             CreateWorldOverlay();
+
+        BuildVisionBlockerGrid();
 
         FogOfWarVisionSource[] existingSources =
             FindObjectsOfType<FogOfWarVisionSource>();
@@ -195,6 +216,33 @@ public class FogOfWarManager : MonoBehaviour
 
         mapOrigin = Vector3.zero;
         mapSize = new Vector2(256f, 256f);
+    }
+
+    void ApplyAutoGridResolution()
+    {
+        if (mapSize.x <= 0f || mapSize.y <= 0f || autoGridCellSize <= 0f)
+            return;
+
+        int newWidth = Mathf.Clamp(
+            Mathf.RoundToInt(mapSize.x / autoGridCellSize),
+            autoGridResolutionRange.x,
+            autoGridResolutionRange.y);
+
+        int newHeight = Mathf.Clamp(
+            Mathf.RoundToInt(mapSize.y / autoGridCellSize),
+            autoGridResolutionRange.x,
+            autoGridResolutionRange.y);
+
+        if (newWidth == gridWidth && newHeight == gridHeight)
+            return;
+
+        gridWidth = newWidth;
+        gridHeight = newHeight;
+
+        if (fogTexture != null)
+            Destroy(fogTexture);
+
+        InitializeTexture();
     }
 
     void ApplySurfaceSamplingSettings()
@@ -446,6 +494,33 @@ public class FogOfWarManager : MonoBehaviour
         return localVertex.y <= sinkLocalY + 0.01f;
     }
 
+    void BuildVisionBlockerGrid()
+    {
+        visionBlocked = new bool[gridWidth * gridHeight];
+
+        if (!enableVisionBlocking || mapSize.x <= 0f || mapSize.y <= 0f)
+            return;
+
+        FogOfWarVisionBlocker[] blockers = FindObjectsOfType<FogOfWarVisionBlocker>();
+
+        foreach (FogOfWarVisionBlocker blocker in blockers)
+            MarkBlockerBounds(blocker.GetWorldBounds());
+    }
+
+    void MarkBlockerBounds(Bounds worldBounds)
+    {
+        int minX = WorldToGridX(worldBounds.min.x);
+        int maxX = WorldToGridX(worldBounds.max.x);
+        int minZ = WorldToGridZ(worldBounds.min.z);
+        int maxZ = WorldToGridZ(worldBounds.max.z);
+
+        for (int z = minZ; z <= maxZ; z++)
+        {
+            for (int x = minX; x <= maxX; x++)
+                visionBlocked[z * gridWidth + x] = true;
+        }
+    }
+
     public void Register(FogOfWarVisionSource source)
     {
         if (source == null || visionSources.Contains(source))
@@ -517,7 +592,10 @@ public class FogOfWarManager : MonoBehaviour
             if (source.OwnerId != localPlayerOwnerId)
                 continue;
 
-            StampVision(source.GroundPosition, source.VisionRange);
+            StampVision(
+                source.GroundPosition,
+                source.VisionRange,
+                ResolveEdgeSoftness(source));
         }
 
         for (int i = 0; i < fogPixels.Length; i++)
@@ -530,58 +608,143 @@ public class FogOfWarManager : MonoBehaviour
         fogTexture.Apply(false);
     }
 
-    void StampVision(Vector3 worldPosition, float radius)
+    float ResolveEdgeSoftness(FogOfWarVisionSource source)
     {
-        float cellSizeX = mapSize.x / gridWidth;
-        float cellSizeZ = mapSize.y / gridHeight;
+        return source.EdgeSoftnessOverride >= 0f
+            ? source.EdgeSoftnessOverride
+            : visionEdgeSoftness;
+    }
 
+    /// <summary>
+    /// 시야 반경(radius) 안을 원형으로 채우되, FogOfWarVisionBlocker가 있는 칸(벽 등)을 만나면
+    /// 그 칸까지만 밝히고 뒤쪽으로는 더 이상 뻗어나가지 않습니다(레이마칭 기반 Line-of-Sight).
+    /// </summary>
+    void StampVision(Vector3 worldPosition, float radius, float edgeSoftness)
+    {
         int centerX = WorldToGridX(worldPosition.x);
         int centerZ = WorldToGridZ(worldPosition.z);
 
-        int radiusCellsX = Mathf.CeilToInt(radius / cellSizeX);
-        int radiusCellsZ = Mathf.CeilToInt(radius / cellSizeZ);
+        float cellSizeX = mapSize.x / gridWidth;
+        float cellSizeZ = mapSize.y / gridHeight;
 
-        float radiusSqr = radius * radius;
+        int radiusCellsX = Mathf.Max(1, Mathf.CeilToInt(radius / cellSizeX));
+        int radiusCellsZ = Mathf.Max(1, Mathf.CeilToInt(radius / cellSizeZ));
 
         int minX = Mathf.Max(0, centerX - radiusCellsX);
         int maxX = Mathf.Min(gridWidth - 1, centerX + radiusCellsX);
         int minZ = Mathf.Max(0, centerZ - radiusCellsZ);
         int maxZ = Mathf.Min(gridHeight - 1, centerZ + radiusCellsZ);
 
-        for (int z = minZ; z <= maxZ; z++)
+        // 소스가 서 있는 칸은 항상 밝힌다.
+        StampVisionCell(centerX, centerZ, worldPosition, radius, edgeSoftness);
+
+        // 경계 상자의 테두리 칸으로만 광선을 쏘고, 각 광선은 시야를 막는 칸을 만나면 멈춘다.
+        // (박스 전체를 채우는 것과 점근적으로 같은 비용이면서 차단 여부를 반영할 수 있다.)
+        for (int x = minX; x <= maxX; x++)
         {
-            float worldZ = mapOrigin.z + (z + 0.5f) * cellSizeZ;
+            CastVisionRay(centerX, centerZ, x, minZ, worldPosition, radius, edgeSoftness);
 
-            for (int x = minX; x <= maxX; x++)
+            if (maxZ != minZ)
+                CastVisionRay(centerX, centerZ, x, maxZ, worldPosition, radius, edgeSoftness);
+        }
+
+        for (int z = minZ + 1; z <= maxZ - 1; z++)
+        {
+            CastVisionRay(centerX, centerZ, minX, z, worldPosition, radius, edgeSoftness);
+
+            if (maxX != minX)
+                CastVisionRay(centerX, centerZ, maxX, z, worldPosition, radius, edgeSoftness);
+        }
+    }
+
+    void CastVisionRay(
+        int x0,
+        int z0,
+        int x1,
+        int z1,
+        Vector3 sourceWorldPos,
+        float radius,
+        float edgeSoftness)
+    {
+        int dx = Mathf.Abs(x1 - x0);
+        int dz = Mathf.Abs(z1 - z0);
+        int sx = x0 < x1 ? 1 : -1;
+        int sz = z0 < z1 ? 1 : -1;
+        int err = dx - dz;
+
+        int x = x0;
+        int z = z0;
+
+        while (true)
+        {
+            if (!StampVisionCell(x, z, sourceWorldPos, radius, edgeSoftness))
+                return;
+
+            if (x == x1 && z == z1)
+                return;
+
+            int e2 = 2 * err;
+
+            if (e2 > -dz)
             {
-                float worldX = mapOrigin.x + (x + 0.5f) * cellSizeX;
+                err -= dz;
+                x += sx;
+            }
 
-                float dx = worldX - worldPosition.x;
-                float dz = worldZ - worldPosition.z;
-                float distSqr = dx * dx + dz * dz;
-
-                if (distSqr > radiusSqr)
-                    continue;
-
-                float strength = CalculateVisionStrength(
-                    Mathf.Sqrt(distSqr),
-                    radius);
-
-                byte value = (byte)(strength * 255f);
-                int index = z * gridWidth + x;
-
-                if (value > fogPixels[index].g)
-                    fogPixels[index].g = value;
+            if (e2 < dx)
+            {
+                err += dx;
+                z += sz;
             }
         }
     }
 
-    float CalculateVisionStrength(float distance, float radius)
+    /// <returns>이 칸을 지나 광선을 계속 진행해도 되면 true, 여기서 멈춰야 하면 false.</returns>
+    bool StampVisionCell(
+        int x,
+        int z,
+        Vector3 sourceWorldPos,
+        float radius,
+        float edgeSoftness)
     {
-        if (visionEdgeSoftness <= 0f)
+        if (x < 0 || x >= gridWidth || z < 0 || z >= gridHeight)
+            return false;
+
+        float cellSizeX = mapSize.x / gridWidth;
+        float cellSizeZ = mapSize.y / gridHeight;
+        float worldX = mapOrigin.x + (x + 0.5f) * cellSizeX;
+        float worldZ = mapOrigin.z + (z + 0.5f) * cellSizeZ;
+
+        float dx = worldX - sourceWorldPos.x;
+        float dz = worldZ - sourceWorldPos.z;
+        float distSqr = dx * dx + dz * dz;
+
+        if (distSqr > radius * radius)
+            return false;
+
+        float strength = CalculateVisionStrength(
+            Mathf.Sqrt(distSqr),
+            radius,
+            edgeSoftness);
+
+        byte value = (byte)(strength * 255f);
+        int index = z * gridWidth + x;
+
+        if (value > fogPixels[index].g)
+            fogPixels[index].g = value;
+
+        if (visionBlocked != null && visionBlocked[index])
+            return false;
+
+        return true;
+    }
+
+    float CalculateVisionStrength(float distance, float radius, float edgeSoftness)
+    {
+        if (edgeSoftness <= 0f)
             return distance <= radius ? 1f : 0f;
 
-        float innerRadius = Mathf.Max(0f, radius - visionEdgeSoftness);
+        float innerRadius = Mathf.Max(0f, radius - edgeSoftness);
 
         if (distance <= innerRadius)
             return 1f;
@@ -589,7 +752,7 @@ public class FogOfWarManager : MonoBehaviour
         if (distance >= radius)
             return 0f;
 
-        return 1f - (distance - innerRadius) / visionEdgeSoftness;
+        return 1f - (distance - innerRadius) / edgeSoftness;
     }
 
     public bool IsVisible(Vector3 worldPosition)
@@ -666,6 +829,8 @@ public class FogOfWarManager : MonoBehaviour
         return false;
     }
 
+    // 참고: TrySampleFog는 X/Z만으로 안개 그리드를 조회하고 Y는 쓰지 않으므로,
+    // 여기서 지면 높이를 다시 레이캐스트/NavMesh로 스냅할 필요가 없다(불필요한 비용 제거).
     IEnumerable<Vector3> GetEntityGroundSamplePoints(Bounds worldBounds)
     {
         float padding = entityVisibilityPadding;
@@ -677,21 +842,15 @@ public class FogOfWarManager : MonoBehaviour
         float centerZ = (minZ + maxZ) * 0.5f;
         float referenceY = worldBounds.center.y;
 
-        yield return SnapSampleToGround(new Vector3(centerX, referenceY, centerZ));
-        yield return SnapSampleToGround(new Vector3(minX, referenceY, minZ));
-        yield return SnapSampleToGround(new Vector3(maxX, referenceY, minZ));
-        yield return SnapSampleToGround(new Vector3(minX, referenceY, maxZ));
-        yield return SnapSampleToGround(new Vector3(maxX, referenceY, maxZ));
-        yield return SnapSampleToGround(new Vector3(centerX, referenceY, minZ));
-        yield return SnapSampleToGround(new Vector3(centerX, referenceY, maxZ));
-        yield return SnapSampleToGround(new Vector3(minX, referenceY, centerZ));
-        yield return SnapSampleToGround(new Vector3(maxX, referenceY, centerZ));
-    }
-
-    static Vector3 SnapSampleToGround(Vector3 worldPosition)
-    {
-        worldPosition.y = MapPlayBounds.SampleGroundHeight(worldPosition);
-        return worldPosition;
+        yield return new Vector3(centerX, referenceY, centerZ);
+        yield return new Vector3(minX, referenceY, minZ);
+        yield return new Vector3(maxX, referenceY, minZ);
+        yield return new Vector3(minX, referenceY, maxZ);
+        yield return new Vector3(maxX, referenceY, maxZ);
+        yield return new Vector3(centerX, referenceY, minZ);
+        yield return new Vector3(centerX, referenceY, maxZ);
+        yield return new Vector3(minX, referenceY, centerZ);
+        yield return new Vector3(maxX, referenceY, centerZ);
     }
 
     public bool IsExplored(Vector3 worldPosition)
