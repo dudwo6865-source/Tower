@@ -35,9 +35,10 @@ public static class HealthBarSpriteUtility
             return null;
 
         overlayMaterial = new Material(shader);
+        // 지형·언덕 등에 가려지지 않고 항상 위에 표시되도록 깊이 판정을 무시합니다.
         overlayMaterial.SetInt(
             "unity_GUIZTestMode",
-            (int)CompareFunction.LessEqual);
+            (int)CompareFunction.Always);
 
         return overlayMaterial;
     }
