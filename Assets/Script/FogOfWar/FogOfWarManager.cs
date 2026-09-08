@@ -116,9 +116,12 @@ public class FogOfWarManager : MonoBehaviour
     private int[] blockerIdByCell;
     private readonly List<List<int>> blockerCells = new List<List<int>>();
 
-    private float[] elevationHeights;
-    private int elevationGridWidth;
-    private int elevationGridHeight;
+    // 안개 그리드와 같은 해상도로 미리 펼쳐둔 지형 높이(칸당 값 1개). 레이마칭 중에는
+    // 나눗셈·보간 없이 배열 조회 한 번으로 끝나도록 Start()에서 한 번만 굽는다.
+    private float[] elevationHeightByCell;
+
+    private float cellSizeX;
+    private float cellSizeZ;
 
     const float MinElevationSampleDistance = 0.5f;
     const float ElevationSlopeEpsilon = 0.01f;
@@ -151,6 +154,7 @@ public class FogOfWarManager : MonoBehaviour
         if (autoGridResolution)
             ApplyAutoGridResolution();
 
+        RecomputeCellSize();
         ApplySurfaceSamplingSettings();
         ApplyMaterialSettings(worldFogMaterial);
         ApplyMaterialSettings(uiFogMaterial);
@@ -263,6 +267,12 @@ public class FogOfWarManager : MonoBehaviour
             Destroy(fogTexture);
 
         InitializeTexture();
+    }
+
+    void RecomputeCellSize()
+    {
+        cellSizeX = gridWidth > 0 ? mapSize.x / gridWidth : 0f;
+        cellSizeZ = gridHeight > 0 ? mapSize.y / gridHeight : 0f;
     }
 
     void ApplySurfaceSamplingSettings()
@@ -563,71 +573,80 @@ public class FogOfWarManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 지형 표면 높이를 낮은 해상도 그리드로 한 번만 구워둔다(런타임에 지형이 안 바뀐다고 가정).
-    /// 레이마칭 중에는 이 값을 이중선형 보간해서 광선마다 고도각을 계산하는 데 쓴다.
+    /// 지형 표면 높이를 낮은 해상도 그리드로 한 번만 레이캐스트/NavMesh 샘플링해서 구운 뒤,
+    /// 그 결과를 안개 그리드와 같은 해상도로 한 번에 확장해둔다(둘 다 Start()에서 1회만
+    /// 실행). 이렇게 해두면 매 틱 레이마칭 중에는 칸마다 나눗셈·보간 없이 배열 조회
+    /// 한 번(SampleTerrainHeightAtCell)으로 높이를 얻을 수 있다.
     /// </summary>
     void BuildElevationHeightGrid()
     {
-        elevationHeights = null;
-        elevationGridWidth = 0;
-        elevationGridHeight = 0;
+        elevationHeightByCell = null;
 
-        if (!enableElevationVision || mapSize.x <= 0f || mapSize.y <= 0f)
+        if (!enableElevationVision ||
+            mapSize.x <= 0f || mapSize.y <= 0f ||
+            gridWidth <= 0 || gridHeight <= 0)
+        {
             return;
+        }
 
-        elevationGridWidth = Mathf.Max(2, elevationGridResolution);
-        elevationGridHeight = Mathf.Max(
+        int coarseWidth = Mathf.Max(2, elevationGridResolution);
+        int coarseHeight = Mathf.Max(
             2,
             Mathf.RoundToInt(elevationGridResolution * (mapSize.y / mapSize.x)));
 
-        elevationHeights = new float[elevationGridWidth * elevationGridHeight];
+        float[] coarseHeights = new float[coarseWidth * coarseHeight];
 
-        for (int z = 0; z < elevationGridHeight; z++)
+        for (int z = 0; z < coarseHeight; z++)
         {
-            float v = z / (float)(elevationGridHeight - 1);
+            float v = z / (float)(coarseHeight - 1);
             float worldZ = mapOrigin.z + v * mapSize.y;
 
-            for (int x = 0; x < elevationGridWidth; x++)
+            for (int x = 0; x < coarseWidth; x++)
             {
-                float u = x / (float)(elevationGridWidth - 1);
+                float u = x / (float)(coarseWidth - 1);
                 float worldX = mapOrigin.x + u * mapSize.x;
 
-                elevationHeights[z * elevationGridWidth + x] =
+                coarseHeights[z * coarseWidth + x] =
                     FogGroundUtility.TrySampleSurfaceHeight(worldX, worldZ, out float height)
                         ? height
                         : mapOrigin.y;
             }
         }
+
+        elevationHeightByCell = new float[gridWidth * gridHeight];
+
+        for (int z = 0; z < gridHeight; z++)
+        {
+            float fz = ((z + 0.5f) / gridHeight) * (coarseHeight - 1);
+            int z0 = Mathf.FloorToInt(fz);
+            int z1 = Mathf.Min(z0 + 1, coarseHeight - 1);
+            float tz = fz - z0;
+
+            for (int x = 0; x < gridWidth; x++)
+            {
+                float fx = ((x + 0.5f) / gridWidth) * (coarseWidth - 1);
+                int x0 = Mathf.FloorToInt(fx);
+                int x1 = Mathf.Min(x0 + 1, coarseWidth - 1);
+                float tx = fx - x0;
+
+                float h00 = coarseHeights[z0 * coarseWidth + x0];
+                float h10 = coarseHeights[z0 * coarseWidth + x1];
+                float h01 = coarseHeights[z1 * coarseWidth + x0];
+                float h11 = coarseHeights[z1 * coarseWidth + x1];
+
+                elevationHeightByCell[z * gridWidth + x] = Mathf.Lerp(
+                    Mathf.Lerp(h00, h10, tx),
+                    Mathf.Lerp(h01, h11, tx),
+                    tz);
+            }
+        }
     }
 
-    float SampleTerrainHeight(float worldX, float worldZ)
+    float SampleTerrainHeightAtCell(int x, int z)
     {
-        if (elevationHeights == null || elevationGridWidth <= 1 || elevationGridHeight <= 1)
-            return mapOrigin.y;
-
-        float u = Mathf.Clamp01((worldX - mapOrigin.x) / mapSize.x);
-        float v = Mathf.Clamp01((worldZ - mapOrigin.z) / mapSize.y);
-
-        float fx = u * (elevationGridWidth - 1);
-        float fz = v * (elevationGridHeight - 1);
-
-        int x0 = Mathf.FloorToInt(fx);
-        int z0 = Mathf.FloorToInt(fz);
-        int x1 = Mathf.Min(x0 + 1, elevationGridWidth - 1);
-        int z1 = Mathf.Min(z0 + 1, elevationGridHeight - 1);
-
-        float tx = fx - x0;
-        float tz = fz - z0;
-
-        float h00 = elevationHeights[z0 * elevationGridWidth + x0];
-        float h10 = elevationHeights[z0 * elevationGridWidth + x1];
-        float h01 = elevationHeights[z1 * elevationGridWidth + x0];
-        float h11 = elevationHeights[z1 * elevationGridWidth + x1];
-
-        return Mathf.Lerp(
-            Mathf.Lerp(h00, h10, tx),
-            Mathf.Lerp(h01, h11, tx),
-            tz);
+        return elevationHeightByCell != null
+            ? elevationHeightByCell[z * gridWidth + x]
+            : mapOrigin.y;
     }
 
     public void Register(FogOfWarVisionSource source)
@@ -744,9 +763,6 @@ public class FogOfWarManager : MonoBehaviour
         int centerX = WorldToGridX(worldPosition.x);
         int centerZ = WorldToGridZ(worldPosition.z);
 
-        float cellSizeX = mapSize.x / gridWidth;
-        float cellSizeZ = mapSize.y / gridHeight;
-
         int radiusCellsX = Mathf.Max(1, Mathf.CeilToInt(radius / cellSizeX));
         int radiusCellsZ = Mathf.Max(1, Mathf.CeilToInt(radius / cellSizeZ));
 
@@ -835,9 +851,6 @@ public class FogOfWarManager : MonoBehaviour
 
     Vector2 GetCellWorldXZ(int x, int z)
     {
-        float cellSizeX = mapSize.x / gridWidth;
-        float cellSizeZ = mapSize.y / gridHeight;
-
         return new Vector2(
             mapOrigin.x + (x + 0.5f) * cellSizeX,
             mapOrigin.z + (z + 0.5f) * cellSizeZ);
@@ -877,7 +890,7 @@ public class FogOfWarManager : MonoBehaviour
         // 최소 거리 밑에서는 고도각 판정을 건너뛰고 항상 보이는 것으로 취급한다.
         if (enableElevationVision && distance >= MinElevationSampleDistance)
         {
-            float cellHeight = SampleTerrainHeight(worldXZ.x, worldXZ.y);
+            float cellHeight = SampleTerrainHeightAtCell(x, z);
             float eyeY = sourceWorldPos.y + eyeHeight;
             float slope = (cellHeight - eyeY) / distance;
 
