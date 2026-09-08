@@ -735,8 +735,9 @@ public class FogOfWarManager : MonoBehaviour
     /// <summary>
     /// 시야 반경(radius) 안을 원형으로 채우되, FogOfWarVisionBlocker가 있는 칸(벽 등)을 만나면
     /// 그 칸까지만 밝히고 뒤쪽으로는 더 이상 뻗어나가지 않습니다(레이마칭 기반 Line-of-Sight).
-    /// 지형 높이 차도 광선을 따라 고도각으로 추적해서, 낮은 곳에서는 앞을 가로막는 높은
-    /// 지형 너머가 안 보이고 높은 곳에서는 낮은 지형이 잘 보이게 합니다.
+    /// 지형 높이 차도 광선을 따라 고도각으로 추적합니다: 눈높이보다 낮거나 같은 지형은
+    /// 항상 보이므로 높은 곳에서는 아래가 전부 보이고, 눈높이보다 높은(오르막) 지형만
+    /// 지평선 규칙을 적용해서 낮은 곳에서는 가까운 높은 지형 너머가 안 보이게 합니다.
     /// </summary>
     void StampVision(Vector3 worldPosition, float radius, float edgeSoftness, float eyeHeight)
     {
@@ -797,8 +798,9 @@ public class FogOfWarManager : MonoBehaviour
         int z = z0;
         bool isSourceCell = true;
 
-        // 광선을 따라 지금까지 관측된 가장 높은 고도각(지평선). 이보다 낮은 각도로 보이는
-        // 칸은 더 가까운 지형에 가려진 것으로 보고 밝히지 않는다(광선 자체는 계속 진행).
+        // 광선을 따라 지금까지 관측된 가장 높은 고도각(지평선). 눈높이보다 높은(오르막)
+        // 칸 중 이 각도를 못 넘는 칸만 가려진 것으로 보고 밝히지 않는다(광선 자체는 계속
+        // 진행). 눈높이보다 낮거나 같은 칸은 이 규칙과 무관하게 항상 보인다.
         float maxSlope = float.NegativeInfinity;
 
         while (true)
@@ -879,10 +881,15 @@ public class FogOfWarManager : MonoBehaviour
             float eyeY = sourceWorldPos.y + eyeHeight;
             float slope = (cellHeight - eyeY) / distance;
 
-            if (slope >= maxSlope - ElevationSlopeEpsilon)
-                maxSlope = Mathf.Max(maxSlope, slope);
-            else
-                elevationVisible = false;
+            // 눈높이보다 낮거나 같은 지형은 "지평선"에 걸리지 않고 항상 보인다 — 언덕
+            // 바로 앞이 급하게 꺼지는 지형이어도, 그 아래로 이어지는 낮은 지형 전체가
+            // 가려지면 안 되기 때문이다(고지대에서는 아래가 다 보여야 한다).
+            // 눈높이보다 높은 지형(오르막)만 지평선 규칙을 적용해서, 저지대에서 가까운
+            // 높은 지형 너머의 더 먼 봉우리는 안 보이게 한다.
+            bool atOrBelowEyeLevel = cellHeight <= eyeY;
+
+            elevationVisible = atOrBelowEyeLevel || slope >= maxSlope - ElevationSlopeEpsilon;
+            maxSlope = Mathf.Max(maxSlope, slope);
         }
 
         int index = z * gridWidth + x;
