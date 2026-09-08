@@ -192,6 +192,9 @@ public static class AttackVisuals
         if (trailObject == null)
             return;
 
+        // 프리팹을 썼든 기본 라인이든 상관없이 지형에 가려지지 않도록 적용합니다.
+        ApplyAlwaysOnTopLayer(trailObject);
+
         HitscanTrail trail = trailObject.GetComponent<HitscanTrail>();
         if (trail == null)
             trail = trailObject.AddComponent<HitscanTrail>();
@@ -215,18 +218,28 @@ public static class AttackVisuals
         line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         line.receiveShadows = false;
 
-        ApplyAlwaysOnTopLayer(trailObject);
         return trailObject;
     }
 
     // "Effect" 레이어를 URP Renderer의 Render Objects 기능(Depth Test: Always)과 짝지어두면
     // 이 오브젝트가 지형 등에 가려지지 않고 항상 위에 그려집니다. 레이어가 없는 프로젝트에서는
-    // 조용히 무시합니다(에러 없이 기본 레이어로 남음).
+    // 조용히 무시합니다(에러 없이 기본 레이어로 남음). 프리팹 자식들도 렌더러를 가질 수 있으므로
+    // 재귀적으로 전부 적용합니다.
     static void ApplyAlwaysOnTopLayer(GameObject target)
     {
         int effectLayer = LayerMask.NameToLayer("Effect");
-        if (effectLayer >= 0)
-            target.layer = effectLayer;
+        if (effectLayer < 0)
+            return;
+
+        SetLayerRecursively(target.transform, effectLayer);
+    }
+
+    static void SetLayerRecursively(Transform root, int layer)
+    {
+        root.gameObject.layer = layer;
+
+        for (int i = 0; i < root.childCount; i++)
+            SetLayerRecursively(root.GetChild(i), layer);
     }
 
     static GameObject CreateSphere(
