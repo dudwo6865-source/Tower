@@ -275,7 +275,76 @@ public static class AttackVisuals
 
     public static GameObject CreateFallbackProjectile(Vector3 position, Color color)
     {
-        return CreateSphere("Projectile", position, 0.25f, color);
+        GameObject projectile = CreateSphere("Projectile", position, 0.25f, color);
+        ApplyAlwaysOnTopLayer(projectile);
+        return projectile;
+    }
+
+    // 투사체 이동 없이 발사 지점에서 명중 지점까지 순간적으로 그리는 빛줄기(히트스캔 트레일)입니다.
+    // 풀링 없이 짧게 재생 후 파괴합니다(머즐 플래시/피격 이펙트와 동일한 방식, 빈도가 낮아 충분히 저렴합니다).
+    public static void SpawnHitscanTrail(
+        Vector3 start,
+        Vector3 end,
+        GameObject prefab,
+        Color fallbackColor,
+        float duration,
+        float width)
+    {
+        GameObject trailObject = prefab != null
+            ? Object.Instantiate(prefab)
+            : CreateFallbackHitscanTrail(fallbackColor, width);
+
+        if (trailObject == null)
+            return;
+
+        // 프리팹을 썼든 기본 라인이든 상관없이 지형에 가려지지 않도록 적용합니다.
+        ApplyAlwaysOnTopLayer(trailObject);
+
+        HitscanTrail trail = trailObject.GetComponent<HitscanTrail>();
+        if (trail == null)
+            trail = trailObject.AddComponent<HitscanTrail>();
+
+        // 프리팹을 지정했다면 그 프리팹에 만들어둔 색상 그라디언트/두께 커브를 그대로 씁니다.
+        // 프리팹이 없어 기본 라인을 만든 경우에만 UnitAttacker 값(색상/두께)으로 채웁니다.
+        bool overrideColorAndWidth = prefab == null;
+        trail.Play(start, end, duration, fallbackColor, width, overrideColorAndWidth);
+    }
+
+    static GameObject CreateFallbackHitscanTrail(Color color, float width)
+    {
+        GameObject trailObject = new GameObject("HitscanTrail");
+        LineRenderer line = trailObject.AddComponent<LineRenderer>();
+
+        line.material = GetMaterial();
+        line.positionCount = 2;
+        line.useWorldSpace = true;
+        line.startWidth = width;
+        line.endWidth = width;
+        line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        line.receiveShadows = false;
+
+        return trailObject;
+    }
+
+    // "Effect" 레이어를 URP Renderer의 Render Objects 기능(Depth Test: Always)과 짝지어두면
+    // 이 오브젝트가 지형 등에 가려지지 않고 항상 위에 그려집니다. 레이어가 없는 프로젝트에서는
+    // 조용히 무시합니다(에러 없이 기본 레이어로 남음). 프리팹 자식들도 렌더러를 가질 수 있으므로
+    // 재귀적으로 전부 적용합니다.
+    static void ApplyAlwaysOnTopLayer(GameObject target)
+    {
+        int effectLayer = LayerMask.NameToLayer("Effect");
+        if (effectLayer < 0)
+            return;
+
+        SetLayerRecursively(target.transform, effectLayer);
+    }
+
+    static void SetLayerRecursively(Transform root, int layer)
+    {
+        root.gameObject.layer = layer;
+
+        for (int i = 0; i < root.childCount; i++)
+            SetLayerRecursively(root.GetChild(i), layer);
     }
 
     static GameObject CreateSphere(

@@ -16,7 +16,6 @@ GameObject:
   - component: {fileID: 1435759923663919092}
   - component: {fileID: 655912731553113735}
   - component: {fileID: 6189108068416331313}
-  - component: {fileID: 7862676528947400863}
   - component: {fileID: 7431266829126842125}
   - component: {fileID: 9085166663070198596}
   - component: {fileID: 7222556402491717478}
@@ -98,6 +97,9 @@ MonoBehaviour:
   splashRadius: 3
   splashMinDamageRatio: 0.3
   hitEffectBaseRadius: 3
+  hitscanTrailPrefab: {fileID: 0}
+  hitscanTrailDuration: 0.08
+  hitscanTrailWidth: 0.05
   requireFacingToAttack: 1
   aimAngleTolerance: 8
   aimTransform: {fileID: 0}
@@ -162,6 +164,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   visionRange: 40
   edgeSoftnessOverride: -1
+  eyeHeightOverride: -1
 --- !u!114 &655912731553113735
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -208,22 +211,6 @@ MonoBehaviour:
   pitchRange: {x: 0.95, y: 1.05}
   hitSoundCooldown: 0.12
   playHitOnDeath: 0
---- !u!208 &7862676528947400863
-NavMeshObstacle:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6894192069859626715}
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Shape: 1
-  m_Extents: {x: 0.85, y: 1.23, z: 0.85}
-  m_MoveThreshold: 0.1
-  m_Carve: 1
-  m_CarveOnlyStationary: 1
-  m_Center: {x: 0, y: 1.23, z: 0}
-  m_TimeToStationary: 0.5
 --- !u!114 &7431266829126842125
 MonoBehaviour:
   m_ObjectHideFlags: 0

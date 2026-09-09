@@ -6,15 +6,14 @@ public enum AttackType
     Ranged,
     Flamethrower,
     Cannon,
-    // 기존 값들의 저장된 정수값이 바뀌지 않도록 항상 마지막에 추가합니다.
-    PiercingBeam
+    Hitscan
 }
 
 [DisallowMultipleComponent]
 public class UnitAttacker : MonoBehaviour
 {
     [Header("Attack")]
-    [Tooltip("근접은 즉시 피해(투사체 없음), 원거리는 투사체 발사, 화염방사기는 명중해도 사라지지 않고 사거리 끝까지 직진하는 관통 투사체를 발사합니다. 대포는 포물선을 그리며 날아가 착탄 지점 주변에 범위 피해를 줍니다(중심에서 멀수록 피해 감소). 관통 빔은 화염방사기처럼 날아가는 투사체 없이, 발사 즉시 사거리 끝까지 선을 긋고 그 선 위에 있는 모든 적에게 동시에 관통 피해를 줍니다(히트스캔). 사거리 규칙은 동일합니다.")]
+    [Tooltip("근접은 즉시 피해(투사체 없음), 원거리는 투사체 발사, 화염방사기는 명중해도 사라지지 않고 사거리 끝까지 직진하는 관통 투사체를 발사합니다. 대포는 포물선을 그리며 날아가 착탄 지점 주변에 범위 피해를 줍니다(중심에서 멀수록 피해 감소). 히트스캔은 투사체 이동 없이 즉시 명중 판정을 내고, 발사 지점에서 명중 지점까지 순간적인 빛줄기(트레일)만 그립니다. 사거리 규칙은 동일합니다.")]
     public AttackType attackType = AttackType.Melee;
 
     [Tooltip("한 번 공격할 때 주는 피해량입니다.")]
@@ -99,6 +98,16 @@ public class UnitAttacker : MonoBehaviour
 
     [Tooltip("히트 이펙트가 원래 크기(1배)로 보이는 기준 스플래시 반경입니다. Splash Radius가 이 값보다 크면 이펙트가 커지고, 작으면 작아집니다. 대포 공격일 때만 사용됩니다.")]
     public float hitEffectBaseRadius = 4f;
+
+    [Header("Hitscan")]
+    [Tooltip("히트스캔 공격 시 발사 지점에서 명중 지점까지 순간적으로 그리는 빛줄기(트레일) 프리팹입니다. LineRenderer가 달린 오브젝트를 추천합니다. 비워두면 Projectile Color로 기본 빛줄기를 자동으로 만듭니다. 히트스캔 공격일 때만 사용됩니다.")]
+    public GameObject hitscanTrailPrefab;
+
+    [Tooltip("히트스캔 빛줄기가 화면에 남아 있다가 사라지는 시간(초)입니다. 짧을수록 저렴하고 총알처럼 보이고, 길수록 레이저처럼 보입니다. 히트스캔 공격일 때만 사용됩니다.")]
+    public float hitscanTrailDuration = 0.08f;
+
+    [Tooltip("기본 빛줄기(프리팹 미지정 시)의 두께(m)입니다. 히트스캔 공격일 때만 사용됩니다.")]
+    public float hitscanTrailWidth = 0.05f;
 
     [Header("Aim")]
     [Tooltip("켜면 조준(바라보기)이 끝난 뒤에만 공격합니다.")]
@@ -445,7 +454,28 @@ public class UnitAttacker : MonoBehaviour
                 hitEffectScale,
                 trailEffectPrefab);
         }
-        else
+        else if (attackType == AttackType.Hitscan)
+        {
+            targetHealth.TakeDamage(GetEffectiveDamage(), selfEntity);
+
+            if (spawnVisualEffects)
+            {
+                AttackVisuals.SpawnHitscanTrail(
+                    firePosition,
+                    targetPoint,
+                    hitscanTrailPrefab,
+                    projectileColor,
+                    hitscanTrailDuration,
+                    hitscanTrailWidth);
+
+                AttackVisuals.SpawnHitEffect(
+                    targetPoint,
+                    targetPoint - firePosition,
+                    hitEffectPrefab,
+                    hitColor);
+            }
+        }
+        else // Melee
         {
             targetHealth.TakeDamage(GetEffectiveDamage(), selfEntity);
 

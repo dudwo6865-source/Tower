@@ -16,7 +16,6 @@ GameObject:
   - component: {fileID: 536203124461212337}
   - component: {fileID: 2920484887636534122}
   - component: {fileID: 3118619779372776809}
-  - component: {fileID: 2178372661727785338}
   - component: {fileID: 7342531807426592294}
   - component: {fileID: 5286744627477198792}
   - component: {fileID: 3624898603343642002}
@@ -139,6 +138,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   visionRange: 30
   edgeSoftnessOverride: -1
+  eyeHeightOverride: -1
 --- !u!114 &2920484887636534122
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -168,22 +168,6 @@ MonoBehaviour:
   blockCells: 1
   carveNavMesh: 1
   snapTransformOnRegister: 0
---- !u!208 &2178372661727785338
-NavMeshObstacle:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4556915251988834629}
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Shape: 1
-  m_Extents: {x: 1.7, y: 0.5, z: 1.7}
-  m_MoveThreshold: 0.1
-  m_Carve: 1
-  m_CarveOnlyStationary: 1
-  m_Center: {x: 0, y: 0.5, z: 0}
-  m_TimeToStationary: 0.5
 --- !u!114 &7342531807426592294
 MonoBehaviour:
   m_ObjectHideFlags: 0

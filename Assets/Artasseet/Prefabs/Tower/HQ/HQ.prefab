@@ -14,11 +14,12 @@ GameObject:
   - component: {fileID: 8087241223973816829}
   - component: {fileID: 5951804090492023698}
   - component: {fileID: 7444597695745637919}
-  - component: {fileID: 7603442996026151032}
   - component: {fileID: 2238863894075100490}
   - component: {fileID: 8844226611335577990}
   - component: {fileID: 9223372036854775807}
   - component: {fileID: 1292566576071216317}
+  - component: {fileID: 493344982007910691}
+  - component: {fileID: 1085186090901106335}
   m_Layer: 0
   m_Name: HQ
   m_TagString: Biulding
@@ -110,7 +111,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 18, y: 8.49, z: 18}
+  m_Size: {x: 15, y: 8.49, z: 15}
   m_Center: {x: 0, y: 3.97, z: 0}
 --- !u!114 &5951804090492023698
 MonoBehaviour:
@@ -148,22 +149,6 @@ MonoBehaviour:
   deathSinkDistance: 1.5
   deathEffectColor: {r: 0.3, g: 0.3, b: 0.3, a: 1}
   deathEffectPrefab: {fileID: 0}
---- !u!208 &7603442996026151032
-NavMeshObstacle:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1362446224610192768}
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Shape: 1
-  m_Extents: {x: 6.8, y: 0.5, z: 6.8}
-  m_MoveThreshold: 0.1
-  m_Carve: 1
-  m_CarveOnlyStationary: 1
-  m_Center: {x: 0, y: 0.5, z: 0}
-  m_TimeToStationary: 0.5
 --- !u!114 &2238863894075100490
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -178,6 +163,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   visionRange: 60
   edgeSoftnessOverride: -1
+  eyeHeightOverride: -1
 --- !u!114 &8844226611335577990
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -190,7 +176,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 06111e8d5f14f3b46a3c9a5a006c460d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  footprintCells: {x: 8, y: 8}
+  footprintCells: {x: 6, y: 6}
   blockCells: 1
   carveNavMesh: 1
   snapTransformOnRegister: 0
@@ -231,3 +217,47 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &493344982007910691
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1362446224610192768}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cb8a6c9de3fe8b1458e4548a1aea8319, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  heightOffset: 0.5
+  viewDownOffset: 10
+  barHeight: 0.5
+  worldScale: 0.07
+  segmentWorldWidth: 0.4
+  localPlayerOwnerId: 1
+  alwaysShowEnemyBar: 0
+  showWhenSelected: 1
+  showAfterDamageDuration: 3
+  allyFillColor: {r: 0.2, g: 0.9, b: 0.3, a: 1}
+  enemyFillColor: {r: 0.95, g: 0.2, b: 0.2, a: 1}
+  lowHealthColor: {r: 0.95, g: 0.55, b: 0.1, a: 1}
+  lowHealthThreshold: 0.35
+  healthPerSegment: 10
+  segmentSpacing: 3
+  maxSegmentsPerRow: 15
+--- !u!208 &1085186090901106335
+NavMeshObstacle:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1362446224610192768}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Shape: 1
+  m_Extents: {x: 13.5, y: 4.658, z: 13.5}
+  m_MoveThreshold: 0.1
+  m_Carve: 1
+  m_CarveOnlyStationary: 1
+  m_Center: {x: 0, y: 4.658, z: 0}
+  m_TimeToStationary: 0.5

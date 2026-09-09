@@ -131,6 +131,17 @@ public class SelectableEntity : MonoBehaviour
         if (!autoAssignEntityTypeId)
             return;
 
+        // PrefabUtility 조회를 OnValidate 안에서 바로 하면, 에디터가 씬을 복원하는 시점 등에
+        // 내부적으로 SendMessage를 유발해 콘솔에 경고가 뜬다("SendMessage cannot be called
+        // during Awake, CheckConsistency, or OnValidate"). 다음 에디터 틱으로 미뤄서 피한다.
+        EditorApplication.delayCall += DeferredApplyEntityTypeId;
+    }
+
+    void DeferredApplyEntityTypeId()
+    {
+        if (this == null || !autoAssignEntityTypeId)
+            return;
+
         string prefabName = ResolvePrefabAssetName(gameObject);
 
         if (!string.IsNullOrEmpty(prefabName))
