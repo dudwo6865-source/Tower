@@ -83,6 +83,7 @@ MonoBehaviour:
   projectileSpeed: 50
   firePoint: {fileID: 2027668245274238783}
   pierceHitRadius: 0.6
+  beamWidth: 1
   minAttackRange: 0
   arcHeight: 4
   arcHeightRatio: 0.3
@@ -326,7 +327,7 @@ NavMeshObstacle:
   m_Enabled: 1
   serializedVersion: 3
   m_Shape: 1
-  m_Extents: {x: 2.25, y: 0.5, z: 2.25}
+  m_Extents: {x: 0.85, y: 0.5, z: 0.85}
   m_MoveThreshold: 0.1
   m_Carve: 1
   m_CarveOnlyStationary: 1

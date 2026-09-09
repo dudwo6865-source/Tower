@@ -113,6 +113,7 @@ MonoBehaviour:
   projectileSpeed: 15
   firePoint: {fileID: 1073154435222840426}
   pierceHitRadius: 0.6
+  beamWidth: 1
   minAttackRange: 0
   arcHeight: 4
   arcHeightRatio: 0.3
