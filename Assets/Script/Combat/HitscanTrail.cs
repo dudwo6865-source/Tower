@@ -14,7 +14,12 @@ public class HitscanTrail : MonoBehaviour
     private float elapsed;
     private Color baseColor;
     private bool ownsColorAndWidth;
-    private MaterialPropertyBlock propertyBlock = new MaterialPropertyBlock();
+    private MaterialPropertyBlock propertyBlock;
+
+    void Awake()
+    {
+        propertyBlock = new MaterialPropertyBlock();
+    }
 
     public void Play(Vector3 start, Vector3 end, float lifeTime, Color color, float width, bool overrideColorAndWidth)
     {
