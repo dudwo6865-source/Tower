@@ -8,6 +8,10 @@ using UnityEngine;
 public class HitscanTrail : MonoBehaviour
 {
     static readonly int GradationId = Shader.PropertyToID("_Gradation");
+    static readonly int SpeedId = Shader.PropertyToID("_Speed");
+
+    const float StartSpeed = 0.1f;
+    const float EndSpeed = 0.5f;
 
     private LineRenderer line;
     private float duration;
@@ -49,8 +53,10 @@ public class HitscanTrail : MonoBehaviour
 
         // Trail 셰이더의 Gradation 값을 라이프타임에 맞춰 1->0으로 내려, 노이즈 패턴이
         // 점점 걷혀 사라지는 디졸브 연출이 재생되게 합니다(프리팹 유무와 무관하게 항상 적용).
+        // Speed 값은 라이프타임에 맞춰 0.1->0.5로 올려, 노이즈가 갈수록 빠르게 흐르게 합니다.
         line.GetPropertyBlock(propertyBlock);
         propertyBlock.SetFloat(GradationId, 1f - t);
+        propertyBlock.SetFloat(SpeedId, Mathf.Lerp(StartSpeed, EndSpeed, t));
         line.SetPropertyBlock(propertyBlock);
 
         // 프리팹이 직접 만든 그라디언트/두께 커브는 건드리지 않고, 지속 시간만 지키다 사라집니다.
