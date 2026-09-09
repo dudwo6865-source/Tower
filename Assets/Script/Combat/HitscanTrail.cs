@@ -7,11 +7,14 @@ using UnityEngine;
 [RequireComponent(typeof(LineRenderer))]
 public class HitscanTrail : MonoBehaviour
 {
+    static readonly int GradationId = Shader.PropertyToID("_Gradation");
+
     private LineRenderer line;
     private float duration;
     private float elapsed;
     private Color baseColor;
     private bool ownsColorAndWidth;
+    private MaterialPropertyBlock propertyBlock = new MaterialPropertyBlock();
 
     public void Play(Vector3 start, Vector3 end, float lifeTime, Color color, float width, bool overrideColorAndWidth)
     {
@@ -38,6 +41,12 @@ public class HitscanTrail : MonoBehaviour
     {
         elapsed += Time.deltaTime;
         float t = Mathf.Clamp01(elapsed / duration);
+
+        // Trail 셰이더의 Gradation 값을 라이프타임에 맞춰 0->1로 올려, 노이즈 패턴이
+        // 점점 걷혀 사라지는 디졸브 연출이 재생되게 합니다(프리팹 유무와 무관하게 항상 적용).
+        line.GetPropertyBlock(propertyBlock);
+        propertyBlock.SetFloat(GradationId, t);
+        line.SetPropertyBlock(propertyBlock);
 
         // 프리팹이 직접 만든 그라디언트/두께 커브는 건드리지 않고, 지속 시간만 지키다 사라집니다.
         if (ownsColorAndWidth)
