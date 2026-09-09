@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 6556934976411305198}
   - component: {fileID: 2977951885626763682}
   m_Layer: 6
-  m_Name: Trail_ST
+  m_Name: BS_SnipingTower_Trail
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -53,7 +53,7 @@ LineRenderer:
   m_RenderingLayerMask: 4294967295
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 971b41bb054895d438dbc72c63aa542b, type: 2}
+  - {fileID: 2100000, guid: a99eb1215b78dc04f991d4654dbc681c, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -85,7 +85,7 @@ LineRenderer:
       m_Curve:
       - serializedVersion: 3
         time: 0
-        value: 0.7986013
+        value: 1
         inSlope: -0.07320368
         outSlope: -0.07320368
         tangentMode: 0
@@ -94,7 +94,7 @@ LineRenderer:
         outWeight: 0.19031137
       - serializedVersion: 3
         time: 1
-        value: 0.3541726
+        value: 0.38195038
         inSlope: -0.32437015
         outSlope: -0.32437015
         tangentMode: 0
