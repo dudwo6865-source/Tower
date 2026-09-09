@@ -4,7 +4,6 @@ using UnityEngine;
 public static class AttackVisuals
 {
     private static Material sharedMaterial;
-    private static Material sharedLineMaterial;
 
     public static void SpawnMuzzleFlash(
         Vector3 position,
@@ -170,32 +169,12 @@ public static class AttackVisuals
             trailEffectPrefab);
     }
 
-    // 히트스캔 + 화염방사기 혼합 공격입니다. 날아가는 투사체 없이, 발사 즉시 origin에서
-    // direction 방향으로 range만큼 선을 긋고 그 선(폭 = beamWidth) 안에 있는 모든 적에게
-    // 동시에 관통 피해를 줍니다.
-    public static void SpawnPiercingBeam(
-        Vector3 origin,
-        Vector3 direction,
-        float range,
-        float beamWidth,
-        float damage,
-        SelectableEntity attacker,
-        GameObject hitEffectPrefab,
-        Color hitFallbackColor,
-        Color beamFallbackColor,
-        float visualDuration)
-    {
-        direction = direction.sqrMagnitude > 0.0001f ? direction.normalized : Vector3.forward;
-
-        Vector3 endPoint = origin + direction * Mathf.Max(0f, range);
-
-        ApplyLineDamage(origin, endPoint, beamWidth, damage, attacker, direction, hitEffectPrefab, hitFallbackColor);
-        SpawnBeamVisual(origin, endPoint, beamWidth, beamFallbackColor, visualDuration);
-    }
-
-    // 선분(origin~endPoint) 기준 beamWidth 폭 안에 있는 모든 적(아군 제외)에게 즉시 피해를 줍니다.
-    // 화염방사기 관통과 달리 순간 판정이라 별도 중복 방지가 필요 없습니다(각 적은 이 루프에서 한 번만 나옴).
-    static void ApplyLineDamage(
+    // 관통 빔(히트스캔 + 화염방사기 혼합) 공격입니다. 날아가는 투사체 없이, 발사 즉시
+    // 선분(start~end) 기준 beamWidth 폭 안에 있는 모든 적(아군 제외)에게 동시에 관통
+    // 피해를 줍니다. 화염방사기 관통과 달리 순간 판정이라 별도 중복 방지가 필요 없습니다
+    // (각 적은 이 루프에서 한 번만 나옴). 시각 효과는 호출하는 쪽에서 SpawnHitscanTrail로
+    // 따로 그립니다.
+    public static void ApplyPiercingLineDamage(
         Vector3 start,
         Vector3 end,
         float beamWidth,
@@ -247,30 +226,6 @@ public static class AttackVisuals
 
             SpawnHitEffect(point, direction, hitEffectPrefab, hitFallbackColor);
         }
-    }
-
-    // 관통 빔의 순간적인 선 이펙트입니다. 프리팹 없이 LineRenderer로 그린 뒤 짧게 페이드아웃합니다.
-    static void SpawnBeamVisual(Vector3 start, Vector3 end, float width, Color color, float duration)
-    {
-        GameObject beamObject = new GameObject("PiercingBeamVisual");
-        beamObject.transform.position = start;
-
-        BeamVisual beam = beamObject.AddComponent<BeamVisual>();
-        beam.Play(start, end, Mathf.Max(0.02f, width), color, duration, GetLineMaterial());
-    }
-
-    static Material GetLineMaterial()
-    {
-        if (sharedLineMaterial != null)
-            return new Material(sharedLineMaterial);
-
-        Shader shader =
-            Shader.Find("Sprites/Default") ??
-            Shader.Find("Unlit/Color") ??
-            Shader.Find("Standard");
-
-        sharedLineMaterial = new Material(shader);
-        return new Material(sharedLineMaterial);
     }
 
     public static GameObject CreateFallbackProjectile(Vector3 position, Color color)

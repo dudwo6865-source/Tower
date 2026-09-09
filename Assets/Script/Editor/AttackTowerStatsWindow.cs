@@ -36,7 +36,6 @@ public class AttackTowerStatsWindow : EditorWindow
         public SerializedProperty hitEffectBaseRadius;
         public SerializedProperty pierceHitRadius;
         public SerializedProperty beamWidth;
-        public SerializedProperty beamVisualDuration;
     }
 
     const float NameWidth = 130f;
@@ -107,7 +106,6 @@ public class AttackTowerStatsWindow : EditorWindow
                 hitEffectBaseRadius = so.FindProperty("hitEffectBaseRadius"),
                 pierceHitRadius = so.FindProperty("pierceHitRadius"),
                 beamWidth = so.FindProperty("beamWidth"),
-                beamVisualDuration = so.FindProperty("beamVisualDuration"),
             });
         }
 
@@ -180,7 +178,6 @@ public class AttackTowerStatsWindow : EditorWindow
             HeaderLabel("이펙트기준반경", NumWidth);
             HeaderLabel("관통반경", NumWidth);
             HeaderLabel("빔폭", NumWidth);
-            HeaderLabel("빔지속", NumWidth);
             HeaderLabel("", ButtonWidth);
         }
 
@@ -204,7 +201,7 @@ public class AttackTowerStatsWindow : EditorWindow
         bool isCannon = type == AttackType.Cannon;
         bool isFlame = type == AttackType.Flamethrower;
         bool isBeam = type == AttackType.PiercingBeam;
-        bool hasProjectile = type != AttackType.Melee && type != AttackType.PiercingBeam;
+        bool hasProjectile = type == AttackType.Ranged || type == AttackType.Flamethrower || type == AttackType.Cannon;
 
         using (new EditorGUILayout.HorizontalScope())
         {
@@ -255,10 +252,7 @@ public class AttackTowerStatsWindow : EditorWindow
                 Field(entry.pierceHitRadius);
 
             using (new EditorGUI.DisabledScope(!isBeam))
-            {
                 Field(entry.beamWidth);
-                Field(entry.beamVisualDuration);
-            }
 
             if (GUILayout.Button("선택", GUILayout.Width(ButtonWidth)))
             {

@@ -1,7 +1,7 @@
 using UnityEditor;
 using UnityEngine;
 
-// 공격 타입(Melee/Ranged/Flamethrower/Cannon/Hitscan)에 따라 관련 없는 필드는 인스펙터에서 숨깁니다.
+// 공격 타입(Melee/Ranged/Flamethrower/Cannon/Hitscan/PiercingBeam)에 따라 관련 없는 필드는 인스펙터에서 숨깁니다.
 [CustomEditor(typeof(UnitAttacker))]
 [CanEditMultipleObjects]
 public class UnitAttackerEditor : Editor
@@ -19,7 +19,6 @@ public class UnitAttackerEditor : Editor
     SerializedProperty pierceHitRadius;
 
     SerializedProperty beamWidth;
-    SerializedProperty beamVisualDuration;
 
     SerializedProperty minAttackRange;
     SerializedProperty useBallisticArc;
@@ -70,7 +69,6 @@ public class UnitAttackerEditor : Editor
         pierceHitRadius = serializedObject.FindProperty("pierceHitRadius");
 
         beamWidth = serializedObject.FindProperty("beamWidth");
-        beamVisualDuration = serializedObject.FindProperty("beamVisualDuration");
 
         minAttackRange = serializedObject.FindProperty("minAttackRange");
         useBallisticArc = serializedObject.FindProperty("useBallisticArc");
@@ -124,7 +122,8 @@ public class UnitAttackerEditor : Editor
         bool showProjectile = mixedType || type == AttackType.Ranged || type == AttackType.Flamethrower || type == AttackType.Cannon;
         bool showFlamethrower = mixedType || type == AttackType.Flamethrower;
         bool showCannon = mixedType || type == AttackType.Cannon;
-        bool showHitscan = mixedType || type == AttackType.Hitscan;
+        bool showHitscan = mixedType || type == AttackType.Hitscan || type == AttackType.PiercingBeam;
+        bool showBeam = mixedType || type == AttackType.PiercingBeam;
 
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("Animation", EditorStyles.boldLabel);
@@ -153,7 +152,6 @@ public class UnitAttackerEditor : Editor
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Piercing Beam", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(beamWidth);
-            EditorGUILayout.PropertyField(beamVisualDuration);
         }
 
         if (showCannon)
@@ -192,7 +190,7 @@ public class UnitAttackerEditor : Editor
         if (showHitscan)
         {
             EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Hitscan", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Hitscan / Piercing Beam Trail", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(hitscanTrailPrefab);
             EditorGUILayout.PropertyField(hitscanTrailDuration);
             EditorGUILayout.PropertyField(hitscanTrailWidth);
