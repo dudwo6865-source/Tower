@@ -1,8 +1,10 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public static class AttackVisuals
 {
     private static Material sharedMaterial;
+    private static Material sharedLineMaterial;
 
     public static void SpawnMuzzleFlash(
         Vector3 position,
@@ -166,6 +168,109 @@ public static class AttackVisuals
             ballisticGravity,
             hitEffectScale,
             trailEffectPrefab);
+    }
+
+    // 히트스캔 + 화염방사기 혼합 공격입니다. 날아가는 투사체 없이, 발사 즉시 origin에서
+    // direction 방향으로 range만큼 선을 긋고 그 선(폭 = beamWidth) 안에 있는 모든 적에게
+    // 동시에 관통 피해를 줍니다.
+    public static void SpawnPiercingBeam(
+        Vector3 origin,
+        Vector3 direction,
+        float range,
+        float beamWidth,
+        float damage,
+        SelectableEntity attacker,
+        GameObject hitEffectPrefab,
+        Color hitFallbackColor,
+        Color beamFallbackColor,
+        float visualDuration)
+    {
+        direction = direction.sqrMagnitude > 0.0001f ? direction.normalized : Vector3.forward;
+
+        Vector3 endPoint = origin + direction * Mathf.Max(0f, range);
+
+        ApplyLineDamage(origin, endPoint, beamWidth, damage, attacker, direction, hitEffectPrefab, hitFallbackColor);
+        SpawnBeamVisual(origin, endPoint, beamWidth, beamFallbackColor, visualDuration);
+    }
+
+    // 선분(origin~endPoint) 기준 beamWidth 폭 안에 있는 모든 적(아군 제외)에게 즉시 피해를 줍니다.
+    // 화염방사기 관통과 달리 순간 판정이라 별도 중복 방지가 필요 없습니다(각 적은 이 루프에서 한 번만 나옴).
+    static void ApplyLineDamage(
+        Vector3 start,
+        Vector3 end,
+        float beamWidth,
+        float damage,
+        SelectableEntity attacker,
+        Vector3 direction,
+        GameObject hitEffectPrefab,
+        Color hitFallbackColor)
+    {
+        float halfWidth = Mathf.Max(0.05f, beamWidth) * 0.5f;
+        float halfWidthSq = halfWidth * halfWidth;
+
+        Vector3 flatStart = new Vector3(start.x, 0f, start.z);
+        Vector3 flatEnd = new Vector3(end.x, 0f, end.z);
+        Vector3 flatSegment = flatEnd - flatStart;
+        float segmentLengthSq = flatSegment.sqrMagnitude;
+
+        IReadOnlyList<SelectableEntity> entities = SelectableRegistry.Entities;
+
+        for (int i = 0; i < entities.Count; i++)
+        {
+            SelectableEntity entity = entities[i];
+
+            if (entity == null || entity == attacker)
+                continue;
+
+            // 아군(같은 소유자)은 관통 피해에서 제외합니다.
+            if (attacker != null && entity.ownerId == attacker.ownerId)
+                continue;
+
+            Vector3 point = entity.SelectionBounds.center;
+            Vector3 flatPoint = new Vector3(point.x, 0f, point.z);
+
+            float t = segmentLengthSq > 0.0001f
+                ? Mathf.Clamp01(Vector3.Dot(flatPoint - flatStart, flatSegment) / segmentLengthSq)
+                : 0f;
+
+            Vector3 closest = flatStart + flatSegment * t;
+
+            if ((flatPoint - closest).sqrMagnitude > halfWidthSq)
+                continue;
+
+            EntityHealth health = entity.CachedHealth;
+
+            if (health == null || !health.IsAlive)
+                continue;
+
+            health.TakeDamage(damage, attacker);
+
+            SpawnHitEffect(point, direction, hitEffectPrefab, hitFallbackColor);
+        }
+    }
+
+    // 관통 빔의 순간적인 선 이펙트입니다. 프리팹 없이 LineRenderer로 그린 뒤 짧게 페이드아웃합니다.
+    static void SpawnBeamVisual(Vector3 start, Vector3 end, float width, Color color, float duration)
+    {
+        GameObject beamObject = new GameObject("PiercingBeamVisual");
+        beamObject.transform.position = start;
+
+        BeamVisual beam = beamObject.AddComponent<BeamVisual>();
+        beam.Play(start, end, Mathf.Max(0.02f, width), color, duration, GetLineMaterial());
+    }
+
+    static Material GetLineMaterial()
+    {
+        if (sharedLineMaterial != null)
+            return new Material(sharedLineMaterial);
+
+        Shader shader =
+            Shader.Find("Sprites/Default") ??
+            Shader.Find("Unlit/Color") ??
+            Shader.Find("Standard");
+
+        sharedLineMaterial = new Material(shader);
+        return new Material(sharedLineMaterial);
     }
 
     public static GameObject CreateFallbackProjectile(Vector3 position, Color color)

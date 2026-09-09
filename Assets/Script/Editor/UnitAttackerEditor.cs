@@ -18,6 +18,9 @@ public class UnitAttackerEditor : Editor
 
     SerializedProperty pierceHitRadius;
 
+    SerializedProperty beamWidth;
+    SerializedProperty beamVisualDuration;
+
     SerializedProperty minAttackRange;
     SerializedProperty useBallisticArc;
     SerializedProperty ballisticGravity;
@@ -61,6 +64,9 @@ public class UnitAttackerEditor : Editor
         firePoint = serializedObject.FindProperty("firePoint");
 
         pierceHitRadius = serializedObject.FindProperty("pierceHitRadius");
+
+        beamWidth = serializedObject.FindProperty("beamWidth");
+        beamVisualDuration = serializedObject.FindProperty("beamVisualDuration");
 
         minAttackRange = serializedObject.FindProperty("minAttackRange");
         useBallisticArc = serializedObject.FindProperty("useBallisticArc");
@@ -107,9 +113,10 @@ public class UnitAttackerEditor : Editor
         bool mixedType = attackType.hasMultipleDifferentValues;
         AttackType type = (AttackType)attackType.enumValueIndex;
 
-        bool showProjectile = mixedType || type != AttackType.Melee;
+        bool showProjectile = mixedType || (type != AttackType.Melee && type != AttackType.PiercingBeam);
         bool showFlamethrower = mixedType || type == AttackType.Flamethrower;
         bool showCannon = mixedType || type == AttackType.Cannon;
+        bool showBeam = mixedType || type == AttackType.PiercingBeam;
 
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("Animation", EditorStyles.boldLabel);
@@ -131,6 +138,14 @@ public class UnitAttackerEditor : Editor
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Flamethrower", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(pierceHitRadius);
+        }
+
+        if (showBeam)
+        {
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Piercing Beam", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(beamWidth);
+            EditorGUILayout.PropertyField(beamVisualDuration);
         }
 
         if (showCannon)

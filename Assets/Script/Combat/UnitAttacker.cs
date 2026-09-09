@@ -5,14 +5,16 @@ public enum AttackType
     Melee,
     Ranged,
     Flamethrower,
-    Cannon
+    Cannon,
+    // 기존 값들의 저장된 정수값이 바뀌지 않도록 항상 마지막에 추가합니다.
+    PiercingBeam
 }
 
 [DisallowMultipleComponent]
 public class UnitAttacker : MonoBehaviour
 {
     [Header("Attack")]
-    [Tooltip("근접은 즉시 피해(투사체 없음), 원거리는 투사체 발사, 화염방사기는 명중해도 사라지지 않고 사거리 끝까지 직진하는 관통 투사체를 발사합니다. 대포는 포물선을 그리며 날아가 착탄 지점 주변에 범위 피해를 줍니다(중심에서 멀수록 피해 감소). 사거리 규칙은 동일합니다.")]
+    [Tooltip("근접은 즉시 피해(투사체 없음), 원거리는 투사체 발사, 화염방사기는 명중해도 사라지지 않고 사거리 끝까지 직진하는 관통 투사체를 발사합니다. 대포는 포물선을 그리며 날아가 착탄 지점 주변에 범위 피해를 줍니다(중심에서 멀수록 피해 감소). 관통 빔은 화염방사기처럼 날아가는 투사체 없이, 발사 즉시 사거리 끝까지 선을 긋고 그 선 위에 있는 모든 적에게 동시에 관통 피해를 줍니다(히트스캔). 사거리 규칙은 동일합니다.")]
     public AttackType attackType = AttackType.Melee;
 
     [Tooltip("한 번 공격할 때 주는 피해량입니다.")]
@@ -38,6 +40,13 @@ public class UnitAttacker : MonoBehaviour
     [Header("Flamethrower")]
     [Tooltip("화염방사기 투사체의 명중 판정 반지름입니다. 이 범위(콜라이더)에 닿은 모든 적이 피해를 입습니다. 투사체 프리팹에 콜라이더가 있으면 그 크기를 그대로 쓰고, 없을 때만 이 값으로 새로 만듭니다. 화염방사기 공격일 때만 사용됩니다.")]
     public float pierceHitRadius = 0.6f;
+
+    [Header("Piercing Beam")]
+    [Tooltip("관통 빔의 폭(두께)입니다. 발사 지점에서 사거리 끝까지 그은 선을 기준으로, 이 폭 안에 있는 모든 적이 즉시 관통 피해를 입습니다. 관통 빔 공격일 때만 사용됩니다.")]
+    public float beamWidth = 1f;
+
+    [Tooltip("빔 선이 화면에 보였다가 사라지기까지 걸리는 시간(초)입니다. 관통 빔 공격일 때만 사용됩니다.")]
+    public float beamVisualDuration = 0.12f;
 
     [Header("Cannon")]
     [Tooltip("이 거리보다 가까운 적은 사격할 수 없습니다(사각지대). 0이면 제한이 없습니다. 대포 공격일 때만 사용됩니다.")]
@@ -371,7 +380,30 @@ public class UnitAttacker : MonoBehaviour
         Quaternion fireRotation =
             CombatEffectSpawner.GetFlatLookRotation(firePosition, targetPoint);
 
-        if (attackType == AttackType.Ranged || attackType == AttackType.Flamethrower || attackType == AttackType.Cannon)
+        if (attackType == AttackType.PiercingBeam)
+        {
+            Transform pivot = aimTransform != null ? aimTransform : transform;
+            Vector3 aimDir = GetAimWorldDirection(pivot);
+            aimDir.y = 0f;
+
+            if (aimDir.sqrMagnitude < 0.0001f)
+                aimDir = fireRotation * Vector3.forward;
+            else
+                aimDir.Normalize();
+
+            AttackVisuals.SpawnPiercingBeam(
+                firePosition,
+                aimDir,
+                attackRange,
+                beamWidth,
+                GetEffectiveDamage(),
+                selfEntity,
+                hitEffectPrefab,
+                hitColor,
+                projectileColor,
+                beamVisualDuration);
+        }
+        else if (attackType == AttackType.Ranged || attackType == AttackType.Flamethrower || attackType == AttackType.Cannon)
         {
             bool piercing = attackType == AttackType.Flamethrower;
             bool arcing = attackType == AttackType.Cannon;
@@ -494,7 +526,7 @@ public class UnitAttacker : MonoBehaviour
         Gizmos.color = new Color(1f, 0.92f, 0.16f, 0.4f);
         Gizmos.DrawWireSphere(origin, attackRange);
 
-        if (attackType != AttackType.Cannon && attackType != AttackType.Flamethrower)
+        if (attackType != AttackType.Cannon && attackType != AttackType.Flamethrower && attackType != AttackType.PiercingBeam)
             return;
 
         Transform pivot = aimTransform != null ? aimTransform : transform;
@@ -515,10 +547,21 @@ public class UnitAttacker : MonoBehaviour
                 Gizmos.DrawWireSphere(origin, minAttackRange);
             }
         }
-        else
+        else if (attackType == AttackType.Flamethrower)
         {
             Gizmos.color = new Color(1f, 0.55f, 0.15f, 0.5f);
             Gizmos.DrawWireSphere(aimOrigin, pierceHitRadius);
+        }
+        else
+        {
+            // 관통 빔: 발사 지점에서 사거리 끝까지, 빔 폭만큼 벌어진 두 선으로 관통 범위를 보여줍니다.
+            Gizmos.color = new Color(0.3f, 0.85f, 1f, 0.6f);
+            Vector3 endPoint = aimOrigin + aimDir * attackRange;
+            Vector3 side = Vector3.Cross(Vector3.up, aimDir).normalized * (beamWidth * 0.5f);
+
+            Gizmos.DrawLine(aimOrigin, endPoint);
+            Gizmos.DrawLine(aimOrigin + side, endPoint + side);
+            Gizmos.DrawLine(aimOrigin - side, endPoint - side);
         }
     }
 }
