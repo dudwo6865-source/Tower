@@ -283,10 +283,11 @@ public class SelectableEntity : MonoBehaviour
 
         WorldHealthBar healthBar = GetComponent<WorldHealthBar>();
 
-        if (healthBar != null)
-            return;
+        if (healthBar == null)
+            gameObject.AddComponent<WorldHealthBar>();
 
-        gameObject.AddComponent<WorldHealthBar>();
+        if (GetComponent<HitFlash>() == null)
+            gameObject.AddComponent<HitFlash>();
     }
 
     float GetRingRadius()
