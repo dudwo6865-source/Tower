@@ -20,7 +20,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Shader Graphs_Boom
+  m_Name: Hir_cannon
   m_Shader: {fileID: -6465566751694194690, guid: 9ea91e219add5a743aec93f3f26aef1f, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0

@@ -100,8 +100,8 @@ MonoBehaviour:
   splashRadius: 3
   splashMinDamageRatio: 0.3
   hitEffectBaseRadius: 3
-  hitscanTrailPrefab: {fileID: 1246684977009984879, guid: 2704bf6c3eb76964f86363a71c8a5c17, type: 3}
-  hitscanTrailDuration: 0.08
+  hitscanTrailPrefab: {fileID: 1246684977009984879, guid: a44724a3e00dcc945adc5f1aa8659f63, type: 3}
+  hitscanTrailDuration: 0.2
   hitscanTrailWidth: 0.05
   requireFacingToAttack: 1
   aimAngleTolerance: 8
@@ -320,7 +320,7 @@ NavMeshObstacle:
   m_Enabled: 1
   serializedVersion: 3
   m_Shape: 1
-  m_Extents: {x: 2.25, y: 0.5, z: 2.25}
+  m_Extents: {x: 0.85, y: 0.5, z: 0.85}
   m_MoveThreshold: 0.1
   m_Carve: 1
   m_CarveOnlyStationary: 1
