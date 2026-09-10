@@ -23,7 +23,7 @@ GameObject:
   - component: {fileID: 1830700167372679797}
   - component: {fileID: 1433728667295166960}
   m_Layer: 0
-  m_Name: RaileGun Tower
+  m_Name: PlasmaTower
   m_TagString: Biulding
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
