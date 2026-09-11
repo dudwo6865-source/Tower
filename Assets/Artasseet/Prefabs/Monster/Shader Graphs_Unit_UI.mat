@@ -24,7 +24,8 @@ Material:
   m_Shader: {fileID: 4800000, guid: 71c2866ffae12d24eae531d2f2a02815, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
-  m_ValidKeywords: []
+  m_ValidKeywords:
+  - _EMISSION
   m_InvalidKeywords:
   - _EMISSIVE_SIMPLE
   - _IS_ANGELRING_OFF
@@ -344,7 +345,7 @@ Material:
     - _DstBlend: 0
     - _DstBlendAlpha: 0
     - _EMISSIVE: 0
-    - _EmissionToggle: 0
+    - _EmissionToggle: 1
     - _EmissiveColorMode: 1
     - _EmissiveExposureWeight: 1
     - _EmissiveIntensity: 1

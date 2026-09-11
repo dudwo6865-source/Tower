@@ -16,11 +16,11 @@ GameObject:
   - component: {fileID: 96901974076648166}
   - component: {fileID: 7391814339456279020}
   - component: {fileID: 3416975678898589207}
-  - component: {fileID: 7767618224902939210}
   - component: {fileID: 1609905897747143312}
   - component: {fileID: 8201947722985626847}
   - component: {fileID: 8580367225277791086}
   - component: {fileID: 1855744092077372344}
+  - component: {fileID: -5498353272612864297}
   m_Layer: 0
   m_Name: GunTower
   m_TagString: Biulding
@@ -83,6 +83,7 @@ MonoBehaviour:
   projectileSpeed: 50
   firePoint: {fileID: 2027668245274238783}
   pierceHitRadius: 0.6
+  beamWidth: 1
   minAttackRange: 0
   arcHeight: 4
   arcHeightRatio: 0.3
@@ -98,6 +99,9 @@ MonoBehaviour:
   splashRadius: 3
   splashMinDamageRatio: 0.3
   hitEffectBaseRadius: 3
+  hitscanTrailPrefab: {fileID: 0}
+  hitscanTrailDuration: 0.08
+  hitscanTrailWidth: 0.05
   requireFacingToAttack: 1
   aimAngleTolerance: 8
   aimTransform: {fileID: 0}
@@ -160,8 +164,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 61901079e3a498a43a2f5ce076c72bb7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  visionRange: 40
+  visionRange: 50
   edgeSoftnessOverride: -1
+  eyeHeightOverride: -1
 --- !u!114 &7391814339456279020
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -208,22 +213,6 @@ MonoBehaviour:
   pitchRange: {x: 0.95, y: 1.05}
   hitSoundCooldown: 0.12
   playHitOnDeath: 0
---- !u!208 &7767618224902939210
-NavMeshObstacle:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6989466109074766155}
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Shape: 1
-  m_Extents: {x: 0.85, y: 1.23, z: 0.85}
-  m_MoveThreshold: 0.1
-  m_Carve: 1
-  m_CarveOnlyStationary: 1
-  m_Center: {x: 0, y: 1.23, z: 0}
-  m_TimeToStationary: 0.5
 --- !u!114 &1609905897747143312
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -328,6 +317,22 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 3.82, y: 2.99, z: 3.91}
   m_Center: {x: 0, y: 1.48, z: 0}
+--- !u!208 &-5498353272612864297
+NavMeshObstacle:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6989466109074766155}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Shape: 1
+  m_Extents: {x: 0.85, y: 0.5, z: 0.85}
+  m_MoveThreshold: 0.1
+  m_Carve: 1
+  m_CarveOnlyStationary: 1
+  m_Center: {x: 0, y: 0.5, z: 0}
+  m_TimeToStationary: 0.5
 --- !u!1 &8750845808705704242
 GameObject:
   m_ObjectHideFlags: 0
