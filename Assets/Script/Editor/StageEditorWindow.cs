@@ -251,22 +251,38 @@ public class StageEditorWindow : EditorWindow
         EditorGUILayout.Space(4);
     }
 
-    // 두 섹션을 좌우로 나란히 그린다. (예: Identity | Map Content)
+    const float SectionColumnGap = 8f;
+
+    // 두 섹션을 좌우로 나란히, 같은 폭으로 그린다. (예: Identity | Map Content)
+    // ExpandWidth만 쓰면 내용물(필드 개수·썸네일 등)에 따라 두 칸의 최소 폭이
+    // 달라져서 반반으로 안 나뉘고, 창을 늘릴 때도 한쪽만 더 늘어난다.
+    // 그래서 매 OnGUI마다 창 폭 기준으로 칼럼 폭을 직접 계산해 고정 폭으로 준다.
     void DrawSectionRow(Action left, Action right)
     {
+        float columnWidth = GetSectionColumnWidth();
+
         EditorGUILayout.BeginHorizontal();
 
-        EditorGUILayout.BeginVertical(GUILayout.ExpandWidth(true));
+        EditorGUILayout.BeginVertical(GUILayout.Width(columnWidth));
         left();
         EditorGUILayout.EndVertical();
 
-        GUILayout.Space(8);
+        GUILayout.Space(SectionColumnGap);
 
-        EditorGUILayout.BeginVertical(GUILayout.ExpandWidth(true));
+        EditorGUILayout.BeginVertical(GUILayout.Width(columnWidth));
         right();
         EditorGUILayout.EndVertical();
 
         EditorGUILayout.EndHorizontal();
+    }
+
+    float GetSectionColumnWidth()
+    {
+        const float listPanelWidth = 240f;
+        const float outerPadding = 24f; // 스크롤바 + 좌우 여백
+
+        float detailWidth = Mathf.Max(300f, position.width - listPanelWidth - outerPadding);
+        return Mathf.Max(150f, (detailWidth - SectionColumnGap) * 0.5f);
     }
 
     // ---------- Sections ----------
