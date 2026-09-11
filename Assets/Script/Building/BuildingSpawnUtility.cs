@@ -22,6 +22,19 @@ public static class BuildingSpawnUtility
         if (data == null || !IsSpawnablePrefab(data.Prefab, data.BuildAssetName))
             return null;
 
+        Vector2Int footprintCells = data.GetFootprintCells();
+
+        // 지형 검사는 반드시 Instantiate '전에' 끝낸다.
+        // Instantiate 순간 EntityHealth.Awake가 BuildingRegistry에 등록되면서
+        // MapGrid의 칸 높이 캐시가 통째로 비워지고, 프리팹의 NavMeshObstacle도 이미
+        // carve를 시작한 상태가 된다. 그래서 등록 시점에 다시 계산된 높이에는 자기
+        // 발밑에 뚫린 구멍이 반영돼, 바로 직전 미리보기에서 통과한 자리인데도
+        // "NavMesh 위가 아니다"라며 등록이 실패했다.
+        bool terrainAlreadyValid =
+            skipTerrainChecks ||
+            GridOccupancy.Instance == null ||
+            GridOccupancy.Instance.CanOccupy(originCell, footprintCells, position.y);
+
         GameObject buildingObject = Object.Instantiate(
             data.Prefab,
             position,
@@ -47,11 +60,12 @@ public static class BuildingSpawnUtility
         DisableNavMeshObstacles(buildingObject);
 
         GridFootprint footprint = GridFootprint.EnsureOnInstance(buildingObject);
-        footprint.footprintCells = data.GetFootprintCells();
+        footprint.footprintCells = footprintCells;
         footprint.blockCells = true;
         footprint.snapTransformOnRegister = true;
 
-        if (!footprint.RegisterAtOriginCell(originCell, skipTerrainChecks))
+        // 지형은 위에서(Instantiate 전에) 이미 확인했으므로 여기서는 칸 점유만 한다.
+        if (!footprint.RegisterAtOriginCell(originCell, terrainAlreadyValid))
         {
             Debug.LogWarning(
                 $"BuildingSpawnUtility: '{data.BuildAssetName}' footprint registration failed at {originCell}.",
