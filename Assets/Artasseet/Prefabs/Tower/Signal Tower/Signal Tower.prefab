@@ -19,6 +19,7 @@ GameObject:
   - component: {fileID: 7342531807426592294}
   - component: {fileID: 5286744627477198792}
   - component: {fileID: 3624898603343642002}
+  - component: {fileID: -916635289630693629}
   m_Layer: 0
   m_Name: Signal Tower
   m_TagString: Untagged
@@ -233,6 +234,20 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 8, y: 3, z: 8}
   m_Center: {x: 0, y: 1.5, z: 0}
+--- !u!114 &-916635289630693629
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4556915251988834629}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a9d9a5fbab614fbf8ec2811887cbe308, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  flashColor: {r: 1.1577258, g: 0.13335063, b: 0, a: 1}
+  duration: 0.5
 --- !u!1001 &9155505794589018298
 PrefabInstance:
   m_ObjectHideFlags: 0

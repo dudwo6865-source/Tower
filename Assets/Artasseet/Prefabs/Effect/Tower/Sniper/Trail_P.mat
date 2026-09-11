@@ -20,7 +20,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Trail_RG
+  m_Name: Trail_P
   m_Shader: {fileID: -6465566751694194690, guid: d30ebcce33e5b9e4f95f8bd9518c1eab, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
@@ -110,10 +110,11 @@ Material:
     - _Cutoff: 0.5
     - _DetailAlbedoMapScale: 1
     - _DetailNormalMapScale: 1
+    - _Dissolve: 0
     - _DstBlend: 0
     - _DstBlendAlpha: 0
     - _EnvironmentReflections: 1
-    - _Float: -0.19
+    - _Float: -0.17
     - _Float_1: 1
     - _GlossMapScale: 0
     - _Glossiness: 0

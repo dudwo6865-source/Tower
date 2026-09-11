@@ -21,6 +21,7 @@ GameObject:
   - component: {fileID: 8580367225277791086}
   - component: {fileID: 1855744092077372344}
   - component: {fileID: -5498353272612864297}
+  - component: {fileID: -3988476864951440775}
   m_Layer: 0
   m_Name: GunTower
   m_TagString: Biulding
@@ -333,6 +334,20 @@ NavMeshObstacle:
   m_CarveOnlyStationary: 1
   m_Center: {x: 0, y: 0.5, z: 0}
   m_TimeToStationary: 0.5
+--- !u!114 &-3988476864951440775
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6989466109074766155}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a9d9a5fbab614fbf8ec2811887cbe308, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  flashColor: {r: 1.1577258, g: 0.13335063, b: 0, a: 1}
+  duration: 0.5
 --- !u!1 &8750845808705704242
 GameObject:
   m_ObjectHideFlags: 0

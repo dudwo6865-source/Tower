@@ -20,6 +20,7 @@ GameObject:
   - component: {fileID: 7222556402491717478}
   - component: {fileID: 3433100028922866364}
   - component: {fileID: 7154603641866049718}
+  - component: {fileID: 12619677613366495}
   m_Layer: 0
   m_Name: MissileTower
   m_TagString: Biulding
@@ -309,6 +310,20 @@ MonoBehaviour:
   kickTime: 0.04
   returnTime: 0.18
   recoilAxisLocal: {x: 0, y: 0, z: -1}
+--- !u!114 &12619677613366495
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6894192069859626715}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a9d9a5fbab614fbf8ec2811887cbe308, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  flashColor: {r: 1.1577258, g: 0.13335063, b: 0, a: 1}
+  duration: 0.5
 --- !u!1 &8793834146566177653
 GameObject:
   m_ObjectHideFlags: 0
