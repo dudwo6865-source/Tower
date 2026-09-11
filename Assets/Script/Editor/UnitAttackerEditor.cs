@@ -1,7 +1,7 @@
 using UnityEditor;
 using UnityEngine;
 
-// 공격 타입(Melee/Ranged/Flamethrower/Cannon)에 따라 관련 없는 필드는 인스펙터에서 숨깁니다.
+// 공격 타입(Melee/Ranged/Flamethrower/Cannon/Hitscan/PiercingBeam)에 따라 관련 없는 필드는 인스펙터에서 숨깁니다.
 [CustomEditor(typeof(UnitAttacker))]
 [CanEditMultipleObjects]
 public class UnitAttackerEditor : Editor
@@ -17,6 +17,8 @@ public class UnitAttackerEditor : Editor
     SerializedProperty firePoint;
 
     SerializedProperty pierceHitRadius;
+
+    SerializedProperty beamWidth;
 
     SerializedProperty minAttackRange;
     SerializedProperty useBallisticArc;
@@ -48,6 +50,10 @@ public class UnitAttackerEditor : Editor
     SerializedProperty projectilePrefab;
     SerializedProperty trailEffectPrefab;
 
+    SerializedProperty hitscanTrailPrefab;
+    SerializedProperty hitscanTrailDuration;
+    SerializedProperty hitscanTrailWidth;
+
     void OnEnable()
     {
         attackType = serializedObject.FindProperty("attackType");
@@ -61,6 +67,8 @@ public class UnitAttackerEditor : Editor
         firePoint = serializedObject.FindProperty("firePoint");
 
         pierceHitRadius = serializedObject.FindProperty("pierceHitRadius");
+
+        beamWidth = serializedObject.FindProperty("beamWidth");
 
         minAttackRange = serializedObject.FindProperty("minAttackRange");
         useBallisticArc = serializedObject.FindProperty("useBallisticArc");
@@ -91,6 +99,10 @@ public class UnitAttackerEditor : Editor
         hitEffectPrefab = serializedObject.FindProperty("hitEffectPrefab");
         projectilePrefab = serializedObject.FindProperty("projectilePrefab");
         trailEffectPrefab = serializedObject.FindProperty("trailEffectPrefab");
+
+        hitscanTrailPrefab = serializedObject.FindProperty("hitscanTrailPrefab");
+        hitscanTrailDuration = serializedObject.FindProperty("hitscanTrailDuration");
+        hitscanTrailWidth = serializedObject.FindProperty("hitscanTrailWidth");
     }
 
     public override void OnInspectorGUI()
@@ -107,9 +119,11 @@ public class UnitAttackerEditor : Editor
         bool mixedType = attackType.hasMultipleDifferentValues;
         AttackType type = (AttackType)attackType.enumValueIndex;
 
-        bool showProjectile = mixedType || type != AttackType.Melee;
+        bool showProjectile = mixedType || type == AttackType.Ranged || type == AttackType.Flamethrower || type == AttackType.Cannon;
         bool showFlamethrower = mixedType || type == AttackType.Flamethrower;
         bool showCannon = mixedType || type == AttackType.Cannon;
+        bool showHitscan = mixedType || type == AttackType.Hitscan || type == AttackType.PiercingBeam;
+        bool showBeam = mixedType || type == AttackType.PiercingBeam;
 
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("Animation", EditorStyles.boldLabel);
@@ -131,6 +145,13 @@ public class UnitAttackerEditor : Editor
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Flamethrower", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(pierceHitRadius);
+        }
+
+        if (showBeam)
+        {
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Piercing Beam", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(beamWidth);
         }
 
         if (showCannon)
@@ -164,6 +185,15 @@ public class UnitAttackerEditor : Editor
             EditorGUILayout.PropertyField(splashRadius);
             EditorGUILayout.PropertyField(splashMinDamageRatio);
             EditorGUILayout.PropertyField(hitEffectBaseRadius);
+        }
+
+        if (showHitscan)
+        {
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Hitscan / Piercing Beam Trail", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(hitscanTrailPrefab);
+            EditorGUILayout.PropertyField(hitscanTrailDuration);
+            EditorGUILayout.PropertyField(hitscanTrailWidth);
         }
 
         EditorGUILayout.Space();

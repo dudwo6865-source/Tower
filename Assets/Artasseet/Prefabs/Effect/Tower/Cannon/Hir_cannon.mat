@@ -20,8 +20,8 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Shader Graphs_Boom 1
-  m_Shader: {fileID: -6465566751694194690, guid: 25656cfbbbcdaac4fab482c0d1b27d24, type: 3}
+  m_Name: Hir_cannon
+  m_Shader: {fileID: -6465566751694194690, guid: 9ea91e219add5a743aec93f3f26aef1f, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -54,6 +54,6 @@ Material:
     - _QueueControl: 0
     - _QueueOffset: 0
     m_Colors:
-    - _Color: {r: 1, g: 0.042452812, b: 0.042452812, a: 0}
+    - _Color: {r: 23.96863, g: 2.123036, b: 0, a: 0}
     - _Emission: {r: 0, g: 0, b: 0, a: 0}
   m_BuildTextureStacks: []

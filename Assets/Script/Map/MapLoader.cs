@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 // MapConfig를 받아 맵을 로드하는 오케스트레이터입니다.
-// 가장 이른 실행 순서(-1000)로 두어, 씬의 매니저(MapGrid/WattManager/
+// 가장 이른 실행 순서(-1000)로 두어, 씬의 매니저(WattManager/
 // DayNightCycle/WaveManager)들이 자신의 Awake/Start를 실행하기 "전에"
 //   1) 설정값을 각 매니저에 주입하고
 //   2) 맵 프리팹을 인스턴스화 + NavMesh를 굽습니다.
@@ -16,6 +16,22 @@ public class MapLoader : MonoBehaviour
 
     // 맵 선택 화면에서 씬을 로드하기 전에 설정합니다. 있으면 defaultConfig보다 우선합니다.
     public static MapConfig PendingConfig;
+
+#if UNITY_EDITOR
+    // 에디터에서 플레이 모드로 들어가면 Enter Play Mode Settings에 따라 도메인이
+    // 리로드되며 위 static PendingConfig가 그대로 날아간다. SessionState는 도메인
+    // 리로드에도 살아남으므로, Stage Editor가 여기 경로를 남겨두면 Awake에서 복원한다.
+    const string PendingConfigPathSessionKey = "MapLoader.PendingConfigPath";
+
+    // Stage Editor 등 에디터 툴에서, 플레이 모드 진입 직전에 다음 로드할 스테이지를 지정할 때 사용합니다.
+    public static void SetPendingConfigForNextPlay(MapConfig config)
+    {
+        PendingConfig = config;
+
+        string path = config != null ? UnityEditor.AssetDatabase.GetAssetPath(config) : "";
+        UnityEditor.SessionState.SetString(PendingConfigPathSessionKey, path);
+    }
+#endif
 
     [Header("Config")]
     [Tooltip("PendingConfig가 없을 때 로드할 기본 맵입니다. (에디터 단독 테스트용)")]
@@ -42,6 +58,17 @@ public class MapLoader : MonoBehaviour
 
         if (!loadOnAwake)
             return;
+
+#if UNITY_EDITOR
+        // 도메인 리로드로 PendingConfig가 비었으면 SessionState에 남겨둔 경로로 복원한다.
+        if (PendingConfig == null)
+        {
+            string pendingPath = UnityEditor.SessionState.GetString(PendingConfigPathSessionKey, "");
+
+            if (!string.IsNullOrEmpty(pendingPath))
+                PendingConfig = UnityEditor.AssetDatabase.LoadAssetAtPath<MapConfig>(pendingPath);
+        }
+#endif
 
         MapConfig config = PendingConfig != null ? PendingConfig : defaultConfig;
 
@@ -71,10 +98,10 @@ public class MapLoader : MonoBehaviour
 
         // 매니저들이 자신의 Awake/Start에서 읽도록, 먼저 설정값을 주입한다.
         // (MapLoader가 가장 이른 실행 순서이므로 매니저 Awake보다 앞선다.)
-        ApplyGridConfig(config);
         ApplyEconomyConfig(config);
         ApplyDayNightConfig(config);
         ApplyWaveConfig(config);
+        ApplyWinConditionConfig(config);
 
         // 재로드 대비: 기존 맵 인스턴스 제거
         if (CurrentMap != null)
@@ -114,14 +141,6 @@ public class MapLoader : MonoBehaviour
             CurrentMap.RefreshMapGrid();
     }
 
-    void ApplyGridConfig(MapConfig config)
-    {
-        MapGrid grid = FindFirstObjectByType<MapGrid>();
-
-        if (grid != null)
-            grid.cellSize = config.cellSize;
-    }
-
     void ApplyEconomyConfig(MapConfig config)
     {
         if (!config.overrideEconomy)
@@ -150,6 +169,11 @@ public class MapLoader : MonoBehaviour
         cycle.startPhase = config.startPhase;
         cycle.dayDuration = config.dayDuration;
         cycle.nightDuration = config.nightDuration;
+        cycle.dayLightColor = config.dayLightColor;
+        cycle.nightLightColor = config.nightLightColor;
+        cycle.dayLightIntensity = config.dayLightIntensity;
+        cycle.nightLightIntensity = config.nightLightIntensity;
+        cycle.lightTransitionDuration = config.lightTransitionDuration;
     }
 
     void ApplyWaveConfig(MapConfig config)
@@ -162,10 +186,34 @@ public class MapLoader : MonoBehaviour
         if (wave == null)
             return;
 
+        if (config.enemyPrefabs != null && config.enemyPrefabs.Count > 0)
+            wave.enemyPrefabs = new List<GameObject>(config.enemyPrefabs);
+
+        if (config.initialEnemyPrefabs != null && config.initialEnemyPrefabs.Count > 0)
+            wave.initialEnemyPrefabs = new List<GameObject>(config.initialEnemyPrefabs);
+
         wave.initialEnemyCount = config.initialEnemyCount;
+        wave.initialMinDistanceFromHq = config.initialMinDistanceFromHq;
+        wave.mapEdgeMargin = config.mapEdgeMargin;
+        wave.randomPositionAttempts = config.randomPositionAttempts;
         wave.nightWaveStartDelay = config.nightWaveStartDelay;
+        wave.nightWaveMinDistanceFromHq = config.nightWaveMinDistanceFromHq;
+        wave.nightWaveAvoidPlayerVision = config.nightWaveAvoidPlayerVision;
         wave.spawnersPerNight = config.spawnersPerNight != null
             ? new List<int>(config.spawnersPerNight)
             : new List<int>();
+    }
+
+    void ApplyWinConditionConfig(MapConfig config)
+    {
+        if (!config.overrideWinCondition)
+            return;
+
+        GameResultManager result = FindFirstObjectByType<GameResultManager>();
+
+        if (result == null)
+            return;
+
+        result.survivalNightsToWin = config.survivalNightsToWin;
     }
 }

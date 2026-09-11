@@ -9949,7 +9949,7 @@ MonoBehaviour:
   gridWidth: 256
   gridHeight: 256
   visionEdgeSoftness: 15
-  visibilityThreshold: 1
+  visibilityThreshold: 0.35
   entityVisibilityPadding: 2
   entityShowThreshold: 0.1
   entityHideThreshold: 0.1

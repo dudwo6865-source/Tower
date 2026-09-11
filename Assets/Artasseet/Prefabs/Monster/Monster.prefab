@@ -239,6 +239,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: e39d1ddd29717ca43baae0acc1ffc4b4, type: 3}
       insertIndex: -1
       addedObject: {fileID: -5230149995670399789}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: e39d1ddd29717ca43baae0acc1ffc4b4, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1433427340785863860}
   m_SourcePrefab: {fileID: 100100000, guid: e39d1ddd29717ca43baae0acc1ffc4b4, type: 3}
 --- !u!1 &4697029455683187683 stripped
 GameObject:
@@ -259,7 +262,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   entityType: 0
   ownerId: 2
-  entityTypeId: unit
+  entityTypeId: Monster 1
+  autoAssignEntityTypeId: 1
   selectionCollider: {fileID: 0}
   portrait: {fileID: 21300000, guid: 0b89bfbbe1f6a4341ab3495b5196db59, type: 3}
   autoSetupHealth: 1
@@ -275,7 +279,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aaa78dcf412fc5543af7a979177f177e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxHealth: 500
+  maxHealth: 50
   deathAnimationDuration: 1
   deathSinkDistance: 1.5
   deathEffectColor: {r: 0.3, g: 0.3, b: 0.3, a: 1}
@@ -293,6 +297,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   visionRange: 30
+  edgeSoftnessOverride: -1
+  eyeHeightOverride: -1
 --- !u!114 &7726370785441250164
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -354,6 +360,7 @@ MonoBehaviour:
   projectileSpeed: 25
   firePoint: {fileID: 0}
   pierceHitRadius: 0.6
+  beamWidth: 1
   minAttackRange: 0
   arcHeight: 4
   arcHeightRatio: 0.3
@@ -361,11 +368,17 @@ MonoBehaviour:
   arcPeakTime: 0.5
   arcClimbPower: 1
   arcDivePower: 1
+  useBallisticArc: 0
+  ballisticGravity: 20
   impactOffsetRadius: 0
   lateralWobbleRatio: 0.15
   lateralWobbleAmount: 0
   splashRadius: 3
   splashMinDamageRatio: 0.3
+  hitEffectBaseRadius: 4
+  hitscanTrailPrefab: {fileID: 0}
+  hitscanTrailDuration: 0.08
+  hitscanTrailWidth: 0.05
   requireFacingToAttack: 1
   aimAngleTolerance: 8
   aimTransform: {fileID: 0}
@@ -377,6 +390,7 @@ MonoBehaviour:
   muzzleFlashPrefab: {fileID: 0}
   hitEffectPrefab: {fileID: 0}
   projectilePrefab: {fileID: 0}
+  trailEffectPrefab: {fileID: 0}
 --- !u!114 &5345614893600635350
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -519,3 +533,17 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   manaStoneReward: 5
+--- !u!114 &1433427340785863860
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4697029455683187683}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a9d9a5fbab614fbf8ec2811887cbe308, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  flashColor: {r: 1.1577258, g: 0.13335063, b: 0, a: 0.5254902}
+  duration: 0.5
