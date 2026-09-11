@@ -15,11 +15,10 @@ MonoBehaviour:
   displayName: 1Stage
   description: 
   previewImage: {fileID: 0}
-  mapRootPrefab: {fileID: 0}
-  cellSize: 2
+  mapRootPrefab: {fileID: 8098669722882859227, guid: e5dc0c86e3046704a89d275482820c10, type: 3}
   overrideEconomy: 1
-  maxWatt: 100
-  startingWatt: 50
+  maxWatt: 300
+  startingWatt: 100
   incomePerSecond: 5
   overrideDayNight: 1
   startPhase: 0
@@ -31,9 +30,11 @@ MonoBehaviour:
   nightLightIntensity: 0.35
   lightTransitionDuration: 5
   overrideWave: 1
-  enemyPrefabs: []
-  initialEnemyPrefabs: []
-  initialEnemyCount: 0
+  enemyPrefabs:
+  - {fileID: 1578748568211256678, guid: 1e5f1d6fdde4c7641b58bc69c391eea8, type: 3}
+  initialEnemyPrefabs:
+  - {fileID: 4697029455683187683, guid: b86ae9ecf7ea34046b9a4efdf58fd728, type: 3}
+  initialEnemyCount: 2
   initialMinDistanceFromHq: 25
   mapEdgeMargin: 8
   randomPositionAttempts: 32
@@ -41,3 +42,5 @@ MonoBehaviour:
   spawnersPerNight: 0100000002000000
   nightWaveMinDistanceFromHq: 20
   nightWaveAvoidPlayerVision: 1
+  overrideWinCondition: 1
+  survivalNightsToWin: 5
