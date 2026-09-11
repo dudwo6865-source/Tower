@@ -89,6 +89,14 @@ public class BuildZoneVisualizer : MonoBehaviour
             Destroy(edgeMaterial);
     }
 
+    void OnValidate()
+    {
+        // zoneFillColor/zoneEdgeColor/edgeLineWidth 같은 인스펙터 값은 시그니처 계산에
+        // 들어가지 않아서 그것만 바꾸면 다음 LateUpdate에서도 다시 그려지지 않는다.
+        // 캐시를 무효화해 바로 다음 프레임에 새 값으로 다시 그리게 한다.
+        InvalidateZoneCache();
+    }
+
     void RefreshVisibility()
     {
         if (MapGrid.Instance == null || BuildZoneManager.Instance == null)
