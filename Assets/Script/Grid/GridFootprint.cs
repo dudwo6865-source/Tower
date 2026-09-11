@@ -130,11 +130,15 @@ public class GridFootprint : MonoBehaviour
         if (MapGrid.Instance == null || GridOccupancy.Instance == null)
             return false;
 
+        // 다층 맵에서는 같은 XZ에 층마다 다른 NavMesh 후보 높이가 있을 수 있다.
+        // transform.position.y(배치 시점에 이미 확정된 높이)를 넘겨야
+        // TowerPlacementController.IsValidPlacement가 미리보기에서 검증한 것과
+        // 같은 층을 골라, "미리보기는 통과했는데 실제 등록은 실패" 하는 불일치를 막는다.
         if (!GridOccupancy.Instance.TryOccupy(
                 originCell,
                 footprintCells,
                 this,
-                float.NaN,
+                transform.position.y,
                 skipTerrainChecks))
             return false;
 
