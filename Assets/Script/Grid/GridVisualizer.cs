@@ -92,8 +92,23 @@ public class GridVisualizer : MonoBehaviour
 
     private Vector2Int placementFootprint = Vector2Int.one;
 
+    public static GridVisualizer Instance { get; private set; }
+
     void Awake()
     {
+        // 씬이 두 개 이상 동시에 로드된 상태로 Play에 들어가면(예: 테스트 씬을 열어둔 채로
+        // Battle 씬도 같이 로드된 경우) 각 씬에 저장된 TowerPlacementController+GridVisualizer가
+        // 따로 자기 몫의 GridVisuals를 만든다. TowerPlacementController의 중복 제거는
+        // Destroy(gameObject)가 그 프레임 끝까지 지연되는 동안에는 막지 못하므로, 여기서도
+        // 같은 패턴으로 중복 인스턴스를 즉시 걸러낸다.
+        if (Instance != null && Instance != this)
+        {
+            Destroy(this);
+            return;
+        }
+
+        Instance = this;
+
         placementController = GetComponent<TowerPlacementController>();
 
         if (placementController == null)
@@ -109,6 +124,11 @@ public class GridVisualizer : MonoBehaviour
 
     void OnEnable()
     {
+        // Destroy(this)는 이 프레임 끝까지 지연되므로, Awake에서 중복으로 걸러진
+        // 인스턴스라도 OnEnable은 그대로 호출된다. 중복이면 이벤트 구독을 건너뛴다.
+        if (Instance != this)
+            return;
+
         if (placementController == null)
             placementController = GetComponent<TowerPlacementController>();
 
@@ -135,6 +155,9 @@ public class GridVisualizer : MonoBehaviour
 
     void OnDestroy()
     {
+        if (Instance == this)
+            Instance = null;
+
         if (footprintMesh != null)
             Destroy(footprintMesh);
 
