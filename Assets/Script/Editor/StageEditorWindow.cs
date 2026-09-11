@@ -7,7 +7,7 @@ using UnityEngine.SceneManagement;
 
 // 스테이지(MapConfig) 통합 관리 에디터입니다.
 // - 좌측: 프로젝트의 모든 MapConfig(스테이지) 목록 (검색/추가/복제/삭제)
-// - 우측: 선택한 스테이지의 Grid/Economy/DayNight/Wave 설정을 카테고리별로 편집
+// - 우측: 선택한 스테이지의 Economy/DayNight/Wave/Win Condition 설정을 카테고리별로 편집 (필드 2열 배치)
 // - 씬 <-> 스테이지 값 동기화(가져오기/적용), 유효성 경고, 미리보기 요약 제공
 // Tools > Map > Stage Editor
 public class StageEditorWindow : EditorWindow
@@ -17,7 +17,6 @@ public class StageEditorWindow : EditorWindow
 
     static readonly Color IdentityColor = new Color(0.30f, 0.45f, 0.55f);
     static readonly Color MapColor = new Color(0.20f, 0.50f, 0.45f);
-    static readonly Color GridColor = new Color(0.45f, 0.50f, 0.20f);
     static readonly Color EconomyColor = new Color(0.60f, 0.48f, 0.10f);
     static readonly Color DayNightColor = new Color(0.28f, 0.30f, 0.58f);
     static readonly Color WaveColor = new Color(0.58f, 0.24f, 0.22f);
@@ -33,7 +32,6 @@ public class StageEditorWindow : EditorWindow
 
     bool foldIdentity = true;
     bool foldMap = true;
-    bool foldGrid = true;
     bool foldEconomy = true;
     bool foldDayNight = true;
     bool foldWave = true;
@@ -211,13 +209,17 @@ public class StageEditorWindow : EditorWindow
 
         detailScroll = EditorGUILayout.BeginScrollView(detailScroll);
 
+        float previousLabelWidth = EditorGUIUtility.labelWidth;
+        EditorGUIUtility.labelWidth = 130f;
+
         DrawIdentitySection();
         DrawMapContentSection();
-        DrawGridSection();
         DrawEconomySection();
         DrawDayNightSection();
         DrawWaveSection();
         DrawWinConditionSection();
+
+        EditorGUIUtility.labelWidth = previousLabelWidth;
 
         EditorGUILayout.EndScrollView();
 
@@ -292,20 +294,6 @@ public class StageEditorWindow : EditorWindow
         EditorGUILayout.Space(6);
     }
 
-    void DrawGridSection()
-    {
-        foldGrid = DrawSectionFoldout("Grid (격자)", GridColor, foldGrid);
-        if (!foldGrid)
-            return;
-
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("cellSize"), new GUIContent("칸 크기(m)"));
-
-        if (selected.cellSize <= 0f)
-            EditorGUILayout.HelpBox("칸 크기는 0보다 커야 합니다.", MessageType.Warning);
-
-        EditorGUILayout.Space(6);
-    }
-
     void DrawEconomySection()
     {
         foldEconomy = DrawSectionFoldout("Economy / Watt (자원)", EconomyColor, foldEconomy);
@@ -315,9 +303,10 @@ public class StageEditorWindow : EditorWindow
         DrawOverrideToggle("overrideEconomy", "이 스테이지 값으로 WattManager 덮어쓰기");
 
         EditorGUI.BeginDisabledGroup(!selected.overrideEconomy);
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("maxWatt"), new GUIContent("최대 Watt"));
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("startingWatt"), new GUIContent("시작 Watt"));
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("incomePerSecond"), new GUIContent("초당 충전량"));
+        DrawFieldPairs(
+            ("maxWatt", "최대 Watt"),
+            ("startingWatt", "시작 Watt"),
+            ("incomePerSecond", "초당 충전량"));
         EditorGUI.EndDisabledGroup();
 
         if (selected.overrideEconomy)
@@ -346,14 +335,15 @@ public class StageEditorWindow : EditorWindow
         DrawOverrideToggle("overrideDayNight", "이 스테이지 값으로 DayNightCycle 덮어쓰기");
 
         EditorGUI.BeginDisabledGroup(!selected.overrideDayNight);
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("startPhase"), new GUIContent("시작 페이즈"));
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("dayDuration"), new GUIContent("낮 지속시간(초)"));
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("nightDuration"), new GUIContent("밤 지속시간(초)"));
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("lightTransitionDuration"), new GUIContent("라이트 전환시간(초)"));
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("dayLightColor"), new GUIContent("낮 라이트 색상"));
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("dayLightIntensity"), new GUIContent("낮 라이트 강도"));
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("nightLightColor"), new GUIContent("밤 라이트 색상"));
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("nightLightIntensity"), new GUIContent("밤 라이트 강도"));
+        DrawFieldPairs(
+            ("startPhase", "시작 페이즈"),
+            ("dayDuration", "낮 지속시간(초)"),
+            ("nightDuration", "밤 지속시간(초)"),
+            ("lightTransitionDuration", "라이트 전환시간(초)"),
+            ("dayLightColor", "낮 라이트 색상"),
+            ("dayLightIntensity", "낮 라이트 강도"),
+            ("nightLightColor", "밤 라이트 색상"),
+            ("nightLightIntensity", "밤 라이트 강도"));
         EditorGUI.EndDisabledGroup();
 
         if (selected.overrideDayNight)
@@ -394,16 +384,18 @@ public class StageEditorWindow : EditorWindow
 
         EditorGUILayout.Space(4);
         EditorGUILayout.LabelField("초기 배치 (Day Start)", EditorStyles.boldLabel);
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("initialEnemyCount"), new GUIContent("초기 스포너 수"));
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("initialMinDistanceFromHq"), new GUIContent("본부와 최소 거리"));
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("mapEdgeMargin"), new GUIContent("맵 가장자리 여백"));
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("randomPositionAttempts"), new GUIContent("배치 위치 샘플 시도 횟수"));
+        DrawFieldPairs(
+            ("initialEnemyCount", "초기 스포너 수"),
+            ("initialMinDistanceFromHq", "본부와 최소 거리"),
+            ("mapEdgeMargin", "맵 가장자리 여백"),
+            ("randomPositionAttempts", "배치 위치 샘플 시도 횟수"));
 
         EditorGUILayout.Space(4);
         EditorGUILayout.LabelField("밤 웨이브", EditorStyles.boldLabel);
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("nightWaveStartDelay"), new GUIContent("밤 시작 후 대기(초)"));
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("nightWaveMinDistanceFromHq"), new GUIContent("본부와 최소 거리"));
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("nightWaveAvoidPlayerVision"), new GUIContent("플레이어 시야 밖에 우선 배치"));
+        DrawFieldPairs(
+            ("nightWaveStartDelay", "밤 시작 후 대기(초)"),
+            ("nightWaveMinDistanceFromHq", "본부와 최소 거리"),
+            ("nightWaveAvoidPlayerVision", "플레이어 시야 밖에 우선 배치"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("spawnersPerNight"), new GUIContent("밤마다 스포너 수 (0=1번째 밤)"), true);
 
         EditorGUI.EndDisabledGroup();
@@ -475,6 +467,30 @@ public class StageEditorWindow : EditorWindow
         GUI.backgroundColor = prop.boolValue ? new Color(0.55f, 0.85f, 0.55f) : new Color(0.85f, 0.55f, 0.55f);
         EditorGUILayout.PropertyField(prop, new GUIContent(label));
         GUI.backgroundColor = prev;
+    }
+
+    // 필드를 두 개씩 가로로 짝지어 그린다. 세로로 길게 늘어지는 걸 줄이기 위함.
+    // 항목이 홀수 개면 마지막 한 줄은 왼쪽만 채우고 오른쪽은 비워둔다.
+    void DrawFieldPairs(params (string property, string label)[] fields)
+    {
+        for (int i = 0; i < fields.Length; i += 2)
+        {
+            EditorGUILayout.BeginHorizontal();
+
+            DrawPairedField(fields[i]);
+
+            if (i + 1 < fields.Length)
+                DrawPairedField(fields[i + 1]);
+            else
+                GUILayout.FlexibleSpace();
+
+            EditorGUILayout.EndHorizontal();
+        }
+    }
+
+    void DrawPairedField((string property, string label) field)
+    {
+        EditorGUILayout.PropertyField(serializedObject.FindProperty(field.property), new GUIContent(field.label));
     }
 
     static bool HasAnyPrefab(List<GameObject> list) => list != null && list.Count > 0;
@@ -584,10 +600,6 @@ public class StageEditorWindow : EditorWindow
 
         Undo.RecordObject(selected, "Pull Stage From Scene");
 
-        MapGrid grid = Object.FindFirstObjectByType<MapGrid>();
-        if (grid != null)
-            selected.cellSize = grid.cellSize;
-
         WattManager watt = Object.FindFirstObjectByType<WattManager>();
         if (watt != null)
         {
@@ -631,7 +643,7 @@ public class StageEditorWindow : EditorWindow
         EditorUtility.SetDirty(selected);
         serializedObject.Update();
 
-        if (grid == null && watt == null && cycle == null && wave == null && result == null)
+        if (watt == null && cycle == null && wave == null && result == null)
             ShowNotification(new GUIContent("씬에서 매니저를 찾지 못했습니다. 씬을 열고 다시 시도하세요."));
         else
             ShowNotification(new GUIContent("씬의 현재 값을 가져왔습니다."));
@@ -643,15 +655,6 @@ public class StageEditorWindow : EditorWindow
             return;
 
         bool appliedAny = false;
-
-        MapGrid grid = Object.FindFirstObjectByType<MapGrid>();
-        if (grid != null)
-        {
-            Undo.RecordObject(grid, "Apply Stage To Scene");
-            grid.cellSize = selected.cellSize;
-            EditorUtility.SetDirty(grid);
-            appliedAny = true;
-        }
 
         if (selected.overrideEconomy)
         {
