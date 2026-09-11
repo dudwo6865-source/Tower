@@ -30,17 +30,31 @@ MonoBehaviour:
   nightLightIntensity: 0.35
   lightTransitionDuration: 5
   overrideWave: 1
-  enemyPrefabs:
-  - {fileID: 1578748568211256678, guid: 1e5f1d6fdde4c7641b58bc69c391eea8, type: 3}
-  initialEnemyPrefabs:
-  - {fileID: 4697029455683187683, guid: b86ae9ecf7ea34046b9a4efdf58fd728, type: 3}
-  initialEnemyCount: 2
-  initialMinDistanceFromHq: 25
-  mapEdgeMargin: 8
-  randomPositionAttempts: 32
-  nightWaveStartDelay: 3
-  spawnersPerNight: 0100000002000000
-  nightWaveMinDistanceFromHq: 20
-  nightWaveAvoidPlayerVision: 1
+  wavePlan:
+    waves:
+    - spawnCountMultiplier: 10
+      spawnCountBonus: 2
+      spawnIntervalMultiplier: 1
+      maxAliveMultiplier: 0
+      healthMultiplier: 1
+      damageMultiplier: 1
+      speedMultiplier: 1
+    growthPerWaveAfterLast:
+      spawnCountMultiplier: 0
+      spawnCountBonus: 2
+      spawnIntervalMultiplier: 1
+      maxAliveMultiplier: 1
+      healthMultiplier: 1
+      damageMultiplier: 1
+      speedMultiplier: 1
+  applyNightBonus: 1
+  nightBonus:
+    spawnCountMultiplier: 1
+    spawnCountBonus: 0
+    spawnIntervalMultiplier: 1
+    maxAliveMultiplier: 1
+    healthMultiplier: 1
+    damageMultiplier: 1.2
+    speedMultiplier: 1.2
   overrideWinCondition: 1
   survivalNightsToWin: 5
