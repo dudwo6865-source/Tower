@@ -89,4 +89,11 @@ public class MapConfig : ScriptableObject
 
     [Tooltip("켜면 밤 스포너를 플레이어 시야 밖(안개 속)에 우선 배치합니다.")]
     public bool nightWaveAvoidPlayerVision = true;
+
+    [Header("Win Condition")]
+    [Tooltip("켜면 이 스테이지의 승리 조건 설정으로 GameResultManager를 덮어씁니다.")]
+    public bool overrideWinCondition = true;
+
+    [Tooltip("본부가 파괴되지 않고 이 밤까지 버티면 승리합니다. (예: 5 = 5번째 밤이 끝나면 승리)")]
+    public int survivalNightsToWin = 5;
 }

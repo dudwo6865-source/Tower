@@ -17,6 +17,22 @@ public class MapLoader : MonoBehaviour
     // 맵 선택 화면에서 씬을 로드하기 전에 설정합니다. 있으면 defaultConfig보다 우선합니다.
     public static MapConfig PendingConfig;
 
+#if UNITY_EDITOR
+    // 에디터에서 플레이 모드로 들어가면 Enter Play Mode Settings에 따라 도메인이
+    // 리로드되며 위 static PendingConfig가 그대로 날아간다. SessionState는 도메인
+    // 리로드에도 살아남으므로, Stage Editor가 여기 경로를 남겨두면 Awake에서 복원한다.
+    const string PendingConfigPathSessionKey = "MapLoader.PendingConfigPath";
+
+    // Stage Editor 등 에디터 툴에서, 플레이 모드 진입 직전에 다음 로드할 스테이지를 지정할 때 사용합니다.
+    public static void SetPendingConfigForNextPlay(MapConfig config)
+    {
+        PendingConfig = config;
+
+        string path = config != null ? UnityEditor.AssetDatabase.GetAssetPath(config) : "";
+        UnityEditor.SessionState.SetString(PendingConfigPathSessionKey, path);
+    }
+#endif
+
     [Header("Config")]
     [Tooltip("PendingConfig가 없을 때 로드할 기본 맵입니다. (에디터 단독 테스트용)")]
     public MapConfig defaultConfig;
@@ -42,6 +58,17 @@ public class MapLoader : MonoBehaviour
 
         if (!loadOnAwake)
             return;
+
+#if UNITY_EDITOR
+        // 도메인 리로드로 PendingConfig가 비었으면 SessionState에 남겨둔 경로로 복원한다.
+        if (PendingConfig == null)
+        {
+            string pendingPath = UnityEditor.SessionState.GetString(PendingConfigPathSessionKey, "");
+
+            if (!string.IsNullOrEmpty(pendingPath))
+                PendingConfig = UnityEditor.AssetDatabase.LoadAssetAtPath<MapConfig>(pendingPath);
+        }
+#endif
 
         MapConfig config = PendingConfig != null ? PendingConfig : defaultConfig;
 
@@ -75,6 +102,7 @@ public class MapLoader : MonoBehaviour
         ApplyEconomyConfig(config);
         ApplyDayNightConfig(config);
         ApplyWaveConfig(config);
+        ApplyWinConditionConfig(config);
 
         // 재로드 대비: 기존 맵 인스턴스 제거
         if (CurrentMap != null)
@@ -183,5 +211,18 @@ public class MapLoader : MonoBehaviour
         wave.spawnersPerNight = config.spawnersPerNight != null
             ? new List<int>(config.spawnersPerNight)
             : new List<int>();
+    }
+
+    void ApplyWinConditionConfig(MapConfig config)
+    {
+        if (!config.overrideWinCondition)
+            return;
+
+        GameResultManager result = FindFirstObjectByType<GameResultManager>();
+
+        if (result == null)
+            return;
+
+        result.survivalNightsToWin = config.survivalNightsToWin;
     }
 }

@@ -21,6 +21,7 @@ public class StageEditorWindow : EditorWindow
     static readonly Color EconomyColor = new Color(0.60f, 0.48f, 0.10f);
     static readonly Color DayNightColor = new Color(0.28f, 0.30f, 0.58f);
     static readonly Color WaveColor = new Color(0.58f, 0.24f, 0.22f);
+    static readonly Color WinConditionColor = new Color(0.55f, 0.42f, 0.12f);
 
     List<MapConfig> stages = new List<MapConfig>();
     MapConfig selected;
@@ -36,6 +37,7 @@ public class StageEditorWindow : EditorWindow
     bool foldEconomy = true;
     bool foldDayNight = true;
     bool foldWave = true;
+    bool foldWinCondition = true;
 
     [MenuItem("Tools/Map/Stage Editor (스테이지 에디터)")]
     static void Open()
@@ -215,6 +217,7 @@ public class StageEditorWindow : EditorWindow
         DrawEconomySection();
         DrawDayNightSection();
         DrawWaveSection();
+        DrawWinConditionSection();
 
         EditorGUILayout.EndScrollView();
 
@@ -418,6 +421,34 @@ public class StageEditorWindow : EditorWindow
         EditorGUILayout.Space(6);
     }
 
+    void DrawWinConditionSection()
+    {
+        foldWinCondition = DrawSectionFoldout("Win Condition (승리 조건)", WinConditionColor, foldWinCondition);
+        if (!foldWinCondition)
+            return;
+
+        DrawOverrideToggle("overrideWinCondition", "이 스테이지 값으로 GameResultManager 덮어쓰기");
+
+        EditorGUI.BeginDisabledGroup(!selected.overrideWinCondition);
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("survivalNightsToWin"), new GUIContent("생존 목표 (몇 번째 밤까지)"));
+        EditorGUI.EndDisabledGroup();
+
+        if (selected.overrideWinCondition)
+        {
+            if (selected.survivalNightsToWin <= 0)
+                EditorGUILayout.HelpBox("생존 목표가 0 이하입니다. 게임 시작과 거의 동시에 승리 조건이 충족됩니다.", MessageType.Warning);
+
+            EditorGUILayout.LabelField(
+                $"미리보기: 본부가 파괴되지 않고 {selected.survivalNightsToWin}번째 밤이 끝나면 승리합니다.",
+                EditorStyles.miniLabel);
+            EditorGUILayout.LabelField(
+                "다른 승리/패배 조건은 GameResultManager.EndGame()을 호출하는 방식으로 나중에 추가할 수 있습니다.",
+                EditorStyles.miniLabel);
+        }
+
+        EditorGUILayout.Space(6);
+    }
+
     // ---------- Helpers ----------
 
     bool DrawSectionFoldout(string title, Color color, bool expanded)
@@ -593,10 +624,14 @@ public class StageEditorWindow : EditorWindow
             selected.spawnersPerNight = new List<int>(wave.spawnersPerNight ?? new List<int>());
         }
 
+        GameResultManager result = Object.FindFirstObjectByType<GameResultManager>();
+        if (result != null)
+            selected.survivalNightsToWin = result.survivalNightsToWin;
+
         EditorUtility.SetDirty(selected);
         serializedObject.Update();
 
-        if (grid == null && watt == null && cycle == null && wave == null)
+        if (grid == null && watt == null && cycle == null && wave == null && result == null)
             ShowNotification(new GUIContent("씬에서 매니저를 찾지 못했습니다. 씬을 열고 다시 시도하세요."));
         else
             ShowNotification(new GUIContent("씬의 현재 값을 가져왔습니다."));
@@ -680,6 +715,18 @@ public class StageEditorWindow : EditorWindow
             }
         }
 
+        if (selected.overrideWinCondition)
+        {
+            GameResultManager result = Object.FindFirstObjectByType<GameResultManager>();
+            if (result != null)
+            {
+                Undo.RecordObject(result, "Apply Stage To Scene");
+                result.survivalNightsToWin = selected.survivalNightsToWin;
+                EditorUtility.SetDirty(result);
+                appliedAny = true;
+            }
+        }
+
         if (appliedAny)
         {
             Scene activeScene = SceneManager.GetActiveScene();
@@ -697,7 +744,10 @@ public class StageEditorWindow : EditorWindow
         if (selected == null)
             return;
 
-        MapLoader.PendingConfig = selected;
+        // static 필드만 설정하면 플레이 모드 진입 시 도메인 리로드로 초기화되어
+        // MapLoader.Awake()가 값을 받기 전에 사라진다. SessionState까지 같이 남겨
+        // 리로드 후에도 복원되게 한다. (MapLoader.SetPendingConfigForNextPlay 참고)
+        MapLoader.SetPendingConfigForNextPlay(selected);
 
         if (!EditorApplication.isPlaying)
             EditorApplication.isPlaying = true;
