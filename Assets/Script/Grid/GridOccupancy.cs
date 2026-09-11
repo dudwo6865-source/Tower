@@ -19,7 +19,9 @@ public class GridOccupancy : MonoBehaviour
     {
         if (Instance != null && Instance != this)
         {
-            Destroy(gameObject);
+            // 중복 컴포넌트만 지운다. gameObject째로 지우면 같은 오브젝트에 있는
+            // 다른 매니저(MapGrid 등)까지 같이 사라진다.
+            Destroy(this);
             return;
         }
 
@@ -167,6 +169,48 @@ public class GridOccupancy : MonoBehaviour
     public bool IsOccupied(Vector2Int cell)
     {
         return occupiedCells.ContainsKey(cell);
+    }
+
+    /// <summary>
+    /// CanOccupy가 막힌 이유를 사람이 읽을 수 있는 문장으로 돌려줍니다.
+    /// "미리보기는 통과했는데 등록만 실패" 같은 경우를 콘솔에서 바로 구분하기 위한 진단용입니다.
+    /// </summary>
+    public string DescribeBlockReason(
+        Vector2Int originCell,
+        Vector2Int footprintCells,
+        float preferredY,
+        bool skipTerrainChecks)
+    {
+        MapGrid grid = MapGrid.Instance;
+
+        if (grid == null)
+            return "MapGrid.Instance가 없습니다";
+
+        if (!grid.IsFootprintInRect(originCell, footprintCells))
+        {
+            return $"격자 범위를 벗어났습니다 " +
+                   $"(footprint={footprintCells}, 격자={grid.CellCountX}x{grid.CellCountZ})";
+        }
+
+        if (!skipTerrainChecks)
+        {
+            if (!grid.IsFootprintInBounds(originCell, footprintCells, preferredY))
+                return $"footprint 전체가 같은 층 NavMesh 위에 있지 않습니다 (preferredY={preferredY})";
+
+            if (grid.IsFootprintOnHill(originCell, footprintCells))
+                return "언덕(Cliff) 칸이 포함되어 있습니다";
+        }
+
+        foreach (Vector2Int cell in IterateFootprint(originCell, footprintCells))
+        {
+            if (!occupiedCells.TryGetValue(cell, out GridFootprint owner))
+                continue;
+
+            string ownerName = owner != null ? owner.name : "(이미 파괴된 오브젝트)";
+            return $"{cell} 칸을 이미 '{ownerName}'이(가) 점유하고 있습니다";
+        }
+
+        return "막힌 조건을 찾지 못했습니다 (지금 다시 검사하면 통과하는 상태입니다)";
     }
 
     public void CopyOccupiedCellsTo(List<Vector2Int> results)

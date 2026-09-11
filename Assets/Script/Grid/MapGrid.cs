@@ -94,7 +94,9 @@ public class MapGrid : MonoBehaviour
     {
         if (Instance != null && Instance != this)
         {
-            Destroy(gameObject);
+            // 중복 컴포넌트만 지운다. gameObject째로 지우면 맵 루트나 매니저 오브젝트가
+            // 통째로 사라져, 같이 붙어 있던 GridOccupancy 등의 Instance까지 null이 된다.
+            Destroy(this);
             return;
         }
 

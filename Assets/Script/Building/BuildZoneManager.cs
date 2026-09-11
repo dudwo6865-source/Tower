@@ -17,7 +17,10 @@ public class BuildZoneManager : MonoBehaviour
     {
         if (Instance != null && Instance != this)
         {
-            Destroy(gameObject);
+            // 이 컴포넌트만 지운다. gameObject째로 지우면, 이 매니저를 다른 매니저들과
+            // 같은 오브젝트에 모아둔 구성에서 MapGrid/GridOccupancy까지 같이 사라져
+            // 그쪽 Instance가 null이 되고 건물 footprint 등록이 통째로 실패한다.
+            Destroy(this);
             return;
         }
 

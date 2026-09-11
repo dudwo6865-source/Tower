@@ -260,7 +260,22 @@ public static class EnemySpawnUtility
         if (prefab == null)
             return null;
 
+        Vector2Int footprintCells = GridFootprint.ResolveFootprintCells(prefab);
+
+        // 지형 검사는 Instantiate '전에' 끝낸다. Instantiate 순간 EntityHealth.Awake가
+        // BuildingRegistry에 등록되면서 MapGrid의 칸 높이 캐시가 비워지고, 프리팹의
+        // NavMeshObstacle도 자기 발밑을 carve하기 시작한다. 그 뒤에 검사하면 방금 자기가
+        // 뚫은 구멍 때문에 "NavMesh 위가 아니다"라며 등록이 실패한다.
+        bool terrainAlreadyValid =
+            GridOccupancy.Instance == null ||
+            GridOccupancy.Instance.CanOccupy(originCell, footprintCells, position.y);
+
         GameObject instance = UnityEngine.Object.Instantiate(prefab, position, rotation);
+
+        // carve가 이미 시작됐어도 등록 전에 꺼둔다. 적 건물은 유닛이 위에서 스폰돼
+        // 나와야 하므로 어차피 carveNavMesh=false로 운영한다.
+        BuildingSpawnUtility.DisableNavMeshObstacles(instance);
+
         SelectableEntity selectable = ResolveSelectable(instance);
         GameObject buildingObject = selectable != null ? selectable.gameObject : instance;
 
@@ -281,14 +296,25 @@ public static class EnemySpawnUtility
             spawner.enemyOwnerId = enemyOwnerId;
 
         GridFootprint footprint = GridFootprint.EnsureOnInstance(buildingObject);
+        footprint.footprintCells = footprintCells;
         footprint.blockCells = true;
         footprint.carveNavMesh = false;
         footprint.snapTransformOnRegister = true;
 
-        if (!footprint.RegisterAtOriginCell(originCell))
+        // 지형은 위에서(Instantiate 전에) 이미 확인했으므로 여기서는 칸 점유만 한다.
+        if (!footprint.RegisterAtOriginCell(originCell, terrainAlreadyValid))
         {
+            string reason = GridOccupancy.Instance != null
+                ? GridOccupancy.Instance.DescribeBlockReason(
+                    originCell,
+                    footprintCells,
+                    position.y,
+                    terrainAlreadyValid)
+                : "GridOccupancy.Instance가 없습니다";
+
             Debug.LogWarning(
-                $"EnemySpawnUtility: 적 건물 footprint 등록에 실패했습니다. origin={originCell}",
+                $"EnemySpawnUtility: 적 건물 footprint 등록에 실패했습니다. " +
+                $"origin={originCell}, 이유: {reason}",
                 instance);
             UnityEngine.Object.Destroy(instance);
             return null;

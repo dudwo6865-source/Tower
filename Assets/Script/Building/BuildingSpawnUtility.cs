@@ -67,8 +67,17 @@ public static class BuildingSpawnUtility
         // 지형은 위에서(Instantiate 전에) 이미 확인했으므로 여기서는 칸 점유만 한다.
         if (!footprint.RegisterAtOriginCell(originCell, terrainAlreadyValid))
         {
+            string reason = GridOccupancy.Instance != null
+                ? GridOccupancy.Instance.DescribeBlockReason(
+                    originCell,
+                    footprintCells,
+                    position.y,
+                    terrainAlreadyValid)
+                : "GridOccupancy.Instance가 없습니다";
+
             Debug.LogWarning(
-                $"BuildingSpawnUtility: '{data.BuildAssetName}' footprint registration failed at {originCell}.",
+                $"BuildingSpawnUtility: '{data.BuildAssetName}' footprint registration failed " +
+                $"at {originCell}. 이유: {reason}",
                 buildingObject);
         }
 
