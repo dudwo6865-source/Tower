@@ -126,10 +126,15 @@ public class TowerPlacementController : MonoBehaviour
         Instance = this;
         EnsurePlacementAudioSource();
 
-        if (GetComponent<GridVisualizer>() == null)
+        // GetComponent는 이 오브젝트 자신만 보므로, GridVisualizer/BuildZoneManager를
+        // 별도 오브젝트에서 직접 관리하는 경우 여기서 "없다"고 오판해 새로 하나 더
+        // 만들어버린다. 그 새 인스턴스가 먼저 Instance를 차지하면, 원래 씬에 있던
+        // (설정값이 들어있는) 진짜 인스턴스가 중복으로 판정돼 제거되는 문제가 있었다.
+        // 씬 전체에서 찾아 이미 있으면 그대로 두도록 고친다.
+        if (FindFirstObjectByType<GridVisualizer>() == null)
             gameObject.AddComponent<GridVisualizer>();
 
-        if (GetComponent<BuildZoneManager>() == null)
+        if (FindFirstObjectByType<BuildZoneManager>() == null)
             gameObject.AddComponent<BuildZoneManager>();
     }
 
