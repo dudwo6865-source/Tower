@@ -267,6 +267,9 @@ Material:
     - _AddPrecomputedVelocity: 0
     - _Add_Antipodean_RimLight: 1
     - _AlbedoAffectEmissive: 0
+    - _AlbedoRecolorEnabled: 0
+    - _AlbedoRecolorRange: 0.08
+    - _AlbedoRecolorSmoothness: 0.05
     - _AlphaClip: 0
     - _AlphaCutoff: 0.5
     - _AlphaCutoffEnable: 0
@@ -413,6 +416,7 @@ Material:
     - _Is_ViewShift: 0
     - _LightDirection_MaskOn: 1
     - _LinkDetailsWithBase: 1
+    - _MaskPackMode: 0
     - _MatCap: 0
     - _MaterialID: 1
     - _Metallic: 0
@@ -519,6 +523,7 @@ Material:
     - _UVEmissive: 0
     - _Unlit_Intensity: 1.5
     - _UseEmissiveIntensity: 0
+    - _UseMaskOcclusion: 0
     - _UseShadowThreshold: 0
     - _Use_1stAs2nd: 0
     - _Use_BaseAs1st: 0
@@ -539,6 +544,8 @@ Material:
     m_Colors:
     - _1st_ShadeColor: {r: 0.6792453, g: 0.6792453, b: 0.6792453, a: 1}
     - _2nd_ShadeColor: {r: 0.5943396, g: 0.5943396, b: 0.5943396, a: 1}
+    - _AlbedoKeyColor: {r: 0.09999997, g: 0.34999996, b: 1, a: 1}
+    - _AlbedoRecolorColor: {r: 1, g: 0, b: 0, a: 1}
     - _AngelRingMaskColor: {r: 0, g: 1, b: 0, a: 1}
     - _AngelRing_Color: {r: 1, g: 1, b: 1, a: 1}
     - _Ap_RimLightColor: {r: 0, g: 0.26967344, b: 0.6226415, a: 1}
