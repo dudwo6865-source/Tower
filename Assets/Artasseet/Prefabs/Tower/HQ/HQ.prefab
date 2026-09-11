@@ -193,7 +193,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ownerId: 1
-  buildRadiusCells: 8
+  buildRadiusCells: 20
   buildZoneHeightOffset: 0.06
   canPlaceOutsideBuildZones: 0
 --- !u!95 &1292566576071216317
