@@ -75,7 +75,11 @@ public class GridFootprint : MonoBehaviour
     {
         footprintCells = NormalizeFootprint(footprintCells);
 
-        if (blockCells)
+        // 플레이 중 스크립트로 컴포넌트가 막 추가된 경우 Unity가 OnValidate를 즉시 호출하는데,
+        // 이 안에서 AddComponent<NavMeshObstacle>()를 실행하면 "SendMessage cannot be called
+        // during Awake, CheckConsistency, or OnValidate" 경고가 발생한다.
+        // 플레이 중에는 Start()/RegisterAtOriginCell()에서 안전한 시점에 다시 호출되므로 여기서는 건너뛴다.
+        if (blockCells && !Application.isPlaying)
             ApplyNavMeshObstacleSize();
     }
 
