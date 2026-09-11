@@ -1550,8 +1550,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 70725f519a0210942b7e59102c0769e2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  validFootprintColor: {r: 0.2, g: 0.95, b: 0.35, a: 0.5882353}
-  invalidFootprintColor: {r: 0.9490196, g: 0.27218574, b: 0.19999999, a: 0.6313726}
+  validFootprintColor: {r: 0.25, g: 0.65, b: 1, a: 0.65}
+  invalidFootprintColor: {r: 0.95, g: 0.2, b: 0.2, a: 0.7}
   heightOffset: 0.08
 --- !u!114 &166941982
 MonoBehaviour:

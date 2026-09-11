@@ -7,12 +7,27 @@ using UnityEngine.Rendering;
 public class PlacementGridVisualizer : MonoBehaviour
 {
     [Header("Footprint")]
-    public Color validFootprintColor = new Color(0.2f, 0.95f, 0.35f, 0.4f);
+    [Tooltip("건설 가능한 칸을 표시하는 하늘색 레이어 색상입니다.")]
+    public Color validFootprintColor = new Color(0.25f, 0.65f, 1f, 0.65f);
 
-    public Color invalidFootprintColor = new Color(0.95f, 0.25f, 0.25f, 0.4f);
+    [Tooltip("건설할 수 없는 칸을 표시하는 색상입니다.")]
+    public Color invalidFootprintColor = new Color(0.95f, 0.2f, 0.2f, 0.7f);
 
     [Tooltip("지형 위로 띄울 높이입니다.")]
     public float heightOffset = 0.12f;
+
+    [Header("Cell Shape")]
+    [Tooltip("칸 테두리에서 안쪽으로 들어가는 두께(월드 단위)입니다. 값을 키우면 칸끼리 서로 떨어져 보입니다.")]
+    public float cellInset = 0.12f;
+
+    [Tooltip("칸 모서리를 둥글게 표시할 반경(월드 단위)입니다.")]
+    public float cellCornerRadius = 0.28f;
+
+    [Tooltip("모서리 하나를 표현하는 곡선 분할 수입니다. 값이 클수록 더 둥글게 보입니다.")]
+    [Range(1, 12)]
+    public int cellCornerSegments = 6;
+
+    private readonly List<Vector2> perimeterScratch = new List<Vector2>();
 
     private TowerPlacementController placementController;
     private Transform visualsRoot;
@@ -241,19 +256,57 @@ public class PlacementGridVisualizer : MonoBehaviour
     {
         Vector3 corner = grid.CellCornerToWorld(cell);
         float size = grid.cellSize;
+
+        // 테두리에서 inset만큼 안으로 들여서 칸끼리 살짝 떨어져 보이게 만들고,
+        // 남은 절반 폭을 넘지 않게 반경을 잘라 모서리끼리 겹치지 않게 한다.
+        float inset = Mathf.Clamp(cellInset, 0f, size * 0.5f - 0.01f);
+        float radius = Mathf.Clamp(cellCornerRadius, 0f, size * 0.5f - inset);
+
+        float min = inset;
+        float max = size - inset;
+
+        perimeterScratch.Clear();
+        AddRoundedCorner(perimeterScratch, new Vector2(max - radius, min + radius), radius, -90f, 0f);
+        AddRoundedCorner(perimeterScratch, new Vector2(max - radius, max - radius), radius, 0f, 90f);
+        AddRoundedCorner(perimeterScratch, new Vector2(min + radius, max - radius), radius, 90f, 180f);
+        AddRoundedCorner(perimeterScratch, new Vector2(min + radius, min + radius), radius, 180f, 270f);
+
         int start = vertices.Count;
 
-        vertices.Add(Lift(corner));
-        vertices.Add(Lift(corner + new Vector3(size, 0f, 0f)));
-        vertices.Add(Lift(corner + new Vector3(size, 0f, size)));
-        vertices.Add(Lift(corner + new Vector3(0f, 0f, size)));
+        for (int i = 0; i < perimeterScratch.Count; i++)
+        {
+            Vector2 p = perimeterScratch[i];
+            vertices.Add(Lift(corner + new Vector3(p.x, 0f, p.y)));
+        }
 
-        triangles.Add(start);
-        triangles.Add(start + 2);
-        triangles.Add(start + 1);
-        triangles.Add(start);
-        triangles.Add(start + 3);
-        triangles.Add(start + 2);
+        // 볼록 다각형이라 팬 삼각분할로 충분하다.
+        for (int i = 1; i < perimeterScratch.Count - 1; i++)
+        {
+            triangles.Add(start);
+            triangles.Add(start + i);
+            triangles.Add(start + i + 1);
+        }
+    }
+
+    void AddRoundedCorner(
+        List<Vector2> points,
+        Vector2 arcCenter,
+        float radius,
+        float startDegrees,
+        float endDegrees)
+    {
+        if (radius <= 0f)
+        {
+            points.Add(arcCenter);
+            return;
+        }
+
+        for (int i = 0; i <= cellCornerSegments; i++)
+        {
+            float t = (float)i / cellCornerSegments;
+            float angle = Mathf.Deg2Rad * Mathf.Lerp(startDegrees, endDegrees, t);
+            points.Add(arcCenter + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius);
+        }
     }
 
     Vector3 Lift(Vector3 worldPoint)
