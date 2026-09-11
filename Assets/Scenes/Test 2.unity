@@ -3740,7 +3740,7 @@ GameObject:
   m_Component:
   - component: {fileID: 287188556}
   - component: {fileID: 287188558}
-  - component: {fileID: 287188557}
+  - component: {fileID: 287188559}
   m_Layer: 0
   m_Name: MapGrid
   m_TagString: Untagged
@@ -3763,19 +3763,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1852850652}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &287188557
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 287188555}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 161b50603049d70478c4deecb57527ee, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  defaultBuildingFootprint: {x: 2, y: 2}
 --- !u!114 &287188558
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3783,12 +3770,12 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 287188555}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9a62523c5e3f62546bc716bd8d47cd87, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  cellSize: 2
+  cellSize: 4
   useNavMeshBounds: 1
   requireNavMeshForCells: 1
   navMeshSampleRadiusFactor: 0.1
@@ -3802,6 +3789,26 @@ MonoBehaviour:
   manualMapSize: {x: 60, y: 60}
   drawGridGizmos: 1
   drawOnlyWalkableCellsInGizmos: 1
+--- !u!114 &287188559
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 287188555}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 70725f519a0210942b7e59102c0769e2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  validFootprintColor: {r: 0, g: 1, b: 0.15318131, a: 0.65}
+  invalidFootprintColor: {r: 0.95, g: 0.2, b: 0.2, a: 0.7}
+  heightOffset: 0.08
+  zoneFillColor: {r: 1, g: 0.8118372, b: 0, a: 0.3}
+  zoneHeightOffset: 0
+  cellInset: 0.15
+  cellCornerRadius: 0.5
+  cellCornerSegments: 3
 --- !u!1 &297597633
 GameObject:
   m_ObjectHideFlags: 0
@@ -21335,7 +21342,6 @@ GameObject:
   m_Component:
   - component: {fileID: 1899539527}
   - component: {fileID: 1899539530}
-  - component: {fileID: 1899539529}
   - component: {fileID: 1899539528}
   m_Layer: 0
   m_Name: Build
@@ -21404,21 +21410,6 @@ MonoBehaviour:
   iconUnaffordableTint: {r: 1, g: 1, b: 1, a: 0.4}
   enableHotkeys: 1
   maxHotkeySlots: 9
---- !u!114 &1899539529
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1899539526}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 70725f519a0210942b7e59102c0769e2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  validFootprintColor: {r: 0.25, g: 0.65, b: 1, a: 0.65}
-  invalidFootprintColor: {r: 0.95, g: 0.2, b: 0.2, a: 0.7}
-  heightOffset: 0.08
 --- !u!114 &1899539530
 MonoBehaviour:
   m_ObjectHideFlags: 0
