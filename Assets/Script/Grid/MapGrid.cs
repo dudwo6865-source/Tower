@@ -103,6 +103,13 @@ public class MapGrid : MonoBehaviour
         Instance = this;
         navFloorCache = new MapGridNavFloorCache(this);
 
+        // GridOccupancy가 씬에 없으면 건물 footprint 등록이 전부 실패한다. 그런데 배치
+        // 판정(IsValidPlacement)은 Instance가 null이면 점유 검사를 통째로 건너뛰기 때문에,
+        // "배치는 되는데 등록만 안 되는" 상태로 조용히 진행된다(업그레이드 UI도 같이 막힌다).
+        // 씬 어디에도 없을 때만 만들어서 그런 상태 자체가 생기지 않게 한다.
+        if (FindFirstObjectByType<GridOccupancy>() == null)
+            gameObject.AddComponent<GridOccupancy>();
+
         BuildingRegistry.OnBuildingRegistered += HandleBuildingRegistryChanged;
         BuildingRegistry.OnBuildingRemoved += HandleBuildingRegistryChanged;
     }
