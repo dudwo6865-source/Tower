@@ -126,14 +126,11 @@ public class TowerPlacementController : MonoBehaviour
         Instance = this;
         EnsurePlacementAudioSource();
 
-        if (GetComponent<PlacementGridVisualizer>() == null)
-            gameObject.AddComponent<PlacementGridVisualizer>();
+        if (GetComponent<GridVisualizer>() == null)
+            gameObject.AddComponent<GridVisualizer>();
 
         if (GetComponent<BuildZoneManager>() == null)
             gameObject.AddComponent<BuildZoneManager>();
-
-        if (GetComponent<BuildZoneVisualizer>() == null)
-            gameObject.AddComponent<BuildZoneVisualizer>();
     }
 
     void Start()
