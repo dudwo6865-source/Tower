@@ -391,7 +391,7 @@ public class ProductionBuilding : MonoBehaviour
         UnitCombatAI combatAI = unitObject.GetComponent<UnitCombatAI>();
 
         if (combatAI != null)
-            combatAI.BeginManualMove();
+            combatAI.BeginManualMove(destination);
 
         if (!GridMovement.TrySetAgentDestination(agent, destination))
             return;

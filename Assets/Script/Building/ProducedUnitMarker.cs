@@ -44,7 +44,7 @@ public class ProducedUnitMarker : MonoBehaviour
 
         // 전투/기존 명령 상태를 끊고 수동 이동으로 건물까지 이동시킨다.
         if (combatAI != null)
-            combatAI.BeginManualMove();
+            combatAI.BeginManualMove(recallTarget);
 
         if (agent != null && agent.isActiveAndEnabled)
         {

@@ -242,7 +242,7 @@ public static class UnitCommandHandler
             if (combatAI != null)
             {
                 UnitCommandDebugLog.Log(combatAI, $"플레이어 명령: 이동 -> ({destination.x:F1}, {destination.y:F1}, {destination.z:F1})");
-                combatAI.BeginManualMove();
+                combatAI.BeginManualMove(destination);
             }
             else
                 agent.isStopped = false;

@@ -22,6 +22,12 @@ public class UnitCombatAI : MobileCombatAI
     bool manualFocusTarget;
     bool attackMoveActive;
     Vector3 attackMoveDestination;
+
+    // 목적지를 아는 이동 명령은 거리로 도착을 판정한다.
+    // 경로가 아직 안 잡힌 상태(hasPath=false)를 '도착'으로 오해해 명령이 한 프레임 만에
+    // 취소되던 문제가 있었다. (생산 집결지·야간 복귀처럼 경로 설정이 한 프레임 밀리는 경우)
+    bool hasManualDestination;
+    Vector3 manualDestination;
     UnitOrderState orderState = UnitOrderState.Free;
     Vector3 holdAnchor;
     Vector3 patrolStart;
@@ -87,6 +93,7 @@ public class UnitCombatAI : MobileCombatAI
         {
             manualMoveActive = false;
             attackMoveActive = false;
+            hasManualDestination = false;
             return true;
         }
 
@@ -102,11 +109,13 @@ public class UnitCombatAI : MobileCombatAI
             return true;
 
         if (attackMoveActive)
+            return IsWithinFlatDistance(attackMoveDestination, 0.75f);
+
+        if (hasManualDestination)
         {
-            Vector3 flat = transform.position - attackMoveDestination;
-            flat.y = 0f;
-            float arrive = 0.75f;
-            return flat.sqrMagnitude <= arrive * arrive;
+            return IsWithinFlatDistance(
+                manualDestination,
+                Mathf.Max(0.75f, agent.stoppingDistance + 0.1f));
         }
 
         if (agent.pathPending)
@@ -116,6 +125,13 @@ public class UnitCombatAI : MobileCombatAI
             return true;
 
         return agent.remainingDistance <= agent.stoppingDistance + 0.1f;
+    }
+
+    bool IsWithinFlatDistance(Vector3 destination, float distance)
+    {
+        Vector3 flat = transform.position - destination;
+        flat.y = 0f;
+        return flat.sqrMagnitude <= distance * distance;
     }
 
     void ResumeAttackMoveIfNeeded()
@@ -138,15 +154,24 @@ public class UnitCombatAI : MobileCombatAI
 
     void MaintainHoldPosition()
     {
-        Vector3 flat = transform.position - holdAnchor;
-        flat.y = 0f;
+        if (agent == null || !agent.isOnNavMesh)
+            return;
 
-        if (flat.sqrMagnitude <= 0.25f)
+        if (IsWithinFlatDistance(holdAnchor, 0.5f))
         {
-            if (agent.isOnNavMesh && agent.hasPath)
+            if (agent.hasPath)
                 agent.ResetPath();
             return;
         }
+
+        // 이미 홀드 지점으로 돌아가는 중이면 매 프레임 경로를 새로 깔지 않는다.
+        // (예전에는 밀려난 유닛마다 프레임당 한 번씩 전체 경로를 다시 계산했다)
+        bool alreadyReturning =
+            (agent.hasPath || agent.pathPending) &&
+            (agent.destination - holdAnchor).sqrMagnitude <= 0.25f;
+
+        if (alreadyReturning)
+            return;
 
         GridMovement.TrySetAgentDestination(agent, holdAnchor, immediate: true);
     }
@@ -197,6 +222,17 @@ public class UnitCombatAI : MobileCombatAI
             return;
 
         destinationTimer = Mathf.Max(0.05f, destinationRefreshInterval);
+
+        // 이미 같은 순찰 지점으로 가는 중이면 경로를 다시 계산하지 않는다.
+        bool alreadyHeadingToGoal =
+            hasDestination &&
+            agent.isOnNavMesh &&
+            (agent.hasPath || agent.pathPending) &&
+            (agent.destination - goal).sqrMagnitude <= 0.25f;
+
+        if (alreadyHeadingToGoal)
+            return;
+
         lastDestination = goal;
         hasDestination = GridMovement.TrySetAgentDestination(agent, goal, immediate: true);
     }
@@ -214,6 +250,7 @@ public class UnitCombatAI : MobileCombatAI
         {
             orderState = UnitOrderState.Free;
             manualMoveActive = false;
+            hasManualDestination = false;
         }
 
         base.OnAggroInterrupt();
@@ -235,12 +272,28 @@ public class UnitCombatAI : MobileCombatAI
 
     public void BeginManualMove()
     {
+        BeginManualMove(false, Vector3.zero);
+    }
+
+    /// <summary>
+    /// 목적지를 아는 이동 명령입니다. 도착 판정을 경로 상태가 아닌 거리로 하므로,
+    /// 경로 설정이 한 프레임 늦어져도 명령이 취소되지 않습니다.
+    /// </summary>
+    public void BeginManualMove(Vector3 destination)
+    {
+        BeginManualMove(true, destination);
+    }
+
+    void BeginManualMove(bool knownDestination, Vector3 destination)
+    {
         UnitCommandDebugLog.Log(this, "명령: 수동 이동 시작 (Free)");
 
         orderState = UnitOrderState.Free;
         manualMoveActive = true;
         manualFocusTarget = false;
         attackMoveActive = false;
+        hasManualDestination = knownDestination;
+        manualDestination = destination;
         currentTarget = null;
         currentTargetHealth = null;
         hasDestination = false;
@@ -262,6 +315,7 @@ public class UnitCombatAI : MobileCombatAI
         manualMoveActive = false;
         manualFocusTarget = true;
         attackMoveActive = false;
+        hasManualDestination = false;
         destinationTimer = 0f;
         hasDestination = false;
         RequestImmediatePath();
@@ -280,6 +334,7 @@ public class UnitCombatAI : MobileCombatAI
         manualFocusTarget = false;
         attackMoveActive = true;
         attackMoveDestination = destination;
+        hasManualDestination = false;
         currentTarget = null;
         currentTargetHealth = null;
         ClearDamageFocusTarget();
@@ -298,6 +353,7 @@ public class UnitCombatAI : MobileCombatAI
         manualFocusTarget = false;
         ClearDamageFocusTarget();
         attackMoveActive = false;
+        hasManualDestination = false;
         currentTarget = null;
         currentTargetHealth = null;
         hasDestination = false;
@@ -314,6 +370,7 @@ public class UnitCombatAI : MobileCombatAI
         manualFocusTarget = false;
         ClearDamageFocusTarget();
         attackMoveActive = false;
+        hasManualDestination = false;
         hasDestination = false;
         currentTarget = null;
         currentTargetHealth = null;
@@ -337,6 +394,7 @@ public class UnitCombatAI : MobileCombatAI
         manualFocusTarget = false;
         ClearDamageFocusTarget();
         attackMoveActive = false;
+        hasManualDestination = false;
         currentTarget = null;
         currentTargetHealth = null;
         destinationTimer = 0f;
