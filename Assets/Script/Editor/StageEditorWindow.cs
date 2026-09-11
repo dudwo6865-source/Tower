@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text;
 using UnityEditor;
@@ -7,7 +8,9 @@ using UnityEngine.SceneManagement;
 
 // 스테이지(MapConfig) 통합 관리 에디터입니다.
 // - 좌측: 프로젝트의 모든 MapConfig(스테이지) 목록 (검색/추가/복제/삭제)
-// - 우측: 선택한 스테이지의 Economy/DayNight/Wave/Win Condition 설정을 카테고리별로 편집 (필드 2열 배치)
+// - 우측: 선택한 스테이지의 설정을 카테고리(섹션)별로 편집. 섹션을 2열로 배치해
+//   (Identity|Map Content, Economy|Day-Night, Wave|Win Condition) 세로로
+//   너무 길어지지 않게 한다.
 // - 씬 <-> 스테이지 값 동기화(가져오기/적용), 유효성 경고, 미리보기 요약 제공
 // Tools > Map > Stage Editor
 public class StageEditorWindow : EditorWindow
@@ -210,14 +213,12 @@ public class StageEditorWindow : EditorWindow
         detailScroll = EditorGUILayout.BeginScrollView(detailScroll);
 
         float previousLabelWidth = EditorGUIUtility.labelWidth;
-        EditorGUIUtility.labelWidth = 130f;
+        EditorGUIUtility.labelWidth = 110f;
 
-        DrawIdentitySection();
-        DrawMapContentSection();
-        DrawEconomySection();
-        DrawDayNightSection();
-        DrawWaveSection();
-        DrawWinConditionSection();
+        // 섹션 자체를 2열로 배치해 세로로 길어지는 걸 줄인다.
+        DrawSectionRow(DrawIdentitySection, DrawMapContentSection);
+        DrawSectionRow(DrawEconomySection, DrawDayNightSection);
+        DrawSectionRow(DrawWaveSection, DrawWinConditionSection);
 
         EditorGUIUtility.labelWidth = previousLabelWidth;
 
@@ -248,6 +249,24 @@ public class StageEditorWindow : EditorWindow
 
         EditorGUILayout.EndHorizontal();
         EditorGUILayout.Space(4);
+    }
+
+    // 두 섹션을 좌우로 나란히 그린다. (예: Identity | Map Content)
+    void DrawSectionRow(Action left, Action right)
+    {
+        EditorGUILayout.BeginHorizontal();
+
+        EditorGUILayout.BeginVertical(GUILayout.ExpandWidth(true));
+        left();
+        EditorGUILayout.EndVertical();
+
+        GUILayout.Space(8);
+
+        EditorGUILayout.BeginVertical(GUILayout.ExpandWidth(true));
+        right();
+        EditorGUILayout.EndVertical();
+
+        EditorGUILayout.EndHorizontal();
     }
 
     // ---------- Sections ----------
@@ -303,10 +322,9 @@ public class StageEditorWindow : EditorWindow
         DrawOverrideToggle("overrideEconomy", "이 스테이지 값으로 WattManager 덮어쓰기");
 
         EditorGUI.BeginDisabledGroup(!selected.overrideEconomy);
-        DrawFieldPairs(
-            ("maxWatt", "최대 Watt"),
-            ("startingWatt", "시작 Watt"),
-            ("incomePerSecond", "초당 충전량"));
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("maxWatt"), new GUIContent("최대 Watt"));
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("startingWatt"), new GUIContent("시작 Watt"));
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("incomePerSecond"), new GUIContent("초당 충전량"));
         EditorGUI.EndDisabledGroup();
 
         if (selected.overrideEconomy)
@@ -335,15 +353,14 @@ public class StageEditorWindow : EditorWindow
         DrawOverrideToggle("overrideDayNight", "이 스테이지 값으로 DayNightCycle 덮어쓰기");
 
         EditorGUI.BeginDisabledGroup(!selected.overrideDayNight);
-        DrawFieldPairs(
-            ("startPhase", "시작 페이즈"),
-            ("dayDuration", "낮 지속시간(초)"),
-            ("nightDuration", "밤 지속시간(초)"),
-            ("lightTransitionDuration", "라이트 전환시간(초)"),
-            ("dayLightColor", "낮 라이트 색상"),
-            ("dayLightIntensity", "낮 라이트 강도"),
-            ("nightLightColor", "밤 라이트 색상"),
-            ("nightLightIntensity", "밤 라이트 강도"));
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("startPhase"), new GUIContent("시작 페이즈"));
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("dayDuration"), new GUIContent("낮 지속시간(초)"));
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("nightDuration"), new GUIContent("밤 지속시간(초)"));
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("lightTransitionDuration"), new GUIContent("라이트 전환시간(초)"));
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("dayLightColor"), new GUIContent("낮 라이트 색상"));
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("dayLightIntensity"), new GUIContent("낮 라이트 강도"));
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("nightLightColor"), new GUIContent("밤 라이트 색상"));
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("nightLightIntensity"), new GUIContent("밤 라이트 강도"));
         EditorGUI.EndDisabledGroup();
 
         if (selected.overrideDayNight)
@@ -384,18 +401,16 @@ public class StageEditorWindow : EditorWindow
 
         EditorGUILayout.Space(4);
         EditorGUILayout.LabelField("초기 배치 (Day Start)", EditorStyles.boldLabel);
-        DrawFieldPairs(
-            ("initialEnemyCount", "초기 스포너 수"),
-            ("initialMinDistanceFromHq", "본부와 최소 거리"),
-            ("mapEdgeMargin", "맵 가장자리 여백"),
-            ("randomPositionAttempts", "배치 위치 샘플 시도 횟수"));
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("initialEnemyCount"), new GUIContent("초기 스포너 수"));
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("initialMinDistanceFromHq"), new GUIContent("본부와 최소 거리"));
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("mapEdgeMargin"), new GUIContent("맵 가장자리 여백"));
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("randomPositionAttempts"), new GUIContent("배치 위치 샘플 시도 횟수"));
 
         EditorGUILayout.Space(4);
         EditorGUILayout.LabelField("밤 웨이브", EditorStyles.boldLabel);
-        DrawFieldPairs(
-            ("nightWaveStartDelay", "밤 시작 후 대기(초)"),
-            ("nightWaveMinDistanceFromHq", "본부와 최소 거리"),
-            ("nightWaveAvoidPlayerVision", "플레이어 시야 밖에 우선 배치"));
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("nightWaveStartDelay"), new GUIContent("밤 시작 후 대기(초)"));
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("nightWaveMinDistanceFromHq"), new GUIContent("본부와 최소 거리"));
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("nightWaveAvoidPlayerVision"), new GUIContent("플레이어 시야 밖에 우선 배치"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("spawnersPerNight"), new GUIContent("밤마다 스포너 수 (0=1번째 밤)"), true);
 
         EditorGUI.EndDisabledGroup();
@@ -467,30 +482,6 @@ public class StageEditorWindow : EditorWindow
         GUI.backgroundColor = prop.boolValue ? new Color(0.55f, 0.85f, 0.55f) : new Color(0.85f, 0.55f, 0.55f);
         EditorGUILayout.PropertyField(prop, new GUIContent(label));
         GUI.backgroundColor = prev;
-    }
-
-    // 필드를 두 개씩 가로로 짝지어 그린다. 세로로 길게 늘어지는 걸 줄이기 위함.
-    // 항목이 홀수 개면 마지막 한 줄은 왼쪽만 채우고 오른쪽은 비워둔다.
-    void DrawFieldPairs(params (string property, string label)[] fields)
-    {
-        for (int i = 0; i < fields.Length; i += 2)
-        {
-            EditorGUILayout.BeginHorizontal();
-
-            DrawPairedField(fields[i]);
-
-            if (i + 1 < fields.Length)
-                DrawPairedField(fields[i + 1]);
-            else
-                GUILayout.FlexibleSpace();
-
-            EditorGUILayout.EndHorizontal();
-        }
-    }
-
-    void DrawPairedField((string property, string label) field)
-    {
-        EditorGUILayout.PropertyField(serializedObject.FindProperty(field.property), new GUIContent(field.label));
     }
 
     static bool HasAnyPrefab(List<GameObject> list) => list != null && list.Count > 0;
