@@ -591,7 +591,7 @@ public class StageEditorWindow : EditorWindow
 
         Undo.RecordObject(selected, "Pull Stage From Scene");
 
-        WattManager watt = Object.FindFirstObjectByType<WattManager>();
+        WattManager watt = UnityEngine.Object.FindFirstObjectByType<WattManager>();
         if (watt != null)
         {
             selected.maxWatt = watt.maxWatt;
@@ -599,7 +599,7 @@ public class StageEditorWindow : EditorWindow
             selected.incomePerSecond = watt.incomePerSecond;
         }
 
-        DayNightCycle cycle = Object.FindFirstObjectByType<DayNightCycle>();
+        DayNightCycle cycle = UnityEngine.Object.FindFirstObjectByType<DayNightCycle>();
         if (cycle != null)
         {
             selected.startPhase = cycle.startPhase;
@@ -612,7 +612,7 @@ public class StageEditorWindow : EditorWindow
             selected.lightTransitionDuration = cycle.lightTransitionDuration;
         }
 
-        WaveManager wave = Object.FindFirstObjectByType<WaveManager>();
+        WaveManager wave = UnityEngine.Object.FindFirstObjectByType<WaveManager>();
         if (wave != null)
         {
             selected.enemyPrefabs = new List<GameObject>(wave.enemyPrefabs ?? new List<GameObject>());
@@ -627,7 +627,7 @@ public class StageEditorWindow : EditorWindow
             selected.spawnersPerNight = new List<int>(wave.spawnersPerNight ?? new List<int>());
         }
 
-        GameResultManager result = Object.FindFirstObjectByType<GameResultManager>();
+        GameResultManager result = UnityEngine.Object.FindFirstObjectByType<GameResultManager>();
         if (result != null)
             selected.survivalNightsToWin = result.survivalNightsToWin;
 
@@ -649,7 +649,7 @@ public class StageEditorWindow : EditorWindow
 
         if (selected.overrideEconomy)
         {
-            WattManager watt = Object.FindFirstObjectByType<WattManager>();
+            WattManager watt = UnityEngine.Object.FindFirstObjectByType<WattManager>();
             if (watt != null)
             {
                 Undo.RecordObject(watt, "Apply Stage To Scene");
@@ -663,7 +663,7 @@ public class StageEditorWindow : EditorWindow
 
         if (selected.overrideDayNight)
         {
-            DayNightCycle cycle = Object.FindFirstObjectByType<DayNightCycle>();
+            DayNightCycle cycle = UnityEngine.Object.FindFirstObjectByType<DayNightCycle>();
             if (cycle != null)
             {
                 Undo.RecordObject(cycle, "Apply Stage To Scene");
@@ -682,7 +682,7 @@ public class StageEditorWindow : EditorWindow
 
         if (selected.overrideWave)
         {
-            WaveManager wave = Object.FindFirstObjectByType<WaveManager>();
+            WaveManager wave = UnityEngine.Object.FindFirstObjectByType<WaveManager>();
             if (wave != null)
             {
                 Undo.RecordObject(wave, "Apply Stage To Scene");
@@ -711,7 +711,7 @@ public class StageEditorWindow : EditorWindow
 
         if (selected.overrideWinCondition)
         {
-            GameResultManager result = Object.FindFirstObjectByType<GameResultManager>();
+            GameResultManager result = UnityEngine.Object.FindFirstObjectByType<GameResultManager>();
             if (result != null)
             {
                 Undo.RecordObject(result, "Apply Stage To Scene");
