@@ -150,6 +150,11 @@ public class MapLoader : MonoBehaviour
         cycle.startPhase = config.startPhase;
         cycle.dayDuration = config.dayDuration;
         cycle.nightDuration = config.nightDuration;
+        cycle.dayLightColor = config.dayLightColor;
+        cycle.nightLightColor = config.nightLightColor;
+        cycle.dayLightIntensity = config.dayLightIntensity;
+        cycle.nightLightIntensity = config.nightLightIntensity;
+        cycle.lightTransitionDuration = config.lightTransitionDuration;
     }
 
     void ApplyWaveConfig(MapConfig config)
@@ -162,8 +167,19 @@ public class MapLoader : MonoBehaviour
         if (wave == null)
             return;
 
+        if (config.enemyPrefabs != null && config.enemyPrefabs.Count > 0)
+            wave.enemyPrefabs = new List<GameObject>(config.enemyPrefabs);
+
+        if (config.initialEnemyPrefabs != null && config.initialEnemyPrefabs.Count > 0)
+            wave.initialEnemyPrefabs = new List<GameObject>(config.initialEnemyPrefabs);
+
         wave.initialEnemyCount = config.initialEnemyCount;
+        wave.initialMinDistanceFromHq = config.initialMinDistanceFromHq;
+        wave.mapEdgeMargin = config.mapEdgeMargin;
+        wave.randomPositionAttempts = config.randomPositionAttempts;
         wave.nightWaveStartDelay = config.nightWaveStartDelay;
+        wave.nightWaveMinDistanceFromHq = config.nightWaveMinDistanceFromHq;
+        wave.nightWaveAvoidPlayerVision = config.nightWaveAvoidPlayerVision;
         wave.spawnersPerNight = config.spawnersPerNight != null
             ? new List<int>(config.spawnersPerNight)
             : new List<int>();
