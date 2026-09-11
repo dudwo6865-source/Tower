@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using UnityEngine;
 
 // MapConfig를 받아 맵을 로드하는 오케스트레이터입니다.
@@ -186,22 +185,13 @@ public class MapLoader : MonoBehaviour
         if (wave == null)
             return;
 
-        if (config.enemyPrefabs != null && config.enemyPrefabs.Count > 0)
-            wave.enemyPrefabs = new List<GameObject>(config.enemyPrefabs);
+        // 사본을 넘긴다. 플레이 중 WaveManager 쪽 값을 만져도 원본 에셋이 더러워지지 않는다.
+        wave.wavePlan = config.wavePlan != null
+            ? config.wavePlan.Clone()
+            : new WavePlan();
 
-        if (config.initialEnemyPrefabs != null && config.initialEnemyPrefabs.Count > 0)
-            wave.initialEnemyPrefabs = new List<GameObject>(config.initialEnemyPrefabs);
-
-        wave.initialEnemyCount = config.initialEnemyCount;
-        wave.initialMinDistanceFromHq = config.initialMinDistanceFromHq;
-        wave.mapEdgeMargin = config.mapEdgeMargin;
-        wave.randomPositionAttempts = config.randomPositionAttempts;
-        wave.nightWaveStartDelay = config.nightWaveStartDelay;
-        wave.nightWaveMinDistanceFromHq = config.nightWaveMinDistanceFromHq;
-        wave.nightWaveAvoidPlayerVision = config.nightWaveAvoidPlayerVision;
-        wave.spawnersPerNight = config.spawnersPerNight != null
-            ? new List<int>(config.spawnersPerNight)
-            : new List<int>();
+        wave.applyNightBonus = config.applyNightBonus;
+        wave.nightBonus = new WaveTuning(config.nightBonus);
     }
 
     void ApplyWinConditionConfig(MapConfig config)

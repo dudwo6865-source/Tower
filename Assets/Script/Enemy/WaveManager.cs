@@ -1,8 +1,12 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+// 웨이브 진행을 관리합니다.
+// 스포너를 새로 만들지 않고, 맵에 이미 배치된 EnemySpawner들의 수치
+// (스폰량 / 스폰 간격 / 동시 생존 상한 / 스폰되는 적의 스탯 가중치)를 웨이브마다 조정합니다.
+//
+// 웨이브 = 낮과 밤 한 주기입니다. 첫 낮이 웨이브 1이고, 밤이 끝나 다음 낮이 시작되면 웨이브가 오릅니다.
 [DefaultExecutionOrder(-100)]
 [DisallowMultipleComponent]
 public class WaveManager : MonoBehaviour
@@ -13,86 +17,80 @@ public class WaveManager : MonoBehaviour
     [Tooltip("비워두면 씬에서 자동으로 찾습니다.")]
     public DayNightCycle dayNightCycle;
 
-    [Header("Enemy Buildings")]
-    [Tooltip("밤마다 생성할 적 건물(스포너) 프리팹 목록입니다. 여러 개면 생성마다 무작위로 선택합니다.")]
-    public List<GameObject> enemyPrefabs = new List<GameObject>();
+    [Header("Wave Plan")]
+    [Tooltip("웨이브별로 맵의 모든 EnemySpawner에 적용할 수치입니다. " +
+             "표에 적은 웨이브 이후는 마지막 값에 증가율이 복리로 붙어 계속 이어집니다.")]
+    public WavePlan wavePlan = new WavePlan();
 
-    [Tooltip("생성되는 적 건물의 소속 ID입니다. 플레이어와 달라야 적으로 인식됩니다.")]
-    public int enemyOwnerId = 2;
+    [Header("Night Bonus")]
+    [Tooltip("켜면 밤 동안에만 아래 보정을 웨이브 수치에 한 번 더 곱합니다.")]
+    public bool applyNightBonus = true;
 
-    [Header("Player")]
-    [Tooltip("플레이어 본부를 찾을 때 사용하는 ownerId입니다.")]
-    public int playerOwnerId = 1;
+    [Tooltip("밤 동안 추가로 곱할 보정입니다. 전부 1이면 낮과 같습니다.")]
+    public WaveTuning nightBonus = new WaveTuning();
 
-    [Header("Initial Scatter (Day Start)")]
-    [Tooltip("초기 배치에 사용할 적 건물 프리팹 목록입니다. 비워두면 위의 Enemy Buildings 프리팹을 사용합니다.")]
-    public List<GameObject> initialEnemyPrefabs = new List<GameObject>();
+    [Header("Debug")]
+    [Tooltip("웨이브가 바뀔 때 콘솔에 적용된 수치를 남깁니다.")]
+    public bool logWaveChanges = true;
 
-    [Tooltip("게임 시작 시 맵에 미리 배치할 적 스포너 수입니다.")]
-    public int initialEnemyCount = 0;
+    /// <summary>1부터 시작합니다. 1 = 첫 번째 웨이브(첫 낮 + 첫 밤).</summary>
+    public int CurrentWaveNumber { get; private set; } = 1;
 
-    [Tooltip("본부와 최소 이 거리 이상 떨어진 곳에만 배치합니다.")]
-    public float initialMinDistanceFromHq = 25f;
+    /// <summary>지금 스포너들에 적용 중인 최종 보정값입니다(밤 보정 포함).</summary>
+    public WaveTuning CurrentTuning { get; private set; } = new WaveTuning();
 
-    [Tooltip("맵 가장자리에서 안쪽으로 둘 여백입니다.")]
-    public float mapEdgeMargin = 8f;
+    public bool IsNight => dayNightCycle != null && dayNightCycle.IsNight;
 
-    [Tooltip("랜덤 위치 샘플 최대 시도 횟수입니다.")]
-    public int randomPositionAttempts = 32;
+    public int ActiveSpawnerCount => EnemySpawner.Active.Count;
 
-    [Header("Map Bounds")]
-    [Tooltip("NavMesh 바운드를 못 찾을 때만 사용하는 폴백입니다. 스폰은 기본적으로 baked NavMesh 범위를 맵 바운드로 씁니다.")]
-    public MapPlayBoundsSource boundsSource = MapPlayBoundsSource.MapGrid;
+    public int TotalAliveEnemies
+    {
+        get
+        {
+            int total = 0;
+            IReadOnlyList<EnemySpawner> spawners = EnemySpawner.Active;
 
-    [Tooltip("boundsSource가 Manual일 때 사용하는 맵 원점입니다.")]
-    public Vector3 manualBoundsOrigin = Vector3.zero;
+            for (int i = 0; i < spawners.Count; i++)
+            {
+                if (spawners[i] != null)
+                    total += spawners[i].AliveCount;
+            }
 
-    [Tooltip("boundsSource가 Manual일 때 사용하는 맵 크기(X=가로, Y=세로)입니다.")]
-    public Vector2 manualBoundsSize = new Vector2(256f, 256f);
+            return total;
+        }
+    }
 
-    [Header("Night Spawn")]
-    [Tooltip("밤이 시작된 뒤 스포너 생성까지 대기 시간(초)입니다.")]
-    public float nightWaveStartDelay = 3f;
+    /// <summary>웨이브 번호와 적용된 보정값을 함께 전달합니다. UI 표시 등에 씁니다.</summary>
+    public event Action<int, WaveTuning> OnWaveChanged;
 
-    [Tooltip("밤마다 생성할 스포너 수입니다. 인덱스 0=1번째 밤. 이후 밤을 지정하지 않으면 마지막 값을 계속 사용합니다.")]
-    public List<int> spawnersPerNight = new List<int> { 1, 2 };
+    public event Action<int> OnNightStarted;
 
-    [Tooltip("밤 스포너를 본부와 최소 이 거리 이상 떨어진 곳에 배치합니다.")]
-    public float nightWaveMinDistanceFromHq = 20f;
-
-    [Tooltip("켜면 밤 스포너를 플레이어 시야 밖(안개 속)에 우선 배치합니다.")]
-    public bool nightWaveAvoidPlayerVision = true;
-
-    public int GlobalWaveIndex { get; private set; }
-
-    public int CurrentNightWave { get; private set; }
-
-    // 완료한 밤 주기 수. 0=첫 밤.
-    public int NightCycleIndex { get; private set; }
-
-    public int TotalAliveEnemies => aliveCount;
-
-    int aliveCount;
-
-    public event Action<int> OnNightWaveStarted;
-
-    Coroutine nightWaveRoutine;
-    bool initialScatterDone;
+    DayNightPhase? lastPhase;
 
     void Awake()
     {
         if (Instance != null && Instance != this)
         {
-            Destroy(gameObject);
+            // 이 컴포넌트만 제거한다. gameObject째로 지우면 같은 오브젝트에 있는
+            // 다른 매니저까지 함께 사라진다.
+            Destroy(this);
             return;
         }
 
         Instance = this;
         ResolveReferences();
+
+        // 스포너(실행 순서 0)의 Awake보다 먼저 현재 웨이브 수치를 준비해 둔다.
+        RefreshTuning(notify: false);
     }
 
     void OnEnable()
     {
+        // Destroy(this)는 프레임 끝까지 지연되므로 중복 인스턴스도 OnEnable/Start가 돈다.
+        // 그대로 두면 중복 쪽의 기본값이 스포너 전체에 덮어씌워진다.
+        if (Instance != this)
+            return;
+
         if (dayNightCycle != null)
             dayNightCycle.OnPhaseStarted += HandlePhaseStarted;
     }
@@ -101,29 +99,15 @@ public class WaveManager : MonoBehaviour
     {
         if (dayNightCycle != null)
             dayNightCycle.OnPhaseStarted -= HandlePhaseStarted;
-
-        StopNightWaves();
     }
 
     void Start()
     {
-        StartCoroutine(StartRoutine());
-    }
+        if (Instance != this)
+            return;
 
-    IEnumerator StartRoutine()
-    {
-        // 씬에 미리 놓인 건물이 격자를 점유한 뒤에 스포너를 배치한다.
-        yield return null;
-
-        if (!initialScatterDone)
-            ScatterInitialEnemies();
-
-        if (dayNightCycle != null &&
-            dayNightCycle.IsNight &&
-            nightWaveRoutine == null)
-        {
-            StartNightWaves();
-        }
+        // 씬의 스포너들이 모두 등록된 뒤 한 번 더 적용한다.
+        RefreshTuning(notify: true);
     }
 
     void OnDestroy()
@@ -135,369 +119,90 @@ public class WaveManager : MonoBehaviour
     void ResolveReferences()
     {
         if (dayNightCycle == null)
-            dayNightCycle = FindObjectOfType<DayNightCycle>();
-    }
-
-    void TrackAlive(EntityHealth health)
-    {
-        if (health == null)
-            return;
-
-        aliveCount++;
-
-        void HandleDied()
-        {
-            health.OnDied -= HandleDied;
-            aliveCount = Mathf.Max(0, aliveCount - 1);
-        }
-
-        health.OnDied += HandleDied;
+            dayNightCycle = FindFirstObjectByType<DayNightCycle>();
     }
 
     void HandlePhaseStarted(DayNightPhase phase)
     {
-        if (phase == DayNightPhase.Day)
-        {
-            StopNightWaves();
+        // '밤 -> 낮'으로 실제로 넘어갔을 때만 웨이브를 올린다.
+        // DayNightCycle은 시작할 때 현재 페이즈로 이벤트를 한 번 쏘는데,
+        // 그건 웨이브가 넘어간 게 아니라 시작 상태를 알리는 것이다.
+        bool nightEnded =
+            lastPhase.HasValue &&
+            lastPhase.Value == DayNightPhase.Night &&
+            phase == DayNightPhase.Day;
 
-            NightCycleIndex++;
-            return;
-        }
+        lastPhase = phase;
 
-        StartNightWaves();
+        if (nightEnded)
+            CurrentWaveNumber++;
+
+        RefreshTuning(notify: true);
+
+        if (phase == DayNightPhase.Night)
+            OnNightStarted?.Invoke(CurrentWaveNumber);
     }
 
-    public void ScatterInitialEnemies()
+    /// <summary>현재 웨이브(와 낮/밤)에 맞는 보정을 다시 계산해 모든 스포너에 적용합니다.</summary>
+    public void RefreshTuning(bool notify)
     {
-        if (initialEnemyCount <= 0)
-        {
-            initialScatterDone = true;
-            return;
-        }
+        CurrentTuning = BuildTuningForWave(CurrentWaveNumber, IsNight);
+        ApplyCurrentWaveToAll();
 
-        int spawned = SpawnBuildings(
-            initialEnemyCount,
-            initialMinDistanceFromHq,
-            avoidPlayerVision: true,
-            GetInitialEnemyPrefab);
-
-        initialScatterDone = true;
-
-        Debug.Log(
-            $"WaveManager: 초기 적 스포너 {spawned}/{initialEnemyCount}개를 맵에 배치했습니다.");
-    }
-
-    void StartNightWaves()
-    {
-        StopNightWaves();
-        CurrentNightWave = 0;
-        nightWaveRoutine = StartCoroutine(NightWaveLoop());
-    }
-
-    void StopNightWaves()
-    {
-        if (nightWaveRoutine == null)
+        if (!notify)
             return;
 
-        StopCoroutine(nightWaveRoutine);
-        nightWaveRoutine = null;
-    }
+        OnWaveChanged?.Invoke(CurrentWaveNumber, CurrentTuning);
 
-    IEnumerator NightWaveLoop()
-    {
-        if (nightWaveStartDelay > 0f)
-            yield return new WaitForSeconds(nightWaveStartDelay);
-
-        if (!IsNightActive())
-            yield break;
-
-        CurrentNightWave = 1;
-        GlobalWaveIndex++;
-        OnNightWaveStarted?.Invoke(CurrentNightWave);
-        SpawnNightSpawners();
-    }
-
-    bool IsNightActive()
-    {
-        if (dayNightCycle == null)
-            return false;
-
-        return dayNightCycle.IsNight;
-    }
-
-    void SpawnNightSpawners()
-    {
-        int count = GetSpawnersForNight(NightCycleIndex);
-
-        int spawned = SpawnBuildings(
-            count,
-            nightWaveMinDistanceFromHq,
-            nightWaveAvoidPlayerVision,
-            GetNightWaveEnemyPrefab);
-
-        Debug.Log(
-            $"WaveManager: 밤#{NightCycleIndex + 1} — 스포너 {spawned}/{count}개 생성");
-    }
-
-    int SpawnBuildings(
-        int count,
-        float minDistanceFromHq,
-        bool avoidPlayerVision,
-        Func<GameObject> prefabSelector)
-    {
-        if (count <= 0 || prefabSelector == null || !HasAnyEnemyPrefab())
-            return 0;
-
-        if (!TryGetMapBounds(out MapPlayBoundsData bounds))
+        if (logWaveChanges)
         {
-            Debug.LogWarning("WaveManager: 맵 경계를 찾지 못해 적 건물 배치를 건너뜁니다.");
-            return 0;
+            Debug.Log(
+                $"WaveManager: 웨이브 {CurrentWaveNumber}" +
+                $"{(IsNight ? " (밤)" : " (낮)")} — 스포너 {ActiveSpawnerCount}개에 적용: " +
+                $"{CurrentTuning.ToShortSummary()}");
         }
-
-        FogOfWarManager.Instance?.RefreshVisionNow();
-
-        Vector3 hqPosition = FindPlayerHeadquartersPosition();
-        int spawned = 0;
-
-        for (int i = 0; i < count; i++)
-        {
-            GameObject prefab = prefabSelector();
-
-            if (prefab == null)
-                continue;
-
-            Vector2Int footprintCells = EnemySpawnUtility.ResolveBuildingFootprint(prefab);
-
-            if (!TryGetRandomBuildingPlacement(
-                    bounds,
-                    hqPosition,
-                    minDistanceFromHq,
-                    mapEdgeMargin,
-                    avoidPlayerVision,
-                    footprintCells,
-                    out Vector2Int originCell,
-                    out Vector3 position))
-            {
-                continue;
-            }
-
-            GameObject buildingObject = EnemySpawnUtility.SpawnEnemyBuilding(
-                prefab,
-                position,
-                prefab.transform.rotation,
-                originCell,
-                enemyOwnerId,
-                playerOwnerId,
-                1f,
-                TrackAlive);
-
-            if (buildingObject == null)
-                continue;
-
-            spawned++;
-        }
-
-        return spawned;
     }
 
-    public int GetSpawnersForNight(int nightCycleIndex)
+    /// <summary>해당 웨이브의 보정값입니다. 에디터 미리보기와 UI가 같이 씁니다.</summary>
+    public WaveTuning BuildTuningForWave(int waveNumber, bool night)
     {
-        if (spawnersPerNight == null || spawnersPerNight.Count == 0)
-            return 0;
+        WaveTuning waveTuning = wavePlan != null
+            ? wavePlan.Evaluate(waveNumber)
+            : new WaveTuning();
 
-        int index = Mathf.Clamp(nightCycleIndex, 0, spawnersPerNight.Count - 1);
-        return Mathf.Max(0, spawnersPerNight[index]);
+        if (!night || !applyNightBonus)
+            return waveTuning.Sanitized();
+
+        return WaveTuning.Combine(waveTuning, nightBonus).Sanitized();
     }
 
-    bool HasAnyEnemyPrefab()
+    public void ApplyCurrentWaveToAll()
     {
-        if (enemyPrefabs != null && enemyPrefabs.Count > 0)
-            return true;
+        IReadOnlyList<EnemySpawner> spawners = EnemySpawner.Active;
 
-        return initialEnemyPrefabs != null && initialEnemyPrefabs.Count > 0;
+        for (int i = spawners.Count - 1; i >= 0; i--)
+            ApplyCurrentWaveTo(spawners[i]);
     }
 
-    GameObject GetNightWaveEnemyPrefab()
+    /// <summary>웨이브 도중에 새로 등록된 스포너가 현재 수치를 따라오게 합니다.</summary>
+    public void ApplyCurrentWaveTo(EnemySpawner spawner)
     {
-        if (enemyPrefabs == null || enemyPrefabs.Count == 0)
-            return GetInitialEnemyPrefab();
+        if (spawner == null)
+            return;
 
-        return enemyPrefabs[UnityEngine.Random.Range(0, enemyPrefabs.Count)];
+        spawner.ApplyWaveTuning(CurrentTuning, CurrentWaveNumber);
     }
 
-    GameObject GetInitialEnemyPrefab()
+    /// <summary>테스트용으로 웨이브를 직접 지정합니다.</summary>
+    public void SetWave(int waveNumber)
     {
-        List<GameObject> source =
-            (initialEnemyPrefabs != null && initialEnemyPrefabs.Count > 0)
-                ? initialEnemyPrefabs
-                : enemyPrefabs;
-
-        if (source == null || source.Count == 0)
-            return null;
-
-        return source[UnityEngine.Random.Range(0, source.Count)];
+        CurrentWaveNumber = Mathf.Max(1, waveNumber);
+        RefreshTuning(notify: true);
     }
 
-    bool TryGetMapBounds(out MapPlayBoundsData bounds)
+    [ContextMenu("다음 웨이브로 진행 (테스트)")]
+    void AdvanceWaveFromMenu()
     {
-        if (TryGetNavMeshMapBounds(out bounds))
-            return true;
-
-        return MapPlayBounds.TryResolve(
-            boundsSource,
-            manualBoundsOrigin,
-            manualBoundsSize,
-            out bounds);
-    }
-
-    static bool TryGetNavMeshMapBounds(out MapPlayBoundsData bounds)
-    {
-        bounds = default;
-
-        MapGrid mapGrid = MapGrid.Instance;
-
-        if (mapGrid == null)
-            mapGrid = UnityEngine.Object.FindObjectOfType<MapGrid>();
-
-        if (mapGrid == null)
-            return false;
-
-        mapGrid.Refresh();
-
-        if (!mapGrid.IsNavMeshBoundsActive ||
-            mapGrid.CellCountX <= 0 ||
-            mapGrid.CellCountZ <= 0)
-        {
-            return false;
-        }
-
-        bounds.IsValid = true;
-        bounds.Origin = mapGrid.MapOrigin;
-        bounds.Width = mapGrid.MapSize.x;
-        bounds.Length = mapGrid.MapSize.y;
-        return true;
-    }
-
-    Vector3 FindPlayerHeadquartersPosition()
-    {
-        Vector3 fallback = Vector3.zero;
-        bool hasFallback = false;
-
-        foreach (SelectableEntity building in BuildingRegistry.Buildings)
-        {
-            if (building == null || building.ownerId != playerOwnerId)
-                continue;
-
-            if (!hasFallback)
-            {
-                fallback = building.transform.position;
-                hasFallback = true;
-            }
-
-            if (building.GetComponent<Headquarters>() != null)
-                return building.transform.position;
-        }
-
-        if (hasFallback)
-            return fallback;
-
-        if (UnitSelectionManager.Instance != null)
-            return UnitSelectionManager.Instance.transform.position;
-
-        return Vector3.zero;
-    }
-
-    bool TryGetRandomBuildingPlacement(
-        MapPlayBoundsData bounds,
-        Vector3 avoidCenter,
-        float minDistanceFromAvoid,
-        float edgeMargin,
-        bool avoidPlayerVision,
-        Vector2Int footprintCells,
-        out Vector2Int originCell,
-        out Vector3 position)
-    {
-        originCell = default;
-        position = Vector3.zero;
-
-        MapGrid mapGrid = MapGrid.Instance;
-        float cellSize = mapGrid != null ? mapGrid.cellSize : 2f;
-        float footprintMargin =
-            Mathf.Max(footprintCells.x, footprintCells.y) * cellSize * 0.5f;
-        float margin = edgeMargin + footprintMargin;
-
-        float minX = bounds.Origin.x + margin;
-        float maxX = bounds.Origin.x + bounds.Width - margin;
-        float minZ = bounds.Origin.z + margin;
-        float maxZ = bounds.Origin.z + bounds.Length - margin;
-
-        if (maxX <= minX || maxZ <= minZ)
-            return false;
-
-        float minDistanceSqr = minDistanceFromAvoid * minDistanceFromAvoid;
-        int attempts = Mathf.Max(1, randomPositionAttempts);
-
-        if (avoidPlayerVision)
-            attempts = Mathf.Max(attempts, randomPositionAttempts * 4);
-
-        for (int attempt = 0; attempt < attempts; attempt++)
-        {
-            float x = UnityEngine.Random.Range(minX, maxX);
-            float z = UnityEngine.Random.Range(minZ, maxZ);
-
-            if (!UnitSpawnUtility.TrySampleTopmostAtXZ(x, z, out Vector3 sampled))
-                continue;
-
-            if (mapGrid != null)
-            {
-                if (!mapGrid.TryGetSnappedFootprintPlacement(
-                        sampled,
-                        footprintCells,
-                        out Vector2Int candidateOrigin,
-                        out Vector3 center))
-                {
-                    continue;
-                }
-
-                if (GridOccupancy.Instance != null &&
-                    !GridOccupancy.Instance.CanOccupy(
-                        candidateOrigin,
-                        footprintCells,
-                        center.y))
-                {
-                    continue;
-                }
-
-                if ((center - avoidCenter).sqrMagnitude < minDistanceSqr)
-                    continue;
-
-                if (avoidPlayerVision &&
-                    EnemySpawnUtility.IsFootprintVisibleToLocalPlayer(
-                        center,
-                        footprintCells))
-                {
-                    continue;
-                }
-
-                originCell = candidateOrigin;
-                position = center;
-                return true;
-            }
-
-            if ((sampled - avoidCenter).sqrMagnitude < minDistanceSqr)
-                continue;
-
-            if (avoidPlayerVision &&
-                EnemySpawnUtility.IsVisibleToLocalPlayer(sampled))
-            {
-                continue;
-            }
-
-            originCell = default;
-            position = sampled;
-            return true;
-        }
-
-        return false;
+        SetWave(CurrentWaveNumber + 1);
     }
 }

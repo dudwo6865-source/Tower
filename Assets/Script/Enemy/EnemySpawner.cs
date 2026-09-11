@@ -55,7 +55,29 @@ public class EnemySpawner : MonoBehaviour
     [Tooltip("밤이 되면 스폰된 적이 어그로에 적이 없을 때 플레이어 HQ로 진군합니다.")]
     public bool advanceToEnemyBuildings = true;
 
+    [Header("Wave")]
+    [Tooltip("이 웨이브(1부터)가 되어야 활동을 시작합니다. 1이면 처음부터 활동합니다. " +
+             "맵에 스포너를 미리 다 깔아두고 웨이브가 진행될수록 하나씩 깨어나게 할 때 씁니다.")]
+    public int activateFromWave = 1;
+
     public int AliveCount { get; private set; }
+
+    /// <summary>씬에서 활성화된 모든 스포너입니다. WaveManager가 웨이브 수치를 적용할 때 씁니다.</summary>
+    public static IReadOnlyList<EnemySpawner> Active => active;
+
+    static readonly List<EnemySpawner> active = new List<EnemySpawner>();
+
+    /// <summary>현재 웨이브 보정이 적용된 실제 값입니다.</summary>
+    public int EffectiveEnemiesPerSpawn { get; private set; }
+
+    public float EffectiveSpawnInterval { get; private set; }
+
+    public int EffectiveMaxAliveEnemies { get; private set; }
+
+    public int EffectiveEnemiesOnDeath { get; private set; }
+
+    /// <summary>activateFromWave에 도달해 이 웨이브에 활동하는지 여부입니다.</summary>
+    public bool IsAwakeForCurrentWave { get; private set; } = true;
 
     readonly List<EnemyCombatAI> spawnedAIs = new List<EnemyCombatAI>();
     EntityHealth health;
@@ -63,6 +85,15 @@ public class EnemySpawner : MonoBehaviour
     float spawnTimer;
     float attackedTimer;
     bool isDead;
+
+    // 인스펙터에 적어둔 값을 기준값으로 보관한다. 웨이브 보정은 항상 이 기준값에서
+    // 다시 계산하므로, 웨이브가 여러 번 바뀌어도 배율이 누적되지 않는다.
+    int baseEnemiesPerSpawn;
+    float baseSpawnInterval;
+    int baseMaxAliveEnemies;
+    int baseEnemiesOnDeath;
+
+    WaveTuning tuning = new WaveTuning();
 
     void Awake()
     {
@@ -74,18 +105,54 @@ public class EnemySpawner : MonoBehaviour
             health.OnDamaged += HandleDamaged;
         }
 
+        baseEnemiesPerSpawn = enemiesPerSpawn;
+        baseSpawnInterval = spawnInterval;
+        baseMaxAliveEnemies = maxAliveEnemies;
+        baseEnemiesOnDeath = enemiesOnDeath;
+
+        ApplyWaveTuning(new WaveTuning(), 1);
+
         if (spawnPeriodically)
-            spawnTimer = Mathf.Max(0.1f, spawnInterval);
+            spawnTimer = Mathf.Max(0.1f, EffectiveSpawnInterval);
     }
 
     void OnEnable()
     {
         BindDayNightCycle();
+
+        if (!active.Contains(this))
+            active.Add(this);
+
+        // 웨이브 도중에 생긴 스포너도 바로 현재 웨이브 수치를 따르게 한다.
+        WaveManager.Instance?.ApplyCurrentWaveTo(this);
     }
 
     void OnDisable()
     {
         UnbindDayNightCycle();
+        active.Remove(this);
+    }
+
+    /// <summary>WaveManager가 웨이브마다 호출합니다. 기준값에 보정을 적용해 실제 값을 다시 만듭니다.</summary>
+    public void ApplyWaveTuning(WaveTuning waveTuning, int waveNumber)
+    {
+        tuning = (waveTuning ?? new WaveTuning()).Sanitized();
+        IsAwakeForCurrentWave = waveNumber >= Mathf.Max(1, activateFromWave);
+
+        EffectiveEnemiesPerSpawn = Mathf.Max(
+            0,
+            Mathf.RoundToInt(baseEnemiesPerSpawn * tuning.spawnCountMultiplier) + tuning.spawnCountBonus);
+
+        EffectiveEnemiesOnDeath = Mathf.Max(
+            0,
+            Mathf.RoundToInt(baseEnemiesOnDeath * tuning.spawnCountMultiplier));
+
+        EffectiveSpawnInterval = Mathf.Max(0.1f, baseSpawnInterval * tuning.spawnIntervalMultiplier);
+
+        // 기준값이 0(무제한)이면 배율을 곱해도 무제한으로 둔다.
+        EffectiveMaxAliveEnemies = baseMaxAliveEnemies <= 0
+            ? 0
+            : Mathf.Max(1, Mathf.RoundToInt(baseMaxAliveEnemies * tuning.maxAliveMultiplier));
     }
 
     void OnDestroy()
@@ -124,7 +191,7 @@ public class EnemySpawner : MonoBehaviour
 
     void Update()
     {
-        if (isDead)
+        if (isDead || !IsAwakeForCurrentWave)
             return;
 
         if (attackedTimer > 0f)
@@ -138,7 +205,7 @@ public class EnemySpawner : MonoBehaviour
         if (!shouldSpawn)
             return;
 
-        if (maxAliveEnemies > 0 && AliveCount >= maxAliveEnemies)
+        if (EffectiveMaxAliveEnemies > 0 && AliveCount >= EffectiveMaxAliveEnemies)
             return;
 
         spawnTimer -= Time.deltaTime;
@@ -146,8 +213,8 @@ public class EnemySpawner : MonoBehaviour
         if (spawnTimer > 0f)
             return;
 
-        spawnTimer = Mathf.Max(0.1f, spawnInterval);
-        SpawnBurst(enemiesPerSpawn, respectAliveCap: true);
+        spawnTimer = Mathf.Max(0.1f, EffectiveSpawnInterval);
+        SpawnBurst(EffectiveEnemiesPerSpawn, respectAliveCap: true);
     }
 
     void HandlePhaseStarted(DayNightPhase phase)
@@ -172,8 +239,13 @@ public class EnemySpawner : MonoBehaviour
 
         isDead = true;
 
+        // 아직 깨어나지 않은 스포너를 미리 부수면 방출도 없다. 웨이브가 오기 전에
+        // 선제 공격으로 정리하는 플레이가 손해 보지 않게 한다.
+        if (!IsAwakeForCurrentWave)
+            return;
+
         // 파괴 시 방출은 생존 상한을 무시하고 정해진 수만큼 모두 스폰한다.
-        SpawnBurst(enemiesOnDeath, respectAliveCap: false);
+        SpawnBurst(EffectiveEnemiesOnDeath, respectAliveCap: false);
     }
 
     void SpawnBurst(int count, bool respectAliveCap)
@@ -184,8 +256,8 @@ public class EnemySpawner : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             if (respectAliveCap &&
-                maxAliveEnemies > 0 &&
-                AliveCount >= maxAliveEnemies)
+                EffectiveMaxAliveEnemies > 0 &&
+                AliveCount >= EffectiveMaxAliveEnemies)
                 break;
 
             GameObject prefab =
@@ -200,14 +272,16 @@ public class EnemySpawner : MonoBehaviour
                 avoidPlayerVision: false,
                 spawnPositionAttempts);
 
+            // 웨이브 스탯 가중치를 여기서 적용한다. 스폰된 개체에만 붙으므로
+            // 이미 살아있는 적은 그대로 두고, 이후 스폰부터 강해진다.
             GameObject enemyObject = EnemySpawnUtility.SpawnEnemy(
                 prefab,
                 position,
                 prefab.transform.rotation,
                 enemyOwnerId,
-                1f,
-                1f,
-                1f,
+                tuning.healthMultiplier,
+                tuning.damageMultiplier,
+                tuning.speedMultiplier,
                 TrackAlive);
 
             if (enemyObject == null)

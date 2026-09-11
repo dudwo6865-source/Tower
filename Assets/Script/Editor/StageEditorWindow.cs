@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Text;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -409,39 +408,106 @@ public class StageEditorWindow : EditorWindow
 
         DrawOverrideToggle("overrideWave", "이 스테이지 값으로 WaveManager 덮어쓰기");
 
+        EditorGUILayout.HelpBox(
+            "스포너(EnemySpawner)는 맵 프리팹에 미리 배치합니다.\n" +
+            "여기서는 웨이브마다 그 스포너들의 스폰량과 스폰되는 적의 스탯 가중치만 조절합니다.",
+            MessageType.Info);
+
         EditorGUI.BeginDisabledGroup(!selected.overrideWave);
 
-        EditorGUILayout.LabelField("적 프리팹", EditorStyles.boldLabel);
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("enemyPrefabs"), new GUIContent("밤 스포너 프리팹"), true);
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("initialEnemyPrefabs"), new GUIContent("초기 배치 프리팹(비우면 위 목록 사용)"), true);
+        SerializedProperty plan = serializedObject.FindProperty("wavePlan");
+
+        EditorGUILayout.LabelField("웨이브별 수치", EditorStyles.boldLabel);
+        EditorGUILayout.PropertyField(
+            plan.FindPropertyRelative("waves"),
+            new GUIContent("웨이브 표 (0번 = 웨이브 1)"),
+            true);
+
+        EditorGUILayout.PropertyField(
+            plan.FindPropertyRelative("growthPerWaveAfterLast"),
+            new GUIContent("표 이후 웨이브 증가율"),
+            true);
 
         EditorGUILayout.Space(4);
-        EditorGUILayout.LabelField("초기 배치 (Day Start)", EditorStyles.boldLabel);
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("initialEnemyCount"), new GUIContent("초기 스포너 수"));
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("initialMinDistanceFromHq"), new GUIContent("본부와 최소 거리"));
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("mapEdgeMargin"), new GUIContent("맵 가장자리 여백"));
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("randomPositionAttempts"), new GUIContent("배치 위치 샘플 시도 횟수"));
-
-        EditorGUILayout.Space(4);
-        EditorGUILayout.LabelField("밤 웨이브", EditorStyles.boldLabel);
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("nightWaveStartDelay"), new GUIContent("밤 시작 후 대기(초)"));
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("nightWaveMinDistanceFromHq"), new GUIContent("본부와 최소 거리"));
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("nightWaveAvoidPlayerVision"), new GUIContent("플레이어 시야 밖에 우선 배치"));
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("spawnersPerNight"), new GUIContent("밤마다 스포너 수 (0=1번째 밤)"), true);
+        EditorGUILayout.LabelField("밤 보정", EditorStyles.boldLabel);
+        EditorGUILayout.PropertyField(
+            serializedObject.FindProperty("applyNightBonus"),
+            new GUIContent("밤에 추가 보정 적용"));
+        EditorGUILayout.PropertyField(
+            serializedObject.FindProperty("nightBonus"),
+            new GUIContent("밤 보정"),
+            true);
 
         EditorGUI.EndDisabledGroup();
 
         if (selected.overrideWave)
+            DrawWavePreview();
+
+        EditorGUILayout.Space(6);
+    }
+
+    const int WavePreviewCount = 8;
+
+    void DrawWavePreview()
+    {
+        WavePlan plan = selected.wavePlan;
+
+        if (plan == null || plan.AuthoredWaveCount == 0)
         {
-            if (!HasAnyPrefab(selected.enemyPrefabs) && !HasAnyPrefab(selected.initialEnemyPrefabs))
-                EditorGUILayout.HelpBox("적 프리팹이 하나도 없습니다. 이 스테이지에서는 적이 생성되지 않습니다.", MessageType.Warning);
+            EditorGUILayout.HelpBox(
+                "웨이브 표가 비어 있습니다. 모든 웨이브가 기본값(배율 1)으로 진행됩니다.",
+                MessageType.Warning);
+            return;
+        }
+
+        EditorGUILayout.Space(4);
+        EditorGUILayout.LabelField(
+            $"미리보기 (웨이브 1~{WavePreviewCount})",
+            EditorStyles.boldLabel);
+
+        for (int wave = 1; wave <= WavePreviewCount; wave++)
+        {
+            WaveTuning tuning = plan.Evaluate(wave);
+            bool extrapolated = wave > plan.AuthoredWaveCount;
 
             EditorGUILayout.LabelField(
-                $"미리보기 (1~8번째 밤): {BuildSpawnerPreview(selected.spawnersPerNight, 8)}",
+                $"웨이브 {wave}{(extrapolated ? " (증가율)" : "")}",
+                tuning.ToShortSummary(),
                 EditorStyles.miniLabel);
         }
 
-        EditorGUILayout.Space(6);
+        if (selected.applyNightBonus)
+        {
+            WaveTuning night = WaveTuning.Combine(
+                plan.Evaluate(1),
+                selected.nightBonus).Sanitized();
+
+            EditorGUILayout.LabelField(
+                "웨이브 1 (밤)",
+                night.ToShortSummary(),
+                EditorStyles.miniLabel);
+        }
+
+        if (IsGrowthFlat(plan.growthPerWaveAfterLast))
+        {
+            EditorGUILayout.HelpBox(
+                $"증가율이 모두 1이라 웨이브 {plan.AuthoredWaveCount} 이후에는 난이도가 더 오르지 않습니다.",
+                MessageType.Info);
+        }
+    }
+
+    static bool IsGrowthFlat(WaveTuning growth)
+    {
+        if (growth == null)
+            return true;
+
+        return Mathf.Approximately(growth.spawnCountMultiplier, 1f) &&
+               growth.spawnCountBonus == 0 &&
+               Mathf.Approximately(growth.spawnIntervalMultiplier, 1f) &&
+               Mathf.Approximately(growth.maxAliveMultiplier, 1f) &&
+               Mathf.Approximately(growth.healthMultiplier, 1f) &&
+               Mathf.Approximately(growth.damageMultiplier, 1f) &&
+               Mathf.Approximately(growth.speedMultiplier, 1f);
     }
 
     void DrawWinConditionSection()
@@ -500,32 +566,7 @@ public class StageEditorWindow : EditorWindow
         GUI.backgroundColor = prev;
     }
 
-    static bool HasAnyPrefab(List<GameObject> list) => list != null && list.Count > 0;
-
     static float SafeDivide(float a, float b) => b <= 0f ? 0f : a / b;
-
-    static string BuildSpawnerPreview(List<int> list, int previewCount)
-    {
-        if (list == null || list.Count == 0)
-            return "(설정 없음)";
-
-        StringBuilder sb = new StringBuilder();
-
-        for (int i = 0; i < previewCount; i++)
-        {
-            int index = Mathf.Clamp(i, 0, list.Count - 1);
-            int value = Mathf.Max(0, list[index]);
-            sb.Append(value);
-
-            if (i < previewCount - 1)
-                sb.Append(", ");
-        }
-
-        if (previewCount >= list.Count)
-            sb.Append($"  ({list.Count}밤 이후 마지막 값 유지)");
-
-        return sb.ToString();
-    }
 
     // ---------- Stage list actions ----------
 
@@ -631,16 +672,9 @@ public class StageEditorWindow : EditorWindow
         WaveManager wave = UnityEngine.Object.FindFirstObjectByType<WaveManager>();
         if (wave != null)
         {
-            selected.enemyPrefabs = new List<GameObject>(wave.enemyPrefabs ?? new List<GameObject>());
-            selected.initialEnemyPrefabs = new List<GameObject>(wave.initialEnemyPrefabs ?? new List<GameObject>());
-            selected.initialEnemyCount = wave.initialEnemyCount;
-            selected.initialMinDistanceFromHq = wave.initialMinDistanceFromHq;
-            selected.mapEdgeMargin = wave.mapEdgeMargin;
-            selected.randomPositionAttempts = wave.randomPositionAttempts;
-            selected.nightWaveStartDelay = wave.nightWaveStartDelay;
-            selected.nightWaveMinDistanceFromHq = wave.nightWaveMinDistanceFromHq;
-            selected.nightWaveAvoidPlayerVision = wave.nightWaveAvoidPlayerVision;
-            selected.spawnersPerNight = new List<int>(wave.spawnersPerNight ?? new List<int>());
+            selected.wavePlan = wave.wavePlan != null ? wave.wavePlan.Clone() : new WavePlan();
+            selected.applyNightBonus = wave.applyNightBonus;
+            selected.nightBonus = new WaveTuning(wave.nightBonus);
         }
 
         GameResultManager result = UnityEngine.Object.FindFirstObjectByType<GameResultManager>();
@@ -703,22 +737,12 @@ public class StageEditorWindow : EditorWindow
             {
                 Undo.RecordObject(wave, "Apply Stage To Scene");
 
-                if (HasAnyPrefab(selected.enemyPrefabs))
-                    wave.enemyPrefabs = new List<GameObject>(selected.enemyPrefabs);
+                wave.wavePlan = selected.wavePlan != null
+                    ? selected.wavePlan.Clone()
+                    : new WavePlan();
 
-                if (HasAnyPrefab(selected.initialEnemyPrefabs))
-                    wave.initialEnemyPrefabs = new List<GameObject>(selected.initialEnemyPrefabs);
-
-                wave.initialEnemyCount = selected.initialEnemyCount;
-                wave.initialMinDistanceFromHq = selected.initialMinDistanceFromHq;
-                wave.mapEdgeMargin = selected.mapEdgeMargin;
-                wave.randomPositionAttempts = selected.randomPositionAttempts;
-                wave.nightWaveStartDelay = selected.nightWaveStartDelay;
-                wave.nightWaveMinDistanceFromHq = selected.nightWaveMinDistanceFromHq;
-                wave.nightWaveAvoidPlayerVision = selected.nightWaveAvoidPlayerVision;
-                wave.spawnersPerNight = selected.spawnersPerNight != null
-                    ? new List<int>(selected.spawnersPerNight)
-                    : new List<int>();
+                wave.applyNightBonus = selected.applyNightBonus;
+                wave.nightBonus = new WaveTuning(selected.nightBonus);
 
                 EditorUtility.SetDirty(wave);
                 appliedAny = true;
