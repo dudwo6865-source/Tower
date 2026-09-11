@@ -41,6 +41,13 @@ public class PlacementGridVisualizer : MonoBehaviour
     private float lastPreferredY = float.NaN;
     private float preferredSampleY;
 
+    // OnValidate가 인스펙터 값(색상/inset/radius 등)이 바뀔 때 바로 다시 그릴 수 있도록
+    // 가장 최근에 HandlePreviewChanged로 받은 미리보기 상태를 별도로 보관한다.
+    private bool hasCurrentPreview;
+    private Vector2Int currentOriginCell;
+    private Vector2Int currentFootprintCells = Vector2Int.one;
+    private bool currentIsValid;
+
     void Awake()
     {
         placementController = GetComponent<TowerPlacementController>();
@@ -81,12 +88,14 @@ public class PlacementGridVisualizer : MonoBehaviour
     {
         if (MapGrid.Instance == null)
         {
+            hasCurrentPreview = false;
             SetVisualsActive(false);
             return;
         }
 
         if (!state.hasPreview)
         {
+            hasCurrentPreview = false;
             SetVisualsActive(false);
             return;
         }
@@ -100,6 +109,11 @@ public class PlacementGridVisualizer : MonoBehaviour
         // 풋프린트 표시가 안 맞는 문제가 있었다.
         Vector2Int originCell = state.originCell;
         preferredSampleY = state.centerWorld.y;
+
+        hasCurrentPreview = true;
+        currentOriginCell = originCell;
+        currentFootprintCells = state.footprintCells;
+        currentIsValid = state.isValid;
 
         bool layoutChanged = originCell != lastFootprintOrigin ||
             state.footprintCells != lastFootprintSize;
@@ -134,6 +148,30 @@ public class PlacementGridVisualizer : MonoBehaviour
 
         if (footprintMaterial != null)
             Destroy(footprintMaterial);
+    }
+
+    void OnValidate()
+    {
+        // Awake가 아직 실행되지 않았다면(런타임에 막 AddComponent된 직후 Unity가 자동으로
+        // 호출하는 경우) 여기서 손대지 않는다. Awake가 곧이어 정상적으로 초기화한다.
+        // 이 시점에 EnsureVisuals()로 새 GameObject/컴포넌트를 만들면 OnValidate 안에서
+        // AddComponent를 호출하는 셈이 되어 Unity가 경고를 띄운다.
+        if (visualsRoot == null || footprintMesh == null || footprintMaterial == null)
+            return;
+
+        InvalidateCache();
+
+        // 배치 중에 색상/inset/모서리 반경 같은 인스펙터 값을 바꾸면, 고스트를 움직이지
+        // 않아도 바로 반영되도록 지금 보이고 있는 풋프린트를 즉시 다시 그린다.
+        if (hasCurrentPreview && visualsRoot.gameObject.activeSelf)
+        {
+            RebuildFootprintMesh(currentOriginCell, currentFootprintCells, currentIsValid);
+
+            lastFootprintOrigin = currentOriginCell;
+            lastFootprintSize = currentFootprintCells;
+            lastFootprintValid = currentIsValid;
+            lastPreferredY = preferredSampleY;
+        }
     }
 
     void EnsureVisuals()
