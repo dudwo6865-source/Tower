@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 // 하나의 맵(레벨)을 정의하는 데이터 에셋입니다.
 // 지형·정적 오브젝트·사전 배치물은 mapRootPrefab(프리팹)에 담고,
-// 그리드/경제/데이나잇/스포너 웨이브 등 숫자 파라미터는 여기서 관리합니다.
+// 경제/데이나잇/스포너 웨이브 등 숫자 파라미터는 여기서 관리합니다.
 // MapLoader가 이 에셋을 받아 맵을 인스턴스화하고 설정을 주입합니다.
 [CreateAssetMenu(menuName = "Tank/Map Config", fileName = "MapConfig")]
 public class MapConfig : ScriptableObject
@@ -22,10 +22,6 @@ public class MapConfig : ScriptableObject
     [Header("Map Content")]
     [Tooltip("MapRoot 컴포넌트가 붙은 맵 루트 프리팹입니다. (지형 + 정적 오브젝트 + NavMeshSurface)")]
     public GameObject mapRootPrefab;
-
-    [Header("Grid")]
-    [Tooltip("한 칸의 월드 크기(m). 로드 시 MapGrid.cellSize에 적용됩니다.")]
-    public float cellSize = 2f;
 
     [Header("Economy (Watt)")]
     [Tooltip("켜면 이 맵의 Watt 설정으로 WattManager를 덮어씁니다.")]

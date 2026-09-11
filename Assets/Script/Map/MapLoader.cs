@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 // MapConfig를 받아 맵을 로드하는 오케스트레이터입니다.
-// 가장 이른 실행 순서(-1000)로 두어, 씬의 매니저(MapGrid/WattManager/
+// 가장 이른 실행 순서(-1000)로 두어, 씬의 매니저(WattManager/
 // DayNightCycle/WaveManager)들이 자신의 Awake/Start를 실행하기 "전에"
 //   1) 설정값을 각 매니저에 주입하고
 //   2) 맵 프리팹을 인스턴스화 + NavMesh를 굽습니다.
@@ -98,7 +98,6 @@ public class MapLoader : MonoBehaviour
 
         // 매니저들이 자신의 Awake/Start에서 읽도록, 먼저 설정값을 주입한다.
         // (MapLoader가 가장 이른 실행 순서이므로 매니저 Awake보다 앞선다.)
-        ApplyGridConfig(config);
         ApplyEconomyConfig(config);
         ApplyDayNightConfig(config);
         ApplyWaveConfig(config);
@@ -140,14 +139,6 @@ public class MapLoader : MonoBehaviour
             CurrentMap.BuildNavMesh();
         else
             CurrentMap.RefreshMapGrid();
-    }
-
-    void ApplyGridConfig(MapConfig config)
-    {
-        MapGrid grid = FindFirstObjectByType<MapGrid>();
-
-        if (grid != null)
-            grid.cellSize = config.cellSize;
     }
 
     void ApplyEconomyConfig(MapConfig config)
