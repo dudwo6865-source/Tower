@@ -216,12 +216,13 @@ MonoBehaviour:
   spawnPeriodically: 1
   spawnInterval: 20
   enemiesPerSpawn: 3
-  maxAliveEnemies: 20
+  maxAliveEnemies: 0
   allyDetectRadius: 30
   detectUnitsOnly: 1
   attackedSpawnDuration: 5
   enemiesOnDeath: 10
   advanceToEnemyBuildings: 1
+  activateFromWave: 1
 --- !u!1001 &8859745303724175636
 PrefabInstance:
   m_ObjectHideFlags: 0
