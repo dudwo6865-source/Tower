@@ -7,6 +7,16 @@ using UnityEngine;
 //   2) 맵 프리팹을 인스턴스화 + NavMesh를 굽습니다.
 // 이렇게 하면 매니저들은 주입된 값과 인스턴스화된 스포너를 그대로 읽어
 // 별도 수정 없이 정상 동작합니다.
+// 씬에 맵(MapRoot)이 이미 놓여 있을 때의 처리 방식입니다.
+public enum SceneMapHandling
+{
+    // 씬에 남아 있는 맵을 제거하고 스테이지의 맵 프리팹을 새로 만듭니다. (겹침 방지)
+    Replace,
+
+    // 씬에 있는 맵을 그대로 씁니다. 맵을 씬에 꺼내 편집하는 중에 편합니다.
+    UseSceneMap
+}
+
 [DefaultExecutionOrder(-1000)]
 [DisallowMultipleComponent]
 public class MapLoader : MonoBehaviour
@@ -41,6 +51,12 @@ public class MapLoader : MonoBehaviour
 
     [Tooltip("Awake에서 자동으로 맵을 로드합니다.")]
     public bool loadOnAwake = true;
+
+    [Header("Scene Map")]
+    [Tooltip("씬에 맵(MapRoot)이 이미 놓여 있을 때 어떻게 할지입니다.\n" +
+        "Replace: 씬의 맵을 제거하고 스테이지의 맵 프리팹을 새로 만듭니다. 맵이 두 장 겹치는 것을 막습니다.\n" +
+        "Use Scene Map: 씬에 있는 맵을 그대로 쓰고 프리팹을 만들지 않습니다. 맵을 씬에 꺼내 편집하는 중에 씁니다.")]
+    public SceneMapHandling sceneMapHandling = SceneMapHandling.Replace;
 
     public MapConfig LoadedConfig { get; private set; }
     public MapRoot CurrentMap { get; private set; }
@@ -102,9 +118,19 @@ public class MapLoader : MonoBehaviour
         ApplyWaveConfig(config);
         ApplyWinConditionConfig(config);
 
-        // 재로드 대비: 기존 맵 인스턴스 제거
+        // 재로드 대비: 이전에 만든 맵 인스턴스 제거
         if (CurrentMap != null)
-            Destroy(CurrentMap.gameObject);
+            RemoveMapRoot(CurrentMap);
+
+        CurrentMap = null;
+
+        // 씬에 미리 놓여 있는 맵을 먼저 처리한다. 그대로 쓰기로 했다면 프리팹은 만들지 않는다.
+        if (TryTakeSceneMap(out MapRoot sceneMap))
+        {
+            CurrentMap = sceneMap;
+            PrepareLoadedMap();
+            return;
+        }
 
         if (config.mapRootPrefab == null)
         {
@@ -131,6 +157,14 @@ public class MapLoader : MonoBehaviour
             return;
         }
 
+        PrepareLoadedMap();
+    }
+
+    void PrepareLoadedMap()
+    {
+        if (CurrentMap == null)
+            return;
+
         // 런타임 NavMesh 굽기 옵션이 켜져 있으면 다시 굽는다(소스 메쉬 Read/Write 필요).
         // 꺼져 있으면 프리팹에 미리 구운 NavMesh 데이터가 인스턴스화 시 자동 등록되므로,
         // MapGrid 경계만 갱신한다. (MapGrid.Instance가 아직 없으면 MapGrid가 자신의 Start에서 갱신)
@@ -138,6 +172,62 @@ public class MapLoader : MonoBehaviour
             CurrentMap.BuildNavMesh();
         else
             CurrentMap.RefreshMapGrid();
+    }
+
+    /// <summary>
+    /// 씬에 이미 놓여 있는 맵을 처리합니다.
+    /// 설정이 UseSceneMap이면 첫 번째 맵을 그대로 쓰고, 나머지는(그리고 Replace일 때는 전부) 제거합니다.
+    /// 씬에 맵을 꺼내둔 채로 플레이하면 프리팹이 하나 더 생겨 두 장이 겹치기 때문입니다.
+    /// </summary>
+    bool TryTakeSceneMap(out MapRoot sceneMap)
+    {
+        sceneMap = null;
+
+        // 이미 꺼진(= 방금 제거 처리한) 맵은 제외한다. 꺼져 있는 맵은 겹치지도 않는다.
+        MapRoot[] existing = FindObjectsByType<MapRoot>(
+            FindObjectsInactive.Exclude,
+            FindObjectsSortMode.None);
+
+        for (int i = 0; i < existing.Length; i++)
+        {
+            MapRoot mapRoot = existing[i];
+
+            if (mapRoot == null)
+                continue;
+
+            if (sceneMapHandling == SceneMapHandling.UseSceneMap && sceneMap == null)
+            {
+                sceneMap = mapRoot;
+
+                Debug.Log(
+                    $"MapLoader: 씬에 있는 맵 '{mapRoot.name}'을 그대로 사용합니다. " +
+                    "(Scene Map Handling = Use Scene Map)",
+                    mapRoot);
+
+                continue;
+            }
+
+            Debug.LogWarning(
+                $"MapLoader: 씬에 남아 있던 맵 '{mapRoot.name}'을 제거했습니다. " +
+                "맵은 씬에 두지 말고 스테이지의 Map Root Prefab으로만 관리하세요. " +
+                "(스테이지 에디터의 '씬에서 맵 치우기' 버튼을 쓰면 됩니다.)",
+                mapRoot);
+
+            RemoveMapRoot(mapRoot);
+        }
+
+        return sceneMap != null;
+    }
+
+    void RemoveMapRoot(MapRoot mapRoot)
+    {
+        if (mapRoot == null)
+            return;
+
+        // Destroy는 프레임 끝에 처리된다. 그때까지 두면 맵 아래 오브젝트들의 Awake/Start가
+        // 돌면서 NavMesh와 격자에 등록돼 버리므로, 먼저 꺼서 그 초기화 자체를 막는다.
+        mapRoot.gameObject.SetActive(false);
+        Destroy(mapRoot.gameObject);
     }
 
     void ApplyEconomyConfig(MapConfig config)

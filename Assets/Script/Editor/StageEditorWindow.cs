@@ -336,7 +336,168 @@ public class StageEditorWindow : EditorWindow
                 MessageType.Error);
         }
 
+        DrawSceneMapTools();
+
         EditorGUILayout.Space(6);
+    }
+
+    // 맵은 씬에 두지 않고 프리팹으로만 관리하는 것이 기본이다.
+    // 편집할 때만 잠깐 씬에 꺼냈다가 다시 치울 수 있게 하고,
+    // 꺼내둔 채로 플레이해서 맵이 두 장 겹치는 상황을 미리 경고한다.
+    void DrawSceneMapTools()
+    {
+        MapRoot[] sceneMaps = FindObjectsByType<MapRoot>(
+            FindObjectsInactive.Include,
+            FindObjectsSortMode.None);
+
+        EditorGUILayout.Space(4);
+        EditorGUILayout.LabelField("씬 편집", EditorStyles.boldLabel);
+
+        EditorGUILayout.BeginHorizontal();
+
+        using (new EditorGUI.DisabledScope(selected.mapRootPrefab == null))
+        {
+            if (GUILayout.Button("씬에 맵 꺼내기"))
+                SpawnMapInScene();
+        }
+
+        using (new EditorGUI.DisabledScope(sceneMaps.Length == 0))
+        {
+            if (GUILayout.Button("씬에서 맵 치우기"))
+                RemoveMapsFromScene(sceneMaps);
+        }
+
+        EditorGUILayout.EndHorizontal();
+
+        DrawSceneMapStatus(sceneMaps);
+    }
+
+    void DrawSceneMapStatus(MapRoot[] sceneMaps)
+    {
+        MapLoader loader = FindFirstObjectByType<MapLoader>();
+
+        if (loader == null)
+        {
+            EditorGUILayout.HelpBox(
+                "열려 있는 씬에 MapLoader가 없습니다. 이 스테이지의 값이 씬에 전혀 적용되지 않습니다.\n" +
+                "씬에 MapLoader를 하나 두세요.",
+                MessageType.Warning);
+            return;
+        }
+
+        if (sceneMaps.Length == 0)
+        {
+            EditorGUILayout.LabelField(
+                "씬에 맵 없음 — 플레이하면 MapLoader가 맵 프리팹으로 만듭니다. (권장 상태)",
+                EditorStyles.miniLabel);
+            return;
+        }
+
+        if (sceneMaps.Length > 1)
+        {
+            EditorGUILayout.HelpBox(
+                $"씬에 맵이 {sceneMaps.Length}개 있습니다. 지금도 서로 겹쳐 있습니다.",
+                MessageType.Error);
+        }
+
+        if (!loader.loadOnAwake)
+        {
+            EditorGUILayout.HelpBox(
+                $"씬에 맵 {sceneMaps.Length}개가 놓여 있습니다. MapLoader의 Load On Awake가 꺼져 있어 " +
+                "플레이해도 맵 프리팹은 로드되지 않습니다.",
+                MessageType.Info);
+            return;
+        }
+
+        if (loader.sceneMapHandling == SceneMapHandling.UseSceneMap)
+        {
+            EditorGUILayout.HelpBox(
+                $"씬에 맵 {sceneMaps.Length}개가 놓여 있습니다. MapLoader가 Use Scene Map이라 " +
+                "플레이하면 씬의 맵을 그대로 쓰고 맵 프리팹은 만들지 않습니다. (편집 중에 쓰는 설정입니다)",
+                MessageType.Info);
+            return;
+        }
+
+        EditorGUILayout.HelpBox(
+            $"씬에 맵 {sceneMaps.Length}개가 놓여 있습니다. 플레이하면 MapLoader가 이 맵을 제거하고 " +
+            "맵 프리팹을 새로 만듭니다.\n" +
+            "편집 중이라면 MapLoader의 Scene Map Handling을 Use Scene Map으로 바꾸거나, " +
+            "'씬에서 맵 치우기'로 정리하세요.",
+            MessageType.Warning);
+    }
+
+    void SpawnMapInScene()
+    {
+        if (selected == null || selected.mapRootPrefab == null)
+            return;
+
+        // 이미 꺼내둔 맵이 있는데 하나 더 만들면 그 자리에서 바로 겹친다.
+        MapRoot[] existing = FindObjectsByType<MapRoot>(
+            FindObjectsInactive.Include,
+            FindObjectsSortMode.None);
+
+        if (existing.Length > 0 &&
+            !EditorUtility.DisplayDialog(
+                "씬에 맵 꺼내기",
+                $"씬에 이미 맵이 {existing.Length}개 있습니다. 하나 더 꺼내면 서로 겹칩니다.\n\n" +
+                "계속할까요?",
+                "그래도 꺼내기",
+                "취소"))
+        {
+            return;
+        }
+
+        GameObject instance =
+            PrefabUtility.InstantiatePrefab(selected.mapRootPrefab) as GameObject;
+
+        if (instance == null)
+        {
+            ShowNotification(new GUIContent("맵 프리팹을 씬에 만들지 못했습니다."));
+            return;
+        }
+
+        // MapLoader도 원점에 만든다. 편집 중 위치가 어긋나지 않게 맞춰 둔다.
+        instance.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+
+        Undo.RegisterCreatedObjectUndo(instance, "Spawn Stage Map");
+        Selection.activeGameObject = instance;
+        EditorSceneManager.MarkSceneDirty(instance.scene);
+
+        ShowNotification(new GUIContent(
+            "씬에 맵을 꺼냈습니다. 편집이 끝나면 프리팹에 Apply하고 '씬에서 맵 치우기'를 누르세요."));
+    }
+
+    void RemoveMapsFromScene(MapRoot[] sceneMaps)
+    {
+        if (sceneMaps == null || sceneMaps.Length == 0)
+            return;
+
+        if (!EditorUtility.DisplayDialog(
+                "씬에서 맵 치우기",
+                $"씬에 있는 맵 {sceneMaps.Length}개를 삭제합니다.\n" +
+                "프리팹에 Apply하지 않은 수정은 사라집니다. (Ctrl+Z로 되돌릴 수 있습니다)\n\n" +
+                "계속할까요?",
+                "치우기",
+                "취소"))
+        {
+            return;
+        }
+
+        int removed = 0;
+
+        foreach (MapRoot mapRoot in sceneMaps)
+        {
+            if (mapRoot == null)
+                continue;
+
+            Undo.DestroyObjectImmediate(mapRoot.gameObject);
+            removed++;
+        }
+
+        if (removed > 0)
+            EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+
+        ShowNotification(new GUIContent($"씬에서 맵 {removed}개를 치웠습니다."));
     }
 
     void DrawEconomySection()
