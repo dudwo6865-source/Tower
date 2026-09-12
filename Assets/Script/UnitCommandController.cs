@@ -13,6 +13,9 @@ public class UnitCommandController : MonoBehaviour
     [Tooltip("Esc 키로 대기 중인 명령 모드를 취소합니다.")]
     public bool cancelModeWithEscape = true;
 
+    [Tooltip("우클릭으로 대기 중인 명령 모드를 취소합니다. 취소에 쓰인 우클릭은 이동 명령으로 이어지지 않습니다.")]
+    public bool cancelModeWithRightClick = true;
+
     public UnitCommandMode ActiveMode { get; private set; } = UnitCommandMode.None;
 
     public bool HasPendingMode => ActiveMode != UnitCommandMode.None;
@@ -158,6 +161,23 @@ public class UnitCommandController : MonoBehaviour
     public void CancelMode()
     {
         SetMode(UnitCommandMode.None);
+    }
+
+    /// <summary>
+    /// 명령 모드가 대기 중일 때 들어온 우클릭을 '취소'로 소비합니다.
+    /// 건물 배치(TowerPlacementController)의 우클릭 취소와 동작을 맞춥니다.
+    /// 소비했으면 true를 돌려주므로, 호출한 쪽은 같은 우클릭으로 이동 명령까지 내리지 않게 할 수 있습니다.
+    /// </summary>
+    public bool TryCancelModeWithRightClick()
+    {
+        if (!cancelModeWithRightClick || !HasPendingMode)
+            return false;
+
+        if (!Input.GetMouseButtonDown(1))
+            return false;
+
+        CancelMode();
+        return true;
     }
 
     public void IssueStop()

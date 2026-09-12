@@ -120,9 +120,13 @@ public class UnitSelectionManager : MonoBehaviour
         if (!Input.GetMouseButtonDown(1))
             return;
 
+        // 명령 모드가 대기 중이면 우클릭은 명령이 아니라 '취소'로 쓴다.
         if (UnitCommandController.HasInstance &&
             UnitCommandController.Instance.HasPendingMode)
+        {
+            UnitCommandController.Instance.TryCancelModeWithRightClick();
             return;
+        }
 
         if (BuildingCommandHandler.TryIssueRallyPointFromRightClick())
             return;
