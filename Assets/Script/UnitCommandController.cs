@@ -23,6 +23,9 @@ public class UnitCommandController : MonoBehaviour
     [Tooltip("집결지(Rally Point) 명령의 커서 링 색입니다.")]
     public Color rallyCursorColor = new Color(1f, 0.85f, 0.25f, 0.95f);
 
+    [Tooltip("움직일 수 없는 건물만 선택한 채로 바닥에 명령을 찍었을 때, 지면 표시가 남아 있는 시간(초)입니다.")]
+    public float groundCommandMarkerSeconds = 1.2f;
+
     public UnitCommandMode ActiveMode { get; private set; } = UnitCommandMode.None;
 
     public bool HasPendingMode => ActiveMode != UnitCommandMode.None;
@@ -291,20 +294,12 @@ public class UnitCommandController : MonoBehaviour
 
     bool TryExecuteAttackMode(RaycastHit hit)
     {
-        UnitSelectionManager selection = UnitSelectionManager.Instance;
-
-        if (selection == null)
-            return false;
-
         SelectableEntity clickedEntity =
             hit.collider.GetComponentInParent<SelectableEntity>();
 
-        // 적을 직접 찍었을 때만 그 대상을 지정 공격한다.
-        // 빈 지형은 물론 아군 유닛·건물을 찍어도 그 지점으로 '공격 이동'한다.
-        // (아군 위를 찍었다고 아군을 때리면 진형 한가운데를 찍는 순간 명령이 엉킨다.)
-        if (UnitCommandHandler.TryGetEnemyTarget(
+        // 소속을 가리지 않는다. 아군을 찍으면 아군을 공격하는 강제 공격이 의도된 동작이다.
+        if (UnitCommandHandler.TryGetAttackTarget(
                 clickedEntity,
-                selection.localPlayerOwnerId,
                 out SelectableEntity attackTarget))
         {
             if (UnitCommandHandler.IssueAttackToSelection(attackTarget))
@@ -315,8 +310,20 @@ public class UnitCommandController : MonoBehaviour
         }
 
         // 공격 이동: 찍은 지점으로 이동하면서 도중에 만나는 적과 교전한다.
-        if (UnitCommandHandler.HasCommandableUnits())
-            return UnitCommandHandler.IssueAttackMoveToSelection(hit.point);
+        if (UnitCommandHandler.IssueAttackMoveToSelection(hit.point))
+            return true;
+
+        // 움직일 수 없는 건물(타워)만 선택한 경우다. 실제로 갈 곳은 없지만
+        // 클릭을 삼켜버리면 명령이 씹힌 것처럼 보이므로, 지면에 표시만 남기고 받아들인다.
+        if (BuildingCommandHandler.HasCommandableBuildings())
+        {
+            UnitCommandIndicatorTracker.ShowPointMarker(
+                hit.point,
+                MoveDestinationIndicator.AttackMoveColor,
+                groundCommandMarkerSeconds);
+
+            return true;
+        }
 
         return false;
     }

@@ -14,6 +14,9 @@ public class UnitCommandIndicatorTracker : MonoBehaviour
     Color moveIndicatorColor = MoveDestinationIndicator.MoveColor;
     SelectableEntity attackTarget;
 
+    // 따라갈 유닛이 없는 명령의 마커는 도착 판정이 없으므로 시간으로 지운다.
+    float pointMarkerTimer;
+
     struct MoveTrackEntry
     {
         public NavMeshAgent agent;
@@ -45,6 +48,7 @@ public class UnitCommandIndicatorTracker : MonoBehaviour
 
     void LateUpdate()
     {
+        UpdatePointMarker();
         UpdateMoveTracking();
         UpdateAttackTracking();
     }
@@ -79,6 +83,24 @@ public class UnitCommandIndicatorTracker : MonoBehaviour
         Instance.BeginAttackTracking(attackers, target);
     }
 
+    /// <summary>
+    /// 따라갈 유닛이 없는 명령을 지면에 표시합니다.
+    /// (예: 이동할 수 없는 타워만 선택한 채로 바닥에 공격 명령을 찍은 경우)
+    /// 도착 판정 대신 지정한 시간이 지나면 스스로 사라집니다.
+    /// </summary>
+    public static void ShowPointMarker(
+        Vector3 indicatorPosition,
+        Color indicatorColor,
+        float seconds)
+    {
+        EnsureInstance();
+
+        if (Instance == null)
+            return;
+
+        Instance.BeginPointMarker(indicatorPosition, indicatorColor, seconds);
+    }
+
     public static void ClearTracking()
     {
         if (Instance == null)
@@ -96,6 +118,33 @@ public class UnitCommandIndicatorTracker : MonoBehaviour
         trackerObject.AddComponent<UnitCommandIndicatorTracker>();
     }
 
+    void BeginPointMarker(Vector3 indicatorPosition, Color indicatorColor, float seconds)
+    {
+        // 지면 마커만 바꾼다. 진행 중인 공격 대상 표시는 그대로 둔다.
+        // (타워는 바닥을 찍어도 원래 공격하던 대상을 계속 공격한다.)
+        moveTracks.Clear();
+        moveIndicatorPosition = indicatorPosition;
+        moveIndicatorColor = indicatorColor;
+        pointMarkerTimer = Mathf.Max(0.05f, seconds);
+
+        MoveDestinationIndicator.ShowAt(indicatorPosition, indicatorColor);
+    }
+
+    void UpdatePointMarker()
+    {
+        if (pointMarkerTimer <= 0f)
+            return;
+
+        // 일시정지 중에도 잠깐 보이고 사라지는 표시다.
+        pointMarkerTimer -= Time.unscaledDeltaTime;
+
+        if (pointMarkerTimer > 0f)
+            return;
+
+        pointMarkerTimer = 0f;
+        MoveDestinationIndicator.HideIndicator();
+    }
+
     void BeginMoveTracking(
         IEnumerable<(NavMeshAgent agent, Vector3 destination)> agents,
         Vector3 indicatorPosition,
@@ -104,6 +153,7 @@ public class UnitCommandIndicatorTracker : MonoBehaviour
         moveTracks.Clear();
         attackTracks.Clear();
         attackTarget = null;
+        pointMarkerTimer = 0f;
         moveIndicatorPosition = indicatorPosition;
         moveIndicatorColor = indicatorColor;
 
@@ -136,6 +186,7 @@ public class UnitCommandIndicatorTracker : MonoBehaviour
         moveTracks.Clear();
         attackTracks.Clear();
         attackTarget = target;
+        pointMarkerTimer = 0f;
 
         foreach (var entry in attackers)
         {
@@ -251,6 +302,7 @@ public class UnitCommandIndicatorTracker : MonoBehaviour
         moveTracks.Clear();
         attackTracks.Clear();
         attackTarget = null;
+        pointMarkerTimer = 0f;
         MoveDestinationIndicator.HideIndicator();
         AttackTargetIndicator.HideIndicator();
     }
