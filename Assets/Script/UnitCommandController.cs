@@ -16,6 +16,13 @@ public class UnitCommandController : MonoBehaviour
     [Tooltip("우클릭으로 대기 중인 명령 모드를 취소합니다. 취소에 쓰인 우클릭은 이동 명령으로 이어지지 않습니다.")]
     public bool cancelModeWithRightClick = true;
 
+    [Header("Command Cursor Ring")]
+    [Tooltip("정찰(Patrol) 명령의 커서 링 색입니다.")]
+    public Color patrolCursorColor = new Color(0.3f, 0.7f, 1f, 0.95f);
+
+    [Tooltip("집결지(Rally Point) 명령의 커서 링 색입니다.")]
+    public Color rallyCursorColor = new Color(1f, 0.85f, 0.25f, 0.95f);
+
     public UnitCommandMode ActiveMode { get; private set; } = UnitCommandMode.None;
 
     public bool HasPendingMode => ActiveMode != UnitCommandMode.None;
@@ -53,19 +60,19 @@ public class UnitCommandController : MonoBehaviour
             CancelMode();
         }
 
-        UpdateAttackCursorIndicator();
+        UpdateCommandCursorIndicator();
     }
 
-    // Attack 모드일 때 마우스 아래 지면 위치에 공격 범위 미리보기 원을 표시한다.
-    void UpdateAttackCursorIndicator()
+    // 명령 모드가 켜져 있는 동안 마우스 아래 지면 위치에 명령 링을 표시한다.
+    void UpdateCommandCursorIndicator()
     {
-        if (ActiveMode != UnitCommandMode.Attack)
+        if (!HasPendingMode)
             return;
 
         if (Camera.main == null ||
             (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()))
         {
-            AttackCommandCursorIndicator.HideIndicator();
+            CommandCursorIndicator.HideIndicator();
             return;
         }
 
@@ -73,17 +80,47 @@ public class UnitCommandController : MonoBehaviour
 
         if (!Physics.Raycast(ray, out RaycastHit hit))
         {
-            AttackCommandCursorIndicator.HideIndicator();
+            CommandCursorIndicator.HideIndicator();
             return;
         }
 
-        AttackCommandCursorIndicator.ShowAt(hit.point, GetAttackCursorRadius());
+        CommandCursorIndicator.ShowAt(
+            hit.point,
+            GetCursorRadius(ActiveMode),
+            GetCursorColor(ActiveMode));
+    }
+
+    public Color GetCursorColor(UnitCommandMode mode)
+    {
+        switch (mode)
+        {
+            case UnitCommandMode.Attack:
+                return MoveDestinationIndicator.AttackMoveColor;
+
+            case UnitCommandMode.Patrol:
+                return patrolCursorColor;
+
+            case UnitCommandMode.RallyPoint:
+                return rallyCursorColor;
+
+            default:
+                return MoveDestinationIndicator.MoveColor;
+        }
+    }
+
+    float GetCursorRadius(UnitCommandMode mode)
+    {
+        // 공격 명령만 실제 타격 범위를 보여줄 의미가 있다. 나머지는 기본 크기.
+        if (mode != UnitCommandMode.Attack)
+            return CommandCursorIndicator.DefaultRadius;
+
+        return GetAttackCursorRadius();
     }
 
     // 선택 중인 유닛이 대포(Cannon)라면 스플래시 범위만큼 미리보기 원을 키운다.
     float GetAttackCursorRadius()
     {
-        float radius = AttackCommandCursorIndicator.DefaultRadius;
+        float radius = CommandCursorIndicator.DefaultRadius;
 
         if (UnitSelectionManager.Instance == null)
             return radius;
@@ -138,15 +175,12 @@ public class UnitCommandController : MonoBehaviour
         if (!Physics.Raycast(ray, out RaycastHit hit))
             return false;
 
-        UnitCommandMode executedMode = ActiveMode;
-
         if (!TryExecutePendingMode(hit))
             return false;
 
         // 명령이 실제로 전달됐을 때만 확정 피드백을 재생한다.
         // CancelMode보다 먼저 호출해야 원이 그 자리에서 한 번 튀고 사라진다.
-        if (executedMode == UnitCommandMode.Attack)
-            AttackCommandCursorIndicator.PlayConfirmPulse(hit.point);
+        CommandCursorIndicator.PlayConfirmPulse(hit.point);
 
         suppressSelectionClick = true;
         CancelMode();
@@ -161,10 +195,10 @@ public class UnitCommandController : MonoBehaviour
         ActiveMode = mode;
         OnModeChanged?.Invoke(ActiveMode);
 
-        if (ActiveMode == UnitCommandMode.Attack)
-            AttackCommandCursorIndicator.PlayActivationPulse();
+        if (HasPendingMode)
+            CommandCursorIndicator.PlayActivationPulse();
         else
-            AttackCommandCursorIndicator.HideIndicator();
+            CommandCursorIndicator.HideIndicator();
     }
 
     public void CancelMode()
@@ -257,19 +291,30 @@ public class UnitCommandController : MonoBehaviour
 
     bool TryExecuteAttackMode(RaycastHit hit)
     {
+        UnitSelectionManager selection = UnitSelectionManager.Instance;
+
+        if (selection == null)
+            return false;
+
         SelectableEntity clickedEntity =
             hit.collider.GetComponentInParent<SelectableEntity>();
 
-        if (UnitCommandHandler.TryGetAttackTarget(
+        // 적을 직접 찍었을 때만 그 대상을 지정 공격한다.
+        // 빈 지형은 물론 아군 유닛·건물을 찍어도 그 지점으로 '공격 이동'한다.
+        // (아군 위를 찍었다고 아군을 때리면 진형 한가운데를 찍는 순간 명령이 엉킨다.)
+        if (UnitCommandHandler.TryGetEnemyTarget(
                 clickedEntity,
+                selection.localPlayerOwnerId,
                 out SelectableEntity attackTarget))
         {
             if (UnitCommandHandler.IssueAttackToSelection(attackTarget))
                 return true;
 
-            return BuildingCommandHandler.IssueAttackToSelection(attackTarget);
+            if (BuildingCommandHandler.IssueAttackToSelection(attackTarget))
+                return true;
         }
 
+        // 공격 이동: 찍은 지점으로 이동하면서 도중에 만나는 적과 교전한다.
         if (UnitCommandHandler.HasCommandableUnits())
             return UnitCommandHandler.IssueAttackMoveToSelection(hit.point);
 

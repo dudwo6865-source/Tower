@@ -1,20 +1,20 @@
 using UnityEngine;
 
-// 공격 명령(Attack) 모드에서 마우스가 가리키는 지면 위치에 붉은 원을 표시합니다.
-// 대상을 클릭하기 전까지 커서를 따라다니며, 대포(Cannon) 타입 유닛을 선택 중이면
-// 원 크기를 그 유닛의 스플래시 범위(splashRadius)만큼 키워 보여줍니다.
+// 명령 모드(이동 / 공격 / 정찰 / 집결지)에서 마우스가 가리키는 지면 위치에 원을 표시합니다.
+// 명령을 확정하기 전까지 커서를 따라다니며, 색과 크기는 명령을 내리는 쪽(UnitCommandController)이 정합니다.
+// 공격 명령에서 대포(Cannon) 타입 유닛을 선택 중이면 원이 그 유닛의 스플래시 범위만큼 커집니다.
 //
 // 원은 두 가지로 움직여 입력 상태를 알려줍니다.
 // - 대기 맥동: 명령 모드가 켜져 있는 동안 계속 조금씩 커졌다 작아집니다.
 // - 펄스: 명령 모드에 들어갈 때와 명령을 확정할 때 한 번 빠르게 커졌다 돌아옵니다.
 //   확정 펄스는 사라지면서 흐려지고, 연출이 끝난 뒤에 원을 감춥니다.
-public class AttackCommandCursorIndicator : MonoBehaviour
+public class CommandCursorIndicator : MonoBehaviour
 {
-    public static AttackCommandCursorIndicator Instance { get; private set; }
+    public static CommandCursorIndicator Instance { get; private set; }
 
     public const float DefaultRadius = 1f;
 
-    static readonly Color IndicatorColor = new Color(1f, 0.25f, 0.2f, 0.85f);
+    static readonly Color FallbackColor = new Color(1f, 0.25f, 0.2f, 0.85f);
 
     [Header("Ring")]
     [SerializeField] float lineWidth = 0.1f;
@@ -41,12 +41,13 @@ public class AttackCommandCursorIndicator : MonoBehaviour
 
     LineRenderer lineRenderer;
 
-    // 명령 모드가 지정한 원래 반지름. 맥동은 여기에 배율로 얹는다.
+    // 명령 모드가 지정한 원래 반지름과 색. 맥동은 여기에 배율로 얹는다.
     float baseRadius = DefaultRadius;
+    Color baseColor = FallbackColor;
 
-    // 지금 라인에 반영돼 있는 반지름. 값이 바뀔 때만 점을 다시 만든다.
+    // 지금 라인에 반영돼 있는 값. 바뀔 때만 다시 적용한다.
     float appliedRadius = -1f;
-    float appliedAlphaScale = -1f;
+    Color appliedColor = Color.clear;
 
     float pulseTimer;
     float pulseDuration;
@@ -78,14 +79,14 @@ public class AttackCommandCursorIndicator : MonoBehaviour
             Instance = null;
     }
 
-    public static void ShowAt(Vector3 worldPoint, float radius)
+    public static void ShowAt(Vector3 worldPoint, float radius, Color color)
     {
         EnsureInstance();
 
         if (Instance == null)
             return;
 
-        Instance.ShowInternal(worldPoint, radius);
+        Instance.ShowInternal(worldPoint, radius, color);
     }
 
     public static void HideIndicator()
@@ -133,17 +134,18 @@ public class AttackCommandCursorIndicator : MonoBehaviour
         if (Instance != null)
             return;
 
-        GameObject indicatorObject = new GameObject("AttackCommandCursorIndicator");
-        indicatorObject.AddComponent<AttackCommandCursorIndicator>();
+        GameObject indicatorObject = new GameObject("CommandCursorIndicator");
+        indicatorObject.AddComponent<CommandCursorIndicator>();
     }
 
-    void ShowInternal(Vector3 worldPoint, float radius)
+    void ShowInternal(Vector3 worldPoint, float radius, Color color)
     {
         // 확정 연출 중에는 커서를 따라가지 않고 확정 지점에 그대로 머문다.
         if (!hideWhenPulseEnds || !IsPulsing)
             transform.position = worldPoint + Vector3.up * heightOffset;
 
         baseRadius = radius;
+        baseColor = color;
 
         bool wasVisible = lineRenderer != null && lineRenderer.enabled;
         SetVisible(true);
@@ -197,7 +199,7 @@ public class AttackCommandCursorIndicator : MonoBehaviour
             return;
 
         ApplyRadius(baseRadius * GetPulseScale());
-        ApplyAlphaScale(GetAlphaScale());
+        ApplyColor(GetAlphaScale());
     }
 
     float GetPulseScale()
@@ -245,19 +247,18 @@ public class AttackCommandCursorIndicator : MonoBehaviour
         }
     }
 
-    void ApplyAlphaScale(float alphaScale)
+    void ApplyColor(float alphaScale)
     {
         if (lineRenderer == null)
             return;
 
-        if (Mathf.Approximately(alphaScale, appliedAlphaScale))
-            return;
-
-        appliedAlphaScale = alphaScale;
-
-        Color color = IndicatorColor;
+        Color color = baseColor;
         color.a *= alphaScale;
 
+        if (color == appliedColor)
+            return;
+
+        appliedColor = color;
         lineRenderer.startColor = color;
         lineRenderer.endColor = color;
     }
@@ -266,15 +267,13 @@ public class AttackCommandCursorIndicator : MonoBehaviour
     {
         lineRenderer = gameObject.AddComponent<LineRenderer>();
         lineRenderer.material = new Material(Shader.Find("Sprites/Default"));
-        lineRenderer.startColor = IndicatorColor;
-        lineRenderer.endColor = IndicatorColor;
         lineRenderer.startWidth = lineWidth;
         lineRenderer.endWidth = lineWidth;
         lineRenderer.loop = true;
         lineRenderer.useWorldSpace = false;
         lineRenderer.positionCount = segments;
 
-        appliedAlphaScale = 1f;
+        ApplyColor(1f);
         ApplyRadius(DefaultRadius);
     }
 
