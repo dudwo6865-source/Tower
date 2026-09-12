@@ -79,6 +79,29 @@ public class EnemySpawner : MonoBehaviour
     /// <summary>activateFromWave에 도달해 이 웨이브에 활동하는지 여부입니다.</summary>
     public bool IsAwakeForCurrentWave { get; private set; } = true;
 
+    /// <summary>Awake에서 캡처한 인스펙터 기준값입니다. 웨이브 보정은 항상 이 값에서 다시 계산합니다.</summary>
+    public int BaseEnemiesPerSpawn => baseEnemiesPerSpawn;
+
+    public float BaseSpawnInterval => baseSpawnInterval;
+
+    public int BaseMaxAliveEnemies => baseMaxAliveEnemies;
+
+    /// <summary>마지막으로 적용된 웨이브 번호입니다.</summary>
+    public int AppliedWaveNumber { get; private set; } = 1;
+
+    /// <summary>마지막으로 적용된 보정값입니다.</summary>
+    public WaveTuning AppliedTuning => tuning;
+
+    /// <summary>다음 스폰까지 남은 시간(초)입니다.</summary>
+    public float SpawnCountdown => spawnTimer;
+
+    /// <summary>스포너가 파괴되어 더 이상 스폰하지 않는 상태인지 여부입니다.</summary>
+    public bool IsDead => isDead;
+
+    /// <summary>생존 상한에 걸려 스폰이 멈춰 있는지 여부입니다.</summary>
+    public bool IsBlockedByAliveCap =>
+        EffectiveMaxAliveEnemies > 0 && AliveCount >= EffectiveMaxAliveEnemies;
+
     readonly List<EnemyCombatAI> spawnedAIs = new List<EnemyCombatAI>();
     EntityHealth health;
     DayNightCycle dayNightCycle;
@@ -137,22 +160,54 @@ public class EnemySpawner : MonoBehaviour
     public void ApplyWaveTuning(WaveTuning waveTuning, int waveNumber)
     {
         tuning = (waveTuning ?? new WaveTuning()).Sanitized();
+        AppliedWaveNumber = Mathf.Max(1, waveNumber);
         IsAwakeForCurrentWave = waveNumber >= Mathf.Max(1, activateFromWave);
 
-        EffectiveEnemiesPerSpawn = Mathf.Max(
+        EffectiveEnemiesPerSpawn = GetEffectiveSpawnCount(baseEnemiesPerSpawn, tuning);
+        EffectiveEnemiesOnDeath = GetEffectiveDeathSpawnCount(baseEnemiesOnDeath, tuning);
+        EffectiveSpawnInterval = GetEffectiveSpawnInterval(baseSpawnInterval, tuning);
+        EffectiveMaxAliveEnemies = GetEffectiveMaxAlive(baseMaxAliveEnemies, tuning);
+    }
+
+    // 아래 계산식은 에디터 미리보기(EnemySpawnerEditor)와 공유한다.
+    // 런타임과 미리보기가 서로 다른 값을 보여주는 일이 없도록 한 곳에만 둔다.
+
+    public static int GetEffectiveSpawnCount(int baseCount, WaveTuning tuning)
+    {
+        if (tuning == null)
+            return Mathf.Max(0, baseCount);
+
+        return Mathf.Max(
             0,
-            Mathf.RoundToInt(baseEnemiesPerSpawn * tuning.spawnCountMultiplier) + tuning.spawnCountBonus);
+            Mathf.RoundToInt(baseCount * tuning.spawnCountMultiplier) + tuning.spawnCountBonus);
+    }
 
-        EffectiveEnemiesOnDeath = Mathf.Max(
-            0,
-            Mathf.RoundToInt(baseEnemiesOnDeath * tuning.spawnCountMultiplier));
+    public static int GetEffectiveDeathSpawnCount(int baseCount, WaveTuning tuning)
+    {
+        if (tuning == null)
+            return Mathf.Max(0, baseCount);
 
-        EffectiveSpawnInterval = Mathf.Max(0.1f, baseSpawnInterval * tuning.spawnIntervalMultiplier);
+        return Mathf.Max(0, Mathf.RoundToInt(baseCount * tuning.spawnCountMultiplier));
+    }
 
-        // 기준값이 0(무제한)이면 배율을 곱해도 무제한으로 둔다.
-        EffectiveMaxAliveEnemies = baseMaxAliveEnemies <= 0
-            ? 0
-            : Mathf.Max(1, Mathf.RoundToInt(baseMaxAliveEnemies * tuning.maxAliveMultiplier));
+    public static float GetEffectiveSpawnInterval(float baseInterval, WaveTuning tuning)
+    {
+        if (tuning == null)
+            return Mathf.Max(0.1f, baseInterval);
+
+        return Mathf.Max(0.1f, baseInterval * tuning.spawnIntervalMultiplier);
+    }
+
+    /// <summary>기준값이 0(무제한)이면 배율을 곱해도 무제한으로 둡니다.</summary>
+    public static int GetEffectiveMaxAlive(int baseMaxAlive, WaveTuning tuning)
+    {
+        if (baseMaxAlive <= 0)
+            return 0;
+
+        if (tuning == null)
+            return baseMaxAlive;
+
+        return Mathf.Max(1, Mathf.RoundToInt(baseMaxAlive * tuning.maxAliveMultiplier));
     }
 
     void OnDestroy()
