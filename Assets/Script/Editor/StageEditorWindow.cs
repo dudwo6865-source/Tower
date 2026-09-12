@@ -976,6 +976,10 @@ public class StageEditorWindow : EditorWindow
             serializedObject.FindProperty("initialEnemyAvoidPlayerVision"),
             new GUIContent("시야 밖에 배치"));
 
+        EditorGUILayout.PropertyField(
+            serializedObject.FindProperty("initialEnemyAdvanceToPlayerBase"),
+            new GUIContent("본부로 진군"));
+
         EditorGUI.EndDisabledGroup();
 
         if (selected.overrideInitialEnemies)
@@ -1039,6 +1043,13 @@ public class StageEditorWindow : EditorWindow
                 "시야 밖 배치가 켜져 있습니다. 시작 시 시야가 맵을 거의 덮는다면 " +
                 "자리를 못 찾아 시야 안에라도 배치됩니다.",
                 MessageType.None);
+        }
+
+        if (selected.initialEnemyAdvanceToPlayerBase)
+        {
+            EditorGUILayout.HelpBox(
+                "'본부로 진군'이 켜져 있습니다. 초기 적이 배치되자마자 본부로 걸어옵니다.",
+                MessageType.Warning);
         }
     }
 

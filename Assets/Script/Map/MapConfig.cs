@@ -80,6 +80,10 @@ public class MapConfig : ScriptableObject
     [Tooltip("켜면 초기 적을 플레이어 시야 밖(안개 속)에 우선 배치합니다.")]
     public bool initialEnemyAvoidPlayerVision = true;
 
+    [Tooltip("켜면 초기 적이 배치 직후부터 플레이어 본부로 진군합니다. " +
+             "끄면 배치된 자리를 지키며 어그로 범위에 들어온 상대만 공격합니다.")]
+    public bool initialEnemyAdvanceToPlayerBase = false;
+
     [Header("Win Condition")]
     [Tooltip("켜면 이 스테이지의 승리 조건 설정으로 GameResultManager를 덮어씁니다.")]
     public bool overrideWinCondition = true;

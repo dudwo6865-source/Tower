@@ -70,6 +70,11 @@ public class InitialEnemyPlacer : MonoBehaviour
     [Tooltip("배치되는 적의 소속 ID입니다. 플레이어와 달라야 적으로 인식됩니다.")]
     public int enemyOwnerId = 2;
 
+    [Header("Behavior")]
+    [Tooltip("켜면 배치 직후부터 플레이어 본부로 진군합니다.\n" +
+        "끄면 배치된 자리를 지키며, 어그로 범위에 들어온 상대만 공격합니다.")]
+    public bool advanceToPlayerBase = false;
+
     [Header("Placement")]
     [Tooltip("플레이어 본부와 최소 이 거리 이상 떨어진 곳에만 배치합니다.")]
     public float minDistanceFromHq = 25f;
@@ -245,6 +250,10 @@ public class InitialEnemyPlacer : MonoBehaviour
 
             if (enemy == null)
                 continue;
+
+            // 적 프리팹은 advanceToEnemyBuildings가 기본 켜짐이라 그냥 두면 본부로 걸어간다.
+            // 초기 배치 적은 스포너가 관리하지 않으므로 여기서 한 번 정하면 그대로 유지된다.
+            EnemySpawnUtility.ApplyAdvanceToEnemyBuildings(enemy, advanceToPlayerBase);
 
             PlacedCount++;
         }

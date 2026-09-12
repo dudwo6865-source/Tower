@@ -74,6 +74,12 @@ Unity **2022.3.26f1** 타워 디펜스 RTS. 낮/밤이 한 사이클(= 웨이브
   런타임과 에디터 미리보기가 이 헬퍼를 공유합니다. 웨이브 보정 계산도 마찬가지로
   `WaveTuning.BuildForWave` 한 곳입니다.
 
+- 시작 시 맵에 깔아두는 적은 `InitialEnemyPlacer`가 무리 단위로 배치합니다.
+  스포너와 달리 한 번만 배치되고 다시 채워지지 않습니다.
+  **적 프리팹의 `EnemyCombatAI.advanceToEnemyBuildings`는 기본이 켜짐이라**
+  그냥 두면 본부로 걸어갑니다. 초기 배치 적은 배치 직후 이 값을 꺼서
+  자리를 지키게 합니다. (스테이지의 '본부로 진군' 옵션)
+
 ### 스테이지 (MapConfig)
 
 - `Tools > Map > Stage Editor`에서 편집합니다. 웨이브 표, 낮/밤, 경제, 승리 조건.

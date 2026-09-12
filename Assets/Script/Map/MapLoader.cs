@@ -311,6 +311,7 @@ public class MapLoader : MonoBehaviour
         placer.groups = InitialEnemyGroup.CloneList(config.initialEnemies);
         placer.minDistanceFromHq = config.initialEnemyMinDistanceFromHq;
         placer.avoidPlayerVision = config.initialEnemyAvoidPlayerVision;
+        placer.advanceToPlayerBase = config.initialEnemyAdvanceToPlayerBase;
     }
 
     void ApplyWinConditionConfig(MapConfig config)
