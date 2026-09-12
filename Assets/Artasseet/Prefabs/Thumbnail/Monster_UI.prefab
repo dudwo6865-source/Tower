@@ -92,6 +92,7 @@ MonoBehaviour:
   entityType: 0
   ownerId: 2
   entityTypeId: unit
+  autoAssignEntityTypeId: 1
   selectionCollider: {fileID: 0}
   portrait: {fileID: 0}
   autoSetupHealth: 1
@@ -125,6 +126,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   visionRange: 12
+  edgeSoftnessOverride: -1
+  eyeHeightOverride: -1
 --- !u!114 &3586039544142533170
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -185,12 +188,38 @@ MonoBehaviour:
   useAttackAnimationEvent: 1
   projectileSpeed: 25
   firePoint: {fileID: 0}
+  pierceHitRadius: 0.6
+  beamWidth: 1
+  minAttackRange: 0
+  arcHeight: 4
+  arcHeightRatio: 0.3
+  minArcHeight: 0.5
+  arcPeakTime: 0.5
+  arcClimbPower: 1
+  arcDivePower: 1
+  useBallisticArc: 0
+  ballisticGravity: 20
+  impactOffsetRadius: 0
+  lateralWobbleRatio: 0.15
+  lateralWobbleAmount: 0
+  splashRadius: 3
+  splashMinDamageRatio: 0.3
+  hitEffectBaseRadius: 4
+  hitscanTrailPrefab: {fileID: 0}
+  hitscanTrailDuration: 0.08
+  hitscanTrailWidth: 0.05
+  requireFacingToAttack: 1
+  aimAngleTolerance: 8
+  aimTransform: {fileID: 0}
+  aimYawOffset: 0
+  aimAxisLocal: {x: 0, y: 0, z: 0}
   spawnVisualEffects: 0
   projectileColor: {r: 1, g: 0.85, b: 0.3, a: 1}
   hitColor: {r: 1, g: 0.5, b: 0.2, a: 1}
   muzzleFlashPrefab: {fileID: 0}
   hitEffectPrefab: {fileID: 0}
   projectilePrefab: {fileID: 0}
+  trailEffectPrefab: {fileID: 0}
 --- !u!114 &702801552231482143
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -247,6 +276,7 @@ MonoBehaviour:
   targetPriority: 0
   retargetInterval: 0.5
   damageFocusSwitchMargin: 2
+  debugCommandLog: 0
   stoppingDistance: 2
   destinationRefreshInterval: 0.25
   destinationMoveThreshold: 1
@@ -254,9 +284,15 @@ MonoBehaviour:
   facingSpeed: 8
   avoidancePriorityMin: 30
   avoidancePriorityMax: 70
+  buildingDirectChaseRange: 0
   shareAggroWithAllies: 1
-  debugCommandLog: 0
   advanceToEnemyBuildings: 1
+  shareTargetWithNearbyAllies: 1
+  squadRadius: 12
+  squadFollowSpread: 2.5
+  squadFollowSpacing: 2
+  detourRedirectMultiplier: 1.6
+  detourCheckInterval: 1
 --- !u!114 &8151960572430161529
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1224,6 +1260,7 @@ MonoBehaviour:
   entityType: 1
   ownerId: 1
   entityTypeId: canon
+  autoAssignEntityTypeId: 1
   selectionCollider: {fileID: 0}
   portrait: {fileID: 0}
   autoSetupHealth: 1
@@ -1246,12 +1283,38 @@ MonoBehaviour:
   useAttackAnimationEvent: 1
   projectileSpeed: 50
   firePoint: {fileID: 0}
+  pierceHitRadius: 0.6
+  beamWidth: 1
+  minAttackRange: 0
+  arcHeight: 4
+  arcHeightRatio: 0.3
+  minArcHeight: 0.5
+  arcPeakTime: 0.5
+  arcClimbPower: 1
+  arcDivePower: 1
+  useBallisticArc: 0
+  ballisticGravity: 20
+  impactOffsetRadius: 0
+  lateralWobbleRatio: 0.15
+  lateralWobbleAmount: 0
+  splashRadius: 3
+  splashMinDamageRatio: 0.3
+  hitEffectBaseRadius: 4
+  hitscanTrailPrefab: {fileID: 0}
+  hitscanTrailDuration: 0.08
+  hitscanTrailWidth: 0.05
+  requireFacingToAttack: 1
+  aimAngleTolerance: 8
+  aimTransform: {fileID: 0}
+  aimYawOffset: 0
+  aimAxisLocal: {x: 0, y: 0, z: 0}
   spawnVisualEffects: 1
   projectileColor: {r: 1, g: 0.85, b: 0.3, a: 1}
   hitColor: {r: 1, g: 0.5, b: 0.2, a: 1}
   muzzleFlashPrefab: {fileID: 304414178702807373, guid: b9a62cef32ff6da49b88cd5572caba55, type: 3}
   hitEffectPrefab: {fileID: 1598268965855006841, guid: 1817cfabe570b924c88af259660671a3, type: 3}
   projectilePrefab: {fileID: 6820024759759233777, guid: 91e780efda7994440a23cebbb9636401, type: 3}
+  trailEffectPrefab: {fileID: 0}
 --- !u!114 &445371290416561639
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1268,6 +1331,7 @@ MonoBehaviour:
   targetPriority: 0
   retargetInterval: 0.5
   damageFocusSwitchMargin: 2
+  debugCommandLog: 0
   turretPivot: {fileID: 0}
   facingSpeed: 5
   aimYawOffset: -180
@@ -1302,6 +1366,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   visionRange: 40
+  edgeSoftnessOverride: -1
+  eyeHeightOverride: -1
 --- !u!136 &8036602530182636154
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -1526,7 +1592,6 @@ Transform:
   - {fileID: 2102671050137886269}
   - {fileID: 4070851490980507506}
   - {fileID: 3845343949532323004}
-  - {fileID: 4289542737769295600}
   - {fileID: 6926798846298547232}
   - {fileID: 772081351702968775}
   - {fileID: 6913617488973924038}
@@ -1547,7 +1612,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   entityType: 0
   ownerId: 2
-  entityTypeId: unit
+  entityTypeId: Monster_UI
+  autoAssignEntityTypeId: 1
   selectionCollider: {fileID: 0}
   portrait: {fileID: 0}
   autoSetupHealth: 1
@@ -1581,6 +1647,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   visionRange: 12
+  edgeSoftnessOverride: -1
+  eyeHeightOverride: -1
 --- !u!114 &7726370785441250164
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1641,12 +1709,38 @@ MonoBehaviour:
   useAttackAnimationEvent: 1
   projectileSpeed: 25
   firePoint: {fileID: 0}
+  pierceHitRadius: 0.6
+  beamWidth: 1
+  minAttackRange: 0
+  arcHeight: 4
+  arcHeightRatio: 0.3
+  minArcHeight: 0.5
+  arcPeakTime: 0.5
+  arcClimbPower: 1
+  arcDivePower: 1
+  useBallisticArc: 0
+  ballisticGravity: 20
+  impactOffsetRadius: 0
+  lateralWobbleRatio: 0.15
+  lateralWobbleAmount: 0
+  splashRadius: 3
+  splashMinDamageRatio: 0.3
+  hitEffectBaseRadius: 4
+  hitscanTrailPrefab: {fileID: 0}
+  hitscanTrailDuration: 0.08
+  hitscanTrailWidth: 0.05
+  requireFacingToAttack: 1
+  aimAngleTolerance: 8
+  aimTransform: {fileID: 0}
+  aimYawOffset: 0
+  aimAxisLocal: {x: 0, y: 0, z: 0}
   spawnVisualEffects: 0
   projectileColor: {r: 1, g: 0.85, b: 0.3, a: 1}
   hitColor: {r: 1, g: 0.5, b: 0.2, a: 1}
   muzzleFlashPrefab: {fileID: 0}
   hitEffectPrefab: {fileID: 0}
   projectilePrefab: {fileID: 0}
+  trailEffectPrefab: {fileID: 0}
 --- !u!114 &5345614893600635350
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1703,6 +1797,7 @@ MonoBehaviour:
   targetPriority: 0
   retargetInterval: 0.5
   damageFocusSwitchMargin: 2
+  debugCommandLog: 0
   stoppingDistance: 2
   destinationRefreshInterval: 0.25
   destinationMoveThreshold: 1
@@ -1710,9 +1805,15 @@ MonoBehaviour:
   facingSpeed: 8
   avoidancePriorityMin: 30
   avoidancePriorityMax: 70
+  buildingDirectChaseRange: 0
   shareAggroWithAllies: 1
-  debugCommandLog: 0
   advanceToEnemyBuildings: 1
+  shareTargetWithNearbyAllies: 1
+  squadRadius: 12
+  squadFollowSpread: 2.5
+  squadFollowSpacing: 2
+  detourRedirectMultiplier: 1.6
+  detourCheckInterval: 1
 --- !u!114 &2747854902334814809
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2542,92 +2643,6 @@ PrefabInstance:
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: d65a0c4c4f7444d4f9f0d0d4996990fe, type: 3}
   m_PrefabInstance: {fileID: 953710456450063916}
-  m_PrefabAsset: {fileID: 0}
---- !u!1001 &4327181998367246619
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 5360659921643415897}
-    m_Modifications:
-    - target: {fileID: -8679921383154817045, guid: b42beb4072a672c45aa2607248f9ce08, type: 3}
-      propertyPath: m_LocalScale.x
-      value: 1.4285713
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: b42beb4072a672c45aa2607248f9ce08, type: 3}
-      propertyPath: m_LocalScale.y
-      value: 1.4285713
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: b42beb4072a672c45aa2607248f9ce08, type: 3}
-      propertyPath: m_LocalScale.z
-      value: 1.4285713
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: b42beb4072a672c45aa2607248f9ce08, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: b42beb4072a672c45aa2607248f9ce08, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: b42beb4072a672c45aa2607248f9ce08, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: b42beb4072a672c45aa2607248f9ce08, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: b42beb4072a672c45aa2607248f9ce08, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: -0
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: b42beb4072a672c45aa2607248f9ce08, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: -0
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: b42beb4072a672c45aa2607248f9ce08, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: -0
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: b42beb4072a672c45aa2607248f9ce08, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: b42beb4072a672c45aa2607248f9ce08, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: b42beb4072a672c45aa2607248f9ce08, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 919132149155446097, guid: b42beb4072a672c45aa2607248f9ce08, type: 3}
-      propertyPath: m_Name
-      value: canonTower1
-      objectReference: {fileID: 0}
-    - target: {fileID: 919132149155446097, guid: b42beb4072a672c45aa2607248f9ce08, type: 3}
-      propertyPath: m_IsActive
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6317578925029434746, guid: b42beb4072a672c45aa2607248f9ce08, type: 3}
-      propertyPath: m_Materials.Array.data[0]
-      value: 
-      objectReference: {fileID: 2100000, guid: cfc061457e7befa4abe63559075b4634, type: 2}
-    - target: {fileID: 8100320773420232829, guid: b42beb4072a672c45aa2607248f9ce08, type: 3}
-      propertyPath: m_Materials.Array.data[0]
-      value: 
-      objectReference: {fileID: 2100000, guid: cfc061457e7befa4abe63559075b4634, type: 2}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: b42beb4072a672c45aa2607248f9ce08, type: 3}
---- !u!4 &4289542737769295600 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: b42beb4072a672c45aa2607248f9ce08, type: 3}
-  m_PrefabInstance: {fileID: 4327181998367246619}
   m_PrefabAsset: {fileID: 0}
 --- !u!1001 &6375024512559571245
 PrefabInstance:

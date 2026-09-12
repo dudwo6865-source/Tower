@@ -159,7 +159,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0ce68651af8ddb640a77b409081dce6c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  aggroRange: 50
+  aggroRange: 55
   targetPriority: 0
   retargetInterval: 0.5
   damageFocusSwitchMargin: 2

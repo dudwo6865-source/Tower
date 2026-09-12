@@ -19,20 +19,20 @@ MonoBehaviour:
   overrideEconomy: 1
   maxWatt: 300
   startingWatt: 100
-  incomePerSecond: 5
+  incomePerSecond: 3
   overrideDayNight: 1
   startPhase: 0
-  dayDuration: 120
+  dayDuration: 60
   nightDuration: 60
   dayLightColor: {r: 1, g: 0.95686275, b: 0.8392157, a: 1}
-  nightLightColor: {r: 0.35, g: 0.45, b: 0.75, a: 1}
+  nightLightColor: {r: 0.51174796, g: 0.6018649, b: 0.8679245, a: 1}
   dayLightIntensity: 1
-  nightLightIntensity: 0.35
+  nightLightIntensity: 1
   lightTransitionDuration: 5
   overrideWave: 1
   wavePlan:
     waves:
-    - spawnCountMultiplier: 10
+    - spawnCountMultiplier: 20
       spawnCountBonus: 2
       spawnIntervalMultiplier: 1
       maxAliveMultiplier: 0
@@ -40,7 +40,7 @@ MonoBehaviour:
       damageMultiplier: 1
       speedMultiplier: 1
     growthPerWaveAfterLast:
-      spawnCountMultiplier: 0
+      spawnCountMultiplier: 1
       spawnCountBonus: 2
       spawnIntervalMultiplier: 1
       maxAliveMultiplier: 1
@@ -50,7 +50,7 @@ MonoBehaviour:
   applyNightBonus: 1
   nightBonus:
     spawnCountMultiplier: 1
-    spawnCountBonus: 0
+    spawnCountBonus: 2
     spawnIntervalMultiplier: 1
     maxAliveMultiplier: 1
     healthMultiplier: 1
