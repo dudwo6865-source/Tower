@@ -15,7 +15,7 @@ MonoBehaviour:
   displayName: 1Stage
   description: 
   previewImage: {fileID: 0}
-  mapRootPrefab: {fileID: 8098669722882859227, guid: e5dc0c86e3046704a89d275482820c10, type: 3}
+  mapRootPrefab: {fileID: 555248993846175002, guid: e714d5f9257de2e479db2a93eff41d10, type: 3}
   overrideEconomy: 1
   maxWatt: 300
   startingWatt: 100
@@ -32,7 +32,7 @@ MonoBehaviour:
   overrideWave: 1
   wavePlan:
     waves:
-    - spawnCountMultiplier: 20
+    - spawnCountMultiplier: 3
       spawnCountBonus: 2
       spawnIntervalMultiplier: 1
       maxAliveMultiplier: 0
@@ -47,7 +47,7 @@ MonoBehaviour:
       healthMultiplier: 1
       damageMultiplier: 1
       speedMultiplier: 1
-  applyNightBonus: 1
+  applyNightBonus: 0
   nightBonus:
     spawnCountMultiplier: 1
     spawnCountBonus: 2
