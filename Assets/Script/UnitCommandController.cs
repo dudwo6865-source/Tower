@@ -138,8 +138,15 @@ public class UnitCommandController : MonoBehaviour
         if (!Physics.Raycast(ray, out RaycastHit hit))
             return false;
 
+        UnitCommandMode executedMode = ActiveMode;
+
         if (!TryExecutePendingMode(hit))
             return false;
+
+        // 명령이 실제로 전달됐을 때만 확정 피드백을 재생한다.
+        // CancelMode보다 먼저 호출해야 원이 그 자리에서 한 번 튀고 사라진다.
+        if (executedMode == UnitCommandMode.Attack)
+            AttackCommandCursorIndicator.PlayConfirmPulse(hit.point);
 
         suppressSelectionClick = true;
         CancelMode();
@@ -154,7 +161,9 @@ public class UnitCommandController : MonoBehaviour
         ActiveMode = mode;
         OnModeChanged?.Invoke(ActiveMode);
 
-        if (ActiveMode != UnitCommandMode.Attack)
+        if (ActiveMode == UnitCommandMode.Attack)
+            AttackCommandCursorIndicator.PlayActivationPulse();
+        else
             AttackCommandCursorIndicator.HideIndicator();
     }
 
