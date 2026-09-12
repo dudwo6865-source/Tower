@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 // 하나의 맵(레벨)을 정의하는 데이터 에셋입니다.
@@ -64,6 +65,20 @@ public class MapConfig : ScriptableObject
 
     [Tooltip("밤 동안 추가로 곱할 보정입니다. 전부 1이면 낮과 같습니다.")]
     public WaveTuning nightBonus = new WaveTuning();
+
+    [Header("Initial Enemies")]
+    [Tooltip("켜면 이 스테이지 값으로 InitialEnemyPlacer를 덮어씁니다.")]
+    public bool overrideInitialEnemies = true;
+
+    [Tooltip("게임 시작 시 맵에 미리 배치할 적 무리 목록입니다. " +
+             "스포너가 계속 뿜는 적과 달리 한 번만 배치되고 다시 채워지지 않습니다.")]
+    public List<InitialEnemyGroup> initialEnemies = new List<InitialEnemyGroup>();
+
+    [Tooltip("초기 적을 본부와 최소 이 거리 이상 떨어진 곳에 배치합니다.")]
+    public float initialEnemyMinDistanceFromHq = 25f;
+
+    [Tooltip("켜면 초기 적을 플레이어 시야 밖(안개 속)에 우선 배치합니다.")]
+    public bool initialEnemyAvoidPlayerVision = true;
 
     [Header("Win Condition")]
     [Tooltip("켜면 이 스테이지의 승리 조건 설정으로 GameResultManager를 덮어씁니다.")]

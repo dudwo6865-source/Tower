@@ -23,6 +23,7 @@ public class StageEditorWindow : EditorWindow
     static readonly Color DayNightColor = new Color(0.28f, 0.30f, 0.58f);
     static readonly Color WaveColor = new Color(0.58f, 0.24f, 0.22f);
     static readonly Color WinConditionColor = new Color(0.55f, 0.42f, 0.12f);
+    static readonly Color InitialEnemyColor = new Color(0.42f, 0.26f, 0.48f);
 
     List<MapConfig> stages = new List<MapConfig>();
     MapConfig selected;
@@ -38,6 +39,7 @@ public class StageEditorWindow : EditorWindow
     bool foldDayNight = true;
     bool foldWave = true;
     bool foldWinCondition = true;
+    bool foldInitialEnemies = true;
 
     // 분당 스폰 수 계산용. 스포너는 맵 프리팹 또는 열려 있는 씬에서 스캔해 캐시한다.
     bool foldSpawnRateDetail;
@@ -229,6 +231,7 @@ public class StageEditorWindow : EditorWindow
         DrawSectionRow(DrawIdentitySection, DrawMapContentSection);
         DrawSectionRow(DrawEconomySection, DrawDayNightSection);
         DrawSectionRow(DrawWaveSection, DrawWinConditionSection);
+        DrawSectionRow(DrawInitialEnemySection, DrawEmptySection);
 
         EditorGUIUtility.labelWidth = previousLabelWidth;
 
@@ -934,6 +937,109 @@ public class StageEditorWindow : EditorWindow
         float perMinute = SpawnsPerMinute(info, tuning, waveNumber);
 
         return $"{count}마리 / {interval:0.#}초 → 분당 {perMinute:0}마리";
+    }
+
+    // 2열 배치에서 짝이 없는 섹션의 반대편 칸입니다.
+    void DrawEmptySection()
+    {
+    }
+
+    void DrawInitialEnemySection()
+    {
+        foldInitialEnemies = DrawSectionFoldout(
+            "Initial Enemies (시작 시 배치할 적)",
+            InitialEnemyColor,
+            foldInitialEnemies);
+
+        if (!foldInitialEnemies)
+            return;
+
+        DrawOverrideToggle("overrideInitialEnemies", "이 스테이지 값으로 InitialEnemyPlacer 덮어쓰기");
+
+        EditorGUILayout.HelpBox(
+            "게임 시작 시 맵에 한 번만 깔아두는 적입니다. 스포너처럼 계속 뿜어내지 않습니다.\n" +
+            "낮에 맵을 돌아다닐 때 마주치는 야생 몬스터 같은 역할입니다.",
+            MessageType.Info);
+
+        EditorGUI.BeginDisabledGroup(!selected.overrideInitialEnemies);
+
+        EditorGUILayout.PropertyField(
+            serializedObject.FindProperty("initialEnemies"),
+            new GUIContent("적 무리 목록"),
+            true);
+
+        EditorGUILayout.PropertyField(
+            serializedObject.FindProperty("initialEnemyMinDistanceFromHq"),
+            new GUIContent("본부와 최소 거리"));
+
+        EditorGUILayout.PropertyField(
+            serializedObject.FindProperty("initialEnemyAvoidPlayerVision"),
+            new GUIContent("시야 밖에 배치"));
+
+        EditorGUI.EndDisabledGroup();
+
+        if (selected.overrideInitialEnemies)
+            DrawInitialEnemyPreview();
+
+        EditorGUILayout.Space(6);
+    }
+
+    void DrawInitialEnemyPreview()
+    {
+        List<InitialEnemyGroup> groups = selected.initialEnemies;
+
+        if (groups == null || groups.Count == 0)
+        {
+            EditorGUILayout.LabelField(
+                "배치할 적이 없습니다. 시작 시 맵은 비어 있습니다.",
+                EditorStyles.miniLabel);
+            return;
+        }
+
+        int total = 0;
+        int emptyPrefabs = 0;
+
+        EditorGUILayout.Space(4);
+        EditorGUILayout.LabelField("미리보기", EditorStyles.boldLabel);
+        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+
+        foreach (InitialEnemyGroup group in groups)
+        {
+            if (group == null)
+                continue;
+
+            if (group.prefab == null)
+            {
+                emptyPrefabs++;
+                continue;
+            }
+
+            total += group.TotalCount;
+
+            EditorGUILayout.LabelField(
+                group.prefab.name,
+                $"{group.clusterCount}무리 × {group.countPerCluster}마리 = {group.TotalCount}마리 " +
+                $"(반경 {group.clusterRadius:0.#}m)",
+                EditorStyles.miniLabel);
+        }
+
+        EditorGUILayout.LabelField("합계", $"{total}마리", EditorStyles.miniBoldLabel);
+        EditorGUILayout.EndVertical();
+
+        if (emptyPrefabs > 0)
+        {
+            EditorGUILayout.HelpBox(
+                $"프리팹이 비어 있는 항목이 {emptyPrefabs}개 있습니다. 그 무리는 배치되지 않습니다.",
+                MessageType.Warning);
+        }
+
+        if (selected.initialEnemyAvoidPlayerVision)
+        {
+            EditorGUILayout.HelpBox(
+                "시야 밖 배치가 켜져 있습니다. 시작 시 시야가 맵을 거의 덮는다면 " +
+                "자리를 못 찾아 시야 안에라도 배치됩니다.",
+                MessageType.None);
+        }
     }
 
     void DrawWinConditionSection()

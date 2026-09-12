@@ -116,6 +116,7 @@ public class MapLoader : MonoBehaviour
         ApplyEconomyConfig(config);
         ApplyDayNightConfig(config);
         ApplyWaveConfig(config);
+        ApplyInitialEnemyConfig(config);
         ApplyWinConditionConfig(config);
 
         // 재로드 대비: 이전에 만든 맵 인스턴스 제거
@@ -282,6 +283,34 @@ public class MapLoader : MonoBehaviour
 
         wave.applyNightBonus = config.applyNightBonus;
         wave.nightBonus = new WaveTuning(config.nightBonus);
+    }
+
+    void ApplyInitialEnemyConfig(MapConfig config)
+    {
+        if (!config.overrideInitialEnemies)
+            return;
+
+        InitialEnemyPlacer placer = FindFirstObjectByType<InitialEnemyPlacer>();
+
+        if (placer == null)
+        {
+            // 배치할 적이 없으면 굳이 컴포넌트를 만들지 않는다.
+            if (config.initialEnemies == null || config.initialEnemies.Count == 0)
+                return;
+
+            // 설정은 있는데 씬에 배치기가 없으면 아무 일도 일어나지 않아 원인을 찾기 어렵다.
+            // 로더 자신에게 붙여서 설정한 대로 동작하게 한다.
+            placer = gameObject.AddComponent<InitialEnemyPlacer>();
+
+            Debug.Log(
+                "MapLoader: 씬에 InitialEnemyPlacer가 없어 자동으로 추가했습니다.",
+                this);
+        }
+
+        // 사본을 넘긴다. 플레이 중 값을 만져도 원본 에셋이 더러워지지 않는다.
+        placer.groups = InitialEnemyGroup.CloneList(config.initialEnemies);
+        placer.minDistanceFromHq = config.initialEnemyMinDistanceFromHq;
+        placer.avoidPlayerVision = config.initialEnemyAvoidPlayerVision;
     }
 
     void ApplyWinConditionConfig(MapConfig config)

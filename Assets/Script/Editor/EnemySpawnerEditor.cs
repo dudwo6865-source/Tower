@@ -96,6 +96,8 @@ public class EnemySpawnerEditor : Editor
 
         EditorGUILayout.EndVertical();
 
+        DrawExtraTriggers(spawner);
+
         DrawRuntimeWarnings(spawner);
 
         EditorGUILayout.Space(6);
@@ -108,6 +110,45 @@ public class EnemySpawnerEditor : Editor
 
         if (GUILayout.Button($"다음 웨이브로 진행 (현재 {waveManager.CurrentWaveNumber} → {waveManager.CurrentWaveNumber + 1})"))
             waveManager.SetWave(waveManager.CurrentWaveNumber + 1);
+    }
+
+    // 주기 스폰 말고 근접/피격 트리거가 실제로 도는지 보여준다.
+    // 이 둘은 주기 스폰과 별개로 자기 타이머로 돌기 때문에 따로 확인해야 한다.
+    static void DrawExtraTriggers(EnemySpawner spawner)
+    {
+        EditorGUILayout.Space(4);
+        EditorGUILayout.LabelField("추가 스폰 트리거", EditorStyles.boldLabel);
+        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+
+        if (spawner.EffectiveProximityEnemiesPerSpawn > 0)
+        {
+            EditorGUILayout.LabelField(
+                "근접 스폰",
+                $"{spawner.EffectiveProximityEnemiesPerSpawn}마리 / " +
+                $"{spawner.EffectiveProximitySpawnInterval:0.#}초 · " +
+                $"아군 {(spawner.HasAllyInRange ? "감지됨 (스폰 중)" : "없음 (대기)")}");
+        }
+        else
+        {
+            EditorGUILayout.LabelField("근접 스폰", "꺼짐 (Proximity Enemies Per Spawn = 0)");
+        }
+
+        if (spawner.EffectiveAttackedEnemiesPerSpawn > 0)
+        {
+            EditorGUILayout.LabelField(
+                "피격 스폰",
+                $"{spawner.EffectiveAttackedEnemiesPerSpawn}마리 / " +
+                $"{spawner.EffectiveAttackedSpawnInterval:0.#}초 · " +
+                (spawner.AttackedSpawnRemaining > 0f
+                    ? $"{spawner.AttackedSpawnRemaining:0.0}초 남음 (스폰 중)"
+                    : "대기"));
+        }
+        else
+        {
+            EditorGUILayout.LabelField("피격 스폰", "꺼짐 (Attacked Enemies Per Spawn = 0)");
+        }
+
+        EditorGUILayout.EndVertical();
     }
 
     static string DescribeState(EnemySpawner spawner)
