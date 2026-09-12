@@ -166,14 +166,7 @@ public class WaveManager : MonoBehaviour
     /// <summary>해당 웨이브의 보정값입니다. 에디터 미리보기와 UI가 같이 씁니다.</summary>
     public WaveTuning BuildTuningForWave(int waveNumber, bool night)
     {
-        WaveTuning waveTuning = wavePlan != null
-            ? wavePlan.Evaluate(waveNumber)
-            : new WaveTuning();
-
-        if (!night || !applyNightBonus)
-            return waveTuning.Sanitized();
-
-        return WaveTuning.Combine(waveTuning, nightBonus).Sanitized();
+        return WaveTuning.BuildForWave(wavePlan, nightBonus, applyNightBonus, waveNumber, night);
     }
 
     public void ApplyCurrentWaveToAll()

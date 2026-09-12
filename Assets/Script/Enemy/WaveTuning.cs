@@ -94,6 +94,27 @@ public class WaveTuning
         return result;
     }
 
+    /// <summary>
+    /// 웨이브 표와 밤 보정으로 해당 웨이브의 최종 보정을 만듭니다.
+    /// WaveManager(런타임)와 스테이지 에디터(미리보기)가 같은 식을 쓰도록 여기 한 곳에 둡니다.
+    /// </summary>
+    public static WaveTuning BuildForWave(
+        WavePlan plan,
+        WaveTuning nightBonus,
+        bool applyNightBonus,
+        int waveNumber,
+        bool night)
+    {
+        WaveTuning waveTuning = plan != null
+            ? plan.Evaluate(waveNumber)
+            : new WaveTuning();
+
+        if (!night || !applyNightBonus)
+            return waveTuning.Sanitized();
+
+        return Combine(waveTuning, nightBonus).Sanitized();
+    }
+
     /// <summary>두 보정을 곱해서 합칩니다. (예: 웨이브 수치 × 밤 보정)</summary>
     public static WaveTuning Combine(WaveTuning a, WaveTuning b)
     {

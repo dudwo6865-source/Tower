@@ -39,6 +39,13 @@ public class StageEditorWindow : EditorWindow
     bool foldWave = true;
     bool foldWinCondition = true;
 
+    // 분당 스폰 수 계산용. 스포너는 맵 프리팹 또는 열려 있는 씬에서 스캔해 캐시한다.
+    bool foldSpawnRateDetail;
+    int spawnRateWave = 1;
+    List<SpawnerInfo> spawnerCache;
+    MapConfig spawnerCacheOwner;
+    string spawnerSource = "";
+
     [MenuItem("Tools/Map/Stage Editor (스테이지 에디터)")]
     static void Open()
     {
@@ -56,6 +63,9 @@ public class StageEditorWindow : EditorWindow
     void OnFocus()
     {
         RefreshStageList();
+
+        // 다른 창에서 스포너를 고쳤을 수 있으니 다시 스캔하게 한다.
+        InvalidateSpawnerCache();
     }
 
     void RefreshStageList()
@@ -91,6 +101,7 @@ public class StageEditorWindow : EditorWindow
     void SetSelected(MapConfig config)
     {
         selected = config;
+        InvalidateSpawnerCache();
         serializedObject = selected != null ? new SerializedObject(selected) : null;
         EditorPrefs.SetString(LastSelectedPathKey, selected != null ? AssetDatabase.GetAssetPath(selected) : "");
     }
@@ -441,7 +452,10 @@ public class StageEditorWindow : EditorWindow
         EditorGUI.EndDisabledGroup();
 
         if (selected.overrideWave)
+        {
             DrawWavePreview();
+            DrawSpawnRateSection();
+        }
 
         EditorGUILayout.Space(6);
     }
@@ -508,6 +522,257 @@ public class StageEditorWindow : EditorWindow
                Mathf.Approximately(growth.healthMultiplier, 1f) &&
                Mathf.Approximately(growth.damageMultiplier, 1f) &&
                Mathf.Approximately(growth.speedMultiplier, 1f);
+    }
+
+    // ── 분당 스폰 몬스터 수 ───────────────────────────────────────
+    // 웨이브 수치(스폰량/간격)와 실제 스포너 수를 곱해서 "분당 몇 마리가 나오는지"를 보여준다.
+    // 스포너 인스펙터 값만 봐서는 체감 난이도를 가늠할 수 없어서 여기서 합산한다.
+
+    struct SpawnerInfo
+    {
+        public string name;
+        public int enemiesPerSpawn;
+        public float spawnInterval;
+        public int maxAliveEnemies;
+        public int activateFromWave;
+        public bool spawnPeriodically;
+        public bool hasPrefab;
+    }
+
+    void InvalidateSpawnerCache()
+    {
+        spawnerCache = null;
+        spawnerCacheOwner = null;
+    }
+
+    List<SpawnerInfo> GetSpawners()
+    {
+        if (spawnerCache != null && spawnerCacheOwner == selected)
+            return spawnerCache;
+
+        spawnerCache = new List<SpawnerInfo>();
+        spawnerCacheOwner = selected;
+        spawnerSource = "";
+
+        if (selected == null)
+            return spawnerCache;
+
+        List<EnemySpawner> found = new List<EnemySpawner>();
+
+        // 스포너는 맵 프리팹에 미리 배치하는 것이 원칙이다. 거기 없으면 열려 있는 씬에서 찾는다.
+        if (selected.mapRootPrefab != null)
+        {
+            found.AddRange(selected.mapRootPrefab.GetComponentsInChildren<EnemySpawner>(true));
+
+            if (found.Count > 0)
+                spawnerSource = $"맵 프리팹 '{selected.mapRootPrefab.name}'";
+        }
+
+        if (found.Count == 0)
+        {
+            found.AddRange(
+                FindObjectsByType<EnemySpawner>(
+                    FindObjectsInactive.Include,
+                    FindObjectsSortMode.None));
+
+            if (found.Count > 0)
+                spawnerSource = $"열려 있는 씬 '{SceneManager.GetActiveScene().name}'";
+        }
+
+        foreach (EnemySpawner spawner in found)
+        {
+            if (spawner == null)
+                continue;
+
+            spawnerCache.Add(new SpawnerInfo
+            {
+                name = spawner.name,
+                enemiesPerSpawn = spawner.enemiesPerSpawn,
+                spawnInterval = spawner.spawnInterval,
+                maxAliveEnemies = spawner.maxAliveEnemies,
+                activateFromWave = Mathf.Max(1, spawner.activateFromWave),
+                spawnPeriodically = spawner.spawnPeriodically,
+                hasPrefab = spawner.enemyPrefabs != null && spawner.enemyPrefabs.Count > 0
+            });
+        }
+
+        return spawnerCache;
+    }
+
+    WaveTuning BuildTuning(int waveNumber, bool night)
+    {
+        return WaveTuning.BuildForWave(
+            selected.wavePlan,
+            selected.nightBonus,
+            selected.applyNightBonus,
+            waveNumber,
+            night);
+    }
+
+    // 한 스포너가 1분 동안 스폰하는 몬스터 수입니다. 주기 스폰만 계산합니다.
+    static float SpawnsPerMinute(SpawnerInfo info, WaveTuning tuning, int waveNumber)
+    {
+        if (!info.spawnPeriodically || !info.hasPrefab || waveNumber < info.activateFromWave)
+            return 0f;
+
+        int count = EnemySpawner.GetEffectiveSpawnCount(info.enemiesPerSpawn, tuning);
+        float interval = EnemySpawner.GetEffectiveSpawnInterval(info.spawnInterval, tuning);
+
+        if (count <= 0 || interval <= 0f)
+            return 0f;
+
+        return count * 60f / interval;
+    }
+
+    void DrawSpawnRateSection()
+    {
+        EditorGUILayout.Space(6);
+        EditorGUILayout.LabelField("분당 스폰 몬스터 수", EditorStyles.boldLabel);
+
+        List<SpawnerInfo> spawners = GetSpawners();
+
+        EditorGUILayout.BeginHorizontal();
+        EditorGUILayout.LabelField(
+            spawners.Count > 0
+                ? $"스포너 {spawners.Count}개 · 출처: {spawnerSource}"
+                : "스포너를 찾지 못했습니다.",
+            EditorStyles.miniLabel);
+
+        if (GUILayout.Button("다시 스캔", EditorStyles.miniButton, GUILayout.Width(70)))
+            InvalidateSpawnerCache();
+
+        EditorGUILayout.EndHorizontal();
+
+        if (spawners.Count == 0)
+        {
+            EditorGUILayout.HelpBox(
+                "맵 프리팹에도, 열려 있는 씬에도 EnemySpawner가 없습니다.\n" +
+                "스포너를 맵 프리팹에 배치하거나 그 씬을 연 뒤 '다시 스캔'을 누르세요.",
+                MessageType.Info);
+            return;
+        }
+
+        bool showNight = selected.applyNightBonus;
+
+        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+
+        EditorGUILayout.LabelField(
+            "웨이브",
+            showNight ? "분당 스폰 수 (낮 / 밤, 스포너 전체 합계)" : "분당 스폰 수 (스포너 전체 합계)",
+            EditorStyles.miniBoldLabel);
+
+        for (int wave = 1; wave <= WavePreviewCount; wave++)
+        {
+            WaveTuning dayTuning = BuildTuning(wave, false);
+            WaveTuning nightTuning = BuildTuning(wave, true);
+
+            float dayTotal = 0f;
+            float nightTotal = 0f;
+            int activeSpawners = 0;
+
+            foreach (SpawnerInfo info in spawners)
+            {
+                float perMinute = SpawnsPerMinute(info, dayTuning, wave);
+
+                dayTotal += perMinute;
+                nightTotal += SpawnsPerMinute(info, nightTuning, wave);
+
+                if (perMinute > 0f)
+                    activeSpawners++;
+            }
+
+            string amount = showNight
+                ? $"{dayTotal:0}마리 / {nightTotal:0}마리"
+                : $"{dayTotal:0}마리";
+
+            string detail = activeSpawners > 0
+                ? $"  (스포너 {activeSpawners}개 · 개당 {dayTotal / activeSpawners:0}마리)"
+                : "  (활동 중인 스포너 없음)";
+
+            EditorGUILayout.LabelField($"웨이브 {wave}", amount + detail, EditorStyles.miniLabel);
+        }
+
+        EditorGUILayout.EndVertical();
+
+        DrawAliveCapNote(spawners);
+
+        EditorGUILayout.HelpBox(
+            "주기 스폰(Spawn Periodically)만 계산한 값입니다.\n" +
+            "근처에 아군이 있거나 피격당했을 때의 추가 스폰, 스포너 파괴 시 방출은 포함하지 않습니다.",
+            MessageType.None);
+
+        DrawSpawnRateDetail(spawners);
+    }
+
+    void DrawAliveCapNote(List<SpawnerInfo> spawners)
+    {
+        WaveTuning tuning = BuildTuning(1, false);
+
+        int capTotal = 0;
+        bool hasUnlimited = false;
+
+        foreach (SpawnerInfo info in spawners)
+        {
+            int cap = EnemySpawner.GetEffectiveMaxAlive(info.maxAliveEnemies, tuning);
+
+            if (cap <= 0)
+                hasUnlimited = true;
+            else
+                capTotal += cap;
+        }
+
+        if (hasUnlimited)
+            return;
+
+        EditorGUILayout.HelpBox(
+            $"동시 생존 상한 합계는 {capTotal}마리입니다(웨이브 1 기준). " +
+            "적이 죽지 않으면 스폰이 여기서 멈추므로, 위 분당 수치는 최대치입니다.",
+            MessageType.Info);
+    }
+
+    void DrawSpawnRateDetail(List<SpawnerInfo> spawners)
+    {
+        foldSpawnRateDetail = EditorGUILayout.Foldout(foldSpawnRateDetail, "스포너별 상세", true);
+
+        if (!foldSpawnRateDetail)
+            return;
+
+        spawnRateWave = Mathf.Max(1, EditorGUILayout.IntField("기준 웨이브", spawnRateWave));
+
+        WaveTuning tuning = BuildTuning(spawnRateWave, false);
+
+        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+
+        foreach (SpawnerInfo info in spawners)
+        {
+            int cap = EnemySpawner.GetEffectiveMaxAlive(info.maxAliveEnemies, tuning);
+            string capText = cap <= 0 ? "무제한" : $"{cap}마리";
+
+            EditorGUILayout.LabelField(
+                info.name,
+                $"{DescribeSpawner(info, tuning, spawnRateWave)} · 상한 {capText}",
+                EditorStyles.miniLabel);
+        }
+
+        EditorGUILayout.EndVertical();
+    }
+
+    static string DescribeSpawner(SpawnerInfo info, WaveTuning tuning, int waveNumber)
+    {
+        if (!info.hasPrefab)
+            return "적 프리팹이 비어 있음";
+
+        if (!info.spawnPeriodically)
+            return "주기 스폰 꺼짐 (아군 접근/피격 때만 스폰)";
+
+        if (waveNumber < info.activateFromWave)
+            return $"웨이브 {info.activateFromWave}부터 활동";
+
+        int count = EnemySpawner.GetEffectiveSpawnCount(info.enemiesPerSpawn, tuning);
+        float interval = EnemySpawner.GetEffectiveSpawnInterval(info.spawnInterval, tuning);
+        float perMinute = SpawnsPerMinute(info, tuning, waveNumber);
+
+        return $"{count}마리 / {interval:0.#}초 → 분당 {perMinute:0}마리";
     }
 
     void DrawWinConditionSection()
