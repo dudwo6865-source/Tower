@@ -19,8 +19,8 @@ public class UnitSound : MonoBehaviour
     [Tooltip("공격 시 재생할 사운드입니다. 여러 개면 무작위로 선택합니다.")]
     public AudioClip[] attackClips;
 
-    [Tooltip("피격 시 재생할 사운드입니다.")]
-    public AudioClip[] hitClips;
+    [Tooltip("이 유닛의 공격이 대상에 맞았을 때 재생할 사운드입니다. 히트 이펙트와 같은 시점에 납니다.")]
+    public AudioClip[] attackHitClips;
 
     [Tooltip("사망·파괴 시 재생할 사운드입니다.")]
     public AudioClip[] deathClips;
@@ -62,15 +62,12 @@ public class UnitSound : MonoBehaviour
     [Tooltip("재생 시 피치 무작위 범위입니다.")]
     public Vector2 pitchRange = new Vector2(0.95f, 1.05f);
 
-    [Tooltip("피격 사운드 최소 간격(초)입니다. 연속 피격 시 스팸을 줄입니다.")]
-    public float hitSoundCooldown = 0.12f;
-
-    [Tooltip("사망 시 마지막 피격 사운드를 함께 재생할지 여부입니다.")]
-    public bool playHitOnDeath;
+    [Tooltip("명중 사운드 최소 간격(초)입니다. 한 번의 공격이 여러 대상을 맞히거나 " +
+             "연사가 빠를 때 소리가 겹치는 것을 줄입니다.")]
+    public float attackHitSoundCooldown = 0.12f;
 
     EntityHealth health;
-    float lastHealth;
-    float lastHitTime;
+    float lastAttackHitTime;
     bool isDead;
 
     static AudioListener cachedListener;
@@ -107,8 +104,6 @@ public class UnitSound : MonoBehaviour
         if (health == null)
             return;
 
-        lastHealth = health.CurrentHealth;
-        health.OnHealthChanged += HandleHealthChanged;
         health.OnDied += HandleDied;
     }
 
@@ -117,7 +112,6 @@ public class UnitSound : MonoBehaviour
         if (health == null)
             return;
 
-        health.OnHealthChanged -= HandleHealthChanged;
         health.OnDied -= HandleDied;
     }
 
@@ -159,12 +153,35 @@ public class UnitSound : MonoBehaviour
         PlayRandom(attackClips);
     }
 
-    public void PlayHit()
+    /// <summary>
+    /// 이 유닛의 공격이 대상에 맞았을 때 재생합니다. 히트 이펙트를 띄우는 시점과 같습니다.
+    /// 한 번의 공격이 여러 대상을 맞혀도 소리가 겹치지 않게 최소 간격을 둡니다.
+    /// </summary>
+    public void PlayAttackHit()
     {
         if (isDead)
             return;
 
-        PlayRandom(hitClips);
+        if (Time.time < lastAttackHitTime + attackHitSoundCooldown)
+            return;
+
+        lastAttackHitTime = Time.time;
+        PlayRandom(attackHitClips);
+    }
+
+    /// <summary>
+    /// 공격자의 명중 사운드를 재생합니다.
+    /// 투사체처럼 공격자에게서 떨어진 곳에서 착탄을 처리할 때 씁니다.
+    /// </summary>
+    public static void PlayAttackHit(SelectableEntity attacker)
+    {
+        if (attacker == null)
+            return;
+
+        UnitSound sound = attacker.GetComponent<UnitSound>();
+
+        if (sound != null)
+            sound.PlayAttackHit();
     }
 
     public void PlayDeath()
@@ -176,34 +193,8 @@ public class UnitSound : MonoBehaviour
         PlayRandom(deathClips);
     }
 
-    void HandleHealthChanged(float current, float max)
-    {
-        if (isDead || health == null || !health.IsAlive)
-        {
-            lastHealth = current;
-            return;
-        }
-
-        if (current >= lastHealth)
-        {
-            lastHealth = current;
-            return;
-        }
-
-        lastHealth = current;
-
-        if (Time.time < lastHitTime + hitSoundCooldown)
-            return;
-
-        lastHitTime = Time.time;
-        PlayHit();
-    }
-
     void HandleDied()
     {
-        if (playHitOnDeath)
-            PlayRandom(hitClips);
-
         PlayDeath();
     }
 
@@ -294,15 +285,15 @@ public class UnitSound : MonoBehaviour
 
     public void ApplyClips(
         AudioClip[] attack,
-        AudioClip[] hit,
+        AudioClip[] attackHit,
         AudioClip[] death,
         float newVolume = -1f)
     {
         if (attack != null && attack.Length > 0)
             attackClips = attack;
 
-        if (hit != null && hit.Length > 0)
-            hitClips = hit;
+        if (attackHit != null && attackHit.Length > 0)
+            attackHitClips = attackHit;
 
         if (death != null && death.Length > 0)
             deathClips = death;

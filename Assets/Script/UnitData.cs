@@ -121,8 +121,8 @@ public class UnitData : ScriptableObject
     [Tooltip("공격 사운드입니다.")]
     public AudioClip[] attackSoundClips;
 
-    [Tooltip("피격 사운드입니다.")]
-    public AudioClip[] hitSoundClips;
+    [Tooltip("공격이 대상에 맞았을 때의 사운드입니다.")]
+    public AudioClip[] attackHitSoundClips;
 
     [Tooltip("사망·파괴 사운드입니다.")]
     public AudioClip[] deathSoundClips;

@@ -468,6 +468,10 @@ public class UnitAttacker : MonoBehaviour
         {
             targetHealth.TakeDamage(GetEffectiveDamage(), selfEntity);
 
+            // 히트 이펙트와 같은 시점에 명중 사운드를 낸다.
+            // 이펙트 표시 여부와 상관없이 타격은 났으므로 spawnVisualEffects 밖에 둔다.
+            PlayAttackHitSound();
+
             if (spawnVisualEffects)
             {
                 AttackVisuals.SpawnHitscanTrail(
@@ -488,6 +492,8 @@ public class UnitAttacker : MonoBehaviour
         else // Melee
         {
             targetHealth.TakeDamage(GetEffectiveDamage(), selfEntity);
+
+            PlayAttackHitSound();
 
             if (spawnVisualEffects)
             {
@@ -548,6 +554,16 @@ public class UnitAttacker : MonoBehaviour
 
         if (unitSound != null)
             unitSound.PlayAttack();
+    }
+
+    // 투사체는 날아가서 맞으므로 여기서 부르지 않는다. Projectile이 착탄 시점에 직접 재생한다.
+    void PlayAttackHitSound()
+    {
+        if (unitSound == null)
+            unitSound = GetComponent<UnitSound>();
+
+        if (unitSound != null)
+            unitSound.PlayAttackHit();
     }
 
     void ClearPendingAttack()

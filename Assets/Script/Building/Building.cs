@@ -179,7 +179,7 @@ public class Building : MonoBehaviour
     {
         bool hasClips =
             HasClips(source.attackSoundClips) ||
-            HasClips(source.hitSoundClips) ||
+            HasClips(source.attackHitSoundClips) ||
             HasClips(source.deathSoundClips);
 
         if (!hasClips && source.soundVolume <= 0f)
@@ -192,7 +192,7 @@ public class Building : MonoBehaviour
 
         target.ApplyClips(
             source.attackSoundClips,
-            source.hitSoundClips,
+            source.attackHitSoundClips,
             source.deathSoundClips,
             source.soundVolume > 0f ? source.soundVolume : -1f);
     }

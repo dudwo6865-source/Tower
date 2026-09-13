@@ -176,6 +176,9 @@ public class Projectile : MonoBehaviour
 
         health.TakeDamage(damage, attacker);
 
+        // 히트 이펙트와 같은 시점에 공격자의 명중 사운드를 낸다.
+        UnitSound.PlayAttackHit(attacker);
+
         AttackVisuals.SpawnHitEffect(
             transform.position,
             lastMoveDirection,
@@ -438,6 +441,8 @@ public class Projectile : MonoBehaviour
         if (targetHealth != null && targetHealth.IsAlive)
             targetHealth.TakeDamage(damage, attacker);
 
+        UnitSound.PlayAttackHit(attacker);
+
         AttackVisuals.SpawnHitEffect(
             transform.position,
             lastMoveDirection,
@@ -452,6 +457,8 @@ public class Projectile : MonoBehaviour
     public void ImpactArea()
     {
         ApplySplashDamage(transform.position, splashRadius, splashMinDamageRatio, damage, attacker);
+
+        UnitSound.PlayAttackHit(attacker);
 
         AttackVisuals.SpawnHitEffect(
             transform.position,
