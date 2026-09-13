@@ -75,12 +75,21 @@ public class GridFootprint : MonoBehaviour
     {
         footprintCells = NormalizeFootprint(footprintCells);
 
-        // 플레이 중 스크립트로 컴포넌트가 막 추가된 경우 Unity가 OnValidate를 즉시 호출하는데,
-        // 이 안에서 AddComponent<NavMeshObstacle>()를 실행하면 "SendMessage cannot be called
-        // during Awake, CheckConsistency, or OnValidate" 경고가 발생한다.
-        // 플레이 중에는 Start()/RegisterAtOriginCell()에서 안전한 시점에 다시 호출되므로 여기서는 건너뛴다.
-        if (blockCells && !Application.isPlaying)
-            ApplyNavMeshObstacleSize();
+        // OnValidate 안에서는 AddComponent를 부를 수 없다.
+        // ("SendMessage cannot be called during Awake, CheckConsistency, or OnValidate")
+        // 그래서 여기서는 이미 붙어 있는 장애물의 크기만 맞추고, 없으면 만들지 않는다.
+        // 장애물이 없는 건물은 플레이 시작 시 Start()/RegisterAtOriginCell()에서 만들어진다.
+        // 프리팹에 미리 넣어두고 싶으면 인스펙터 컨텍스트 메뉴를 쓴다.
+        if (blockCells)
+            ApplyNavMeshObstacleSize(allowCreate: false);
+    }
+
+    // 프리팹에 장애물을 미리 넣어두고 높이를 직접 잡고 싶을 때 씁니다.
+    // (컴포넌트 우클릭 > NavMesh 장애물 만들기 / 갱신)
+    [ContextMenu("NavMesh 장애물 만들기 / 갱신")]
+    void CreateNavMeshObstacleFromMenu()
+    {
+        ApplyNavMeshObstacleSize(allowCreate: true);
     }
 
     void OnDisable()
@@ -189,6 +198,16 @@ public class GridFootprint : MonoBehaviour
 
     void ApplyNavMeshObstacleSize()
     {
+        ApplyNavMeshObstacleSize(allowCreate: true);
+    }
+
+    /// <summary>
+    /// NavMesh 장애물 크기를 footprint에 맞춥니다.
+    /// allowCreate가 false면 장애물이 없어도 새로 만들지 않습니다.
+    /// OnValidate처럼 컴포넌트를 추가할 수 없는 시점에서 부를 때 씁니다.
+    /// </summary>
+    void ApplyNavMeshObstacleSize(bool allowCreate)
+    {
         if (!blockCells)
             return;
 
@@ -211,10 +230,13 @@ public class GridFootprint : MonoBehaviour
             ? MapGrid.Instance.cellSize
             : 2f;
 
+        if (existing == null && !allowCreate)
+            return;
+
         NavMeshObstacle obstacle = existing;
 
         if (obstacle == null)
-            obstacle = gameObject.AddComponent<NavMeshObstacle>();
+            obstacle = AddNavMeshObstacle();
 
         float width = footprintCells.x * cellSize;
         float depth = footprintCells.y * cellSize;
@@ -232,5 +254,16 @@ public class GridFootprint : MonoBehaviour
         obstacle.carving = true;
         obstacle.carveOnlyStationary = true;
         obstacle.enabled = true;
+    }
+
+    // 에디터에서 붙일 때는 되돌리기가 되고 씬/프리팹이 변경으로 표시되게 한다.
+    NavMeshObstacle AddNavMeshObstacle()
+    {
+#if UNITY_EDITOR
+        if (!Application.isPlaying)
+            return UnityEditor.Undo.AddComponent<NavMeshObstacle>(gameObject);
+#endif
+
+        return gameObject.AddComponent<NavMeshObstacle>();
     }
 }
