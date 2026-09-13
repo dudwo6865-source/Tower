@@ -63,7 +63,16 @@ public class MinimapBlipManager : MonoBehaviour
     private readonly HashSet<SelectableEntity> seenEnemyBuildings =
         new HashSet<SelectableEntity>();
 
+    private readonly Dictionary<SelectableEntity, FogOfWarVisibility> fogVisibilityCache =
+        new Dictionary<SelectableEntity, FogOfWarVisibility>();
+
     private readonly Stack<BlipView> blipPool = new Stack<BlipView>();
+
+    // 매 프레임 새로 만들면 그대로 GC 부담이 된다. 한 번 만들어 두고 비워 쓴다.
+    private readonly HashSet<SelectableEntity> stillActive =
+        new HashSet<SelectableEntity>();
+
+    private readonly List<SelectableEntity> toRemove = new List<SelectableEntity>();
 
     private bool initialized;
 
@@ -128,7 +137,8 @@ public class MinimapBlipManager : MonoBehaviour
 
     void RefreshBlips()
     {
-        var stillActive = new HashSet<SelectableEntity>();
+        stillActive.Clear();
+        toRemove.Clear();
 
         foreach (SelectableEntity entity in SelectableRegistry.Entities)
         {
@@ -140,8 +150,6 @@ public class MinimapBlipManager : MonoBehaviour
             ApplyBlip(blip, entity, display);
         }
 
-        var toRemove = new List<SelectableEntity>();
-
         foreach (KeyValuePair<SelectableEntity, BlipView> pair in activeBlips)
         {
             if (!stillActive.Contains(pair.Key))
@@ -152,6 +160,7 @@ public class MinimapBlipManager : MonoBehaviour
         {
             ReleaseBlip(entity);
             enemyFogVisibility.Remove(entity);
+            fogVisibilityCache.Remove(entity);
         }
 
         foreach (SelectableEntity entity in stillActive)
@@ -181,12 +190,13 @@ public class MinimapBlipManager : MonoBehaviour
         if (entity == null)
             return false;
 
-        EntityHealth health = entity.GetComponent<EntityHealth>();
+        EntityHealth health = entity.CachedHealth;
 
         if (health != null && !health.IsAlive)
         {
             seenEnemyBuildings.Remove(entity);
             enemyFogVisibility.Remove(entity);
+            fogVisibilityCache.Remove(entity);
             return false;
         }
 
@@ -321,7 +331,12 @@ public class MinimapBlipManager : MonoBehaviour
         if (fogManager == null)
             return true;
 
-        FogOfWarVisibility fogVisibility = entity.GetComponent<FogOfWarVisibility>();
+        // 엔티티마다 매 프레임 GetComponent를 부르면 유닛이 많아질수록 그대로 비용이 된다.
+        if (!fogVisibilityCache.TryGetValue(entity, out FogOfWarVisibility fogVisibility))
+        {
+            fogVisibility = entity.GetComponent<FogOfWarVisibility>();
+            fogVisibilityCache[entity] = fogVisibility;
+        }
 
         if (fogVisibility != null)
             return fogVisibility.IsCurrentlyVisible;

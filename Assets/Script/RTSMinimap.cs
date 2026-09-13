@@ -2,11 +2,18 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
+// 미니맵입니다.
+// 이 오브젝트(루트)는 여백을 채우는 배경이고, 실제 맵은 자식 "MapArea"에 그립니다.
+// MapArea는 맵의 가로:세로 비율을 그대로 유지하므로 정사각형이 아닌 맵도 찌그러지지 않고,
+// 남는 공간은 루트 배경색(기본 검정)으로 채워집니다.
+// 블립·시야 안개·카메라 테두리는 모두 MapArea를 기준으로 배치합니다.
 [RequireComponent(typeof(Image))]
 [RequireComponent(typeof(MinimapBlipManager))]
 [DefaultExecutionOrder(200)]
-public class RTSMinimap : MonoBehaviour, IPointerClickHandler
+public class RTSMinimap : MonoBehaviour, IPointerClickHandler, IDragHandler
 {
+    const string MapAreaName = "MapArea";
+
     [Header("References")]
     [Tooltip("미니맵 클릭 시 카메라를 이동시킬 RTS 카메라 컨트롤러입니다. 비워두면 씬에서 자동으로 찾습니다.")]
     public RTSCameraPivotController cameraController;
@@ -20,6 +27,13 @@ public class RTSMinimap : MonoBehaviour, IPointerClickHandler
 
     [Tooltip("Manual/Auto fallback용 맵 크기(X=가로, Y=세로)입니다.")]
     public Vector2 manualMapSize = new Vector2(256f, 256f);
+
+    [Header("Layout")]
+    [Tooltip("맵 비율을 맞추고 남는 여백을 채울 색입니다.")]
+    public Color letterboxColor = Color.black;
+
+    [Tooltip("미니맵 테두리에서 안쪽으로 둘 여백(픽셀)입니다.")]
+    public float mapAreaPadding = 0f;
 
     [Header("Mesh Minimap Texture")]
     [Tooltip("메쉬 지형용 기본 바닥 색입니다.")]
@@ -40,7 +54,7 @@ public class RTSMinimap : MonoBehaviour, IPointerClickHandler
     [Tooltip("지면 레이캐스트 시작 높이 여유값입니다.")]
     public float raycastHeightPadding = 64f;
 
-    [Tooltip("미니맵 텍스처 해상도입니다.")]
+    [Tooltip("미니맵 텍스처의 긴 변 해상도입니다. 짧은 변은 맵 비율에 맞춰 줄어듭니다.")]
     public int textureResolution = 256;
 
     [Header("Camera View")]
@@ -50,7 +64,14 @@ public class RTSMinimap : MonoBehaviour, IPointerClickHandler
     [Tooltip("카메라 시야 테두리 두께(픽셀)입니다.")]
     public float cameraViewBorderThickness = 2f;
 
-    private RectTransform minimapRect;
+    [Header("Input")]
+    [Tooltip("켜면 미니맵을 누른 채 끌어서 카메라를 이동할 수 있습니다.")]
+    public bool allowDragToPan = true;
+
+    private RectTransform rootRect;
+    private RectTransform mapAreaRect;
+    private Image mapAreaImage;
+
     private MapPlayBoundsData mapBounds;
     private bool mapBoundsValid;
 
@@ -59,10 +80,36 @@ public class RTSMinimap : MonoBehaviour, IPointerClickHandler
 
     private RectTransform cameraViewRoot;
     private readonly RectTransform[] cameraViewBorders = new RectTransform[4];
+    private readonly Image[] cameraViewBorderImages = new Image[4];
 
-    public RectTransform MinimapRect => minimapRect;
+    private Vector2 lastRootSize = new Vector2(-1f, -1f);
 
-    public bool IsReady => minimapRect != null && mapBoundsValid;
+    /// <summary>미니맵 전체 영역입니다. 맵 비율을 맞추고 남는 여백까지 포함합니다.</summary>
+    public RectTransform RootRect
+    {
+        get
+        {
+            if (rootRect == null)
+                rootRect = GetComponent<RectTransform>();
+
+            return rootRect;
+        }
+    }
+
+    /// <summary>
+    /// 맵이 실제로 그려지는 영역입니다. 블립·시야 안개·카메라 테두리 모두 이 사각형을 기준으로 합니다.
+    /// 다른 스크립트가 Start 순서상 먼저 물어볼 수 있으므로 여기서 만들어 둡니다.
+    /// </summary>
+    public RectTransform MinimapRect
+    {
+        get
+        {
+            EnsureMapArea();
+            return mapAreaRect;
+        }
+    }
+
+    public bool IsReady => mapAreaRect != null && mapBoundsValid;
 
     public Vector2 WorldToMinimapLocal(Vector3 worldPosition)
     {
@@ -72,7 +119,7 @@ public class RTSMinimap : MonoBehaviour, IPointerClickHandler
         float normalizedZ =
             (worldPosition.z - mapBounds.Origin.z) / mapBounds.Length;
 
-        Rect rect = minimapRect.rect;
+        Rect rect = MinimapRect.rect;
 
         return new Vector2(
             Mathf.Lerp(rect.xMin, rect.xMax, normalizedX),
@@ -81,7 +128,7 @@ public class RTSMinimap : MonoBehaviour, IPointerClickHandler
 
     public Vector3 MinimapLocalToWorld(Vector2 localPoint)
     {
-        Rect rect = minimapRect.rect;
+        Rect rect = MinimapRect.rect;
 
         float normalizedX =
             Mathf.InverseLerp(rect.xMin, rect.xMax, localPoint.x);
@@ -95,17 +142,22 @@ public class RTSMinimap : MonoBehaviour, IPointerClickHandler
             mapBounds.Origin.z + normalizedZ * mapBounds.Length);
     }
 
+    void Awake()
+    {
+        EnsureMapArea();
+    }
+
     void Start()
     {
-        minimapRect = GetComponent<RectTransform>();
-
         if (!ResolveMapBounds())
         {
             Debug.LogError(
-                "RTSMinimap: Map bounds not found. MapGrid(NavMesh) 또는 Manual Map Size를 설정하세요.");
+                "RTSMinimap: Map bounds not found. MapGrid(NavMesh) 또는 Manual Map Size를 설정하세요.",
+                this);
             return;
         }
 
+        UpdateMapAreaSize();
         RebuildMeshMinimapTexture();
 
         if (cameraController == null)
@@ -117,7 +169,7 @@ public class RTSMinimap : MonoBehaviour, IPointerClickHandler
             fogManager = FindObjectOfType<FogOfWarManager>();
 
         if (fogManager != null)
-            fogManager.BindMinimap(minimapRect);
+            fogManager.BindMinimap(MinimapRect);
 
         EnsureCameraViewIndicator();
     }
@@ -126,8 +178,110 @@ public class RTSMinimap : MonoBehaviour, IPointerClickHandler
     void OnValidate()
     {
         textureResolution = Mathf.Clamp(textureResolution, 32, 2048);
+        mapAreaPadding = Mathf.Max(0f, mapAreaPadding);
     }
 #endif
+
+    // 미니맵 UI 크기가 바뀌면 맵 영역도 비율을 유지한 채 다시 맞춘다.
+    void OnRectTransformDimensionsChange()
+    {
+        UpdateMapAreaSize();
+    }
+
+    // ── 맵 영역(비율 유지) ────────────────────────────────────────
+
+    void EnsureMapArea()
+    {
+        if (mapAreaRect != null)
+            return;
+
+        Transform existing = RootRect.Find(MapAreaName);
+
+        if (existing != null)
+        {
+            mapAreaRect = existing as RectTransform;
+            mapAreaImage = existing.GetComponent<Image>();
+        }
+
+        if (mapAreaRect == null)
+        {
+            GameObject areaObject = new GameObject(
+                MapAreaName,
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image));
+
+            areaObject.transform.SetParent(RootRect, false);
+
+            mapAreaRect = areaObject.GetComponent<RectTransform>();
+            mapAreaImage = areaObject.GetComponent<Image>();
+        }
+
+        // 클릭 판정은 루트가 받는다. 맵 영역은 그리기만 한다.
+        if (mapAreaImage != null)
+            mapAreaImage.raycastTarget = false;
+
+        mapAreaRect.anchorMin = new Vector2(0.5f, 0.5f);
+        mapAreaRect.anchorMax = new Vector2(0.5f, 0.5f);
+        mapAreaRect.pivot = new Vector2(0.5f, 0.5f);
+        mapAreaRect.anchoredPosition = Vector2.zero;
+
+        // 블립·시야·카메라 테두리보다 뒤에 그린다.
+        mapAreaRect.SetAsFirstSibling();
+
+        ApplyLetterboxBackground();
+        UpdateMapAreaSize();
+    }
+
+    // 루트는 여백을 채우는 배경이 된다. 맵 그림은 자식(MapArea)이 그린다.
+    void ApplyLetterboxBackground()
+    {
+        Image rootImage = GetComponent<Image>();
+
+        if (rootImage == null)
+            return;
+
+        rootImage.sprite = null;
+        rootImage.color = letterboxColor;
+        rootImage.type = Image.Type.Simple;
+        rootImage.preserveAspect = false;
+    }
+
+    void UpdateMapAreaSize()
+    {
+        if (mapAreaRect == null)
+            return;
+
+        Rect outer = RootRect.rect;
+        float padding = Mathf.Max(0f, mapAreaPadding) * 2f;
+        float availableWidth = outer.width - padding;
+        float availableHeight = outer.height - padding;
+
+        if (availableWidth <= 0f || availableHeight <= 0f)
+            return;
+
+        float mapAspect = GetMapAspect();
+
+        // 가로를 꽉 채워보고, 세로가 넘치면 세로 기준으로 다시 맞춘다.
+        float width = availableWidth;
+        float height = width / mapAspect;
+
+        if (height > availableHeight)
+        {
+            height = availableHeight;
+            width = height * mapAspect;
+        }
+
+        mapAreaRect.sizeDelta = new Vector2(width, height);
+    }
+
+    float GetMapAspect()
+    {
+        if (!mapBoundsValid || mapBounds.Width <= 0f || mapBounds.Length <= 0f)
+            return 1f;
+
+        return mapBounds.Width / mapBounds.Length;
+    }
 
     bool ResolveMapBounds()
     {
@@ -143,25 +297,31 @@ public class RTSMinimap : MonoBehaviour, IPointerClickHandler
     [ContextMenu("Rebuild Minimap Texture")]
     public void RebuildMinimapTexture()
     {
+        EnsureMapArea();
+
         if (!ResolveMapBounds())
             return;
 
+        UpdateMapAreaSize();
         RebuildMeshMinimapTexture();
     }
 
+    // ── 미니맵 텍스처 ────────────────────────────────────────────
+
     void RebuildMeshMinimapTexture()
     {
-        int resolution = textureResolution;
-        var pixels = new Color[resolution * resolution];
+        GetTextureSize(out int textureWidth, out int textureHeight);
+
+        var pixels = new Color[textureWidth * textureHeight];
         float rayDistance = MapPlayBounds.GetRaycastDistance(raycastHeightPadding);
         float referenceHeight = mapBounds.Origin.y;
 
-        for (int y = 0; y < resolution; y++)
+        for (int y = 0; y < textureHeight; y++)
         {
-            for (int x = 0; x < resolution; x++)
+            for (int x = 0; x < textureWidth; x++)
             {
-                float normalizedX = (x + 0.5f) / resolution;
-                float normalizedZ = (y + 0.5f) / resolution;
+                float normalizedX = (x + 0.5f) / textureWidth;
+                float normalizedZ = (y + 0.5f) / textureHeight;
 
                 float worldX = mapBounds.Origin.x + normalizedX * mapBounds.Width;
                 float worldZ = mapBounds.Origin.z + normalizedZ * mapBounds.Length;
@@ -195,24 +355,41 @@ public class RTSMinimap : MonoBehaviour, IPointerClickHandler
                 }
 
                 pixelColor.a = 1f;
-                pixels[y * resolution + x] = pixelColor;
+                pixels[y * textureWidth + x] = pixelColor;
             }
         }
 
-        ApplyPixelsToMinimapTexture(pixels, resolution);
+        ApplyPixelsToMinimapTexture(pixels, textureWidth, textureHeight);
     }
 
-    void ApplyPixelsToMinimapTexture(Color[] pixels, int resolution)
+    // 맵이 가로로 길면 세로 해상도를 줄인다. 정사각형 텍스처를 쓰면 픽셀 밀도가 축마다 달라진다.
+    void GetTextureSize(out int textureWidth, out int textureHeight)
+    {
+        float mapAspect = GetMapAspect();
+        int longSide = Mathf.Clamp(textureResolution, 32, 2048);
+
+        if (mapAspect >= 1f)
+        {
+            textureWidth = longSide;
+            textureHeight = Mathf.Max(8, Mathf.RoundToInt(longSide / mapAspect));
+            return;
+        }
+
+        textureHeight = longSide;
+        textureWidth = Mathf.Max(8, Mathf.RoundToInt(longSide * mapAspect));
+    }
+
+    void ApplyPixelsToMinimapTexture(Color[] pixels, int textureWidth, int textureHeight)
     {
         if (minimapTexture == null ||
-            minimapTexture.width != resolution ||
-            minimapTexture.height != resolution)
+            minimapTexture.width != textureWidth ||
+            minimapTexture.height != textureHeight)
         {
             ReleaseMinimapTexture();
 
             minimapTexture = new Texture2D(
-                resolution,
-                resolution,
+                textureWidth,
+                textureHeight,
                 TextureFormat.RGBA32,
                 false);
 
@@ -230,7 +407,10 @@ public class RTSMinimap : MonoBehaviour, IPointerClickHandler
         if (minimapTexture == null)
             return;
 
-        Image image = GetComponent<Image>();
+        EnsureMapArea();
+
+        if (mapAreaImage == null)
+            return;
 
         if (minimapSprite != null)
         {
@@ -246,10 +426,12 @@ public class RTSMinimap : MonoBehaviour, IPointerClickHandler
             new Vector2(0.5f, 0.5f),
             100f);
 
-        image.sprite = minimapSprite;
-        image.color = Color.white;
-        image.type = Image.Type.Simple;
-        image.preserveAspect = false;
+        mapAreaImage.sprite = minimapSprite;
+        mapAreaImage.color = Color.white;
+        mapAreaImage.type = Image.Type.Simple;
+
+        // 영역 자체가 이미 맵 비율이므로 여기서 또 맞출 필요가 없다.
+        mapAreaImage.preserveAspect = false;
     }
 
     void ReleaseMinimapTexture()
@@ -282,19 +464,48 @@ public class RTSMinimap : MonoBehaviour, IPointerClickHandler
 
     void LateUpdate()
     {
+        // 캔버스 레이아웃은 Awake/Start 시점에 아직 확정되지 않을 수 있다.
+        // 해상도나 캔버스 스케일이 바뀌는 경우까지 함께 받으려고 크기 변화를 확인한다.
+        Vector2 rootSize = RootRect.rect.size;
+
+        if (rootSize != lastRootSize)
+        {
+            lastRootSize = rootSize;
+            UpdateMapAreaSize();
+        }
+
         UpdateCameraViewIndicator();
     }
 
+    // ── 입력 ────────────────────────────────────────────────────
+
     public void OnPointerClick(PointerEventData eventData)
     {
-        if (cameraController == null || minimapRect == null || !mapBoundsValid)
+        FocusFromPointer(eventData);
+    }
+
+    public void OnDrag(PointerEventData eventData)
+    {
+        if (!allowDragToPan)
+            return;
+
+        FocusFromPointer(eventData);
+    }
+
+    void FocusFromPointer(PointerEventData eventData)
+    {
+        if (cameraController == null || !IsReady)
             return;
 
         if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
-                minimapRect,
+                MinimapRect,
                 eventData.position,
                 eventData.pressEventCamera,
                 out Vector2 localPoint))
+            return;
+
+        // 비율을 맞추고 남은 여백(검은 부분)은 맵 밖이므로 무시한다.
+        if (!MinimapRect.rect.Contains(localPoint))
             return;
 
         Vector3 worldPoint = MinimapLocalToWorld(localPoint);
@@ -302,16 +513,23 @@ public class RTSMinimap : MonoBehaviour, IPointerClickHandler
         cameraController.FocusOnPosition(worldPoint);
     }
 
+    // ── 카메라 시야 테두리 ────────────────────────────────────────
+
     void EnsureCameraViewIndicator()
     {
-        if (cameraViewRoot != null || minimapRect == null)
+        if (cameraViewRoot != null)
+            return;
+
+        EnsureMapArea();
+
+        if (mapAreaRect == null)
             return;
 
         GameObject rootObject = new GameObject(
             "CameraViewIndicator",
             typeof(RectTransform));
 
-        rootObject.transform.SetParent(minimapRect, false);
+        rootObject.transform.SetParent(mapAreaRect, false);
 
         cameraViewRoot = rootObject.GetComponent<RectTransform>();
         cameraViewRoot.anchorMin = new Vector2(0.5f, 0.5f);
@@ -342,6 +560,7 @@ public class RTSMinimap : MonoBehaviour, IPointerClickHandler
             borderImage.raycastTarget = false;
 
             cameraViewBorders[i] = borderRect;
+            cameraViewBorderImages[i] = borderImage;
         }
 
         cameraViewRoot.gameObject.SetActive(false);
@@ -349,10 +568,13 @@ public class RTSMinimap : MonoBehaviour, IPointerClickHandler
 
     void UpdateCameraViewIndicator()
     {
-        if (cameraController == null || minimapRect == null || !mapBoundsValid)
+        if (cameraController == null || !IsReady)
             return;
 
         EnsureCameraViewIndicator();
+
+        if (cameraViewRoot == null)
+            return;
 
         if (!cameraController.TryGetVisibleGroundBounds(
                 out float minX,
@@ -360,29 +582,36 @@ public class RTSMinimap : MonoBehaviour, IPointerClickHandler
                 out float minZ,
                 out float maxZ))
         {
-            if (cameraViewRoot != null)
-                cameraViewRoot.gameObject.SetActive(false);
-
+            cameraViewRoot.gameObject.SetActive(false);
             return;
         }
 
         cameraViewRoot.gameObject.SetActive(true);
         cameraViewRoot.SetAsLastSibling();
 
-        Vector2 localMin = WorldToMinimapLocal(
-            new Vector3(minX, 0f, minZ));
+        Vector2 localMin = WorldToMinimapLocal(new Vector3(minX, 0f, minZ));
+        Vector2 localMax = WorldToMinimapLocal(new Vector3(maxX, 0f, maxZ));
 
-        Vector2 localMax = WorldToMinimapLocal(
-            new Vector3(maxX, 0f, maxZ));
+        // 카메라가 맵 밖을 보고 있어도 테두리가 미니맵 밖으로 삐져나가지 않게 자른다.
+        Rect area = MinimapRect.rect;
 
-        float localMinX = localMin.x;
-        float localMaxX = localMax.x;
-        float localMinY = localMin.y;
-        float localMaxY = localMax.y;
+        float localMinX = Mathf.Clamp(localMin.x, area.xMin, area.xMax);
+        float localMaxX = Mathf.Clamp(localMax.x, area.xMin, area.xMax);
+        float localMinY = Mathf.Clamp(localMin.y, area.yMin, area.yMax);
+        float localMaxY = Mathf.Clamp(localMax.y, area.yMin, area.yMax);
 
         float width = localMaxX - localMinX;
         float height = localMaxY - localMinY;
-        float thickness = cameraViewBorderThickness;
+
+        if (width <= 0f || height <= 0f)
+        {
+            cameraViewRoot.gameObject.SetActive(false);
+            return;
+        }
+
+        float thickness = Mathf.Min(
+            cameraViewBorderThickness,
+            Mathf.Min(width, height));
 
         SetBorderRect(
             cameraViewBorders[0],
@@ -412,15 +641,10 @@ public class RTSMinimap : MonoBehaviour, IPointerClickHandler
                 (localMinY + localMaxY) * 0.5f),
             new Vector2(thickness, height));
 
-        foreach (RectTransform border in cameraViewBorders)
+        for (int i = 0; i < cameraViewBorderImages.Length; i++)
         {
-            if (border == null)
-                continue;
-
-            Image borderImage = border.GetComponent<Image>();
-
-            if (borderImage != null)
-                borderImage.color = cameraViewColor;
+            if (cameraViewBorderImages[i] != null)
+                cameraViewBorderImages[i].color = cameraViewColor;
         }
     }
 
@@ -429,6 +653,9 @@ public class RTSMinimap : MonoBehaviour, IPointerClickHandler
         Vector2 anchoredPosition,
         Vector2 sizeDelta)
     {
+        if (border == null)
+            return;
+
         border.anchoredPosition = anchoredPosition;
         border.sizeDelta = sizeDelta;
     }

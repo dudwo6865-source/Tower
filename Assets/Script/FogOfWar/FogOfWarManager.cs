@@ -167,8 +167,10 @@ public class FogOfWarManager : MonoBehaviour
 
         RTSMinimap minimap = FindObjectOfType<RTSMinimap>();
 
+        // 루트가 아니라 맵이 실제로 그려지는 영역에 붙인다.
+        // 루트에 붙이면 비율을 맞추고 남은 여백까지 안개가 덮는다.
         if (minimap != null)
-            BindMinimap(minimap.GetComponent<RectTransform>());
+            BindMinimap(minimap.MinimapRect);
     }
 
     void OnDestroy()
