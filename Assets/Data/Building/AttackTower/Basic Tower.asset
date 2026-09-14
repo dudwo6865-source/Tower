@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Basic Tower
   m_EditorClassIdentifier: 
   displayName: Gun Tower
-  icon: {fileID: 21300000, guid: 1b4ab1bcf4a21ff4f9832cbc36b939ef, type: 3}
+  icon: {fileID: 21300000, guid: a6d934f41fab89d49b867a21f0f1e4f7, type: 3}
   description: Standard defensive tower.
   prefab: {fileID: 6989466109074766155, guid: 5e3a77b413b91f448bd9c241e2a9fa8b, type: 3}
   wattCost: 75

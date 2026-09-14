@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: New Material 1
-  m_Shader: {fileID: -6465566751694194690, guid: 853e6068508e3f647b7c5f2fcae42029, type: 3}
+  m_Shader: {fileID: -6465566751694194690, guid: d03931ebbd27ac1478d2620c6e7fcd10, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -24,6 +24,10 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _BaseMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Base_Map:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
@@ -123,14 +127,14 @@ Material:
     - _WorkflowMode: 1
     - _ZWrite: 1
     m_Colors:
-    - _BaseColor: {r: 0.4716981, g: 0.09113335, b: 0, a: 1}
+    - _BaseColor: {r: 1, g: 0.48467714, b: 0, a: 1}
     - _Base_Color: {r: 0, g: 0.5887158, b: 0.8679245, a: 0.56078434}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _Edge_Color: {r: 5.4221544, g: 0.8287246, b: 0, a: 0.69411767}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _OutLineColor: {r: 1, g: 0.09225982, b: 0, a: 0}
+    - _OutLineColor: {r: 0.1509434, g: 0.010679984, b: 0.010679956, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
-    - _Vector2: {r: 1, g: 1, b: 0, a: 0}
+    - _Vector2: {r: 2.03, g: 0.7, b: 0, a: 0}
   m_BuildTextureStacks: []
 --- !u!114 &1316144462860739501
 MonoBehaviour:

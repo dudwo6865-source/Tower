@@ -199,7 +199,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   attackClips: []
-  hitClips: []
+  attackHitClips: []
   deathClips: []
   audioSource: {fileID: 0}
   volume: 1
@@ -212,8 +212,7 @@ MonoBehaviour:
   referenceMinOrthoSize: 12
   referenceMaxOrthoSize: 45
   pitchRange: {x: 0.95, y: 1.05}
-  hitSoundCooldown: 0.12
-  playHitOnDeath: 0
+  attackHitSoundCooldown: 0.12
 --- !u!65 &8240178125774722032
 BoxCollider:
   m_ObjectHideFlags: 0
