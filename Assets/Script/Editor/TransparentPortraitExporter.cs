@@ -22,6 +22,8 @@ public static class TransparentPortraitExporter
         public float fieldOfView;
         // 수직 프레이밍 오프셋(대상 높이 대비 비율). 양수면 시점이 위로 올라갑니다.
         public float heightOffset;
+        // 수평 프레이밍 오프셋(화면상 대상 폭 대비 비율). 양수면 시점이 오른쪽으로 갑니다.
+        public float sideOffset;
         // 대상 배율. 1보다 크면 크게(가깝게), 작으면 작게(멀리) 찍힙니다.
         public float zoom;
         public bool orthographic;
@@ -368,6 +370,11 @@ public static class TransparentPortraitExporter
         // 카메라 높낮이: 대상 높이에 비례해 시점(주시점)을 위/아래로 이동한다.
         // 양수면 주시점이 위로 올라가 대상이 프레임 아래쪽에 잡힌다.
         center.y += settings.heightOffset * bounds.size.y;
+
+        // 카메라 좌우: 화면상 대상 폭에 비례해 시점을 카메라 기준 좌/우로 이동한다.
+        // 월드 X가 아니라 카메라의 오른쪽 축을 쓰므로 Yaw를 돌려도 화면 기준으로 움직인다.
+        // 양수면 주시점이 오른쪽으로 가서 대상이 프레임 왼쪽에 잡힌다.
+        center += rotation * Vector3.right * (settings.sideOffset * viewExtentX * 2f);
 
         // 여백(padding)으로 프레이밍 크기를 통일해 원근/직교 모두 같은 감각으로 조정한다.
         // 배율(zoom)로 대상을 더 크게(가깝게)/작게(멀리) 잡는다. zoom>1이면 프레임을 좁혀 크게 찍는다.

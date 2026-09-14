@@ -13,6 +13,7 @@ public class TransparentPortraitExporterWindow : EditorWindow
     const string PrefPitch = "Tank.PortraitExport.Pitch";
     const string PrefFov = "Tank.PortraitExport.Fov";
     const string PrefHeightOffset = "Tank.PortraitExport.HeightOffset";
+    const string PrefSideOffset = "Tank.PortraitExport.SideOffset";
     const string PrefZoom = "Tank.PortraitExport.Zoom";
     const string PrefOrthographic = "Tank.PortraitExport.Orthographic";
     const string PrefAutoPreview = "Tank.PortraitExport.AutoPreview";
@@ -34,6 +35,7 @@ public class TransparentPortraitExporterWindow : EditorWindow
     const float DefaultPitch = 25f;
     const float DefaultFov = 30f;
     const float DefaultHeightOffset = 0f;
+    const float DefaultSideOffset = 0f;
     const float DefaultZoom = 1f;
     const int DefaultSupersample = 2;
 
@@ -63,6 +65,7 @@ public class TransparentPortraitExporterWindow : EditorWindow
     float pitch = DefaultPitch;
     float fieldOfView = DefaultFov;
     float heightOffset = DefaultHeightOffset;
+    float sideOffset = DefaultSideOffset;
     float zoom = DefaultZoom;
     bool orthographic = true;
     bool hideGameplayUi = true;
@@ -324,7 +327,7 @@ public class TransparentPortraitExporterWindow : EditorWindow
         HandlePreviewInput(rect);
 
         EditorGUILayout.LabelField(
-            "드래그: 회전 · Alt+드래그: 높이 · 휠: 배율",
+            "드래그: 회전 · Alt+드래그: 상하좌우 이동 · 휠: 배율",
             EditorStyles.centeredGreyMiniLabel);
 
         if (!string.IsNullOrEmpty(previewError))
@@ -401,7 +404,9 @@ public class TransparentPortraitExporterWindow : EditorWindow
 
                 if (current.alt || current.button == 2)
                 {
+                    // 대상이 커서를 따라오도록 시점은 반대 방향으로 민다.
                     heightOffset = Mathf.Clamp(heightOffset + current.delta.y * 0.004f, -1f, 1f);
+                    sideOffset = Mathf.Clamp(sideOffset - current.delta.x * 0.004f, -1f, 1f);
                 }
                 else
                 {
@@ -452,9 +457,10 @@ public class TransparentPortraitExporterWindow : EditorWindow
         DrawUserPresets();
 
         EditorGUILayout.Space(2f);
-        yaw = DrawNudgeSlider("Yaw (좌우)", yaw, -180f, 180f, 1f, 15f, "N0");
-        pitch = DrawNudgeSlider("Pitch (상하)", pitch, -89f, 89f, 1f, 15f, "N0");
+        yaw = DrawNudgeSlider("Yaw (좌우 회전)", yaw, -180f, 180f, 1f, 15f, "N0");
+        pitch = DrawNudgeSlider("Pitch (상하 회전)", pitch, -89f, 89f, 1f, 15f, "N0");
         heightOffset = DrawNudgeSlider("높이 (상하 이동)", heightOffset, -1f, 1f, 0.02f, 0.1f, "N2");
+        sideOffset = DrawNudgeSlider("좌우 (수평 이동)", sideOffset, -1f, 1f, 0.02f, 0.1f, "N2");
 
         EditorGUILayout.Space(4f);
         zoom = DrawNudgeSlider("배율 (크게/작게)", zoom, 0.25f, 4f, 0.05f, 0.25f, "N2");
@@ -610,6 +616,7 @@ public class TransparentPortraitExporterWindow : EditorWindow
         yaw = Mathf.Clamp(WrapAngle(preset.yaw), -180f, 180f);
         pitch = Mathf.Clamp(preset.pitch, -89f, 89f);
         heightOffset = Mathf.Clamp(preset.heightOffset, -1f, 1f);
+        sideOffset = Mathf.Clamp(preset.sideOffset, -1f, 1f);
         zoom = Mathf.Clamp(preset.zoom, 0.25f, 4f);
         padding = Mathf.Clamp(preset.padding, 0f, 0.5f);
         orthographic = preset.orthographic;
@@ -627,6 +634,7 @@ public class TransparentPortraitExporterWindow : EditorWindow
         return Mathf.Abs(Mathf.DeltaAngle(yaw, preset.yaw)) < 0.5f
             && Mathf.Abs(pitch - preset.pitch) < 0.5f
             && Mathf.Abs(heightOffset - preset.heightOffset) < 0.005f
+            && Mathf.Abs(sideOffset - preset.sideOffset) < 0.005f
             && Mathf.Abs(zoom - preset.zoom) < 0.005f
             && Mathf.Abs(padding - preset.padding) < 0.005f;
     }
@@ -635,8 +643,9 @@ public class TransparentPortraitExporterWindow : EditorWindow
     {
         string projection = preset.orthographic ? "Orthographic" : $"FOV {preset.fieldOfView:N0}";
 
-        return $"Yaw {preset.yaw:N0}° · Pitch {preset.pitch:N0}° · 높이 {preset.heightOffset:N2}\n" +
-            $"배율 {preset.zoom:N2} · 여백 {preset.padding:N2} · {projection}";
+        return $"Yaw {preset.yaw:N0}° · Pitch {preset.pitch:N0}°\n" +
+            $"높이 {preset.heightOffset:N2} · 좌우 {preset.sideOffset:N2} · 배율 {preset.zoom:N2}\n" +
+            $"여백 {preset.padding:N2} · {projection}";
     }
 
     void SaveCurrentAsPreset()
@@ -664,6 +673,7 @@ public class TransparentPortraitExporterWindow : EditorWindow
         preset.yaw = yaw;
         preset.pitch = pitch;
         preset.heightOffset = heightOffset;
+        preset.sideOffset = sideOffset;
         preset.zoom = zoom;
         preset.padding = padding;
         preset.orthographic = orthographic;
@@ -1045,6 +1055,7 @@ public class TransparentPortraitExporterWindow : EditorWindow
             hash = hash * 31 + Mathf.RoundToInt(pitch * 100f);
             hash = hash * 31 + Mathf.RoundToInt(fieldOfView * 100f);
             hash = hash * 31 + Mathf.RoundToInt(heightOffset * 1000f);
+            hash = hash * 31 + Mathf.RoundToInt(sideOffset * 1000f);
             hash = hash * 31 + Mathf.RoundToInt(zoom * 1000f);
             hash = hash * 31 + (orthographic ? 1 : 0);
             hash = hash * 31 + (hideGameplayUi ? 1 : 0);
@@ -1191,6 +1202,7 @@ public class TransparentPortraitExporterWindow : EditorWindow
         yaw = DefaultYaw;
         pitch = DefaultPitch;
         heightOffset = DefaultHeightOffset;
+        sideOffset = DefaultSideOffset;
         zoom = DefaultZoom;
         padding = DefaultPadding;
         fieldOfView = DefaultFov;
@@ -1222,6 +1234,7 @@ public class TransparentPortraitExporterWindow : EditorWindow
             pitch = pitch,
             fieldOfView = fieldOfView,
             heightOffset = heightOffset,
+            sideOffset = sideOffset,
             zoom = zoom,
             orthographic = orthographic,
             hideGameplayUi = hideGameplayUi,
@@ -1243,6 +1256,7 @@ public class TransparentPortraitExporterWindow : EditorWindow
             pitch = EditorPrefs.GetFloat(PrefPitch, DefaultPitch),
             fieldOfView = EditorPrefs.GetFloat(PrefFov, DefaultFov),
             heightOffset = EditorPrefs.GetFloat(PrefHeightOffset, DefaultHeightOffset),
+            sideOffset = EditorPrefs.GetFloat(PrefSideOffset, DefaultSideOffset),
             zoom = EditorPrefs.GetFloat(PrefZoom, DefaultZoom),
             orthographic = EditorPrefs.GetBool(PrefOrthographic, true),
             hideGameplayUi = EditorPrefs.GetBool(PrefHideGameplayUi, true),
@@ -1263,6 +1277,7 @@ public class TransparentPortraitExporterWindow : EditorWindow
         pitch = EditorPrefs.GetFloat(PrefPitch, DefaultPitch);
         fieldOfView = EditorPrefs.GetFloat(PrefFov, DefaultFov);
         heightOffset = EditorPrefs.GetFloat(PrefHeightOffset, DefaultHeightOffset);
+        sideOffset = EditorPrefs.GetFloat(PrefSideOffset, DefaultSideOffset);
         zoom = EditorPrefs.GetFloat(PrefZoom, DefaultZoom);
         orthographic = EditorPrefs.GetBool(PrefOrthographic, true);
         hideGameplayUi = EditorPrefs.GetBool(PrefHideGameplayUi, true);
@@ -1287,6 +1302,7 @@ public class TransparentPortraitExporterWindow : EditorWindow
         EditorPrefs.SetFloat(PrefPitch, pitch);
         EditorPrefs.SetFloat(PrefFov, fieldOfView);
         EditorPrefs.SetFloat(PrefHeightOffset, heightOffset);
+        EditorPrefs.SetFloat(PrefSideOffset, sideOffset);
         EditorPrefs.SetFloat(PrefZoom, zoom);
         EditorPrefs.SetBool(PrefOrthographic, orthographic);
         EditorPrefs.SetBool(PrefHideGameplayUi, hideGameplayUi);

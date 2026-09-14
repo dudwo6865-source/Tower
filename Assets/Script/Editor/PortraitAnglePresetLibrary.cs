@@ -24,6 +24,9 @@ public class PortraitAnglePresetLibrary : ScriptableObject
         [Tooltip("대상 높이 대비 시점의 상하 이동 비율입니다.")]
         public float heightOffset;
 
+        [Tooltip("화면상 대상 폭 대비 시점의 좌우 이동 비율입니다.")]
+        public float sideOffset;
+
         [Tooltip("1보다 크면 대상을 크게 잡습니다.")]
         public float zoom = 1f;
 
