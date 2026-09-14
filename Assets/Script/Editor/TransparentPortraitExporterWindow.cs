@@ -37,6 +37,9 @@ public class TransparentPortraitExporterWindow : EditorWindow
     const float DefaultZoom = 1f;
     const int DefaultSupersample = 2;
 
+    // 프리셋 이름 입력칸의 컨트롤 이름 — Enter 저장을 판별할 때 씁니다.
+    const string PresetNameControl = "PortraitExport.PresetName";
+
     // 미리보기는 최종 해상도와 무관하게 이 크기로 렌더합니다.
     const int PreviewRenderSize = 384;
     // 값이 바뀔 때마다 렌더하면 드래그가 무거워지므로 최소 간격을 둡니다.
@@ -84,6 +87,11 @@ public class TransparentPortraitExporterWindow : EditorWindow
     bool previewPending;
     Vector2 scroll;
 
+    // 저장한 카메라 프리셋
+    PortraitAnglePresetLibrary presetLibrary;
+    bool presetLibrarySearched;
+    string newPresetName = string.Empty;
+
     // 섹션 접기 상태
     bool showCamera = true;
     bool showOutput = true;
@@ -91,7 +99,10 @@ public class TransparentPortraitExporterWindow : EditorWindow
 
     static Texture2D checkerTexture;
 
-    // 각도 프리셋 (표시 이름, yaw, pitch)
+    // 선택 중인 프리셋/크기를 강조할 때 쓰는 색입니다.
+    static readonly Color HighlightColor = new Color(0.45f, 0.75f, 1f);
+
+    // 기본 각도 프리셋 (표시 이름, yaw, pitch)
     static readonly (string label, float yaw, float pitch)[] AnglePresets =
     {
         ("정면", 0f, 0f),
@@ -198,6 +209,12 @@ public class TransparentPortraitExporterWindow : EditorWindow
         Selection.selectionChanged -= OnSelectionChanged;
         SaveSettings();
         DestroyPreviewTexture();
+    }
+
+    void OnFocus()
+    {
+        // 다른 곳에서 프리셋 에셋을 만들었거나 지웠을 수 있으니 다시 확인합니다.
+        presetLibrarySearched = false;
     }
 
     void OnSelectionChanged()
@@ -432,6 +449,7 @@ public class TransparentPortraitExporterWindow : EditorWindow
         EditorGUI.indentLevel++;
 
         DrawAnglePresets();
+        DrawUserPresets();
 
         EditorGUILayout.Space(2f);
         yaw = DrawNudgeSlider("Yaw (좌우)", yaw, -180f, 180f, 1f, 15f, "N0");
@@ -460,7 +478,7 @@ public class TransparentPortraitExporterWindow : EditorWindow
     void DrawAnglePresets()
     {
         EditorGUILayout.BeginHorizontal();
-        EditorGUILayout.PrefixLabel("각도 프리셋");
+        EditorGUILayout.PrefixLabel("기본 각도");
 
         Color previousColor = GUI.backgroundColor;
 
@@ -469,7 +487,7 @@ public class TransparentPortraitExporterWindow : EditorWindow
             bool active = Mathf.Abs(Mathf.DeltaAngle(yaw, presetYaw)) < 0.5f
                 && Mathf.Abs(pitch - presetPitch) < 0.5f;
 
-            GUI.backgroundColor = active ? new Color(0.45f, 0.75f, 1f) : previousColor;
+            GUI.backgroundColor = active ? HighlightColor : previousColor;
 
             if (GUILayout.Button(label, EditorStyles.miniButton))
             {
@@ -481,6 +499,235 @@ public class TransparentPortraitExporterWindow : EditorWindow
 
         GUI.backgroundColor = previousColor;
         EditorGUILayout.EndHorizontal();
+    }
+
+    // 저장한 프리셋은 각도뿐 아니라 높이·배율·여백·투영까지 한 번에 되돌립니다.
+    void DrawUserPresets()
+    {
+        PortraitAnglePresetLibrary library = GetPresetLibrary();
+        List<PortraitAnglePresetLibrary.Preset> presets = library != null ? library.Presets : null;
+
+        EditorGUILayout.BeginHorizontal();
+        EditorGUILayout.PrefixLabel(new GUIContent(
+            "내 프리셋",
+            "현재 카메라 설정(각도·높이·배율·여백·투영)을 통째로 저장해 둡니다."));
+
+        if (presets == null || presets.Count == 0)
+            EditorGUILayout.LabelField("저장한 프리셋이 없습니다.", EditorStyles.miniLabel);
+
+        EditorGUILayout.EndHorizontal();
+
+        if (presets != null && presets.Count > 0)
+            DrawUserPresetButtons(library, presets);
+
+        EditorGUILayout.BeginHorizontal();
+        EditorGUILayout.PrefixLabel(" ");
+
+        GUI.SetNextControlName(PresetNameControl);
+        newPresetName = EditorGUILayout.TextField(newPresetName);
+
+        // 이름을 치고 Enter를 눌러도 저장되게 합니다.
+        bool enterPressed = Event.current.type == EventType.KeyDown
+            && (Event.current.keyCode == KeyCode.Return || Event.current.keyCode == KeyCode.KeypadEnter)
+            && GUI.GetNameOfFocusedControl() == PresetNameControl;
+
+        if (enterPressed)
+            Event.current.Use();
+
+        bool overwrites = library != null && library.FindByName(newPresetName.Trim()) != null;
+        string saveLabel = overwrites ? "덮어쓰기" : "현재 설정 저장";
+
+        if (GUILayout.Button(saveLabel, EditorStyles.miniButton, GUILayout.Width(88f)) || enterPressed)
+            SaveCurrentAsPreset();
+
+        using (new EditorGUI.DisabledScope(library == null))
+        {
+            if (GUILayout.Button(new GUIContent("에셋", "프리셋 에셋을 선택합니다. 인스펙터에서 이름과 순서를 바꿀 수 있습니다."),
+                EditorStyles.miniButton, GUILayout.Width(40f)))
+            {
+                Selection.activeObject = library;
+                EditorGUIUtility.PingObject(library);
+            }
+        }
+
+        EditorGUILayout.EndHorizontal();
+    }
+
+    void DrawUserPresetButtons(PortraitAnglePresetLibrary library, List<PortraitAnglePresetLibrary.Preset> presets)
+    {
+        const float cellWidth = 116f;
+
+        float available = Mathf.Max(cellWidth, EditorGUIUtility.currentViewWidth - 40f);
+        int perRow = Mathf.Max(1, Mathf.FloorToInt(available / cellWidth));
+        int deleteIndex = -1;
+
+        for (int i = 0; i < presets.Count; i++)
+        {
+            if (i % perRow == 0)
+            {
+                if (i > 0)
+                    EditorGUILayout.EndHorizontal();
+
+                EditorGUILayout.BeginHorizontal();
+            }
+
+            PortraitAnglePresetLibrary.Preset preset = presets[i];
+
+            if (preset == null)
+                continue;
+
+            Color previousColor = GUI.backgroundColor;
+            GUI.backgroundColor = IsPresetActive(preset) ? HighlightColor : previousColor;
+
+            if (GUILayout.Button(
+                new GUIContent(preset.name, DescribePreset(preset)),
+                EditorStyles.miniButtonLeft,
+                GUILayout.Width(cellWidth - 24f)))
+            {
+                ApplyPreset(preset);
+                GUI.FocusControl(null);
+            }
+
+            GUI.backgroundColor = previousColor;
+
+            if (GUILayout.Button(
+                new GUIContent("×", "이 프리셋을 삭제합니다."),
+                EditorStyles.miniButtonRight,
+                GUILayout.Width(20f)))
+            {
+                deleteIndex = i;
+            }
+        }
+
+        EditorGUILayout.EndHorizontal();
+
+        if (deleteIndex >= 0)
+            DeletePreset(library, deleteIndex);
+    }
+
+    void ApplyPreset(PortraitAnglePresetLibrary.Preset preset)
+    {
+        yaw = Mathf.Clamp(WrapAngle(preset.yaw), -180f, 180f);
+        pitch = Mathf.Clamp(preset.pitch, -89f, 89f);
+        heightOffset = Mathf.Clamp(preset.heightOffset, -1f, 1f);
+        zoom = Mathf.Clamp(preset.zoom, 0.25f, 4f);
+        padding = Mathf.Clamp(preset.padding, 0f, 0.5f);
+        orthographic = preset.orthographic;
+        fieldOfView = Mathf.Clamp(preset.fieldOfView, 5f, 90f);
+    }
+
+    bool IsPresetActive(PortraitAnglePresetLibrary.Preset preset)
+    {
+        if (orthographic != preset.orthographic)
+            return false;
+
+        if (!orthographic && Mathf.Abs(fieldOfView - preset.fieldOfView) > 0.1f)
+            return false;
+
+        return Mathf.Abs(Mathf.DeltaAngle(yaw, preset.yaw)) < 0.5f
+            && Mathf.Abs(pitch - preset.pitch) < 0.5f
+            && Mathf.Abs(heightOffset - preset.heightOffset) < 0.005f
+            && Mathf.Abs(zoom - preset.zoom) < 0.005f
+            && Mathf.Abs(padding - preset.padding) < 0.005f;
+    }
+
+    static string DescribePreset(PortraitAnglePresetLibrary.Preset preset)
+    {
+        string projection = preset.orthographic ? "Orthographic" : $"FOV {preset.fieldOfView:N0}";
+
+        return $"Yaw {preset.yaw:N0}° · Pitch {preset.pitch:N0}° · 높이 {preset.heightOffset:N2}\n" +
+            $"배율 {preset.zoom:N2} · 여백 {preset.padding:N2} · {projection}";
+    }
+
+    void SaveCurrentAsPreset()
+    {
+        string presetName = string.IsNullOrWhiteSpace(newPresetName)
+            ? SuggestPresetName()
+            : newPresetName.Trim();
+
+        PortraitAnglePresetLibrary library = PortraitAnglePresetLibrary.FindOrCreate();
+        presetLibrary = library;
+        presetLibrarySearched = true;
+
+        Undo.RecordObject(library, "초상화 프리셋 저장");
+
+        PortraitAnglePresetLibrary.Preset preset = library.FindByName(presetName);
+        bool isNew = preset == null;
+
+        if (isNew)
+        {
+            preset = new PortraitAnglePresetLibrary.Preset();
+            library.Presets.Add(preset);
+        }
+
+        preset.name = presetName;
+        preset.yaw = yaw;
+        preset.pitch = pitch;
+        preset.heightOffset = heightOffset;
+        preset.zoom = zoom;
+        preset.padding = padding;
+        preset.orthographic = orthographic;
+        preset.fieldOfView = fieldOfView;
+
+        EditorUtility.SetDirty(library);
+        AssetDatabase.SaveAssets();
+
+        newPresetName = string.Empty;
+        GUI.FocusControl(null);
+
+        SetStatus(
+            isNew ? $"프리셋 \"{presetName}\" 저장" : $"프리셋 \"{presetName}\" 덮어쓰기",
+            MessageType.Info);
+    }
+
+    void DeletePreset(PortraitAnglePresetLibrary library, int index)
+    {
+        if (library == null || index < 0 || index >= library.Presets.Count)
+            return;
+
+        string presetName = library.Presets[index].name;
+
+        if (!EditorUtility.DisplayDialog(
+            "프리셋 삭제",
+            $"\"{presetName}\" 프리셋을 삭제할까요?",
+            "삭제",
+            "취소"))
+        {
+            return;
+        }
+
+        Undo.RecordObject(library, "초상화 프리셋 삭제");
+        library.Presets.RemoveAt(index);
+        EditorUtility.SetDirty(library);
+        AssetDatabase.SaveAssets();
+
+        SetStatus($"프리셋 \"{presetName}\" 삭제", MessageType.Info);
+    }
+
+    string SuggestPresetName()
+    {
+        PortraitAnglePresetLibrary library = GetPresetLibrary();
+        int index = 1;
+
+        while (library != null && library.FindByName($"프리셋 {index}") != null)
+            index++;
+
+        return $"프리셋 {index}";
+    }
+
+    // 에셋 탐색은 비싸므로 한 번만 찾고, 창이 포커스를 받을 때 다시 확인합니다.
+    PortraitAnglePresetLibrary GetPresetLibrary()
+    {
+        if (presetLibrary != null)
+            return presetLibrary;
+
+        if (presetLibrarySearched)
+            return null;
+
+        presetLibrarySearched = true;
+        presetLibrary = PortraitAnglePresetLibrary.Find();
+
+        return presetLibrary;
     }
 
     // --- 출력 ---------------------------------------------------------------
@@ -528,7 +775,7 @@ public class TransparentPortraitExporterWindow : EditorWindow
         {
             bool active = width == size && height == size;
             Color previousColor = GUI.backgroundColor;
-            GUI.backgroundColor = active ? new Color(0.45f, 0.75f, 1f) : previousColor;
+            GUI.backgroundColor = active ? HighlightColor : previousColor;
 
             if (GUILayout.Button($"{size}", EditorStyles.miniButton))
             {
