@@ -19,31 +19,77 @@ public class TransparentPortraitExporterWindow : EditorWindow
     const string PrefHideGameplayUi = "Tank.PortraitExport.HideGameplayUi";
     const string PrefImportAsSprite = "Tank.PortraitExport.ImportAsSprite";
     const string PrefAssignPortrait = "Tank.PortraitExport.AssignPortrait";
+    const string PrefOverwrite = "Tank.PortraitExport.Overwrite";
+    const string PrefSupersample = "Tank.PortraitExport.Supersample";
+    const string PrefPreviewBackground = "Tank.PortraitExport.PreviewBackground";
+    const string PrefShowCamera = "Tank.PortraitExport.ShowCamera";
+    const string PrefShowOutput = "Tank.PortraitExport.ShowOutput";
+    const string PrefShowOptions = "Tank.PortraitExport.ShowOptions";
+
+    // 기본값 — "기본값으로 되돌리기"와 EditorPrefs 기본값에서 함께 사용합니다.
+    const int DefaultWidth = 512;
+    const int DefaultHeight = 512;
+    const float DefaultPadding = 0.15f;
+    const float DefaultYaw = 35f;
+    const float DefaultPitch = 25f;
+    const float DefaultFov = 30f;
+    const float DefaultHeightOffset = 0f;
+    const float DefaultZoom = 1f;
+    const int DefaultSupersample = 2;
+
+    // 미리보기는 최종 해상도와 무관하게 이 크기로 렌더합니다.
+    const int PreviewRenderSize = 384;
+    // 값이 바뀔 때마다 렌더하면 드래그가 무거워지므로 최소 간격을 둡니다.
+    const double PreviewMinInterval = 0.05;
+
+    enum PreviewBackground
+    {
+        Checker,
+        Dark,
+        Light,
+        Magenta,
+    }
 
     Object exportTarget;
     string outputFolder = TransparentPortraitExporter.DefaultOutputFolder;
     string fileNameOverride = string.Empty;
-    int width = 512;
-    int height = 512;
-    float padding = 0.15f;
-    float yaw = 35f;
-    float pitch = 25f;
-    float fieldOfView = 30f;
-    float heightOffset = 0f;
-    float zoom = 1f;
+    int width = DefaultWidth;
+    int height = DefaultHeight;
+    float padding = DefaultPadding;
+    float yaw = DefaultYaw;
+    float pitch = DefaultPitch;
+    float fieldOfView = DefaultFov;
+    float heightOffset = DefaultHeightOffset;
+    float zoom = DefaultZoom;
     bool orthographic = true;
     bool hideGameplayUi = true;
     bool importAsSprite = true;
     bool assignPortrait = true;
+    bool overwriteExisting;
+    int supersample = DefaultSupersample;
+
     string statusMessage = string.Empty;
+    MessageType statusType = MessageType.None;
+    string lastExportedPath = string.Empty;
 
     // 미리보기 상태
     bool autoPreview = true;
+    PreviewBackground previewBackground = PreviewBackground.Checker;
     Texture2D previewTexture;
     string previewError = string.Empty;
     int lastPreviewHash;
     Object lastPreviewTarget;
+    bool hasPreviewResult;
+    double lastPreviewTime;
+    bool previewPending;
     Vector2 scroll;
+
+    // 섹션 접기 상태
+    bool showCamera = true;
+    bool showOutput = true;
+    bool showOptions = true;
+
+    static Texture2D checkerTexture;
 
     // 각도 프리셋 (표시 이름, yaw, pitch)
     static readonly (string label, float yaw, float pitch)[] AnglePresets =
@@ -56,21 +102,40 @@ public class TransparentPortraitExporterWindow : EditorWindow
         ("후면", 180f, 15f),
     };
 
-    [MenuItem("Tools/Export/Transparent Portrait PNG")]
+    static readonly int[] SizePresets = { 128, 256, 512, 1024 };
+
+    static readonly GUIContent[] SupersampleLabels =
+    {
+        new GUIContent("끄기"),
+        new GUIContent("2배"),
+        new GUIContent("4배"),
+    };
+
+    static readonly int[] SupersampleValues = { 1, 2, 4 };
+
+    static readonly GUIContent[] BackgroundLabels =
+    {
+        new GUIContent("체커"),
+        new GUIContent("어둡게"),
+        new GUIContent("밝게"),
+        new GUIContent("자홍"),
+    };
+
+    [MenuItem("Tools/내보내기/투명 배경 초상화 PNG", false, 0)]
     static void OpenWindow()
     {
         TransparentPortraitExporterWindow window = GetWindow<TransparentPortraitExporterWindow>(
             false,
-            "Portrait Export",
+            "초상화 내보내기",
             true);
 
-        window.minSize = new Vector2(420f, 520f);
+        window.minSize = new Vector2(430f, 560f);
         window.LoadSettings();
         window.SyncTargetFromSelection();
         window.Show();
     }
 
-    [MenuItem("Tools/Export/Quick Export Selected Portrait")]
+    [MenuItem("Tools/내보내기/선택 항목 바로 내보내기", false, 1)]
     static void QuickExportSelected()
     {
         List<Object> sources = new List<Object>(TransparentPortraitExporter.GetExportSourcesFromSelection());
@@ -78,7 +143,7 @@ public class TransparentPortraitExporterWindow : EditorWindow
         if (sources.Count == 0)
         {
             EditorUtility.DisplayDialog(
-                "Portrait Export",
+                "초상화 내보내기",
                 "프로젝트 창 또는 Hierarchy에서 GameObject, 프리팹, UnitData를 선택해 주세요.",
                 "확인");
 
@@ -107,12 +172,12 @@ public class TransparentPortraitExporterWindow : EditorWindow
         }
 
         EditorUtility.DisplayDialog(
-            "Portrait Export",
+            "초상화 내보내기",
             $"{successCount}/{sources.Count}개 저장 완료\n\n{log}",
             "확인");
     }
 
-    [MenuItem("Tools/Export/Quick Export Selected Portrait", true)]
+    [MenuItem("Tools/내보내기/선택 항목 바로 내보내기", true, 1)]
     static bool QuickExportSelectedValidate()
     {
         foreach (Object _ in TransparentPortraitExporter.GetExportSourcesFromSelection())
@@ -125,11 +190,20 @@ public class TransparentPortraitExporterWindow : EditorWindow
     {
         LoadSettings();
         SyncTargetFromSelection();
+        Selection.selectionChanged += OnSelectionChanged;
     }
 
     void OnDisable()
     {
+        Selection.selectionChanged -= OnSelectionChanged;
+        SaveSettings();
         DestroyPreviewTexture();
+    }
+
+    void OnSelectionChanged()
+    {
+        // 선택 개수 표시와 "선택 항목 전체 내보내기" 버튼을 최신 상태로 유지합니다.
+        Repaint();
     }
 
     void OnGUI()
@@ -142,18 +216,33 @@ public class TransparentPortraitExporterWindow : EditorWindow
             "GameObject, 프리팹, UnitData를 대상으로 사용할 수 있습니다.",
             MessageType.Info);
 
+        DrawTargetSection();
+        DrawPreviewSection();
+        DrawCameraSection();
+        DrawOutputSection();
+        DrawOptionsSection();
+        DrawExportButtons();
+        DrawStatus();
+
+        EditorGUILayout.EndScrollView();
+    }
+
+    // --- 대상 ---------------------------------------------------------------
+
+    void DrawTargetSection()
+    {
         EditorGUILayout.Space(6f);
         EditorGUILayout.LabelField("대상", EditorStyles.boldLabel);
 
         EditorGUI.BeginChangeCheck();
-        exportTarget = EditorGUILayout.ObjectField("Export Target", exportTarget, typeof(Object), true);
+        exportTarget = EditorGUILayout.ObjectField("내보낼 오브젝트", exportTarget, typeof(Object), true);
 
         if (EditorGUI.EndChangeCheck() && exportTarget != null)
             fileNameOverride = GetDefaultFileName(exportTarget);
 
         EditorGUILayout.BeginHorizontal();
 
-        if (GUILayout.Button("선택 대상 가져오기"))
+        if (GUILayout.Button("선택 항목 가져오기"))
         {
             SyncTargetFromSelection();
 
@@ -161,74 +250,40 @@ public class TransparentPortraitExporterWindow : EditorWindow
                 fileNameOverride = GetDefaultFileName(exportTarget);
         }
 
-        EditorGUILayout.EndHorizontal();
-
-        // --- 실시간 미리보기 -------------------------------------------------
-        DrawPreviewSection();
-
-        // --- 카메라 각도 ---------------------------------------------------
-        EditorGUILayout.Space(6f);
-        EditorGUILayout.LabelField("카메라 각도", EditorStyles.boldLabel);
-
-        DrawAnglePresets();
-
-        EditorGUILayout.Space(2f);
-        yaw = DrawNudgeSlider("Yaw (좌우)", yaw, -180f, 180f, 1f, 5f, "N0");
-        pitch = DrawNudgeSlider("Pitch (상하)", pitch, -89f, 89f, 1f, 5f, "N0");
-        heightOffset = DrawNudgeSlider("높이 (상하 이동)", heightOffset, -1f, 1f, 0.02f, 0.1f, "N2");
-
-        EditorGUILayout.Space(6f);
-        EditorGUILayout.LabelField("카메라 렌즈", EditorStyles.boldLabel);
-        zoom = DrawNudgeSlider("배율 (크게/작게)", zoom, 0.25f, 4f, 0.05f, 0.25f, "N2");
-        padding = EditorGUILayout.Slider("여백", padding, 0f, 0.5f);
-        orthographic = EditorGUILayout.ToggleLeft("Orthographic 카메라", orthographic);
-
-        using (new EditorGUI.DisabledScope(orthographic))
-            fieldOfView = EditorGUILayout.Slider("FOV (원근)", fieldOfView, 5f, 90f);
-
-        EditorGUILayout.Space(6f);
-        EditorGUILayout.LabelField("출력", EditorStyles.boldLabel);
-        outputFolder = EditorGUILayout.TextField("저장 폴더", outputFolder);
-        fileNameOverride = EditorGUILayout.TextField("파일 이름", fileNameOverride);
-        width = EditorGUILayout.IntField("너비", width);
-        height = EditorGUILayout.IntField("높이", height);
-
-        EditorGUILayout.Space(6f);
-        EditorGUILayout.LabelField("옵션", EditorStyles.boldLabel);
-        hideGameplayUi = EditorGUILayout.ToggleLeft("체력바/캔버스 등 게임 UI 숨김", hideGameplayUi);
-        importAsSprite = EditorGUILayout.ToggleLeft("PNG를 Sprite로 임포트", importAsSprite);
-        assignPortrait = EditorGUILayout.ToggleLeft("SelectableEntity.portrait에 자동 할당", assignPortrait);
-
-        EditorGUILayout.Space(10f);
-
         using (new EditorGUI.DisabledScope(exportTarget == null))
         {
-            if (GUILayout.Button("PNG 내보내기", GUILayout.Height(32f)))
-                ExportCurrentTarget();
+            if (GUILayout.Button("씬에서 찾기", GUILayout.Width(90f)))
+                EditorGUIUtility.PingObject(exportTarget);
         }
 
-        if (!string.IsNullOrEmpty(statusMessage))
-        {
-            EditorGUILayout.Space(8f);
-            EditorGUILayout.HelpBox(statusMessage, MessageType.None);
-        }
-
-        EditorGUILayout.EndScrollView();
+        EditorGUILayout.EndHorizontal();
     }
+
+    // --- 미리보기 -----------------------------------------------------------
 
     void DrawPreviewSection()
     {
-        EditorGUILayout.Space(6f);
+        EditorGUILayout.Space(8f);
 
         EditorGUILayout.BeginHorizontal();
-        EditorGUILayout.LabelField("미리보기", EditorStyles.boldLabel);
+        EditorGUILayout.LabelField("미리보기", EditorStyles.boldLabel, GUILayout.Width(60f));
         GUILayout.FlexibleSpace();
-        autoPreview = EditorGUILayout.ToggleLeft("자동 갱신", autoPreview, GUILayout.Width(90f));
+        autoPreview = EditorGUILayout.ToggleLeft("자동 갱신", autoPreview, GUILayout.Width(80f));
+
+        previewBackground = (PreviewBackground)EditorGUILayout.Popup(
+            (int)previewBackground,
+            BackgroundLabels,
+            EditorStyles.miniButton,
+            GUILayout.Width(60f));
 
         using (new EditorGUI.DisabledScope(exportTarget == null))
         {
-            if (GUILayout.Button("새로고침", GUILayout.Width(70f)))
+            if (GUILayout.Button("새로고침", EditorStyles.miniButton, GUILayout.Width(64f)))
+            {
+                // 프리팹을 새로 만들었거나 UnitData 연결을 바꾼 경우를 위해 캐시도 비웁니다.
+                TransparentPortraitExporter.ClearUnitDataCache();
                 RefreshPreview();
+            }
         }
 
         EditorGUILayout.EndHorizontal();
@@ -236,32 +291,186 @@ public class TransparentPortraitExporterWindow : EditorWindow
         if (autoPreview)
             RefreshPreviewIfDirty();
 
-        // 미리보기 박스
-        float aspect = height > 0 ? (float)width / height : 1f;
-        float boxWidth = Mathf.Min(EditorGUIUtility.currentViewWidth - 40f, 240f);
-        float boxHeight = boxWidth / Mathf.Max(0.01f, aspect);
+        Rect rect = GetPreviewRect();
 
-        Rect rect = GUILayoutUtility.GetRect(boxWidth, boxHeight, GUILayout.ExpandWidth(false));
-        rect.x += (EditorGUIUtility.currentViewWidth - rect.width) * 0.5f - 6f;
-
-        EditorGUI.DrawRect(rect, new Color(0.16f, 0.16f, 0.16f, 1f));
-        DrawCheckerboard(rect);
+        DrawPreviewBackground(rect);
 
         if (previewTexture != null)
             GUI.DrawTexture(rect, previewTexture, ScaleMode.ScaleToFit, true);
         else if (exportTarget == null)
             EditorGUI.LabelField(rect, "대상을 지정하세요", EditorStyles.centeredGreyMiniLabel);
-        else if (!string.IsNullOrEmpty(previewError))
-            EditorGUI.LabelField(rect, previewError, EditorStyles.centeredGreyMiniLabel);
+        else if (!autoPreview)
+            EditorGUI.LabelField(rect, "새로고침을 눌러 미리보기", EditorStyles.centeredGreyMiniLabel);
+
+        DrawBorder(rect, new Color(0f, 0f, 0f, 0.55f));
+
+        HandlePreviewInput(rect);
+
+        EditorGUILayout.LabelField(
+            "드래그: 회전 · Alt+드래그: 높이 · 휠: 배율",
+            EditorStyles.centeredGreyMiniLabel);
+
+        if (!string.IsNullOrEmpty(previewError))
+            EditorGUILayout.HelpBox(previewError, MessageType.Warning);
+    }
+
+    Rect GetPreviewRect()
+    {
+        float aspect = height > 0 ? (float)width / height : 1f;
+        aspect = Mathf.Clamp(aspect, 0.25f, 4f);
+
+        float available = Mathf.Max(120f, EditorGUIUtility.currentViewWidth - 40f);
+        float boxWidth = Mathf.Min(available, 360f);
+        float boxHeight = boxWidth / aspect;
+
+        // 세로로 긴 비율이면 높이를 먼저 제한해 창 밖으로 넘치지 않게 합니다.
+        if (boxHeight > 360f)
+        {
+            boxHeight = 360f;
+            boxWidth = boxHeight * aspect;
+        }
+
+        EditorGUILayout.BeginHorizontal();
+        GUILayout.FlexibleSpace();
+        Rect rect = GUILayoutUtility.GetRect(boxWidth, boxHeight, GUILayout.ExpandWidth(false));
+        GUILayout.FlexibleSpace();
+        EditorGUILayout.EndHorizontal();
+
+        return rect;
+    }
+
+    void DrawPreviewBackground(Rect rect)
+    {
+        switch (previewBackground)
+        {
+            case PreviewBackground.Dark:
+                EditorGUI.DrawRect(rect, new Color(0.12f, 0.12f, 0.13f, 1f));
+                break;
+
+            case PreviewBackground.Light:
+                EditorGUI.DrawRect(rect, new Color(0.85f, 0.85f, 0.86f, 1f));
+                break;
+
+            case PreviewBackground.Magenta:
+                EditorGUI.DrawRect(rect, new Color(0.85f, 0.1f, 0.75f, 1f));
+                break;
+
+            default:
+                DrawCheckerboard(rect);
+                break;
+        }
+    }
+
+    void HandlePreviewInput(Rect rect)
+    {
+        int controlId = GUIUtility.GetControlID(FocusType.Passive);
+        Event current = Event.current;
+
+        switch (current.GetTypeForControl(controlId))
+        {
+            case EventType.MouseDown:
+                if (rect.Contains(current.mousePosition) && (current.button == 0 || current.button == 2))
+                {
+                    GUIUtility.hotControl = controlId;
+                    GUI.FocusControl(null);
+                    current.Use();
+                }
+
+                break;
+
+            case EventType.MouseDrag:
+                if (GUIUtility.hotControl != controlId)
+                    break;
+
+                if (current.alt || current.button == 2)
+                {
+                    heightOffset = Mathf.Clamp(heightOffset + current.delta.y * 0.004f, -1f, 1f);
+                }
+                else
+                {
+                    yaw = WrapAngle(yaw + current.delta.x * 0.6f);
+                    pitch = Mathf.Clamp(pitch - current.delta.y * 0.6f, -89f, 89f);
+                }
+
+                current.Use();
+                Repaint();
+                break;
+
+            case EventType.MouseUp:
+                if (GUIUtility.hotControl == controlId)
+                {
+                    GUIUtility.hotControl = 0;
+                    current.Use();
+                }
+
+                break;
+
+            case EventType.ScrollWheel:
+                if (!rect.Contains(current.mousePosition))
+                    break;
+
+                zoom = Mathf.Clamp(zoom * (1f - current.delta.y * 0.04f), 0.25f, 4f);
+                current.Use();
+                Repaint();
+                break;
+        }
+
+        if (rect.Contains(current.mousePosition))
+            EditorGUIUtility.AddCursorRect(rect, MouseCursor.Orbit);
+    }
+
+    // --- 카메라 -------------------------------------------------------------
+
+    void DrawCameraSection()
+    {
+        EditorGUILayout.Space(6f);
+        showCamera = EditorGUILayout.Foldout(showCamera, "카메라", true, EditorStyles.foldoutHeader);
+
+        if (!showCamera)
+            return;
+
+        EditorGUI.indentLevel++;
+
+        DrawAnglePresets();
+
+        EditorGUILayout.Space(2f);
+        yaw = DrawNudgeSlider("Yaw (좌우)", yaw, -180f, 180f, 1f, 15f, "N0");
+        pitch = DrawNudgeSlider("Pitch (상하)", pitch, -89f, 89f, 1f, 15f, "N0");
+        heightOffset = DrawNudgeSlider("높이 (상하 이동)", heightOffset, -1f, 1f, 0.02f, 0.1f, "N2");
+
+        EditorGUILayout.Space(4f);
+        zoom = DrawNudgeSlider("배율 (크게/작게)", zoom, 0.25f, 4f, 0.05f, 0.25f, "N2");
+        padding = EditorGUILayout.Slider("여백", padding, 0f, 0.5f);
+        orthographic = EditorGUILayout.ToggleLeft("Orthographic 카메라 (원근 없음)", orthographic);
+
+        using (new EditorGUI.DisabledScope(orthographic))
+            fieldOfView = EditorGUILayout.Slider("FOV (원근)", fieldOfView, 5f, 90f);
+
+        EditorGUILayout.Space(2f);
+
+        if (GUILayout.Button("카메라 값 초기화", EditorStyles.miniButton))
+        {
+            ResetCameraDefaults();
+            GUI.FocusControl(null);
+        }
+
+        EditorGUI.indentLevel--;
     }
 
     void DrawAnglePresets()
     {
         EditorGUILayout.BeginHorizontal();
-        EditorGUILayout.LabelField("프리셋", GUILayout.Width(EditorGUIUtility.labelWidth));
+        EditorGUILayout.PrefixLabel("각도 프리셋");
+
+        Color previousColor = GUI.backgroundColor;
 
         foreach ((string label, float presetYaw, float presetPitch) in AnglePresets)
         {
+            bool active = Mathf.Abs(Mathf.DeltaAngle(yaw, presetYaw)) < 0.5f
+                && Mathf.Abs(pitch - presetPitch) < 0.5f;
+
+            GUI.backgroundColor = active ? new Color(0.45f, 0.75f, 1f) : previousColor;
+
             if (GUILayout.Button(label, EditorStyles.miniButton))
             {
                 yaw = presetYaw;
@@ -270,25 +479,194 @@ public class TransparentPortraitExporterWindow : EditorWindow
             }
         }
 
+        GUI.backgroundColor = previousColor;
         EditorGUILayout.EndHorizontal();
     }
 
-    // 슬라이더 + 숫자 입력 + 미세 조정(±small, ±big) 버튼을 함께 그린다.
+    // --- 출력 ---------------------------------------------------------------
+
+    void DrawOutputSection()
+    {
+        EditorGUILayout.Space(6f);
+        showOutput = EditorGUILayout.Foldout(showOutput, "출력", true, EditorStyles.foldoutHeader);
+
+        if (!showOutput)
+            return;
+
+        EditorGUI.indentLevel++;
+
+        EditorGUILayout.BeginHorizontal();
+        outputFolder = EditorGUILayout.TextField("저장 폴더", outputFolder);
+
+        if (GUILayout.Button("찾기", EditorStyles.miniButtonLeft, GUILayout.Width(40f)))
+            BrowseOutputFolder();
+
+        if (GUILayout.Button("열기", EditorStyles.miniButtonRight, GUILayout.Width(40f)))
+            EditorUtility.RevealInFinder(outputFolder);
+
+        EditorGUILayout.EndHorizontal();
+
+        string defaultName = exportTarget != null ? GetDefaultFileName(exportTarget) : "파일 이름";
+        fileNameOverride = EditorGUILayout.TextField("파일 이름", fileNameOverride);
+
+        if (string.IsNullOrWhiteSpace(fileNameOverride) && exportTarget != null)
+            EditorGUILayout.LabelField(" ", $"비워 두면 \"{defaultName}.png\"", EditorStyles.miniLabel);
+
+        // 한 줄에 너비 × 높이를 묶어 라벨이 겹치지 않게 합니다.
+        // 입력 도중 값이 튀지 않도록 확정(Enter/포커스 이동) 후에만 반영합니다.
+        EditorGUILayout.BeginHorizontal();
+        EditorGUILayout.PrefixLabel("해상도 (px)");
+        width = Mathf.Clamp(EditorGUILayout.DelayedIntField(width), 16, 4096);
+        EditorGUILayout.LabelField("×", GUILayout.Width(14f));
+        height = Mathf.Clamp(EditorGUILayout.DelayedIntField(height), 16, 4096);
+        EditorGUILayout.EndHorizontal();
+
+        EditorGUILayout.BeginHorizontal();
+        EditorGUILayout.PrefixLabel("크기 프리셋");
+
+        foreach (int size in SizePresets)
+        {
+            bool active = width == size && height == size;
+            Color previousColor = GUI.backgroundColor;
+            GUI.backgroundColor = active ? new Color(0.45f, 0.75f, 1f) : previousColor;
+
+            if (GUILayout.Button($"{size}", EditorStyles.miniButton))
+            {
+                width = size;
+                height = size;
+                GUI.FocusControl(null);
+            }
+
+            GUI.backgroundColor = previousColor;
+        }
+
+        EditorGUILayout.EndHorizontal();
+
+        overwriteExisting = EditorGUILayout.ToggleLeft(
+            new GUIContent("같은 이름이면 덮어쓰기", "끄면 name_1.png 처럼 새 파일이 계속 늘어납니다."),
+            overwriteExisting);
+
+        EditorGUI.indentLevel--;
+    }
+
+    void BrowseOutputFolder()
+    {
+        string start = System.IO.Directory.Exists(outputFolder) ? outputFolder : "Assets";
+        string absolute = EditorUtility.OpenFolderPanel("저장 폴더 선택", start, string.Empty);
+
+        if (string.IsNullOrEmpty(absolute))
+            return;
+
+        string projectPath = Application.dataPath.Replace('\\', '/');
+        absolute = absolute.Replace('\\', '/');
+
+        if (!absolute.StartsWith(projectPath, System.StringComparison.Ordinal))
+        {
+            SetStatus("프로젝트의 Assets 폴더 안쪽만 선택할 수 있습니다.", MessageType.Warning);
+            return;
+        }
+
+        outputFolder = "Assets" + absolute.Substring(projectPath.Length);
+        GUI.FocusControl(null);
+    }
+
+    // --- 옵션 ---------------------------------------------------------------
+
+    void DrawOptionsSection()
+    {
+        EditorGUILayout.Space(6f);
+        showOptions = EditorGUILayout.Foldout(showOptions, "옵션", true, EditorStyles.foldoutHeader);
+
+        if (!showOptions)
+            return;
+
+        EditorGUI.indentLevel++;
+
+        hideGameplayUi = EditorGUILayout.ToggleLeft("체력바/캔버스 등 게임 UI 숨김", hideGameplayUi);
+        importAsSprite = EditorGUILayout.ToggleLeft("PNG를 Sprite로 임포트", importAsSprite);
+        assignPortrait = EditorGUILayout.ToggleLeft("SelectableEntity.portrait에 자동 할당", assignPortrait);
+
+        supersample = EditorGUILayout.IntPopup(
+            new GUIContent("외곽선 부드럽게", "높을수록 계단현상이 줄지만 렌더가 느려집니다."),
+            supersample,
+            SupersampleLabels,
+            SupersampleValues);
+
+        EditorGUI.indentLevel--;
+    }
+
+    // --- 내보내기 -----------------------------------------------------------
+
+    void DrawExportButtons()
+    {
+        EditorGUILayout.Space(10f);
+
+        int selectionCount = CountSelectionSources();
+
+        using (new EditorGUI.DisabledScope(exportTarget == null))
+        {
+            if (GUILayout.Button("PNG 내보내기", GUILayout.Height(34f)))
+                ExportCurrentTarget();
+        }
+
+        using (new EditorGUI.DisabledScope(selectionCount < 2))
+        {
+            string label = selectionCount >= 2
+                ? $"선택한 {selectionCount}개 모두 내보내기"
+                : "선택한 항목 모두 내보내기";
+
+            if (GUILayout.Button(label, GUILayout.Height(24f)))
+                ExportSelection();
+        }
+
+        if (GUILayout.Button("모든 설정 기본값으로", EditorStyles.miniButton))
+        {
+            ResetAllDefaults();
+            GUI.FocusControl(null);
+        }
+    }
+
+    void DrawStatus()
+    {
+        if (string.IsNullOrEmpty(statusMessage))
+            return;
+
+        EditorGUILayout.Space(8f);
+        EditorGUILayout.HelpBox(statusMessage, statusType);
+
+        if (string.IsNullOrEmpty(lastExportedPath))
+            return;
+
+        if (GUILayout.Button("저장한 PNG 선택", EditorStyles.miniButton))
+        {
+            Object asset = AssetDatabase.LoadAssetAtPath<Object>(lastExportedPath);
+
+            if (asset != null)
+            {
+                Selection.activeObject = asset;
+                EditorGUIUtility.PingObject(asset);
+            }
+        }
+    }
+
+    // --- 공용 위젯 ----------------------------------------------------------
+
+    // 슬라이더 + 미세 조정(±small, ±big) 버튼을 함께 그립니다.
     float DrawNudgeSlider(string label, float value, float min, float max, float small, float big, string format)
     {
         EditorGUILayout.BeginHorizontal();
         value = EditorGUILayout.Slider(label, value, min, max);
 
-        if (GUILayout.Button("-" + big.ToString(format), EditorStyles.miniButtonLeft, GUILayout.Width(34f)))
+        if (GUILayout.Button("-" + big.ToString(format), EditorStyles.miniButtonLeft, GUILayout.Width(38f)))
             value -= big;
 
-        if (GUILayout.Button("-" + small.ToString(format), EditorStyles.miniButtonMid, GUILayout.Width(34f)))
+        if (GUILayout.Button("-" + small.ToString(format), EditorStyles.miniButtonMid, GUILayout.Width(38f)))
             value -= small;
 
-        if (GUILayout.Button("+" + small.ToString(format), EditorStyles.miniButtonMid, GUILayout.Width(34f)))
+        if (GUILayout.Button("+" + small.ToString(format), EditorStyles.miniButtonMid, GUILayout.Width(38f)))
             value += small;
 
-        if (GUILayout.Button("+" + big.ToString(format), EditorStyles.miniButtonRight, GUILayout.Width(34f)))
+        if (GUILayout.Button("+" + big.ToString(format), EditorStyles.miniButtonRight, GUILayout.Width(38f)))
             value += big;
 
         EditorGUILayout.EndHorizontal();
@@ -298,34 +676,79 @@ public class TransparentPortraitExporterWindow : EditorWindow
 
     static void DrawCheckerboard(Rect rect)
     {
-        const float cell = 8f;
-        Color a = new Color(0.22f, 0.22f, 0.22f, 1f);
-        Color b = new Color(0.28f, 0.28f, 0.28f, 1f);
+        Texture2D checker = GetCheckerTexture();
 
-        int cols = Mathf.CeilToInt(rect.width / cell);
-        int rows = Mathf.CeilToInt(rect.height / cell);
-
-        for (int y = 0; y < rows; y++)
-        {
-            for (int x = 0; x < cols; x++)
-            {
-                Rect c = new Rect(
-                    rect.x + x * cell,
-                    rect.y + y * cell,
-                    Mathf.Min(cell, rect.xMax - (rect.x + x * cell)),
-                    Mathf.Min(cell, rect.yMax - (rect.y + y * cell)));
-
-                EditorGUI.DrawRect(c, (x + y) % 2 == 0 ? a : b);
-            }
-        }
+        // 셀마다 DrawRect를 호출하는 대신 타일 텍스처 한 번으로 그립니다.
+        GUI.DrawTextureWithTexCoords(
+            rect,
+            checker,
+            new Rect(0f, 0f, rect.width / checker.width, rect.height / checker.height));
     }
+
+    static Texture2D GetCheckerTexture()
+    {
+        if (checkerTexture != null)
+            return checkerTexture;
+
+        const int cell = 8;
+        const int size = cell * 2;
+
+        Color a = new Color(0.24f, 0.24f, 0.24f, 1f);
+        Color b = new Color(0.31f, 0.31f, 0.31f, 1f);
+
+        checkerTexture = new Texture2D(size, size, TextureFormat.RGBA32, false)
+        {
+            hideFlags = HideFlags.HideAndDontSave,
+            wrapMode = TextureWrapMode.Repeat,
+            filterMode = FilterMode.Point,
+        };
+
+        Color[] pixels = new Color[size * size];
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+                pixels[y * size + x] = (x / cell + y / cell) % 2 == 0 ? a : b;
+        }
+
+        checkerTexture.SetPixels(pixels);
+        checkerTexture.Apply();
+
+        return checkerTexture;
+    }
+
+    // 미리보기 영역 경계를 분명히 보여 주는 1px 테두리입니다.
+    static void DrawBorder(Rect rect, Color color)
+    {
+        EditorGUI.DrawRect(new Rect(rect.xMin, rect.yMin, rect.width, 1f), color);
+        EditorGUI.DrawRect(new Rect(rect.xMin, rect.yMax - 1f, rect.width, 1f), color);
+        EditorGUI.DrawRect(new Rect(rect.xMin, rect.yMin, 1f, rect.height), color);
+        EditorGUI.DrawRect(new Rect(rect.xMax - 1f, rect.yMin, 1f, rect.height), color);
+    }
+
+    static float WrapAngle(float angle)
+    {
+        return Mathf.Repeat(angle + 180f, 360f) - 180f;
+    }
+
+    // --- 미리보기 렌더 ------------------------------------------------------
 
     void RefreshPreviewIfDirty()
     {
         int hash = ComputeSettingsHash();
 
-        if (previewTexture != null && hash == lastPreviewHash && lastPreviewTarget == exportTarget)
+        // 렌더에 실패한 설정도 "처리 완료"로 기록해야 매 프레임 다시 시도하지 않습니다.
+        if (hasPreviewResult && hash == lastPreviewHash && lastPreviewTarget == exportTarget)
             return;
+
+        double now = EditorApplication.timeSinceStartup;
+
+        if (now - lastPreviewTime < PreviewMinInterval)
+        {
+            previewPending = true;
+            Repaint();
+            return;
+        }
 
         RefreshPreview();
     }
@@ -336,23 +759,28 @@ public class TransparentPortraitExporterWindow : EditorWindow
 
         lastPreviewHash = ComputeSettingsHash();
         lastPreviewTarget = exportTarget;
+        lastPreviewTime = EditorApplication.timeSinceStartup;
+        previewPending = false;
+        hasPreviewResult = true;
         previewError = string.Empty;
 
         if (exportTarget == null)
             return;
 
-        // 미리보기는 최종 해상도가 아닌 적당한 크기로 렌더해 빠르게 갱신한다.
         float aspect = height > 0 ? (float)width / height : 1f;
-        int previewSize = 256;
-        int previewWidth = aspect >= 1f ? previewSize : Mathf.RoundToInt(previewSize * aspect);
-        int previewHeight = aspect >= 1f ? Mathf.RoundToInt(previewSize / aspect) : previewSize;
+        int previewWidth = aspect >= 1f ? PreviewRenderSize : Mathf.RoundToInt(PreviewRenderSize * aspect);
+        int previewHeight = aspect >= 1f ? Mathf.RoundToInt(PreviewRenderSize / aspect) : PreviewRenderSize;
 
         previewWidth = Mathf.Max(16, previewWidth);
         previewHeight = Mathf.Max(16, previewHeight);
 
+        // 미리보기는 자주 갱신되므로 슈퍼샘플링 비용을 2배까지만 씁니다.
+        TransparentPortraitExporter.ExportSettings previewSettings = CreateSettings();
+        previewSettings.supersample = Mathf.Min(previewSettings.supersample, 2);
+
         previewTexture = TransparentPortraitExporter.RenderPreview(
             exportTarget,
-            CreateSettings(),
+            previewSettings,
             previewWidth,
             previewHeight,
             out previewError);
@@ -373,6 +801,7 @@ public class TransparentPortraitExporterWindow : EditorWindow
             hash = hash * 31 + Mathf.RoundToInt(zoom * 1000f);
             hash = hash * 31 + (orthographic ? 1 : 0);
             hash = hash * 31 + (hideGameplayUi ? 1 : 0);
+            hash = hash * 31 + supersample;
             return hash;
         }
     }
@@ -386,6 +815,15 @@ public class TransparentPortraitExporterWindow : EditorWindow
         }
     }
 
+    void Update()
+    {
+        // 드래그 중 최소 간격 때문에 미뤄 둔 미리보기를 이어서 갱신합니다.
+        if (previewPending && autoPreview)
+            Repaint();
+    }
+
+    // --- 내보내기 실행 ------------------------------------------------------
+
     void ExportCurrentTarget()
     {
         SaveSettings();
@@ -396,21 +834,99 @@ public class TransparentPortraitExporterWindow : EditorWindow
             fileNameOverride,
             CreateSettings());
 
-        statusMessage = result.message;
-
         if (!result.success)
         {
-            EditorUtility.DisplayDialog("Portrait Export", result.message, "확인");
+            lastExportedPath = string.Empty;
+            SetStatus(result.message, MessageType.Error);
+            EditorUtility.DisplayDialog("초상화 내보내기", result.message, "확인");
             return;
         }
+
+        lastExportedPath = result.assetPath;
+        string message = result.message;
+
+        if (result.assignedEntity != null)
+            message += $"\nPortrait 할당: {result.assignedEntity.name}";
+
+        SetStatus(message, MessageType.Info);
 
         Object pingTarget = AssetDatabase.LoadAssetAtPath<Object>(result.assetPath);
 
         if (pingTarget != null)
             EditorGUIUtility.PingObject(pingTarget);
+    }
 
-        if (result.assignedEntity != null)
-            statusMessage += $"\nPortrait 할당: {result.assignedEntity.name}";
+    void ExportSelection()
+    {
+        SaveSettings();
+
+        List<Object> sources = new List<Object>(TransparentPortraitExporter.GetExportSourcesFromSelection());
+
+        if (sources.Count == 0)
+        {
+            SetStatus("선택된 대상이 없습니다.", MessageType.Warning);
+            return;
+        }
+
+        TransparentPortraitExporter.ExportSettings settings = CreateSettings();
+        StringBuilder failures = new StringBuilder();
+        int successCount = 0;
+
+        try
+        {
+            for (int i = 0; i < sources.Count; i++)
+            {
+                Object source = sources[i];
+
+                EditorUtility.DisplayProgressBar(
+                    "초상화 내보내기",
+                    $"{source.name} ({i + 1}/{sources.Count})",
+                    (float)i / sources.Count);
+
+                TransparentPortraitExporter.ExportResult result = TransparentPortraitExporter.Export(
+                    source,
+                    outputFolder,
+                    GetDefaultFileName(source),
+                    settings);
+
+                if (result.success)
+                {
+                    successCount++;
+                    lastExportedPath = result.assetPath;
+                    continue;
+                }
+
+                failures.AppendLine($"· {source.name}: {result.message}");
+            }
+        }
+        finally
+        {
+            EditorUtility.ClearProgressBar();
+        }
+
+        if (failures.Length > 0)
+        {
+            SetStatus($"{successCount}/{sources.Count}개 저장 완료\n실패:\n{failures}", MessageType.Warning);
+            return;
+        }
+
+        SetStatus($"{successCount}개 저장 완료: {outputFolder}", MessageType.Info);
+    }
+
+    int CountSelectionSources()
+    {
+        int count = 0;
+
+        foreach (Object _ in TransparentPortraitExporter.GetExportSourcesFromSelection())
+            count++;
+
+        return count;
+    }
+
+    void SetStatus(string message, MessageType type)
+    {
+        statusMessage = message;
+        statusType = type;
     }
 
     void SyncTargetFromSelection()
@@ -421,6 +937,31 @@ public class TransparentPortraitExporterWindow : EditorWindow
             return;
 
         exportTarget = sources[0];
+    }
+
+    void ResetCameraDefaults()
+    {
+        yaw = DefaultYaw;
+        pitch = DefaultPitch;
+        heightOffset = DefaultHeightOffset;
+        zoom = DefaultZoom;
+        padding = DefaultPadding;
+        fieldOfView = DefaultFov;
+        orthographic = true;
+    }
+
+    void ResetAllDefaults()
+    {
+        ResetCameraDefaults();
+        outputFolder = TransparentPortraitExporter.DefaultOutputFolder;
+        width = DefaultWidth;
+        height = DefaultHeight;
+        supersample = DefaultSupersample;
+        overwriteExisting = false;
+        hideGameplayUi = true;
+        importAsSprite = true;
+        assignPortrait = true;
+        SetStatus("설정을 기본값으로 되돌렸습니다.", MessageType.Info);
     }
 
     TransparentPortraitExporter.ExportSettings CreateSettings()
@@ -438,7 +979,9 @@ public class TransparentPortraitExporterWindow : EditorWindow
             orthographic = orthographic,
             hideGameplayUi = hideGameplayUi,
             importAsSprite = importAsSprite,
-            assignPortrait = assignPortrait
+            assignPortrait = assignPortrait,
+            overwriteExisting = overwriteExisting,
+            supersample = supersample
         };
     }
 
@@ -446,37 +989,45 @@ public class TransparentPortraitExporterWindow : EditorWindow
     {
         return new TransparentPortraitExporter.ExportSettings
         {
-            width = EditorPrefs.GetInt(PrefWidth, 512),
-            height = EditorPrefs.GetInt(PrefHeight, 512),
-            padding = EditorPrefs.GetFloat(PrefPadding, 0.15f),
-            yaw = EditorPrefs.GetFloat(PrefYaw, 35f),
-            pitch = EditorPrefs.GetFloat(PrefPitch, 25f),
-            fieldOfView = EditorPrefs.GetFloat(PrefFov, 30f),
-            heightOffset = EditorPrefs.GetFloat(PrefHeightOffset, 0f),
-            zoom = EditorPrefs.GetFloat(PrefZoom, 1f),
+            width = EditorPrefs.GetInt(PrefWidth, DefaultWidth),
+            height = EditorPrefs.GetInt(PrefHeight, DefaultHeight),
+            padding = EditorPrefs.GetFloat(PrefPadding, DefaultPadding),
+            yaw = EditorPrefs.GetFloat(PrefYaw, DefaultYaw),
+            pitch = EditorPrefs.GetFloat(PrefPitch, DefaultPitch),
+            fieldOfView = EditorPrefs.GetFloat(PrefFov, DefaultFov),
+            heightOffset = EditorPrefs.GetFloat(PrefHeightOffset, DefaultHeightOffset),
+            zoom = EditorPrefs.GetFloat(PrefZoom, DefaultZoom),
             orthographic = EditorPrefs.GetBool(PrefOrthographic, true),
             hideGameplayUi = EditorPrefs.GetBool(PrefHideGameplayUi, true),
             importAsSprite = EditorPrefs.GetBool(PrefImportAsSprite, true),
-            assignPortrait = EditorPrefs.GetBool(PrefAssignPortrait, true)
+            assignPortrait = EditorPrefs.GetBool(PrefAssignPortrait, true),
+            overwriteExisting = EditorPrefs.GetBool(PrefOverwrite, false),
+            supersample = EditorPrefs.GetInt(PrefSupersample, DefaultSupersample)
         };
     }
 
     void LoadSettings()
     {
         outputFolder = EditorPrefs.GetString(PrefOutputFolder, TransparentPortraitExporter.DefaultOutputFolder);
-        width = EditorPrefs.GetInt(PrefWidth, 512);
-        height = EditorPrefs.GetInt(PrefHeight, 512);
-        padding = EditorPrefs.GetFloat(PrefPadding, 0.15f);
-        yaw = EditorPrefs.GetFloat(PrefYaw, 35f);
-        pitch = EditorPrefs.GetFloat(PrefPitch, 25f);
-        fieldOfView = EditorPrefs.GetFloat(PrefFov, 30f);
-        heightOffset = EditorPrefs.GetFloat(PrefHeightOffset, 0f);
-        zoom = EditorPrefs.GetFloat(PrefZoom, 1f);
+        width = EditorPrefs.GetInt(PrefWidth, DefaultWidth);
+        height = EditorPrefs.GetInt(PrefHeight, DefaultHeight);
+        padding = EditorPrefs.GetFloat(PrefPadding, DefaultPadding);
+        yaw = EditorPrefs.GetFloat(PrefYaw, DefaultYaw);
+        pitch = EditorPrefs.GetFloat(PrefPitch, DefaultPitch);
+        fieldOfView = EditorPrefs.GetFloat(PrefFov, DefaultFov);
+        heightOffset = EditorPrefs.GetFloat(PrefHeightOffset, DefaultHeightOffset);
+        zoom = EditorPrefs.GetFloat(PrefZoom, DefaultZoom);
         orthographic = EditorPrefs.GetBool(PrefOrthographic, true);
         hideGameplayUi = EditorPrefs.GetBool(PrefHideGameplayUi, true);
         importAsSprite = EditorPrefs.GetBool(PrefImportAsSprite, true);
         assignPortrait = EditorPrefs.GetBool(PrefAssignPortrait, true);
         autoPreview = EditorPrefs.GetBool(PrefAutoPreview, true);
+        overwriteExisting = EditorPrefs.GetBool(PrefOverwrite, false);
+        supersample = EditorPrefs.GetInt(PrefSupersample, DefaultSupersample);
+        previewBackground = (PreviewBackground)EditorPrefs.GetInt(PrefPreviewBackground, (int)PreviewBackground.Checker);
+        showCamera = EditorPrefs.GetBool(PrefShowCamera, true);
+        showOutput = EditorPrefs.GetBool(PrefShowOutput, true);
+        showOptions = EditorPrefs.GetBool(PrefShowOptions, true);
     }
 
     void SaveSettings()
@@ -495,6 +1046,12 @@ public class TransparentPortraitExporterWindow : EditorWindow
         EditorPrefs.SetBool(PrefImportAsSprite, importAsSprite);
         EditorPrefs.SetBool(PrefAssignPortrait, assignPortrait);
         EditorPrefs.SetBool(PrefAutoPreview, autoPreview);
+        EditorPrefs.SetBool(PrefOverwrite, overwriteExisting);
+        EditorPrefs.SetInt(PrefSupersample, supersample);
+        EditorPrefs.SetInt(PrefPreviewBackground, (int)previewBackground);
+        EditorPrefs.SetBool(PrefShowCamera, showCamera);
+        EditorPrefs.SetBool(PrefShowOutput, showOutput);
+        EditorPrefs.SetBool(PrefShowOptions, showOptions);
     }
 
     static string GetDefaultFileName(Object source)

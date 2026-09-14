@@ -22,7 +22,7 @@ public class TmpUnicodeCollectorWindow : EditorWindow
 
     TmpUnicodeCollector.Result lastResult;
 
-    [MenuItem("Tools/TextMesh Pro/Collect Project Unicode")]
+    [MenuItem("Tools/TextMesh Pro/프로젝트 유니코드 수집")]
     static void OpenWindow()
     {
         TmpUnicodeCollectorWindow window = GetWindow<TmpUnicodeCollectorWindow>(

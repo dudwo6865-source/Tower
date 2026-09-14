@@ -5,7 +5,7 @@ using UnityEngine;
 
 // 스타크래프트식 절벽 맵 에디터입니다.
 // Top + 벽/코너 자동 생성, Hill 한 칸 페인트 시 주변 벽/코너 오토타일.
-// Tools > Map > Cliff Map Editor
+// Tools > 맵 > 절벽 맵 에디터
 public class CliffMapEditorWindow : EditorWindow
 {
     enum BrushMode
@@ -45,7 +45,7 @@ public class CliffMapEditorWindow : EditorWindow
 
     static readonly string[] RampDirectionLabels = { "북 (+Z)", "동 (+X)", "남 (-Z)", "서 (-X)" };
 
-    [MenuItem("Tools/Map/Cliff Map Editor")]
+    [MenuItem("Tools/맵/절벽 맵 에디터")]
     static void Open()
     {
         CliffMapEditorWindow window = GetWindow<CliffMapEditorWindow>(false, "Cliff Map", true);

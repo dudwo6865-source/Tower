@@ -6,7 +6,7 @@ using UnityEngine;
 // 이미 만들어진 프리팹들을 한 번에 정리하고 싶을 때 이 메뉴를 사용하세요.
 public static class SelectableEntityTypeIdTool
 {
-    [MenuItem("Tools/RTS/Selectable Entity/프리팹 이름으로 EntityTypeId 일괄 설정")]
+    [MenuItem("Tools/RTS/선택 오브젝트/프리팹 이름으로 EntityTypeId 일괄 설정")]
     static void AssignEntityTypeIdFromPrefabNames()
     {
         string[] guids = AssetDatabase.FindAssets("t:Prefab");

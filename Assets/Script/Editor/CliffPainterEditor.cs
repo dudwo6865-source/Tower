@@ -19,7 +19,7 @@ public class CliffPainterEditor : Editor
             EditorUtility.SetDirty(painter);
         }
 
-        if (GUILayout.Button("Cliff Map Editor 열기"))
-            EditorApplication.ExecuteMenuItem("Tools/Map/Cliff Map Editor");
+        if (GUILayout.Button("절벽 맵 에디터 열기"))
+            EditorApplication.ExecuteMenuItem("Tools/맵/절벽 맵 에디터");
     }
 }

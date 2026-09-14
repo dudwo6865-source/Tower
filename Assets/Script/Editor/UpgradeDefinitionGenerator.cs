@@ -142,7 +142,7 @@ public class UpgradeDefinitionGenerator : EditorWindow
     Vector2 scroll;
     string statusMessage = string.Empty;
 
-    [MenuItem("Tools/Upgrades/Generate Upgrade Definitions")]
+    [MenuItem("Tools/업그레이드/업그레이드 정의 생성")]
     static void OpenWindow()
     {
         UpgradeDefinitionGenerator window = GetWindow<UpgradeDefinitionGenerator>(

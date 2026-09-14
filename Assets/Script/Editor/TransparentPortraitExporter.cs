@@ -9,6 +9,9 @@ public static class TransparentPortraitExporter
 {
     public const string DefaultOutputFolder = "Assets/Art/Portraits";
 
+    // 슈퍼샘플링 시 렌더 타깃 한 변의 최대 픽셀 수입니다.
+    const int MaxRenderSize = 4096;
+
     public struct ExportSettings
     {
         public int width;
@@ -25,6 +28,10 @@ public static class TransparentPortraitExporter
         public bool hideGameplayUi;
         public bool importAsSprite;
         public bool assignPortrait;
+        // 같은 이름의 PNG가 있으면 새 파일을 만들지 않고 덮어씁니다.
+        public bool overwriteExisting;
+        // 1보다 크면 그 배율로 크게 렌더한 뒤 줄여 외곽선 계단현상을 줄입니다. (1/2/4)
+        public int supersample;
     }
 
     public struct ExportResult
@@ -68,7 +75,7 @@ public static class TransparentPortraitExporter
 
         try
         {
-            string assetPath = GetUniqueAssetPath(outputFolder, fileName);
+            string assetPath = GetTargetAssetPath(outputFolder, fileName, settings.overwriteExisting);
             File.WriteAllBytes(assetPath, texture.EncodeToPNG());
 
             AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceUpdate);
@@ -135,6 +142,15 @@ public static class TransparentPortraitExporter
             return null;
         }
 
+        // 슈퍼샘플링: 크게 렌더한 뒤 평균을 내어 줄이면 알파 외곽선이 부드러워집니다.
+        int scale = Mathf.Clamp(settings.supersample <= 0 ? 1 : settings.supersample, 1, 4);
+
+        while (scale > 1 && (width * scale > MaxRenderSize || height * scale > MaxRenderSize))
+            scale /= 2;
+
+        int renderWidth = width * scale;
+        int renderHeight = height * scale;
+
         PreviewRenderUtility preview = new PreviewRenderUtility(true);
 
         try
@@ -173,8 +189,8 @@ public static class TransparentPortraitExporter
             FrameCamera(preview.camera, bounds, settings);
 
             RenderTexture renderTexture = RenderTexture.GetTemporary(
-                width,
-                height,
+                renderWidth,
+                renderHeight,
                 24,
                 RenderTextureFormat.ARGB32);
 
@@ -188,11 +204,18 @@ public static class TransparentPortraitExporter
 
                 RenderTexture.active = renderTexture;
 
-                Texture2D texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
-                texture.ReadPixels(new Rect(0, 0, width, height), 0, 0);
-                texture.Apply();
+                Texture2D rendered = new Texture2D(renderWidth, renderHeight, TextureFormat.RGBA32, false);
+                rendered.hideFlags = HideFlags.HideAndDontSave;
+                rendered.ReadPixels(new Rect(0, 0, renderWidth, renderHeight), 0, 0);
+                rendered.Apply();
 
-                return texture;
+                if (scale == 1)
+                    return rendered;
+
+                Texture2D downsampled = Downsample(rendered, width, height, scale);
+                Object.DestroyImmediate(rendered);
+
+                return downsampled;
             }
             finally
             {
@@ -250,10 +273,22 @@ public static class TransparentPortraitExporter
         return null;
     }
 
+    // 프로젝트 전체 프리팹 스캔은 비싸므로 한 번 찾은 결과를 캐시합니다.
+    // (미리보기는 값이 바뀔 때마다 렌더되므로 캐시가 없으면 슬라이더가 버벅입니다.)
+    static readonly Dictionary<UnitData, GameObject> UnitDataPrefabCache = new Dictionary<UnitData, GameObject>();
+
+    public static void ClearUnitDataCache()
+    {
+        UnitDataPrefabCache.Clear();
+    }
+
     static GameObject ResolveUnitDataSource(UnitData unitData)
     {
         if (unitData == null)
             return null;
+
+        if (UnitDataPrefabCache.TryGetValue(unitData, out GameObject cached) && cached != null)
+            return cached;
 
         string[] guids = AssetDatabase.FindAssets("t:Prefab");
 
@@ -268,12 +303,18 @@ public static class TransparentPortraitExporter
             Unit unit = prefab.GetComponent<Unit>();
 
             if (unit != null && unit.data == unitData)
+            {
+                UnitDataPrefabCache[unitData] = prefab;
                 return prefab;
+            }
 
             Building building = prefab.GetComponent<Building>();
 
             if (building != null && building.data == unitData)
+            {
+                UnitDataPrefabCache[unitData] = prefab;
                 return prefab;
+            }
         }
 
         return null;
@@ -310,8 +351,19 @@ public static class TransparentPortraitExporter
     static void FrameCamera(Camera camera, Bounds bounds, ExportSettings settings)
     {
         Vector3 center = bounds.center;
-        float maxExtent = Mathf.Max(bounds.extents.x, bounds.extents.y, bounds.extents.z);
-        maxExtent = Mathf.Max(maxExtent, 0.1f);
+
+        Quaternion rotation = Quaternion.Euler(settings.pitch, settings.yaw, 0f);
+        camera.transform.rotation = rotation;
+
+        // 바운딩 박스를 카메라 기준으로 돌려서 화면상 가로/세로 크기를 구한다.
+        // (단순히 가장 긴 변만 쓰면 각도나 가로세로 비에 따라 잘리거나 너무 작게 나온다.)
+        GetViewExtents(bounds.extents, rotation, out float viewExtentX, out float viewExtentY, out float viewExtentZ);
+
+        float aspect = camera.aspect <= 0f ? 1f : camera.aspect;
+
+        // 세로 기준 프레임 크기. 가로가 더 넓으면 비율로 나눠 가로도 들어오게 한다.
+        float fitExtent = Mathf.Max(viewExtentY, viewExtentX / aspect);
+        fitExtent = Mathf.Max(fitExtent, 0.05f);
 
         // 카메라 높낮이: 대상 높이에 비례해 시점(주시점)을 위/아래로 이동한다.
         // 양수면 주시점이 위로 올라가 대상이 프레임 아래쪽에 잡힌다.
@@ -320,16 +372,15 @@ public static class TransparentPortraitExporter
         // 여백(padding)으로 프레이밍 크기를 통일해 원근/직교 모두 같은 감각으로 조정한다.
         // 배율(zoom)로 대상을 더 크게(가깝게)/작게(멀리) 잡는다. zoom>1이면 프레임을 좁혀 크게 찍는다.
         float zoom = settings.zoom <= 0f ? 1f : settings.zoom;
-        float frameExtent = maxExtent * (1f + settings.padding) / zoom;
+        float frameExtent = fitExtent * (1f + settings.padding) / zoom;
 
-        Quaternion rotation = Quaternion.Euler(settings.pitch, settings.yaw, 0f);
-        camera.transform.rotation = rotation;
+        // 대상이 근평면 앞으로 튀어나오지 않도록 깊이 절반만큼 더 물러난다.
+        float backOff = viewExtentZ + 1f;
 
         if (camera.orthographic)
         {
             camera.orthographicSize = frameExtent;
-            // 직교 카메라는 거리와 무관하지만 클립 평면 안에 들어오도록 충분히 뒤로 뺀다.
-            camera.transform.position = center + rotation * (Vector3.back * (maxExtent * 4f));
+            camera.transform.position = center + rotation * (Vector3.back * (backOff + frameExtent * 2f));
             return;
         }
 
@@ -338,9 +389,34 @@ public static class TransparentPortraitExporter
 
         // 지정한 FOV에서 대상이 프레임에 꼭 맞도록 필요한 거리를 계산한다.
         float distance = frameExtent / Mathf.Tan(fov * 0.5f * Mathf.Deg2Rad);
-        camera.transform.position = center + rotation * (Vector3.back * distance);
+        camera.transform.position = center + rotation * (Vector3.back * (distance + backOff));
     }
 
+    // 바운딩 박스 8개 꼭짓점을 카메라 로컬 축으로 옮겨 축별 최대 반지름을 구합니다.
+    static void GetViewExtents(Vector3 extents, Quaternion rotation, out float x, out float y, out float z)
+    {
+        Quaternion inverse = Quaternion.Inverse(rotation);
+        x = 0f;
+        y = 0f;
+        z = 0f;
+
+        for (int corner = 0; corner < 8; corner++)
+        {
+            Vector3 point = new Vector3(
+                (corner & 1) == 0 ? -extents.x : extents.x,
+                (corner & 2) == 0 ? -extents.y : extents.y,
+                (corner & 4) == 0 ? -extents.z : extents.z);
+
+            Vector3 local = inverse * point;
+
+            x = Mathf.Max(x, Mathf.Abs(local.x));
+            y = Mathf.Max(y, Mathf.Abs(local.y));
+            z = Mathf.Max(z, Mathf.Abs(local.z));
+        }
+    }
+
+    // 실제로 화면에 보이는 렌더러만으로 프레이밍을 계산합니다.
+    // 꺼져 있는 이펙트나 체력바까지 포함하면 대상이 필요 이상으로 작게 잡힙니다.
     static Bounds CalculateRenderableBounds(GameObject root)
     {
         Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
@@ -348,12 +424,93 @@ public static class TransparentPortraitExporter
         if (renderers.Length == 0)
             return new Bounds(root.transform.position, Vector3.one * 0.1f);
 
-        Bounds bounds = renderers[0].bounds;
+        bool hasBounds = false;
+        Bounds bounds = new Bounds(root.transform.position, Vector3.zero);
 
-        for (int i = 1; i < renderers.Length; i++)
-            bounds.Encapsulate(renderers[i].bounds);
+        for (int pass = 0; pass < 2 && !hasBounds; pass++)
+        {
+            // 1차: 보이는 메시 렌더러만. 하나도 없으면 2차에서 조건 없이 전부 사용합니다.
+            bool strict = pass == 0;
 
-        return bounds;
+            foreach (Renderer renderer in renderers)
+            {
+                if (renderer == null)
+                    continue;
+
+                if (strict && !IsFramingRenderer(renderer))
+                    continue;
+
+                if (!hasBounds)
+                {
+                    bounds = renderer.bounds;
+                    hasBounds = true;
+                    continue;
+                }
+
+                bounds.Encapsulate(renderer.bounds);
+            }
+        }
+
+        return hasBounds ? bounds : new Bounds(root.transform.position, Vector3.one * 0.1f);
+    }
+
+    static bool IsFramingRenderer(Renderer renderer)
+    {
+        if (!renderer.enabled || !renderer.gameObject.activeInHierarchy)
+            return false;
+
+        // 파티클/트레일/라인/UI는 프레이밍 기준에서 제외합니다.
+        if (renderer is ParticleSystemRenderer || renderer is TrailRenderer || renderer is LineRenderer)
+            return false;
+
+        if (renderer.GetComponentInParent<Canvas>() != null)
+            return false;
+
+        return renderer.bounds.size.sqrMagnitude > 0.000001f;
+    }
+
+    // 알파를 고려해(프리멀티플라이) 평균을 내야 반투명 외곽에 검은 테두리가 생기지 않습니다.
+    static Texture2D Downsample(Texture2D source, int width, int height, int scale)
+    {
+        Color[] src = source.GetPixels();
+        Color[] dst = new Color[width * height];
+        int srcWidth = source.width;
+        float sampleCount = scale * scale;
+
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                float r = 0f, g = 0f, b = 0f, a = 0f;
+
+                for (int sy = 0; sy < scale; sy++)
+                {
+                    int row = (y * scale + sy) * srcWidth;
+
+                    for (int sx = 0; sx < scale; sx++)
+                    {
+                        Color c = src[row + x * scale + sx];
+                        r += c.r * c.a;
+                        g += c.g * c.a;
+                        b += c.b * c.a;
+                        a += c.a;
+                    }
+                }
+
+                float alpha = a / sampleCount;
+
+                dst[y * width + x] = alpha <= 0.0001f
+                    ? new Color(0f, 0f, 0f, 0f)
+                    : new Color(r / a, g / a, b / a, alpha);
+            }
+        }
+
+        Texture2D result = new Texture2D(width, height, TextureFormat.RGBA32, false);
+        result.hideFlags = HideFlags.HideAndDontSave;
+        result.SetPixels(dst);
+        result.Apply();
+
+        return result;
     }
 
     static void DisableGameplayVisuals(GameObject root, List<DisabledComponentState> disabledStates)
@@ -445,27 +602,13 @@ public static class TransparentPortraitExporter
         return PrefabUtility.GetCorrespondingObjectFromOriginalSource(source);
     }
 
-    static UnitData FindUnitData(GameObject gameObject)
-    {
-        if (gameObject == null)
-            return null;
-
-        Unit unit = gameObject.GetComponent<Unit>();
-
-        if (unit != null && unit.data != null)
-            return unit.data;
-
-        Building building = gameObject.GetComponent<Building>();
-
-        if (building != null && building.data != null)
-            return building.data;
-
-        return null;
-    }
-
-    static string GetUniqueAssetPath(string folder, string fileName)
+    static string GetTargetAssetPath(string folder, string fileName, bool overwriteExisting)
     {
         string path = $"{folder}/{fileName}.png";
+
+        if (overwriteExisting)
+            return path.Replace('\\', '/');
+
         int counter = 1;
 
         while (File.Exists(path))
