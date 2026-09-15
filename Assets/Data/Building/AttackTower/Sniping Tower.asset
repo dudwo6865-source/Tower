@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Sniping Tower
   m_EditorClassIdentifier: 
   displayName: Sniping Tower
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 9b15ee17a8033a649bce223586c9e7c1, type: 3}
   description: 
   prefab: {fileID: 6894192069859626715, guid: f48efcdbcdf8d344ea3d9f7ae26eaa48, type: 3}
   wattCost: 50

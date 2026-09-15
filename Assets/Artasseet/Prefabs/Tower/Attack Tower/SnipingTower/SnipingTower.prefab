@@ -111,7 +111,7 @@ MonoBehaviour:
   attackType: 4
   attackDamage: 50
   attackRange: 50
-  attackCooldown: 1.5
+  attackCooldown: 4
   useAttackAnimationEvent: 1
   projectileSpeed: 50
   firePoint: {fileID: 7115588338914219255}

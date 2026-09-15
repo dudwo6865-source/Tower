@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Missile Tower
   m_EditorClassIdentifier: 
   displayName: Missile Tower
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 7eec58be293ab6d42bc17a2184e5f9d7, type: 3}
   description: 
   prefab: {fileID: 6894192069859626715, guid: 0c002a2bf59777942a401ff96d369898, type: 3}
   wattCost: 50

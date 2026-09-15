@@ -13,11 +13,10 @@ MonoBehaviour:
   m_Name: Flame Tower
   m_EditorClassIdentifier: 
   displayName: Flame Tower
-  icon: {fileID: 21300000, guid: 1b4ab1bcf4a21ff4f9832cbc36b939ef, type: 3}
+  icon: {fileID: 21300000, guid: 4973593a25134fc439b28ca704bfc612, type: 3}
   description: Standard defensive tower.
   prefab: {fileID: 6555694844794212385, guid: 19bd959f0365ee540844aab8374e10e2, type: 3}
   wattCost: 75
   ownerId: 1
   entityTypeId: 
-  nextTier: {fileID: 0}
-  upgradeWattCost: 0
+  upgradeOptions: []

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: HeavyCannonTower
   m_EditorClassIdentifier: 
   displayName: HeavyCannon Tower
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 03c41da4f1c45364a8f9b901c3b5d906, type: 3}
   description: 
   prefab: {fileID: 6894192069859626715, guid: 3290feb6b6cfb7d48b29e4b1e737aefd, type: 3}
   wattCost: 50

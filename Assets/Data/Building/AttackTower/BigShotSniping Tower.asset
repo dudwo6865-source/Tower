@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: BigShotSniping Tower
   m_EditorClassIdentifier: 
   displayName: BigShotSniping Tower
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 18713cbf8b9c9e149b79b9a6dba626f6, type: 3}
   description: 
   prefab: {fileID: 6894192069859626715, guid: b1d6bbdbbb037bd409bceaace1a19868, type: 3}
   wattCost: 50

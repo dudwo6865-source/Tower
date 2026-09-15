@@ -198,7 +198,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   attackClips:
-  - {fileID: 8300000, guid: da1f74d0e10db174b8b360f280b07683, type: 3}
+  - {fileID: 8300000, guid: 7ffc80e972d2c7141a60a751d3e6f030, type: 3}
   attackHitClips: []
   deathClips:
   - {fileID: 8300000, guid: 6a01f91b3a0304547b8fe8eb3ae0820b, type: 3}

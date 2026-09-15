@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Cannon Tower
   m_EditorClassIdentifier: 
   displayName: Cannon Tower
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 75a6bd8932d0ee04e8c6219f2d6a32fa, type: 3}
   description: 
   prefab: {fileID: 6894192069859626715, guid: d2a14a5e6f7319f45b4797aeb1e0fdd1, type: 3}
   wattCost: 50
