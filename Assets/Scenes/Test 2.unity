@@ -9592,6 +9592,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5804b2418811ea8478c584385fe8d115, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  worldFogShader: {fileID: 4800000, guid: 781f12c35b1b2da43ade0456dcd00b17, type: 3}
+  uiFogShader: {fileID: 4800000, guid: 24c5d4c11d438744486a8dfa849b8102, type: 3}
   localPlayerOwnerId: 1
   gridWidth: 256
   gridHeight: 256

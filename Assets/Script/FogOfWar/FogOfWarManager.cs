@@ -97,8 +97,20 @@ public class FogOfWarManager : MonoBehaviour
     public Color unexploredColor = new Color(0f, 0f, 0f, 0.95f);
     public Color exploredColor = new Color(0f, 0f, 0f, 0.55f);
 
+    [Header("Shaders")]
+    [Tooltip("월드 안개 오버레이에 쓸 셰이더입니다. Assets/Shaders/FogOfWar.shader를 넣어두세요. 비워두면 이름으로 찾지만, 그 셰이더를 쓰는 머티리얼이 없으면 빌드에서 잘려나가 안개가 깨집니다.")]
+    public Shader worldFogShader;
+
+    [Tooltip("미니맵 안개에 쓸 셰이더입니다. Assets/Shaders/FogOfWarUI.shader를 넣어두세요. 비워두면 이름으로 찾지만, 그 셰이더를 쓰는 머티리얼이 없으면 빌드에서 잘려나가 안개가 깨집니다.")]
+    public Shader uiFogShader;
+
     public Texture2D FogTexture => fogTexture;
     public int LocalPlayerOwnerId => localPlayerOwnerId;
+
+    // 월드 안개 머티리얼이 실제로 만들어졌는지입니다. 셰이더가 없어 안개가 화면에
+    // 안 그려지는데 유닛만 계속 숨기면 "적이 이유 없이 사라진 것"처럼 보이므로,
+    // FogOfWarVisibility가 이 값을 보고 숨김을 포기합니다.
+    public bool HasWorldFogMaterial => worldFogMaterial != null;
 
     private readonly List<FogOfWarVisionSource> visionSources =
         new List<FogOfWarVisionSource>();
@@ -299,20 +311,48 @@ public class FogOfWarManager : MonoBehaviour
 
     void CreateMaterials()
     {
-        Shader worldShader = Shader.Find("RTS/FogOfWar");
-        Shader uiShader = Shader.Find("RTS/FogOfWarUI");
+        worldFogMaterial = CreateFogMaterial(
+            worldFogShader,
+            "RTS/FogOfWar",
+            nameof(worldFogShader));
 
-        if (worldShader == null)
-            Debug.LogError("FogOfWarManager: RTS/FogOfWar shader not found");
-
-        if (uiShader == null)
-            Debug.LogError("FogOfWarManager: RTS/FogOfWarUI shader not found");
-
-        worldFogMaterial = new Material(worldShader);
-        uiFogMaterial = new Material(uiShader);
+        uiFogMaterial = CreateFogMaterial(
+            uiFogShader,
+            "RTS/FogOfWarUI",
+            nameof(uiFogShader));
 
         ApplyMaterialSettings(worldFogMaterial);
         ApplyMaterialSettings(uiFogMaterial);
+    }
+
+    // 인스펙터에 꽂아둔 셰이더를 우선 쓴다. 이름으로만 찾으면(Shader.Find) 그 셰이더를
+    // 참조하는 머티리얼이 프로젝트에 하나도 없을 때 빌드에서 셰이더가 통째로 잘려나가,
+    // 에디터에서는 멀쩡하다가 빌드에서만 안개가 깨진다.
+    Material CreateFogMaterial(Shader assignedShader, string shaderName, string fieldName)
+    {
+        Shader shader = assignedShader != null
+            ? assignedShader
+            : Shader.Find(shaderName);
+
+        if (shader == null)
+        {
+            Debug.LogError(
+                $"FogOfWarManager: {shaderName} 셰이더를 찾지 못했습니다. " +
+                $"인스펙터의 {fieldName}에 셰이더를 직접 넣어주세요.",
+                this);
+
+            return null;
+        }
+
+        if (assignedShader == null)
+        {
+            Debug.LogWarning(
+                $"FogOfWarManager: {shaderName} 셰이더를 이름으로 찾았습니다. " +
+                $"빌드에서 잘려나갈 수 있으니 인스펙터의 {fieldName}에 넣어두세요.",
+                this);
+        }
+
+        return new Material(shader);
     }
 
     void ApplyMaterialSettings(Material material)
@@ -335,6 +375,15 @@ public class FogOfWarManager : MonoBehaviour
     {
         if (mapSize.x <= 0f || mapSize.y <= 0f)
             return;
+
+        if (worldFogMaterial == null)
+        {
+            Debug.LogError(
+                "FogOfWarManager: 월드 안개 머티리얼이 없어 오버레이를 만들지 않습니다.",
+                this);
+
+            return;
+        }
 
         GameObject overlayObject = new GameObject("FogOfWarOverlay");
         overlayObject.transform.SetParent(transform, false);
