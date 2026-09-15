@@ -10,6 +10,21 @@ public static class TargetFinder
         CombatTargetPriority priority,
         UnitAttacker engageFilter = null)
     {
+        // Burst Job은 카테고리별 최적 후보를 '하나씩'만 돌려준다. 그 후보가 시야에 가려져
+        // 탈락하면 바로 뒤에 있는 보이는 적은 후보에 아예 없으므로 결과를 믿을 수 없다.
+        // 그럴 때만 아래 전수 탐색으로 넘어간다(평소에는 Job 그대로 쓴다).
+        if (SpatialQueryWorld.Instance != null &&
+            SpatialQueryWorld.Instance.TryFindBestEnemyInRange(
+                fromPosition,
+                myOwnerId,
+                range,
+                priority,
+                engageFilter,
+                out SelectableEntity jobResult))
+        {
+            return jobResult;
+        }
+
         float rangeSqr = range * range;
 
         SelectableEntity bestUnit = null;
@@ -21,16 +36,6 @@ public static class TargetFinder
         float minBuilding = float.MaxValue;
         float minAny = float.MaxValue;
         float minAttackerOfAlly = float.MaxValue;
-
-        if (SpatialQueryWorld.Instance != null)
-        {
-            return SpatialQueryWorld.Instance.FindBestEnemyInRange(
-                fromPosition,
-                myOwnerId,
-                range,
-                priority,
-                engageFilter);
-        }
 
         foreach (SelectableEntity entity in SelectableRegistry.Entities)
         {
@@ -50,7 +55,7 @@ public static class TargetFinder
             if (sqrDistance > rangeSqr)
                 continue;
 
-            if (!IsVisibleToSeeker(myOwnerId, entity.transform.position))
+            if (!IsVisibleToSeeker(fromPosition, myOwnerId, entity.transform.position))
                 continue;
 
             if (sqrDistance < minAny)
@@ -101,18 +106,27 @@ public static class TargetFinder
     }
 
     /// <summary>
-    /// 탐색 주체가 로컬 플레이어일 때만 안개 시야를 검사해서, 시야가 밝혀진 대상만
-    /// 어그로 탐지되도록 한다. 적 AI 등 다른 소속이 찾을 때는 그대로 통과시킨다
-    /// (안개는 로컬 플레이어 한쪽 시야만 나타내기 때문).
+    /// 탐색 주체가 대상을 "볼 수 있는지" 판정한다.
+    /// 로컬 플레이어는 안개 시야를 그대로 쓴다(안개는 플레이어 한쪽 시야만 나타낸다).
+    /// 적 AI는 참조할 안개가 없으므로, 구워둔 지형 높이로 언덕·절벽에 가려졌는지만 본다.
     /// </summary>
-    static bool IsVisibleToSeeker(int myOwnerId, Vector3 position)
+    public static bool IsVisibleToSeeker(
+        Vector3 fromPosition,
+        int myOwnerId,
+        Vector3 targetPosition)
     {
         FogOfWarManager fog = FogOfWarManager.Instance;
 
-        if (fog == null || myOwnerId != fog.LocalPlayerOwnerId)
+        if (fog == null)
             return true;
 
-        return fog.IsVisible(position);
+        if (myOwnerId == fog.LocalPlayerOwnerId)
+            return fog.IsVisible(targetPosition);
+
+        if (!fog.AiUsesTerrainLineOfSight)
+            return true;
+
+        return fog.HasTerrainLineOfSight(fromPosition, targetPosition);
     }
 
     static bool IsAttackingAlly(SelectableEntity enemy, int myOwnerId)

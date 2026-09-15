@@ -89,13 +89,41 @@ public class SpatialQueryWorld : MonoBehaviour
             Rebuild();
     }
 
-    public SelectableEntity FindBestEnemyInRange(
+    /// <summary>
+    /// Job으로 카테고리별 최적 후보를 뽑는다. Job은 후보를 하나씩만 돌려주므로,
+    /// 그 후보가 시야에 가려져 탈락하면(= occluded) 바로 뒤의 보이는 적은 후보에
+    /// 없어서 결과를 믿을 수 없다. 그럴 때 false를 돌려주면 호출한 쪽이 전수 탐색으로
+    /// 넘어간다. 가려진 후보가 없으면 true와 함께 결과를 그대로 준다.
+    /// </summary>
+    public bool TryFindBestEnemyInRange(
         Vector3 fromPosition,
         int myOwnerId,
         float range,
         CombatTargetPriority priority,
-        UnitAttacker engageFilter)
+        UnitAttacker engageFilter,
+        out SelectableEntity result)
     {
+        result = FindBestEnemyInRange(
+            fromPosition,
+            myOwnerId,
+            range,
+            priority,
+            engageFilter,
+            out bool occluded);
+
+        return !occluded;
+    }
+
+    SelectableEntity FindBestEnemyInRange(
+        Vector3 fromPosition,
+        int myOwnerId,
+        float range,
+        CombatTargetPriority priority,
+        UnitAttacker engageFilter,
+        out bool occluded)
+    {
+        occluded = false;
+
         EnsureBuilt();
 
         if (entryCount <= 0)
@@ -126,10 +154,14 @@ public class SpatialQueryWorld : MonoBehaviour
         };
         job.Run();
 
-        SelectableEntity bestAny = FilterByVision(ResolveCandidate(bestIndices[0], engageFilter), myOwnerId);
-        SelectableEntity bestUnit = FilterByVision(ResolveCandidate(bestIndices[1], engageFilter), myOwnerId);
-        SelectableEntity bestBuilding = FilterByVision(ResolveCandidate(bestIndices[2], engageFilter), myOwnerId);
-        SelectableEntity bestAttackerOfAlly = FilterByVision(ResolveCandidate(bestIndices[3], engageFilter), myOwnerId);
+        SelectableEntity bestAny = FilterByVision(
+            ResolveCandidate(bestIndices[0], engageFilter), fromPosition, myOwnerId, ref occluded);
+        SelectableEntity bestUnit = FilterByVision(
+            ResolveCandidate(bestIndices[1], engageFilter), fromPosition, myOwnerId, ref occluded);
+        SelectableEntity bestBuilding = FilterByVision(
+            ResolveCandidate(bestIndices[2], engageFilter), fromPosition, myOwnerId, ref occluded);
+        SelectableEntity bestAttackerOfAlly = FilterByVision(
+            ResolveCandidate(bestIndices[3], engageFilter), fromPosition, myOwnerId, ref occluded);
 
         switch (priority)
         {
@@ -258,22 +290,30 @@ public class SpatialQueryWorld : MonoBehaviour
     }
 
     /// <summary>
-    /// 어그로 탐지가 안개 시야에 밝혀진 대상만 찾도록 거른다. Burst Job 안에서는
+    /// 어그로 탐지가 시야에 보이는 대상만 찾도록 거른다. Burst Job 안에서는
     /// FogOfWarManager를 직접 호출할 수 없어서, Job이 찾은 최적 후보를 여기서 한 번 더
-    /// 검사한다. 탐색 주체가 로컬 플레이어일 때만 적용하고, 적 AI 등 다른 소속이 찾을
-    /// 때는 그대로 통과시킨다(안개는 로컬 플레이어 한쪽 시야만 나타내기 때문).
+    /// 검사한다. 시야 때문에 후보가 탈락하면 occluded를 세워, 호출한 쪽이 전수 탐색으로
+    /// 넘어갈 수 있게 한다.
     /// </summary>
-    static SelectableEntity FilterByVision(SelectableEntity entity, int myOwnerId)
+    static SelectableEntity FilterByVision(
+        SelectableEntity entity,
+        Vector3 fromPosition,
+        int myOwnerId,
+        ref bool occluded)
     {
         if (entity == null)
             return null;
 
-        FogOfWarManager fog = FogOfWarManager.Instance;
-
-        if (fog == null || myOwnerId != fog.LocalPlayerOwnerId)
+        if (TargetFinder.IsVisibleToSeeker(
+                fromPosition,
+                myOwnerId,
+                entity.transform.position))
+        {
             return entity;
+        }
 
-        return fog.IsVisible(entity.transform.position) ? entity : null;
+        occluded = true;
+        return null;
     }
 
     SelectableEntity GetEntity(int snapshotIndex)
