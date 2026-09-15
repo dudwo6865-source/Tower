@@ -100,13 +100,18 @@ public class FogOfWarVisibility : MonoBehaviour
         if (inVision)
             return true;
 
-        if (!hasBeenRevealed)
-            return false;
-
         FogOfWarManager manager = FogOfWarManager.Instance;
 
         if (manager == null)
             return true;
+
+        // 안개가 화면에 안 그려지는 상태(셰이더 누락 등)에서 유닛만 숨기면 적이 이유 없이
+        // 사라진 것처럼 보인다. 이럴 땐 숨기지 않고 그냥 보여준다.
+        if (!manager.HasWorldFogMaterial)
+            return true;
+
+        if (!hasBeenRevealed)
+            return false;
 
         return manager.IsEntityExplored(GetVisibilityBounds());
     }
