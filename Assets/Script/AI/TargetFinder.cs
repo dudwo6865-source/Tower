@@ -620,7 +620,14 @@ public static class TargetFinder
         return true;
     }
 
-    const int MaxBuildingApproachPathCalculations = 20;
+    /// <summary>
+    /// 건물 접근점 하나를 고를 때 돌려볼 NavMesh.CalculatePath 최대 횟수입니다.
+    /// 길이 뚫려 있으면 보통 1회에 끝나지만, 표적이 벽/타워로 막혀 있으면 이 횟수만큼
+    /// 전부 돌기 때문에 유닛이 많을 때 프레임을 그대로 잡아먹습니다. 막힌 경우는
+    /// EnemyCombatAI가 "길을 막은 건물"을 대신 부수는 쪽으로 처리하므로 낮게 둡니다.
+    /// AiPathBudgetSettings 인스펙터에서 조절합니다.
+    /// </summary>
+    public static int MaxBuildingApproachPathCalculations = 6;
 
     static readonly NavMeshPath SharedPath = new NavMeshPath();
 

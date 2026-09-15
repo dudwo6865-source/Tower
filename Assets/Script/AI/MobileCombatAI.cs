@@ -57,6 +57,13 @@ public abstract class MobileCombatAI : CombatAIBase
     Vector3[] cachedPathCorners;
     int cachedPathCornerIndex;
     NavMeshPath buildingContactPath;
+
+    // agent.path와 path.corners는 읽을 때마다 NavMeshPath와 Vector3[]를 새로 할당한다.
+    // 추격 중인 유닛이 매 프레임 이걸 읽으면 유닛 수만큼 쓰레기가 쌓여 GC가 주기적으로
+    // 프레임을 잡아먹으므로, 이 주기마다만 다시 읽는다.
+    const float PathCacheRefreshInterval = 0.5f;
+    float pathCacheTimer;
+    float appliedStoppingDistance = -1f;
     float directChaseCheckTimer;
     bool cachedUseDirectChase;
     bool issuedDirectChase;
@@ -171,19 +178,36 @@ public abstract class MobileCombatAI : CombatAIBase
                 return;
         }
 
+        // GetChaseDestination()은 건물 주변 접근점을 찾느라 NavMesh.CalculatePath를 여러 번
+        // 돌 수 있는 무거운 작업이다. 예산은 SetDestination이 아니라 '이 계산 전에' 잡아야
+        // 한다. 예산을 못 받으면 이번 프레임은 기존 경로로 계속 걷고 다음 프레임에 다시
+        // 시도하므로, 타워 설치(carve)처럼 전원이 동시에 경로를 다시 잡는 순간에도
+        // 한 프레임에 계산이 몰리지 않는다.
+        bool immediate =
+            immediatePathOnce || PreferImmediatePath() || chaseModeChanged;
+
+        if (!immediate && !AiPathBudget.TryAcquireHeavy())
+            return;
+
+        ConsumeImmediatePath();
+
         destinationTimer = Mathf.Max(0.05f, destinationRefreshInterval);
 
         Vector3 destination = GetChaseDestination();
         lastTargetPosition = targetPosition;
         lastDestination = destination;
         issuedDirectChase = cachedUseDirectChase;
-        hasDestination = GridMovement.TrySetAgentDestination(
+        hasDestination = GridMovement.TrySetAgentDestinationImmediate(
             agent,
-            destination,
-            ConsumeImmediatePath() || PreferImmediatePath() || chaseModeChanged);
+            destination);
 
         if (hasDestination)
+        {
             ResetPathStuck();
+
+            // 새 경로를 받았으니 다음 프레임에 코너 캐시를 바로 갱신한다.
+            pathCacheTimer = 0f;
+        }
 
         if (debugCommandLog)
         {
@@ -304,6 +328,13 @@ public abstract class MobileCombatAI : CombatAIBase
 
     void RefreshCachedPath()
     {
+        pathCacheTimer -= Time.deltaTime;
+
+        if (HasCachedPath && pathCacheTimer > 0f)
+            return;
+
+        pathCacheTimer = PathCacheRefreshInterval;
+
         if (!agent.hasPath || agent.pathPending)
             return;
 
@@ -598,6 +629,15 @@ public abstract class MobileCombatAI : CombatAIBase
 
     protected bool TryGetFollowablePathCorners(out Vector3[] corners)
     {
+        // 이미 캐시해둔 코너를 먼저 준다. agent.path.corners는 읽을 때마다 배열을
+        // 새로 할당하므로, 팔로워가 매 프레임 리더에게 물어보면 그만큼 쓰레기가 쌓인다.
+        if (cachedPathCorners != null &&
+            cachedPathCornerIndex < cachedPathCorners.Length)
+        {
+            corners = cachedPathCorners;
+            return true;
+        }
+
         if (agent != null &&
             agent.hasPath &&
             !agent.pathPending &&
@@ -606,13 +646,6 @@ public abstract class MobileCombatAI : CombatAIBase
             corners = agent.path.corners;
             if (corners != null && corners.Length >= 2)
                 return true;
-        }
-
-        if (cachedPathCorners != null &&
-            cachedPathCornerIndex < cachedPathCorners.Length)
-        {
-            corners = cachedPathCorners;
-            return true;
         }
 
         corners = null;
@@ -695,7 +728,14 @@ public abstract class MobileCombatAI : CombatAIBase
             return;
 
         float rangeStop = Mathf.Max(0.1f, attacker.AttackRange * 0.85f);
-        agent.stoppingDistance = Mathf.Min(Mathf.Max(0.1f, stoppingDistance), rangeStop);
+        float value = Mathf.Min(Mathf.Max(0.1f, stoppingDistance), rangeStop);
+
+        // 매 프레임 같은 값을 다시 대입하지 않는다(에이전트 프로퍼티는 네이티브 호출).
+        if (Mathf.Approximately(appliedStoppingDistance, value))
+            return;
+
+        appliedStoppingDistance = value;
+        agent.stoppingDistance = value;
     }
 
     protected void ApplyRandomAvoidancePriority()
@@ -736,6 +776,7 @@ public abstract class MobileCombatAI : CombatAIBase
         hasDestination = false;
         ClearCachedPath();
         ResetPathStuck();
+        pathCacheTimer = 0f;
         directChaseCheckTimer = 0f;
         cachedUseDirectChase = false;
         issuedDirectChase = false;

@@ -135,13 +135,21 @@ public abstract class CombatAIBase : MonoBehaviour
         selfEntity = GetComponent<SelectableEntity>();
     }
 
+    // 표적이 파괴되면 Unity의 == 연산자 때문에 currentTarget은 "null처럼" 보이지만
+    // 관리 참조는 그대로 남는다. 원래 여기 있던 검사(currentTarget != null && !currentTarget)는
+    // 두 조건이 서로 반대라 절대 참이 될 수 없어서 아무 일도 하지 않았다. 실제로 끊어준다.
+    void DropDestroyedTarget()
+    {
+        if (currentTarget != null)
+            return;
+
+        currentTarget = null;
+        currentTargetHealth = null;
+    }
+
     protected void TickRetarget()
     {
-        if (currentTarget != null && !currentTarget)
-        {
-            currentTarget = null;
-            currentTargetHealth = null;
-        }
+        DropDestroyedTarget();
 
         retargetTimer -= Time.deltaTime;
 
@@ -191,11 +199,7 @@ public abstract class CombatAIBase : MonoBehaviour
 
     protected void SetTarget(SelectableEntity target)
     {
-        if (currentTarget != null && !currentTarget)
-        {
-            currentTarget = null;
-            currentTargetHealth = null;
-        }
+        DropDestroyedTarget();
 
         if (target == currentTarget)
             return;

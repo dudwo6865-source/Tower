@@ -41,17 +41,33 @@ public class EnemyCombatAI : MobileCombatAI
     // "전투 중" 판정을 유지했다가 다시 검사하는 간격(초)입니다.
     const float BusyCheckInterval = 2f;
 
+    // 사거리 안에 바로 때릴 대상이 있는지 다시 훑는 간격(초)입니다.
+    const float InRangeScanInterval = 0.25f;
+
+    // 주변 적 존재 여부를 다시 검사하는 간격(초)입니다.
+    const float LocalEnemyCheckInterval = 0.2f;
+
     static readonly List<SelectableEntity> squadBuffer = new List<SelectableEntity>(32);
 
     EnemyCombatAI squadLeader;
     int squadClaimFrame = -1;
-    float localEnemyCheckTimer;
     bool hasLocalEnemy;
-    float squadClaimCheckTimer;
     float squadOffsetFactor;
-    float detourCheckTimer;
-    float busyCheckTimer;
     bool isBusyAttacking;
+
+    // 검사 주기는 deltaTime을 빼는 대신 '다음 검사 시각'으로 관리한다. IsBusyAttacking 같은
+    // 함수는 팔로워들이 리더를 평가할 때도 불리는데, 타이머를 깎는 방식이면 한 프레임에
+    // 여러 번 불릴 때 남의 deltaTime까지 같이 깎여 캐시 주기가 무너진다(= 30m 범위
+    // 탐색이 2초에 한 번이 아니라 매 프레임 가까이 돈다).
+    float localEnemyCheckTime;
+    float squadClaimCheckTime;
+    float detourCheckTime;
+    float busyCheckTime;
+    float inRangeScanTime;
+
+    // ShouldFollowSquadLeader는 한 프레임에 여러 번 불린다. 결과를 프레임 단위로 캐시한다.
+    int squadFollowFrame = -1;
+    bool squadFollowCached;
 
     protected override void Awake()
     {
@@ -62,9 +78,9 @@ public class EnemyCombatAI : MobileCombatAI
         squadOffsetFactor = normalized * 2f - 1f;
 
         // 스폰 직후 전원이 같은 프레임에 팔로워를 긁지 않도록 흩뿌립니다.
-        squadClaimCheckTimer = normalized * SquadClaimInterval;
-        detourCheckTimer = normalized * detourCheckInterval;
-        busyCheckTimer = normalized * BusyCheckInterval;
+        squadClaimCheckTime = Time.time + normalized * SquadClaimInterval;
+        detourCheckTime = Time.time + normalized * detourCheckInterval;
+        busyCheckTime = Time.time + normalized * BusyCheckInterval;
     }
 
     void Update()
@@ -99,10 +115,14 @@ public class EnemyCombatAI : MobileCombatAI
                 if (!HasValidTarget())
                     AdoptSquadLeaderTarget();
             }
-            else if (!attacker.IsInRange(currentTarget))
+            else if (!attacker.IsInRange(currentTarget) &&
+                     Time.time >= inRangeScanTime)
             {
                 // 이미 사거리 안에 공격 가능한 다른 대상이 있으면 그걸 개별적으로 공격한다.
                 // 타워가 뭉쳐 있을 때 전원이 리더가 찜한 타워 하나만 보고 정체되는 것을 막는다.
+                // 범위 탐색이라 매 프레임 돌릴 필요는 없다.
+                inRangeScanTime = Time.time + InRangeScanInterval;
+
                 SelectableEntity nearbyInRange = FindInAttackRangeTarget();
                 if (nearbyInRange != null)
                     SetTarget(nearbyInRange);
@@ -128,6 +148,16 @@ public class EnemyCombatAI : MobileCombatAI
     }
 
     bool ShouldFollowSquadLeader()
+    {
+        if (squadFollowFrame == Time.frameCount)
+            return squadFollowCached;
+
+        squadFollowFrame = Time.frameCount;
+        squadFollowCached = ComputeShouldFollowSquadLeader();
+        return squadFollowCached;
+    }
+
+    bool ComputeShouldFollowSquadLeader()
     {
         if (!shareTargetWithNearbyAllies)
             return false;
@@ -163,22 +193,20 @@ public class EnemyCombatAI : MobileCombatAI
     /// </summary>
     bool IsBusyAttacking()
     {
-        busyCheckTimer -= Time.deltaTime;
-        if (busyCheckTimer > 0f)
+        if (Time.time < busyCheckTime)
             return isBusyAttacking;
 
-        busyCheckTimer = BusyCheckInterval;
+        busyCheckTime = Time.time + BusyCheckInterval;
         isBusyAttacking = HasOtherOwnerNearby(aggroRange, unitsOnly: false);
         return isBusyAttacking;
     }
 
     bool HasLocalEnemy()
     {
-        localEnemyCheckTimer -= Time.deltaTime;
-        if (localEnemyCheckTimer > 0f)
+        if (Time.time < localEnemyCheckTime)
             return hasLocalEnemy;
 
-        localEnemyCheckTimer = 0.2f;
+        localEnemyCheckTime = Time.time + LocalEnemyCheckInterval;
         hasLocalEnemy = QueryLocalEnemy();
         return hasLocalEnemy;
     }
@@ -251,11 +279,10 @@ public class EnemyCombatAI : MobileCombatAI
 
         // 한 번 붙은 팔로워는 IsWithinSquadRange로 계속 유지되므로,
         // 새로 들어오는 아군만 주기적으로 잡아주면 충분합니다.
-        squadClaimCheckTimer -= Time.deltaTime;
-        if (squadClaimCheckTimer > 0f)
+        if (Time.time < squadClaimCheckTime)
             return;
 
-        squadClaimCheckTimer = SquadClaimInterval;
+        squadClaimCheckTime = Time.time + SquadClaimInterval;
 
         if (HasValidTarget())
             ClaimNearbyFollowers();
@@ -400,10 +427,9 @@ public class EnemyCombatAI : MobileCombatAI
         if (agent == null || !agent.isOnNavMesh || agent.pathPending)
             return;
 
-        detourCheckTimer -= Time.deltaTime;
-        if (detourCheckTimer > 0f)
+        if (Time.time < detourCheckTime)
             return;
-        detourCheckTimer = detourCheckInterval;
+        detourCheckTime = Time.time + detourCheckInterval;
 
         bool blocked = agent.hasPath && agent.pathStatus == NavMeshPathStatus.PathPartial;
         bool longDetour = false;
@@ -411,9 +437,15 @@ public class EnemyCombatAI : MobileCombatAI
         if (!blocked && agent.hasPath && agent.pathStatus == NavMeshPathStatus.PathComplete)
         {
             float straight = Vector3.Distance(transform.position, currentTarget.transform.position);
-            if (straight > 0.01f)
+
+            // agent.remainingDistance는 지금 위치에서 남은 경로 길이라 코너 배열을
+            // 새로 할당해서 직접 더할 필요가 없다(= 프레임마다 쌓이던 GC 쓰레기 제거).
+            float pathLength = agent.remainingDistance;
+
+            if (straight > 0.01f &&
+                !float.IsInfinity(pathLength) &&
+                !float.IsNaN(pathLength))
             {
-                float pathLength = GetPathLength(agent.path.corners);
                 longDetour = pathLength > straight * detourRedirectMultiplier;
             }
         }
@@ -426,19 +458,6 @@ public class EnemyCombatAI : MobileCombatAI
             return;
 
         SetTarget(blocker);
-    }
-
-    static float GetPathLength(Vector3[] corners)
-    {
-        if (corners == null || corners.Length < 2)
-            return 0f;
-
-        float length = 0f;
-
-        for (int i = 1; i < corners.Length; i++)
-            length += Vector3.Distance(corners[i - 1], corners[i]);
-
-        return length;
     }
 
     /// <summary>
@@ -456,14 +475,13 @@ public class EnemyCombatAI : MobileCombatAI
         SelectableEntity best = null;
         float bestSqr = float.MaxValue;
 
-        IReadOnlyList<SelectableEntity> all = SelectableRegistry.Entities;
+        // 건물만 찾으면 되므로 전체 엔티티가 아니라 건물 목록만 훑는다.
+        IReadOnlyList<SelectableEntity> all = BuildingRegistry.Buildings;
 
         for (int i = 0; i < all.Count; i++)
         {
             SelectableEntity other = all[i];
             if (other == null || other == target || other == selfEntity)
-                continue;
-            if (other.entityType != SelectableEntityType.Building)
                 continue;
             if (other.ownerId == selfEntity.ownerId)
                 continue;

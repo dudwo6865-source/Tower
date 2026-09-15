@@ -836,6 +836,10 @@ public class MapGrid : MonoBehaviour
         return preferredY;
     }
 
+    // TryImproveCandidate의 점수(|높이차| + 수평거리 * 0.05)가 이 값 이하면
+    // 요청한 자리 그대로라고 보고 남은 후보 탐색을 건너뜁니다.
+    const float ExactSampleScore = 0.05f;
+
     public bool TrySampleNavMeshNearHeight(
         Vector3 worldPosition,
         float preferredY,
@@ -870,10 +874,25 @@ public class MapGrid : MonoBehaviour
             found = true;
         }
 
+        // 요청한 자리에 바로 NavMesh가 있으면(평지에서 거의 항상) 더 볼 필요가 없다.
+        // 이 함수는 추격 목적지를 잡을 때마다 불리는데, 끝까지 돌면 SamplePosition을
+        // 7번 호출한다. 층이 겹치는 곳에서만 나머지 후보를 훑도록 여기서 끊는다.
+        if (found && bestScore <= ExactSampleScore)
+        {
+            hit = best;
+            return true;
+        }
+
         if (NavMesh.SamplePosition(worldPosition, out sample, sampleRadius, navMeshAreaMask) &&
             TryImproveCandidate(sample, worldPosition, preferredY, maxYDelta, ref bestScore, ref best))
         {
             found = true;
+        }
+
+        if (found && bestScore <= ExactSampleScore)
+        {
+            hit = best;
+            return true;
         }
 
         // 같은 층 근처만 슬라이스 (아래/위 층으로 떨어지지 않게)
@@ -897,6 +916,9 @@ public class MapGrid : MonoBehaviour
                 TryImproveCandidate(sample, worldPosition, preferredY, maxYDelta, ref bestScore, ref best))
             {
                 found = true;
+
+                if (bestScore <= ExactSampleScore)
+                    break;
             }
         }
 
