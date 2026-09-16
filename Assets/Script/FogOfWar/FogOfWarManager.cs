@@ -59,6 +59,9 @@ public class FogOfWarManager : MonoBehaviour
     [Tooltip("시야 소스의 기본 눈높이(지면 기준, 미터)입니다. 유닛별로 다르게 하려면 FogOfWarVisionSource의 Eye Height Override를 쓰세요.")]
     public float defaultEyeHeight = 1.5f;
 
+    [Tooltip("켜면 적 AI도 언덕·절벽에 가려진 대상은 어그로로 잡지 않습니다. 안개는 플레이어 한쪽 시야라 적 AI가 쓸 수 없으므로, 여기서는 구워둔 지형 높이만 보고 판정합니다(배열 조회뿐이라 거의 공짜입니다).")]
+    public bool aiTerrainLineOfSight = true;
+
     [Header("Update")]
     [Tooltip("안개 텍스처를 갱신하는 간격(초)입니다.")]
     public float updateInterval = 0.1f;
@@ -1017,6 +1020,95 @@ public class FogOfWarManager : MonoBehaviour
         yield return new Vector3(centerX, referenceY, maxZ);
         yield return new Vector3(minX, referenceY, centerZ);
         yield return new Vector3(maxX, referenceY, centerZ);
+    }
+
+    /// <summary>
+    /// 적 AI 등 안개를 쓸 수 없는 진영이 지형 가림만으로 시야를 판정할 수 있는지입니다.
+    /// </summary>
+    public bool AiUsesTerrainLineOfSight =>
+        aiTerrainLineOfSight &&
+        enableElevationVision &&
+        elevationHeightByCell != null;
+
+    /// <summary>
+    /// from(눈높이 eyeHeight)에서 to가 지형에 가려지지 않고 보이는지 검사합니다.
+    /// 안개 텍스처가 아니라 Start()에서 구워둔 지형 높이 격자만 쓰기 때문에 소속과
+    /// 무관하게 쓸 수 있고, 칸을 따라가며 배열을 읽는 게 전부라 비용이 거의 없습니다.
+    /// 가림 판정 규칙은 StampVisionCell(플레이어 안개)과 같습니다: 눈높이보다 낮거나
+    /// 같은 지형은 항상 보이고, 눈높이보다 높은 지형만 지평선(고도각) 규칙을 받습니다.
+    /// eyeHeight가 음수면 Default Eye Height를 씁니다.
+    /// </summary>
+    public bool HasTerrainLineOfSight(Vector3 from, Vector3 to, float eyeHeight = -1f)
+    {
+        if (!enableElevationVision || elevationHeightByCell == null)
+            return true;
+
+        if (gridWidth <= 0 || gridHeight <= 0)
+            return true;
+
+        int x0 = WorldToGridX(from.x);
+        int z0 = WorldToGridZ(from.z);
+        int x1 = WorldToGridX(to.x);
+        int z1 = WorldToGridZ(to.z);
+
+        float eyeY = from.y + (eyeHeight >= 0f ? eyeHeight : defaultEyeHeight);
+        float maxSlope = float.NegativeInfinity;
+
+        int dx = Mathf.Abs(x1 - x0);
+        int dz = Mathf.Abs(z1 - z0);
+        int sx = x0 < x1 ? 1 : -1;
+        int sz = z0 < z1 ? 1 : -1;
+        int err = dx - dz;
+
+        int x = x0;
+        int z = z0;
+
+        while (true)
+        {
+            // 격자를 벗어나면 가렸다고 볼 근거가 없으니 보이는 것으로 둔다.
+            if (x < 0 || x >= gridWidth || z < 0 || z >= gridHeight)
+                return true;
+
+            bool isTargetCell = x == x1 && z == z1;
+
+            Vector2 worldXZ = GetCellWorldXZ(x, z);
+            float deltaX = worldXZ.x - from.x;
+            float deltaZ = worldXZ.y - from.z;
+            float distance = Mathf.Sqrt(deltaX * deltaX + deltaZ * deltaZ);
+
+            // 아주 가까운 칸은 고도각이 불안정하므로 판정하지 않는다.
+            if (distance >= MinElevationSampleDistance)
+            {
+                float cellHeight = SampleTerrainHeightAtCell(x, z);
+                float slope = (cellHeight - eyeY) / distance;
+                bool atOrBelowEyeLevel = cellHeight <= eyeY;
+                bool visible =
+                    atOrBelowEyeLevel || slope >= maxSlope - ElevationSlopeEpsilon;
+
+                if (isTargetCell)
+                    return visible;
+
+                maxSlope = Mathf.Max(maxSlope, slope);
+            }
+            else if (isTargetCell)
+            {
+                return true;
+            }
+
+            int e2 = 2 * err;
+
+            if (e2 > -dz)
+            {
+                err -= dz;
+                x += sx;
+            }
+
+            if (e2 < dx)
+            {
+                err += dx;
+                z += sz;
+            }
+        }
     }
 
     public bool IsExplored(Vector3 worldPosition)
