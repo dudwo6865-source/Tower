@@ -13,11 +13,10 @@ MonoBehaviour:
   m_Name: MachineGun Tower
   m_EditorClassIdentifier: 
   displayName: MachineGun Tower
-  icon: {fileID: 21300000, guid: 1b4ab1bcf4a21ff4f9832cbc36b939ef, type: 3}
+  icon: {fileID: 21300000, guid: 1f83c6794663d1b479218ce8d7cc913c, type: 3}
   description: Standard defensive tower.
   prefab: {fileID: 6894192069859626715, guid: 5de3ff52636527343a31dfbebddfcfc8, type: 3}
   wattCost: 75
   ownerId: 1
   entityTypeId: 
-  nextTier: {fileID: 0}
-  upgradeWattCost: 0
+  upgradeOptions: []
