@@ -15,9 +15,9 @@ RenderSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 9
   m_Fog: 0
-  m_FogColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  m_FogColor: {r: 0.631675, g: 0.7002554, b: 0.8018868, a: 1}
   m_FogMode: 3
-  m_FogDensity: 0.01
+  m_FogDensity: 0.005
   m_LinearFogStart: 0
   m_LinearFogEnd: 300
   m_AmbientSkyColor: {r: 0.212, g: 0.227, b: 0.259, a: 1}
@@ -9552,7 +9552,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 0}
+  m_Sprite: {fileID: 21300000, guid: 18713cbf8b9c9e149b79b9a6dba626f6, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -9628,6 +9628,7 @@ MonoBehaviour:
   enableElevationVision: 1
   elevationGridResolution: 64
   defaultEyeHeight: 2.5
+  aiTerrainLineOfSight: 1
   updateInterval: 0.1
   createWorldOverlay: 1
   useMapGridWhenAvailable: 1
@@ -10660,7 +10661,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 6e18f228fb7f6204d990bb04935f167c, type: 3}
+  m_Sprite: {fileID: 21300000, guid: a6d934f41fab89d49b867a21f0f1e4f7, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -14159,7 +14160,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -818, y: 461}
+  m_AnchoredPosition: {x: -818.00006, y: 461}
   m_SizeDelta: {x: -1820, y: -898}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2081822772
