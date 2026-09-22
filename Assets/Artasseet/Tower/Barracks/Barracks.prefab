@@ -318,6 +318,7 @@ MonoBehaviour:
   useTowerAI: 0
   isProductionBuilding: 1
   productionRecipe: {fileID: 11400000, guid: fb403a9513c80234abcfa3866fb5fedf, type: 2}
+  isWallCategory: 0
 --- !u!114 &283280464501641543
 MonoBehaviour:
   m_ObjectHideFlags: 0
