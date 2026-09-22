@@ -15,6 +15,7 @@ public class BuildingEditor : Editor
         EditorGUILayout.PropertyField(serializedObject.FindProperty("useTowerAI"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("isProductionBuilding"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("productionRecipe"));
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("isWallCategory"));
 
         serializedObject.ApplyModifiedProperties();
 
