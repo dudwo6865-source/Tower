@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd802dcfcf4b4703ac22ae573d802d39, type: 3}
+  m_Name: Relic_U03_UnitMoveSpeed
+  m_EditorClassIdentifier: 
+  relicId: U03
+  series: 1
+  displayName: "\uACBD\uB7C9 \uC7A5\uBE44"
+  description: "\uBAA8\uB4E0 \uC720\uB2DB \uC774\uB3D9\uC18D\uB3C4 +20%"
+  icon: {fileID: 0}
+  effectType: 5
+  valueMode: 1
+  value: 20
