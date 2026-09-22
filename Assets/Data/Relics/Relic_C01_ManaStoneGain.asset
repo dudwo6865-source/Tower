@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd802dcfcf4b4703ac22ae573d802d39, type: 3}
+  m_Name: Relic_C01_ManaStoneGain
+  m_EditorClassIdentifier: 
+  relicId: C01
+  series: 3
+  displayName: "\uB9C8\uC11D \uCD94\uCD9C\uC7A5\uCE58"
+  description: "\uC801 \uCC98\uCE58 \uC2DC \uD68D\uB4DD\uD558\uB294 \uB9C8\uC11D +20%"
+  icon: {fileID: 0}
+  effectType: 11
+  valueMode: 1
+  value: 20

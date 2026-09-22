@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd802dcfcf4b4703ac22ae573d802d39, type: 3}
+  m_Name: Relic_S02_BuildingMaxHealth
+  m_EditorClassIdentifier: 
+  relicId: S02
+  series: 4
+  displayName: "\uAC15\uD654 \uCF58\uD06C\uB9AC\uD2B8"
+  description: "\uBAA8\uB4E0 \uC544\uAD70 \uAC74\uBB3C \uCD5C\uB300 \uCCB4\uB825 +25%"
+  icon: {fileID: 0}
+  effectType: 13
+  valueMode: 1
+  value: 25
