@@ -70,6 +70,10 @@ public class ManaStoneManager : MonoBehaviour
         if (amount <= 0f)
             return;
 
+        // C01 마석 추출장치: 마석 획득량 보너스를 반영합니다.
+        if (RelicManager.Instance != null)
+            amount = RelicManager.Instance.GetModifiedValue(RelicEffectType.ManaStoneGain, ownerId, amount);
+
         float before = CurrentManaStone;
         CurrentManaStone = ClampAmount(CurrentManaStone + amount);
 

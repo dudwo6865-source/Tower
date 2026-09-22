@@ -472,7 +472,7 @@ public class SelectionInfoPanelUI : MonoBehaviour
             return;
 
         float attackDamage = attacker != null ? attacker.EffectiveAttackDamage : data.attackDamage;
-        float attackRange = attacker != null ? attacker.attackRange : data.attackRange;
+        float attackRange = attacker != null ? attacker.AttackRange : data.attackRange;
         float moveSpeed = data != null ? data.moveSpeed : 0f;
         float visionRange = data != null ? data.visionRange : 0f;
 

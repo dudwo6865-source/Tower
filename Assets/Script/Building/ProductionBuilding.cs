@@ -48,6 +48,23 @@ public class ProductionBuilding : MonoBehaviour
         }
     }
 
+    // U04 자동 생산 모듈: 생산 간격(시간)이 아니라 초당 생산 횟수(rate) 기준으로 적용한다.
+    float GetEffectiveSpawnInterval()
+    {
+        float interval = recipe.spawnInterval;
+
+        if (RelicManager.Instance == null || selectableEntity == null || interval <= 0f)
+            return interval;
+
+        float rate = 1f / interval;
+        float modifiedRate = RelicManager.Instance.GetModifiedValue(
+            RelicEffectType.ProductionSpeed,
+            selectableEntity.ownerId,
+            rate);
+
+        return modifiedRate > 0.0001f ? 1f / modifiedRate : interval;
+    }
+
     // 업그레이드(건물 유닛 스폰 수) 보너스를 반영한 최대 생존 수입니다.
     // recipe 값이 0 이하면 무제한을 의미하므로 0을 반환합니다.
     int EffectiveMaxAlive()
@@ -221,7 +238,7 @@ public class ProductionBuilding : MonoBehaviour
                 continue;
             }
 
-            float interval = recipe != null ? Mathf.Max(0f, recipe.spawnInterval) : 0f;
+            float interval = recipe != null ? Mathf.Max(0f, GetEffectiveSpawnInterval()) : 0f;
             yield return RunProductionCycle(interval);
 
             if (buildingHealth != null && !buildingHealth.IsAlive)

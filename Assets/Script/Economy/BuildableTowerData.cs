@@ -58,7 +58,10 @@ public class BuildableTowerData : ScriptableObject, IBuildablePlacementData
     public string BuildAssetName => name;
     public string DisplayName => displayName;
     public GameObject Prefab => prefab;
-    public int WattCost => wattCost;
+    // W03 절약형 건축법: 건설 Watt 비용 할인을 반영합니다.
+    public int WattCost => RelicManager.Instance != null
+        ? Mathf.Max(0, Mathf.RoundToInt(RelicManager.Instance.ApplyBonus(RelicEffectType.BuildWattCost, wattCost)))
+        : wattCost;
     public int OwnerId => ownerId;
     public Sprite Icon => icon != null ? icon : BuildableIconResolver.ResolvePrefabPortrait(prefab);
 

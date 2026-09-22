@@ -160,7 +160,7 @@ public class UnitAttacker : MonoBehaviour
     private EntityHealth pendingTargetHealth;
     private bool pendingAttackActive;
 
-    public float AttackRange => attackRange;
+    public float AttackRange => GetEffectiveRange();
     public bool IsReady => cooldownTimer <= 0f;
     public bool HasPendingAttack => pendingAttackActive;
 
@@ -208,7 +208,7 @@ public class UnitAttacker : MonoBehaviour
         if (IsTooCloseToEngage(target))
             return false;
 
-        return GetHorizontalBoundsGap(target) <= attackRange;
+        return GetHorizontalBoundsGap(target) <= GetEffectiveRange();
     }
 
     // 대포는 착탄이 포물선이라 아주 가까운 적은 맞힐 수 없습니다(사각지대).
@@ -522,29 +522,75 @@ public class UnitAttacker : MonoBehaviour
         PlayAttackSound();
     }
 
-    // 업그레이드 보너스를 반영한 실제 공격력입니다.
+    // 업그레이드 + 유물 보너스를 반영한 실제 공격력입니다.
+    // (T01 강화 탄두 / U01 강화 무장)
     float GetEffectiveDamage()
     {
-        if (UpgradeManager.Instance == null || selfEntity == null)
-            return attackDamage;
+        float damage = attackDamage;
 
-        return UpgradeManager.Instance.GetModifiedAttackDamage(
-            selfEntity.entityType,
-            selfEntity.ownerId,
-            attackDamage);
+        if (UpgradeManager.Instance != null && selfEntity != null)
+        {
+            damage = UpgradeManager.Instance.GetModifiedAttackDamage(
+                selfEntity.entityType,
+                selfEntity.ownerId,
+                damage);
+        }
+
+        if (RelicManager.Instance != null && selfEntity != null)
+        {
+            RelicEffectType stat = selfEntity.entityType == SelectableEntityType.Building
+                ? RelicEffectType.TowerAttackDamage
+                : RelicEffectType.UnitAttackDamage;
+
+            damage = RelicManager.Instance.GetModifiedValue(stat, selfEntity.ownerId, damage);
+        }
+
+        return damage;
     }
 
     // 업그레이드 공격속도 보너스를 반영한 실제 공격 쿨다운입니다.
-    // (공격속도 업그레이드는 유닛만 대상)
+    // (공격속도 업그레이드는 유닛만 대상). 이어서 타워 공격속도 유물(T02 고속 구동축)을
+    // 얹는다 — 업그레이드가 다루지 않는 건물 공격속도는 유물로만 강화된다.
     float GetEffectiveCooldown()
     {
-        if (UpgradeManager.Instance == null || selfEntity == null)
-            return attackCooldown;
+        float cooldown = attackCooldown;
 
-        return UpgradeManager.Instance.GetModifiedAttackCooldown(
-            selfEntity.entityType,
+        if (UpgradeManager.Instance != null && selfEntity != null)
+        {
+            cooldown = UpgradeManager.Instance.GetModifiedAttackCooldown(
+                selfEntity.entityType,
+                selfEntity.ownerId,
+                cooldown);
+        }
+
+        if (RelicManager.Instance != null && selfEntity != null &&
+            selfEntity.entityType == SelectableEntityType.Building &&
+            cooldown > 0f)
+        {
+            float rate = 1f / cooldown;
+            float modifiedRate = RelicManager.Instance.GetModifiedValue(
+                RelicEffectType.TowerAttackSpeed,
+                selfEntity.ownerId,
+                rate);
+
+            if (modifiedRate > 0.0001f)
+                cooldown = 1f / modifiedRate;
+        }
+
+        return cooldown;
+    }
+
+    // 유물 사거리 보너스(T03 고배율 조준경)를 반영한 실제 사거리입니다. 건물(타워)만 대상입니다.
+    float GetEffectiveRange()
+    {
+        if (RelicManager.Instance == null || selfEntity == null ||
+            selfEntity.entityType != SelectableEntityType.Building)
+            return attackRange;
+
+        return RelicManager.Instance.GetModifiedValue(
+            RelicEffectType.TowerAttackRange,
             selfEntity.ownerId,
-            attackCooldown);
+            attackRange);
     }
 
     void PlayAttackSound()

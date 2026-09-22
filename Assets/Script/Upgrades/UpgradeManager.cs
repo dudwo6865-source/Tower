@@ -119,7 +119,18 @@ public class UpgradeManager : MonoBehaviour
         if (def == null || IsMaxLevel(def))
             return -1;
 
-        return def.GetCostForNextLevel(GetLevel(def));
+        int baseCost = def.GetCostForNextLevel(GetLevel(def));
+
+        // C02 정제 기술: 글로벌 연구의 마석 비용 할인.
+        if (RelicManager.Instance == null)
+            return baseCost;
+
+        float modified = RelicManager.Instance.GetModifiedValue(
+            RelicEffectType.ResearchManaCost,
+            playerOwnerId,
+            baseCost);
+
+        return Mathf.Max(0, Mathf.RoundToInt(modified));
     }
 
     public bool CanPurchase(UpgradeDefinition def)
@@ -250,7 +261,13 @@ public class UpgradeManager : MonoBehaviour
         if (ownerId != playerOwnerId)
             return baseCount;
 
-        return Mathf.Max(0, Mathf.RoundToInt(ApplyBonus(UpgradeStat.BuildingSpawnCount, baseCount)));
+        // U05 확장 병영: 생산 건물 1개당 유닛 상한 보너스를 업그레이드 위에 얹는다.
+        float value = ApplyBonus(UpgradeStat.BuildingSpawnCount, baseCount);
+
+        if (RelicManager.Instance != null)
+            value = RelicManager.Instance.ApplyBonus(RelicEffectType.UnitCapPerBuilding, value);
+
+        return Mathf.Max(0, Mathf.RoundToInt(value));
     }
 
     public static void NotifySpawned(SelectableEntity entity)
@@ -283,12 +300,38 @@ public class UpgradeManager : MonoBehaviour
                 : UpgradeStat.UnitMaxHealth;
 
             float baseMax = health.maxHealth;
-            float bonus = ApplyBonus(healthStat, baseMax) - baseMax;
-            health.SetUpgradeMaxHealthBonus(bonus);
+            float withUpgrade = ApplyBonus(healthStat, baseMax);
+            float withRelic = ApplyRelicMaxHealthBonus(entity, isBuilding, withUpgrade);
+
+            health.SetUpgradeMaxHealthBonus(withRelic - baseMax);
         }
 
         if (!isBuilding)
             ApplyMoveSpeed(entity);
+    }
+
+    // U02 강화 장갑 / S02 강화 콘크리트 / S03 강화 장벽을 업그레이드 체력 보너스 위에 얹는다.
+    // S03은 Building.isWallCategory가 켜진 건물에만 추가로 적용된다.
+    float ApplyRelicMaxHealthBonus(SelectableEntity entity, bool isBuilding, float value)
+    {
+        if (RelicManager.Instance == null)
+            return value;
+
+        RelicEffectType stat = isBuilding
+            ? RelicEffectType.BuildingMaxHealth
+            : RelicEffectType.UnitMaxHealth;
+
+        value = RelicManager.Instance.ApplyBonus(stat, value);
+
+        if (isBuilding)
+        {
+            Building building = entity.GetComponent<Building>();
+
+            if (building != null && building.isWallCategory)
+                value = RelicManager.Instance.ApplyBonus(RelicEffectType.WallMaxHealth, value);
+        }
+
+        return value;
     }
 
     void ApplyMoveSpeed(SelectableEntity entity)
@@ -304,7 +347,13 @@ public class UpgradeManager : MonoBehaviour
             baseSpeeds[agent] = baseSpeed;
         }
 
-        agent.speed = ApplyBonus(UpgradeStat.UnitMoveSpeed, baseSpeed);
+        // U03 경량 장비: 이동속도 보너스를 업그레이드 위에 얹는다.
+        float speed = ApplyBonus(UpgradeStat.UnitMoveSpeed, baseSpeed);
+
+        if (RelicManager.Instance != null)
+            speed = RelicManager.Instance.ApplyBonus(RelicEffectType.UnitMoveSpeed, speed);
+
+        agent.speed = speed;
     }
 
     ManaStoneManager ResolveManaStone()

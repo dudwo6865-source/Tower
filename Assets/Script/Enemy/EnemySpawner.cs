@@ -433,6 +433,9 @@ public class EnemySpawner : MonoBehaviour
 
         isDead = true;
 
+        // 유물 후보 제시는 스포너가 깨어났는지와 무관하게 파괴될 때마다 발생한다.
+        RelicManager.Instance?.NotifySpawnerDestroyed(this);
+
         // 아직 깨어나지 않은 스포너를 미리 부수면 방출도 없다. 웨이브가 오기 전에
         // 선제 공격으로 정리하는 플레이가 손해 보지 않게 한다.
         if (!IsAwakeForCurrentWave)

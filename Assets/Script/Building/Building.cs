@@ -25,6 +25,10 @@ public class Building : MonoBehaviour
     [Tooltip("생산 규칙입니다. 비워두면 ProductionBuilding 컴포넌트 값을 사용합니다.")]
     public ProductionRecipe productionRecipe;
 
+    [Header("Relic")]
+    [Tooltip("벽 계열 건물이면 켭니다. '강화 장벽' 등 벽 전용 유물 효과의 적용 대상이 됩니다.")]
+    public bool isWallCategory;
+
     private SelectableEntity selection;
     private EntityHealth health;
     private UnitAttacker attacker;

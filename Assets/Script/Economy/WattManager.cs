@@ -18,7 +18,19 @@ public class WattManager : MonoBehaviour
 
     public float CurrentWatt { get; private set; }
 
-    public float MaxWatt => Mathf.Max(0f, maxWatt);
+    // W02 대용량 축전지: 최대 Watt 보유량 보너스를 반영합니다.
+    public float MaxWatt
+    {
+        get
+        {
+            float value = maxWatt;
+
+            if (RelicManager.Instance != null)
+                value = RelicManager.Instance.ApplyBonus(RelicEffectType.WattMaxCapacity, value);
+
+            return Mathf.Max(0f, value);
+        }
+    }
 
     public float FillRatio
     {
@@ -59,7 +71,13 @@ public class WattManager : MonoBehaviour
         if (incomePerSecond <= 0f || IsFull)
             return;
 
-        AddWatt(incomePerSecond * Time.deltaTime);
+        // W01 고효율 발전기: Watt 생산속도 보너스를 반영합니다.
+        float income = incomePerSecond;
+
+        if (RelicManager.Instance != null)
+            income = RelicManager.Instance.ApplyBonus(RelicEffectType.WattIncome, income);
+
+        AddWatt(income * Time.deltaTime);
     }
 
     public bool CanAfford(int cost)
