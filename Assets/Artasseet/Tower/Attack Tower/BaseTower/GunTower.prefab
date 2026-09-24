@@ -62,7 +62,7 @@ MonoBehaviour:
   entityTypeId: GunTower
   autoAssignEntityTypeId: 1
   selectionCollider: {fileID: 0}
-  portrait: {fileID: 21300000, guid: d7e95aeaa3485874d99b66b0c0a41752, type: 3}
+  portrait: {fileID: 21300000, guid: a6d934f41fab89d49b867a21f0f1e4f7, type: 3}
   autoSetupHealth: 1
 --- !u!114 &2544994321938817267
 MonoBehaviour:
