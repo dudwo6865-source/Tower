@@ -81,6 +81,7 @@ MonoBehaviour:
   useTowerAI: 1
   isProductionBuilding: 0
   productionRecipe: {fileID: 0}
+  isWallCategory: 0
 --- !u!114 &1225106777453011786
 MonoBehaviour:
   m_ObjectHideFlags: 0
