@@ -14,14 +14,18 @@ public class RelicPanelUI : MonoBehaviour
     [System.Serializable]
     public class CandidateEntry
     {
+        [InspectorName("버튼")]
         public Button button;
 
+        [InspectorName("이름 텍스트")]
         [Tooltip("유물 이름을 표시할 텍스트입니다.")]
         public TextMeshProUGUI nameLabel;
 
+        [InspectorName("설명 텍스트")]
         [Tooltip("유물 효과 설명을 표시할 텍스트입니다. 비워두면 표시하지 않습니다.")]
         public TextMeshProUGUI descriptionLabel;
 
+        [InspectorName("아이콘")]
         [Tooltip("유물 아이콘입니다. 비워두면 표시하지 않습니다.")]
         public Image icon;
     }
@@ -29,11 +33,14 @@ public class RelicPanelUI : MonoBehaviour
     [System.Serializable]
     public class DiscardEntry
     {
+        [InspectorName("버튼")]
         public Button button;
 
+        [InspectorName("이름 텍스트")]
         [Tooltip("장착 중인 유물의 이름을 표시할 텍스트입니다.")]
         public TextMeshProUGUI nameLabel;
 
+        [InspectorName("아이콘")]
         [Tooltip("장착 중인 유물의 아이콘입니다. 비워두면 표시하지 않습니다.")]
         public Image icon;
     }
@@ -41,48 +48,61 @@ public class RelicPanelUI : MonoBehaviour
     [System.Serializable]
     public class SlotEntry
     {
+        [InspectorName("아이콘")]
         [Tooltip("유물 아이콘을 표시할 Image입니다.")]
         public Image icon;
 
+        [InspectorName("이름 텍스트")]
         [Tooltip("유물 이름을 표시할 텍스트입니다. 비워두면 표시하지 않습니다.")]
         public TextMeshProUGUI nameLabel;
 
+        [InspectorName("빈 슬롯 아이콘")]
         [Tooltip("빈 슬롯일 때 대신 보여줄 아이콘입니다. 비워두면 빈 슬롯에서는 아이콘을 끕니다.")]
         public Sprite emptySprite;
     }
 
     [Header("공통")]
+    [InspectorName("유물 매니저")]
     [Tooltip("비워두면 씬에서 자동으로 찾습니다.")]
     public RelicManager relicManager;
 
     [Header("후보 선택 화면")]
+    [InspectorName("후보 화면 루트")]
     [Tooltip("보이고/숨길 패널 루트입니다. 비워두면 이 화면을 켜고 끄지 않습니다.")]
     public GameObject candidatePanelRoot;
 
+    [InspectorName("후보 항목")]
     [Tooltip("후보 버튼들입니다. RelicManager의 Candidate Count와 개수를 맞추세요.")]
     public CandidateEntry[] candidateEntries;
 
     [Header("교체 화면")]
+    [InspectorName("교체 화면 루트")]
     [Tooltip("보이고/숨길 패널 루트입니다. 비워두면 이 화면을 켜고 끄지 않습니다.")]
     public GameObject replacePanelRoot;
 
+    [InspectorName("새 유물 이름 텍스트")]
     [Tooltip("새로 고른(장착 대기 중인) 유물의 이름을 표시합니다.")]
     public TextMeshProUGUI incomingNameLabel;
 
+    [InspectorName("새 유물 설명 텍스트")]
     [Tooltip("새로 고른 유물의 설명을 표시합니다. 비워두면 표시하지 않습니다.")]
     public TextMeshProUGUI incomingDescriptionLabel;
 
+    [InspectorName("새 유물 아이콘")]
     [Tooltip("새로 고른 유물의 아이콘입니다. 비워두면 표시하지 않습니다.")]
     public Image incomingIcon;
 
+    [InspectorName("버릴 유물 항목")]
     [Tooltip("현재 장착 중인 유물을 보여주고, 그중 버릴 대상을 고르는 버튼들입니다. " +
         "RelicManager의 Slot Count와 개수를 맞추세요.")]
     public DiscardEntry[] discardEntries;
 
+    [InspectorName("교체 취소 버튼")]
     [Tooltip("교체를 취소하는 버튼입니다. 비워두면 취소 기능 없이 진행됩니다.")]
     public Button cancelReplaceButton;
 
     [Header("장착 슬롯")]
+    [InspectorName("슬롯 항목")]
     [Tooltip("장착 슬롯을 보여줄 UI 요소들입니다. RelicManager의 Slot Count와 개수를 맞추세요.")]
     public SlotEntry[] slotEntries;
 
