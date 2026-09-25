@@ -16,7 +16,7 @@ MonoBehaviour:
   series: 2
   displayName: "\uACE0\uD6A8\uC728 \uBC1C\uC804\uAE30"
   description: "Watt \uC0DD\uC0B0\uC18D\uB3C4 +20%"
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: b7173bf2ac2b3804a822f2c95779a912, type: 3}
   effectType: 8
   valueMode: 1
   value: 20

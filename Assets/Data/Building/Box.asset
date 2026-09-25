@@ -20,3 +20,4 @@ MonoBehaviour:
   wattCost: 50
   ownerId: 1
   entityTypeId: 
+  upgradeOptions: []

@@ -16,7 +16,7 @@ MonoBehaviour:
   series: 0
   displayName: "\uACE0\uC18D \uAD6C\uB3D9\uCD95"
   description: "\uBAA8\uB4E0 \uACF5\uACA9 \uD0C0\uC6CC \uACF5\uACA9\uC18D\uB3C4 +15%"
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: b7173bf2ac2b3804a822f2c95779a912, type: 3}
   effectType: 1
   valueMode: 1
   value: 15

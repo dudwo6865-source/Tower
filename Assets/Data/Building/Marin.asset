@@ -15,4 +15,5 @@ MonoBehaviour:
   unitPrefab: {fileID: 1258975795556199837, guid: d96f2fb610cbbe848b1d14733aedf7c7, type: 3}
   initialSpawnDelay: 2
   spawnInterval: 8
+  wattCostPerSecond: 1
   maxAlivePerBuilding: 4

@@ -15,8 +15,9 @@ MonoBehaviour:
   relicId: U04
   series: 1
   displayName: "\uC790\uB3D9 \uC0DD\uC0B0 \uBAA8\uB4C8"
-  description: "\uBAA8\uB4E0 \uC720\uB2DB \uC0DD\uC0B0 \uAC74\uBB3C\uC758 \uC0DD\uC0B0\uC18D\uB3C4 +25%"
-  icon: {fileID: 0}
+  description: "\uBAA8\uB4E0 \uC720\uB2DB \uC0DD\uC0B0 \uAC74\uBB3C\uC758 \uC0DD\uC0B0\uC18D\uB3C4
+    +25%"
+  icon: {fileID: 21300000, guid: b7173bf2ac2b3804a822f2c95779a912, type: 3}
   effectType: 6
   valueMode: 1
   value: 25

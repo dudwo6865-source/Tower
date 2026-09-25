@@ -16,7 +16,7 @@ MonoBehaviour:
   series: 2
   displayName: "\uC808\uC57D\uD615 \uAC74\uCD95\uBC95"
   description: "\uBAA8\uB4E0 \uAC74\uC124 Watt \uBE44\uC6A9 -15%"
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: b7173bf2ac2b3804a822f2c95779a912, type: 3}
   effectType: 10
   valueMode: 1
   value: -15

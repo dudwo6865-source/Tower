@@ -249,7 +249,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 1, z: 0}
-  m_LocalScale: {x: 0.4, y: 0.4, z: 0.4}
+  m_LocalScale: {x: 0.3, y: 0.3, z: 0.3}
   m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 7386961319845078969}
@@ -309,7 +309,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   entityType: 0
   ownerId: 1
-  entityTypeId: unit
+  entityTypeId: Marin
+  autoAssignEntityTypeId: 1
   selectionCollider: {fileID: 6629162137175184675}
   portrait: {fileID: 21300000, guid: be5233c9531ec094fafbb78cb2611b0f, type: 3}
   autoSetupHealth: 1
@@ -343,6 +344,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   visionRange: 40
+  edgeSoftnessOverride: -1
+  eyeHeightOverride: -1
 --- !u!114 &4962077725824077520
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -370,7 +373,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   attackClips:
   - {fileID: 8300000, guid: da1f74d0e10db174b8b360f280b07683, type: 3}
-  hitClips: []
+  attackHitClips: []
   deathClips: []
   audioSource: {fileID: 0}
   volume: 1
@@ -383,8 +386,7 @@ MonoBehaviour:
   referenceMinOrthoSize: 12
   referenceMaxOrthoSize: 45
   pitchRange: {x: 0.95, y: 1.05}
-  hitSoundCooldown: 0.12
-  playHitOnDeath: 0
+  attackHitSoundCooldown: 0.12
 --- !u!114 &369918185537933595
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -404,16 +406,38 @@ MonoBehaviour:
   useAttackAnimationEvent: 1
   projectileSpeed: 80
   firePoint: {fileID: 8401624674451895835}
+  pierceHitRadius: 0.6
+  beamWidth: 1
+  minAttackRange: 0
+  arcHeight: 4
+  arcHeightRatio: 0.3
+  minArcHeight: 0.5
+  arcPeakTime: 0.5
+  arcClimbPower: 1
+  arcDivePower: 1
+  useBallisticArc: 0
+  ballisticGravity: 20
+  impactOffsetRadius: 0
+  lateralWobbleRatio: 0.15
+  lateralWobbleAmount: 0
+  splashRadius: 3
+  splashMinDamageRatio: 0.3
+  hitEffectBaseRadius: 4
+  hitscanTrailPrefab: {fileID: 0}
+  hitscanTrailDuration: 0.08
+  hitscanTrailWidth: 0.05
   requireFacingToAttack: 0
   aimAngleTolerance: 30
   aimTransform: {fileID: 0}
   aimYawOffset: 0
+  aimAxisLocal: {x: 0, y: 0, z: 0}
   spawnVisualEffects: 1
   projectileColor: {r: 1, g: 0.85, b: 0.3, a: 1}
   hitColor: {r: 1, g: 0.5, b: 0.2, a: 1}
   muzzleFlashPrefab: {fileID: 304414178702807373, guid: b9a62cef32ff6da49b88cd5572caba55, type: 3}
   hitEffectPrefab: {fileID: 1598268965855006841, guid: 1817cfabe570b924c88af259660671a3, type: 3}
   projectilePrefab: {fileID: 6820024759759233777, guid: 91e780efda7994440a23cebbb9636401, type: 3}
+  trailEffectPrefab: {fileID: 0}
 --- !u!114 &61461626690304003
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -470,6 +494,7 @@ MonoBehaviour:
   targetPriority: 0
   retargetInterval: 0.1
   damageFocusSwitchMargin: 2
+  debugCommandLog: 0
   stoppingDistance: 2
   destinationRefreshInterval: 0.25
   destinationMoveThreshold: 1
@@ -477,8 +502,8 @@ MonoBehaviour:
   facingSpeed: 8
   avoidancePriorityMin: 30
   avoidancePriorityMax: 70
+  buildingDirectChaseRange: 0
   shareAggroWithAllies: 1
-  debugCommandLog: 0
   patrolArrivalDistance: 1.25
 --- !u!114 &8748445037153174795
 MonoBehaviour:

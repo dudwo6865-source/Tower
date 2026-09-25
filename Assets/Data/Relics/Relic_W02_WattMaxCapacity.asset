@@ -16,7 +16,7 @@ MonoBehaviour:
   series: 2
   displayName: "\uB300\uC6A9\uB7C9 \uCD95\uC804\uC9C0"
   description: "\uCD5C\uB300 Watt \uBCF4\uC720\uB7C9 +30%"
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: b7173bf2ac2b3804a822f2c95779a912, type: 3}
   effectType: 9
   valueMode: 1
   value: 30
