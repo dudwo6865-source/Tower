@@ -6,126 +6,177 @@ using UnityEngine.UI;
 public class SelectionInfoPanelUI : MonoBehaviour
 {
     [Header("참조")]
+    [Label("선택 매니저")]
     [Tooltip("유닛 선택을 감지하는 매니저입니다. 비워두면 UnitSelectionManager.Instance를 사용합니다.")]
     public UnitSelectionManager selectionManager;
 
+    [Label("업그레이드 매니저")]
     [Tooltip("업그레이드 변경 시 전투 스탯 표시를 갱신합니다. 비워두면 자동으로 찾습니다.")]
     public UpgradeManager upgradeManager;
 
     [Header("패널")]
+    [Label("패널 루트")]
     [Tooltip("선택 정보 패널 전체 루트입니다. 선택이 없으면 숨깁니다.")]
     public GameObject panelRoot;
 
     [Header("기본 정보")]
+    [Label("기본 정보 영역")]
     [Tooltip("이름/부제/초상화를 묶는 ID 패널 루트입니다. 다중 선택 시 숨깁니다.")]
     public GameObject identitySection;
+    [Label("이름 텍스트")]
     [Tooltip("선택 대상 이름(유닛/건물 표시명)을 표시할 텍스트입니다.")]
     public TextMeshProUGUI nameText;
+    [Label("초상화 이미지")]
     [Tooltip("SelectableEntity.portrait 또는 UnitData.portrait를 표시할 초상화 이미지입니다.")]
     public Image portraitImage;
 
     [Header("체력")]
+    [Label("체력 텍스트")]
     [Tooltip("현재/최대 체력 수치를 표시할 텍스트입니다.")]
     public TextMeshProUGUI healthText;
 
     [Header("전투")]
+    [Label("전투 영역")]
     [Tooltip("공격·사거리·이동·시야 등 전투 스탯 영역 루트입니다.")]
     public GameObject combatSection;
+    [Label("공격력 텍스트")]
     [Tooltip("공격력을 표시할 텍스트입니다.")]
     public TextMeshProUGUI attackText;
+    [Label("사거리 텍스트")]
     [Tooltip("사거리를 표시할 텍스트입니다.")]
     public TextMeshProUGUI rangeText;
+    [Label("이동 속도 텍스트")]
     [Tooltip("이동 속도를 표시할 텍스트입니다. 건물 선택 시 숨깁니다.")]
     public TextMeshProUGUI moveSpeedText;
+    [Label("시야 텍스트")]
     [Tooltip("시야 범위를 표시할 텍스트입니다.")]
     public TextMeshProUGUI visionText;
 
     [Header("생산")]
+    [Label("생산 영역")]
     [Tooltip("생산 건물 정보 영역 루트입니다. 생산 건물이 아니면 숨깁니다.")]
     public GameObject productionSection;
+    [Label("생산 유닛 아이콘")]
     [Tooltip("생산 중인 유닛의 초상화(SelectableEntity.portrait)를 표시할 이미지입니다.")]
     public Image productionIconImage;
+    [Label("생산 유닛 이름 텍스트")]
     [Tooltip("생산 중인 유닛 이름을 표시할 텍스트입니다.")]
     public TextMeshProUGUI productionTitleText;
+    [Label("생산 상태 텍스트")]
     [Tooltip("생산 상태(대기/생산 중), 보유 수, 한도 등을 표시할 텍스트입니다.")]
     public TextMeshProUGUI productionDetailText;
+    [Label("생산 진행 슬라이더")]
     [Tooltip("현재 생산 진행률(0~1)을 표시할 슬라이더입니다.")]
     public Slider productionSlider;
+    [Label("초당 Watt 소모량 텍스트")]
     [Tooltip("생산 중 초당 Watt 소모량을 표시할 텍스트입니다. 레시피의 소모량이 0이면 비웁니다.")]
     public TextMeshProUGUI productionWattCostText;
 
     [Header("업그레이드 연구")]
+    [Label("연구 영역")]
     [Tooltip("업그레이드 건물 연구 정보 영역 루트입니다. UpgradeBuilding 선택 시에만 표시합니다.")]
     public GameObject upgradeResearchSection;
+    [Label("연구 아이콘")]
     [Tooltip("연구 중인 업그레이드 아이콘입니다.")]
     public Image upgradeResearchIconImage;
+    [Label("연구 이름 텍스트")]
     [Tooltip("연구 중인 업그레이드 이름을 표시할 텍스트입니다.")]
     public TextMeshProUGUI upgradeResearchTitleText;
+    [Label("연구 상태 텍스트")]
     [Tooltip("연구 상태/남은 시간 등을 표시할 텍스트입니다.")]
     public TextMeshProUGUI upgradeResearchDetailText;
+    [Label("연구 진행 슬라이더")]
     [Tooltip("현재 연구 진행률(0~1)을 표시할 슬라이더입니다.")]
     public Slider upgradeResearchSlider;
 
     [Header("다중 선택")]
+    [Label("초상화 그리드 부모")]
     [Tooltip("여러 개 선택 시 각 대상 초상화를 나열할 그리드 부모입니다. (Grid Layout Group 등을 붙인 오브젝트)")]
     public Transform portraitGridParent;
+    [Label("초상화 칸 프리팹")]
     [Tooltip("초상화 1칸 프리팹입니다. SelectionPortraitCell 컴포넌트가 있어야 합니다.")]
     public SelectionPortraitCell portraitCellPrefab;
+    [Label("다중 선택 영역")]
     [Tooltip("(선택) 초상화 그리드 영역 전체 루트입니다. 단일/빈 선택 시 숨깁니다.")]
     public GameObject multiSelectionSection;
+    [Label("최대 초상화 칸 수")]
     [Tooltip("초상화 그리드에 표시할 최대 칸 수입니다. 0 이하이면 제한 없음.")]
     public int maxPortraitCells = 0;
 
     [Header("다중 선택 - 셀 크기")]
+    [Label("셀 크기 자동 조절")]
     [Tooltip("켜면 선택 수에 따라 초상화 셀 크기를 자동으로 조절합니다.")]
     public bool dynamicCellSize = false;
+    [Label("초상화 그리드")]
     [Tooltip("셀 크기를 조절할 그리드입니다. 비워두면 portraitGridParent에서 GridLayoutGroup을 찾습니다.")]
     public GridLayoutGroup portraitGrid;
+    [Label("기본 셀 크기")]
     [Tooltip("기본 셀 크기입니다. (선택 수가 축소 기준 미만일 때)")]
     public Vector2 defaultCellSize = new Vector2(96f, 96f);
+    [Label("1차 축소 기준 수")]
     [Tooltip("이 개수 이상 선택하면 셀 크기를 shrunkCellSize로 줄입니다. (1차)")]
     public int cellShrinkThreshold = 8;
+    [Label("1차 축소 셀 크기")]
     [Tooltip("1차 축소 기준 이상 선택 시 사용할 셀 크기입니다.")]
     public Vector2 shrunkCellSize = new Vector2(56f, 56f);
+    [Label("2차 축소 기준 수")]
     [Tooltip("이 개수 이상 선택하면 셀 크기를 shrunkCellSize2로 더 줄입니다. (2차)")]
     public int cellShrinkThreshold2 = 16;
+    [Label("2차 축소 셀 크기")]
     [Tooltip("2차 축소 기준 이상 선택 시 사용할 셀 크기입니다.")]
     public Vector2 shrunkCellSize2 = new Vector2(40f, 40f);
 
+    [Label("초상화 그리드 디버그 로그")]
     [Tooltip("켜면 다중 선택 초상화 그리드 생성 과정을 Console에 출력합니다.")]
     public bool debugPortraitGrid = false;
 
     [Header("텍스트 형식")]
+    [Label("체력 형식")]
     [Tooltip("체력 텍스트 형식입니다. {0}=현재 체력, {1}=최대 체력")]
     public string healthFormat = "{0:0} / {1:0}";
+    [Label("공격력 형식")]
     [Tooltip("공격력 텍스트 형식입니다. {0}=공격력")]
     public string attackFormat = "공격 {0:0}";
+    [Label("사거리 형식")]
     [Tooltip("사거리 텍스트 형식입니다. {0}=사거리")]
     public string rangeFormat = "사거리 {0:0.0}";
+    [Label("이동 속도 형식")]
     [Tooltip("이동 속도 텍스트 형식입니다. {0}=이동 속도")]
     public string moveSpeedFormat = "이동 {0:0.0}";
+    [Label("시야 형식")]
     [Tooltip("시야 범위 텍스트 형식입니다. {0}=시야")]
     public string visionFormat = "시야 {0:0}";
+    [Label("유닛 다중 선택 제목")]
     [Tooltip("유닛만 여러 개 선택했을 때 제목 형식입니다. {0}=유닛 수")]
     public string multiUnitFormat = "유닛 {0}기";
+    [Label("건물 다중 선택 제목")]
     [Tooltip("건물만 여러 개 선택했을 때 제목 형식입니다. {0}=건물 수")]
     public string multiBuildingFormat = "건물 {0}개";
+    [Label("혼합 다중 선택 제목")]
     [Tooltip("유닛과 건물을 함께 선택했을 때 제목 형식입니다. {0}=유닛 수, {1}=건물 수")]
     public string multiMixedFormat = "유닛 {0} / 건물 {1}";
+    [Label("보유 유닛 수 형식")]
     [Tooltip("생산 건물 보유 유닛 수 형식입니다. {0}=현재 보유, {1}=최대 보유")]
     public string productionCountFormat = "보유 {0} / {1}";
+    [Label("생산 중 문구")]
     [Tooltip("유닛을 생산 중일 때 표시할 문구입니다. {0}=남은 초")]
     public string productionProgressFormat = "생산 중  {0:0.0}s";
+    [Label("생산 대기 문구")]
     [Tooltip("생산 대기 중일 때 표시할 문구입니다.")]
     public string productionIdleFormat = "대기 중";
+    [Label("생산 한도 문구")]
     [Tooltip("생산 한도에 도달했을 때 표시할 문구입니다.")]
     public string productionCapacityFormat = "생산 한도";
+    [Label("Watt 부족 문구")]
     [Tooltip("Watt가 부족해 생산이 멈췄을 때 표시할 문구입니다.")]
     public string productionNoWattFormat = "Watt 부족";
+    [Label("초당 Watt 소모량 형식")]
     [Tooltip("초당 Watt 소모량 텍스트 형식입니다. {0}=현재 초당 소모량(생산 중이 아니면 0), {1}=레시피 기준 초당 소모량")]
     public string productionWattCostFormat = "Watt -{0:0.#}/s";
+    [Label("연구 중 문구")]
     [Tooltip("업그레이드 연구 중일 때 표시할 문구입니다. {0}=남은 초")]
     public string upgradeResearchProgressFormat = "연구 중  {0:0.0}s";
+    [Label("연구 대기 문구")]
     [Tooltip("업그레이드 연구가 없을 때 표시할 문구입니다.")]
     public string upgradeResearchIdleFormat = "대기 중";
 
