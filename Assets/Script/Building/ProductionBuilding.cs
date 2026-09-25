@@ -119,6 +119,18 @@ public class ProductionBuilding : MonoBehaviour
 
     public bool IsProductionActive => IsProducing;
 
+    // Watt가 부족해 생산 진행이 멈춰 있는지 여부입니다.
+    public bool IsWaitingForWatt => IsProducing && waitingForWatt;
+
+    // 생산 중일 때 초당 소모하는 Watt입니다. 소모 대상이 아니면 0입니다.
+    public float WattCostPerSecond =>
+        recipe != null && ConsumesWatt() ? Mathf.Max(0f, recipe.wattCostPerSecond) : 0f;
+
+    // 지금 실제로 소모 중인 초당 Watt입니다. 생산 중이 아니면 0입니다.
+    public float CurrentWattDrainPerSecond => IsProducing ? WattCostPerSecond : 0f;
+
+    bool waitingForWatt;
+
     void Awake()
     {
         selectableEntity = GetComponent<SelectableEntity>();
@@ -210,6 +222,30 @@ public class ProductionBuilding : MonoBehaviour
         productionRoutine = null;
         cycleElapsed = 0f;
         cycleDuration = 0f;
+        waitingForWatt = false;
+    }
+
+    // WattManager는 로컬 플레이어의 자원이므로, 로컬 플레이어 소속 건물만 Watt를 소모한다.
+    bool ConsumesWatt()
+    {
+        if (WattManager.Instance == null)
+            return false;
+
+        if (selectableEntity == null || UnitSelectionManager.Instance == null)
+            return true;
+
+        return selectableEntity.ownerId == UnitSelectionManager.Instance.localPlayerOwnerId;
+    }
+
+    // 이번 프레임의 생산 진행분만큼 Watt를 차감한다. 부족하면 false를 반환한다.
+    bool TryConsumeWatt(float deltaTime)
+    {
+        float cost = WattCostPerSecond * deltaTime;
+
+        if (cost <= 0f)
+            return true;
+
+        return WattManager.Instance.TrySpendAmount(cost);
     }
 
     IEnumerator ProductionLoop()
@@ -263,14 +299,21 @@ public class ProductionBuilding : MonoBehaviour
 
             if (BuildingConstructionGate.IsFeatureLockedOn(this) || IsAtCapacity)
             {
+                waitingForWatt = false;
                 yield return null;
                 continue;
             }
 
-            cycleElapsed += Time.deltaTime;
+            // Watt가 부족하면 진행률을 올리지 않고 다음 프레임에 다시 시도한다.
+            waitingForWatt = !TryConsumeWatt(Time.deltaTime);
+
+            if (!waitingForWatt)
+                cycleElapsed += Time.deltaTime;
+
             yield return null;
         }
 
+        waitingForWatt = false;
         cycleElapsed = cycleDuration;
     }
 

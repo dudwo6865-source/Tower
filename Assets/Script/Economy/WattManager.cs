@@ -98,6 +98,20 @@ public class WattManager : MonoBehaviour
         return true;
     }
 
+    // 초당 소모처럼 소수 단위로 조금씩 차감할 때 사용한다. 부족하면 차감하지 않는다.
+    public bool TrySpendAmount(float amount)
+    {
+        if (amount <= 0f)
+            return true;
+
+        if (CurrentWatt < amount)
+            return false;
+
+        CurrentWatt = ClampWatt(CurrentWatt - amount);
+        NotifyChanged();
+        return true;
+    }
+
     public void AddWatt(float amount)
     {
         if (amount <= 0f)

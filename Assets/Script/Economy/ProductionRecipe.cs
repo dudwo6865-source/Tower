@@ -16,6 +16,11 @@ public class ProductionRecipe : ScriptableObject
     [Tooltip("유닛 한 마리를 생산하는 간격(초)입니다. 낮/밤과 관계없이 이 속도로 생산합니다.")]
     public float spawnInterval = 8f;
 
+    [Header("Cost")]
+    [Tooltip("생산이 진행되는 동안 초당 소모하는 Watt입니다. Watt가 부족하면 생산 진행이 멈춥니다. 0이면 소모하지 않습니다.")]
+    [Min(0f)]
+    public float wattCostPerSecond = 0f;
+
     [Header("Limits")]
     [Tooltip("이 건물에서 동시에 살아 있을 수 있는 유닛 수입니다.")]
     public int maxAlivePerBuilding = 5;
