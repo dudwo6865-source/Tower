@@ -51,6 +51,21 @@ public static class BuildingCommandHandler
         return IssueAttack(buildings, target);
     }
 
+    /// <summary>공격 대상을 지정할 수 있는 타워가 선택돼 있는지 여부입니다.</summary>
+    public static bool HasAttackableTowersSelected()
+    {
+        if (!TryGetCommandingBuildings(out List<SelectableEntity> buildings))
+            return false;
+
+        foreach (SelectableEntity building in buildings)
+        {
+            if (CanAttack(building))
+                return true;
+        }
+
+        return false;
+    }
+
     public static bool IssueRallyPointToSelection(Vector3 hitPoint)
     {
         if (!TryGetProductionBuildings(out List<SelectableEntity> buildings))
@@ -77,6 +92,14 @@ public static class BuildingCommandHandler
         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
 
         if (!Physics.Raycast(ray, out RaycastHit hit))
+            return false;
+
+        // 타워와 함께 선택했을 때 적을 우클릭하면 집결지가 아니라 타워 공격 명령이다.
+        if (HasAttackableTowersSelected() &&
+            UnitCommandHandler.TryGetEnemyTarget(
+                hit.collider.GetComponentInParent<SelectableEntity>(),
+                UnitSelectionManager.Instance.localPlayerOwnerId,
+                out _))
             return false;
 
         return IssueRallyPointToSelection(hit.point);

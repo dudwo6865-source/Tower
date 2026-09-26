@@ -308,10 +308,12 @@ public class UnitCommandController : MonoBehaviour
                 clickedEntity,
                 out SelectableEntity attackTarget))
         {
-            if (UnitCommandHandler.IssueAttackToSelection(attackTarget))
-                return true;
+            // 유닛과 타워를 함께 선택했으면 둘 다 공격한다. 대상 표시가 유닛 쪽을
+            // 따라가도록 타워를 먼저 처리한다.
+            bool towerIssued = BuildingCommandHandler.IssueAttackToSelection(attackTarget);
+            bool unitIssued = UnitCommandHandler.IssueAttackToSelection(attackTarget);
 
-            if (BuildingCommandHandler.IssueAttackToSelection(attackTarget))
+            if (towerIssued || unitIssued)
                 return true;
         }
 

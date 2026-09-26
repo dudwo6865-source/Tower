@@ -15,7 +15,10 @@ public static class UnitCommandHandler
             EventSystem.current.IsPointerOverGameObject())
             return;
 
-        if (!TryGetCommandingUnits(out List<SelectableEntity> units))
+        bool hasUnits = TryGetCommandingUnits(out List<SelectableEntity> units);
+        bool hasTowers = BuildingCommandHandler.HasAttackableTowersSelected();
+
+        if (!hasUnits && !hasTowers)
             return;
 
         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
@@ -30,8 +33,20 @@ public static class UnitCommandHandler
                 clickedEntity,
                 manager.localPlayerOwnerId,
                 out SelectableEntity enemy))
-            IssueAttack(units, enemy);
-        else
+        {
+            // 타워도 유닛처럼 우클릭한 적을 공격 대상으로 삼는다.
+            // 대상 표시가 유닛 쪽을 따라가도록 타워를 먼저 처리한다.
+            if (hasTowers)
+                BuildingCommandHandler.IssueAttackToSelection(enemy);
+
+            if (hasUnits)
+                IssueAttack(units, enemy);
+
+            return;
+        }
+
+        // 타워는 움직일 수 없으므로 지면 우클릭은 유닛에게만 이동 명령으로 전달한다.
+        if (hasUnits)
             IssueMove(units, hit.point);
     }
 
