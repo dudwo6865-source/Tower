@@ -19,6 +19,14 @@ public class UnitCombatAI : MobileCombatAI
     [Tooltip("순찰 지점 도착로 판정 거리입니다.")]
     public float patrolArrivalDistance = 1.25f;
 
+    [Label("이동 중 피격 무시")]
+    [Tooltip("켜면 이동 명령을 수행하는 동안 공격받아도 반격하지 않고 목적지까지 이동합니다. 끄면 공격받는 순간 이동을 멈추고 반격합니다. (공격 이동은 원래대로 교전합니다.)")]
+    public bool keepMoveOrderWhenAttacked = true;
+
+    [Label("지정 대상 유지")]
+    [Tooltip("켜면 플레이어가 지정한 공격 대상이 살아 있는 동안 다른 적에게 공격받아도 대상을 바꾸지 않습니다.")]
+    public bool keepAttackOrderWhenAttacked = true;
+
     bool manualMoveActive;
     bool manualFocusTarget;
     bool attackMoveActive;
@@ -244,6 +252,19 @@ public class UnitCombatAI : MobileCombatAI
     }
 
     protected override bool PreferImmediatePath() => true;
+
+    // 피격 반격이 플레이어 명령을 덮어쓰지 않게 한다. 교전이 많아질수록 피격이 잦아서
+    // 이동/공격 명령이 곧바로 반격으로 바뀌어 '명령이 안 먹는' 것처럼 보였다.
+    protected override void HandleAttackedBy(SelectableEntity attackerEntity)
+    {
+        if (keepMoveOrderWhenAttacked && manualMoveActive && !attackMoveActive)
+            return;
+
+        if (keepAttackOrderWhenAttacked && manualFocusTarget && HasValidTarget())
+            return;
+
+        base.HandleAttackedBy(attackerEntity);
+    }
 
     protected override void OnAggroInterrupt()
     {
