@@ -78,6 +78,7 @@ MonoBehaviour:
   useTowerAI: 1
   isProductionBuilding: 0
   productionRecipe: {fileID: 0}
+  isWallCategory: 0
 --- !u!114 &8172931526184280024
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -168,7 +169,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   attackClips: []
-  hitClips: []
+  attackHitClips: []
   deathClips: []
   audioSource: {fileID: 0}
   volume: 1
@@ -181,8 +182,7 @@ MonoBehaviour:
   referenceMinOrthoSize: 12
   referenceMaxOrthoSize: 45
   pitchRange: {x: 0.95, y: 1.05}
-  hitSoundCooldown: 0.12
-  playHitOnDeath: 0
+  attackHitSoundCooldown: 0.12
 --- !u!114 &1744315023930186802
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -216,13 +216,19 @@ MonoBehaviour:
   spawnPeriodically: 1
   spawnInterval: 20
   enemiesPerSpawn: 3
-  maxAliveEnemies: 0
+  maxAliveEnemies: 500
   allyDetectRadius: 30
   detectUnitsOnly: 1
+  proximityEnemiesPerSpawn: 10
+  proximitySpawnInterval: 0
+  allyCheckInterval: 0.25
   attackedSpawnDuration: 5
+  attackedEnemiesPerSpawn: 10
+  attackedSpawnInterval: 0
   enemiesOnDeath: 10
   advanceToEnemyBuildings: 1
   activateFromWave: 1
+  logSpawnEvents: 0
 --- !u!1001 &8859745303724175636
 PrefabInstance:
   m_ObjectHideFlags: 0

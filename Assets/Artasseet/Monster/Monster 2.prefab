@@ -325,7 +325,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   attackClips: []
-  hitClips: []
+  attackHitClips: []
   deathClips: []
   audioSource: {fileID: 0}
   volume: 1
@@ -338,8 +338,7 @@ MonoBehaviour:
   referenceMinOrthoSize: 12
   referenceMaxOrthoSize: 45
   pitchRange: {x: 0.95, y: 1.05}
-  hitSoundCooldown: 0.12
-  playHitOnDeath: 0
+  attackHitSoundCooldown: 0.12
 --- !u!114 &1974365432639422686
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -487,7 +486,7 @@ Animator:
   m_Enabled: 1
   m_Avatar: {fileID: 0}
   m_Controller: {fileID: 9100000, guid: 66e14e5cb1c5c5d49934d0679b64b0ff, type: 2}
-  m_CullingMode: 0
+  m_CullingMode: 1
   m_UpdateMode: 0
   m_ApplyRootMotion: 0
   m_LinearVelocityBlending: 0

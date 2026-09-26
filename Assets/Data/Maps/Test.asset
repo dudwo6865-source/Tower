@@ -15,11 +15,11 @@ MonoBehaviour:
   displayName: Test
   description: 
   previewImage: {fileID: 0}
-  mapRootPrefab: {fileID: 6271925524783265238, guid: b303b01c94d9ec94da8243dc8a491ed2, type: 3}
+  mapRootPrefab: {fileID: 2792053982294773416, guid: 9332bb555e128124fbf8b3ef2a2d5bf7, type: 3}
   overrideEconomy: 1
-  maxWatt: 1000
-  startingWatt: 500
-  incomePerSecond: 50
+  maxWatt: 500
+  startingWatt: 200
+  incomePerSecond: 10
   overrideDayNight: 1
   startPhase: 0
   dayDuration: 30
@@ -35,15 +35,15 @@ MonoBehaviour:
     - spawnCountMultiplier: 10
       spawnCountBonus: 0
       spawnIntervalMultiplier: 1
-      maxAliveMultiplier: 1
+      maxAliveEnemies: 0
       healthMultiplier: 1
       damageMultiplier: 1
       speedMultiplier: 1
     growthPerWaveAfterLast:
       spawnCountMultiplier: 1
-      spawnCountBonus: 1
+      spawnCountBonus: 2
       spawnIntervalMultiplier: 1
-      maxAliveMultiplier: 1
+      maxAliveEnemies: 500
       healthMultiplier: 1
       damageMultiplier: 1
       speedMultiplier: 1
@@ -52,7 +52,7 @@ MonoBehaviour:
     spawnCountMultiplier: 1
     spawnCountBonus: 0
     spawnIntervalMultiplier: 1
-    maxAliveMultiplier: 1
+    maxAliveEnemies: 0
     healthMultiplier: 1
     damageMultiplier: 1
     speedMultiplier: 1

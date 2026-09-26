@@ -285,7 +285,7 @@ Animator:
   m_Enabled: 1
   m_Avatar: {fileID: 0}
   m_Controller: {fileID: 9100000, guid: c158e3c10fb5fa64abc3c0385528216a, type: 2}
-  m_CullingMode: 0
+  m_CullingMode: 1
   m_UpdateMode: 0
   m_ApplyRootMotion: 0
   m_LinearVelocityBlending: 0
@@ -436,7 +436,7 @@ MonoBehaviour:
   hitColor: {r: 1, g: 0.5, b: 0.2, a: 1}
   muzzleFlashPrefab: {fileID: 304414178702807373, guid: b9a62cef32ff6da49b88cd5572caba55, type: 3}
   hitEffectPrefab: {fileID: 1598268965855006841, guid: 1817cfabe570b924c88af259660671a3, type: 3}
-  projectilePrefab: {fileID: 6820024759759233777, guid: 91e780efda7994440a23cebbb9636401, type: 3}
+  projectilePrefab: {fileID: 6820024759759233777, guid: bc69c5e6048d32a418aa86c3557719e6, type: 3}
   trailEffectPrefab: {fileID: 0}
 --- !u!114 &61461626690304003
 MonoBehaviour:
@@ -466,7 +466,7 @@ NavMeshAgent:
   m_Enabled: 1
   m_AgentTypeID: 0
   m_Radius: 2.7
-  m_Speed: 8
+  m_Speed: 6
   m_Acceleration: 20
   avoidancePriority: 50
   m_AngularSpeed: 300
@@ -505,6 +505,15 @@ MonoBehaviour:
   buildingDirectChaseRange: 0
   shareAggroWithAllies: 1
   patrolArrivalDistance: 1.25
+  keepMoveOrderWhenAttacked: 1
+  keepAttackOrderWhenAttacked: 1
+  moveStuckTimeout: 1.5
+  moveProgressThreshold: 0.3
+  maxMoveRepathAttempts: 2
+  crowdedArrivalRadius: 2.5
+  showUnreachableMarker: 1
+  unreachableMarkerColor: {r: 1, g: 0.8, b: 0.1, a: 0.95}
+  unreachableMarkerSeconds: 1.5
 --- !u!114 &8748445037153174795
 MonoBehaviour:
   m_ObjectHideFlags: 0
