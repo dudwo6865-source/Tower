@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -21,6 +21,19 @@ public static class AiPathBudget
     public const int DefaultMaxHeavyPathRequestsPerFrame = 16;
 
     public const int Unlimited = 0;
+
+    /// <summary>
+    /// NavMesh 비동기 경로 계산의 프레임당 처리량 기본값입니다. 유니티 기본값(100)은
+    /// 적이 수십 마리 동시에 경로를 요청하면 대기열이 여러 프레임 밀립니다.
+    /// </summary>
+    public const int DefaultPathfindingIterationsPerFrame = 1000;
+
+    // 씬에 AiPathBudgetSettings가 없어도 기본 처리량을 적용한다.
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    static void ApplyDefaultPathfindingIterations()
+    {
+        NavMesh.pathfindingIterationsPerFrame = DefaultPathfindingIterationsPerFrame;
+    }
 
     public static bool IsUnlimited => MaxHeavyPathRequestsPerFrame <= Unlimited;
 
@@ -150,6 +163,12 @@ public class AiPathBudgetSettings : MonoBehaviour
     [Min(1)]
     public int maxBuildingApproachPathCalculations = 6;
 
+    [Label("프레임당 NavMesh 경로 처리량")]
+    [Tooltip("NavMesh 비동기 경로 계산(SetDestination)을 한 프레임에 처리하는 양(NavMesh.pathfindingIterationsPerFrame)입니다. " +
+             "유니티 기본값은 100이라 적이 많으면 경로 대기열이 밀려 유닛이 늦게 반응합니다. 높을수록 빨리 처리되지만 프레임 부담이 늘어납니다.")]
+    [Min(1)]
+    public int pathfindingIterationsPerFrame = AiPathBudget.DefaultPathfindingIterationsPerFrame;
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetStatics()
     {
@@ -197,5 +216,7 @@ public class AiPathBudgetSettings : MonoBehaviour
 
         TargetFinder.MaxBuildingApproachPathCalculations =
             Mathf.Max(1, maxBuildingApproachPathCalculations);
+
+        NavMesh.pathfindingIterationsPerFrame = Mathf.Max(1, pathfindingIterationsPerFrame);
     }
 }

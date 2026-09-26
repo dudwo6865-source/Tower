@@ -198,7 +198,8 @@ public abstract class MobileCombatAI : CombatAIBase
         if (!immediate && !AiPathBudget.TryAcquireHeavy())
             return;
 
-        ConsumeImmediatePath();
+        // 플레이어 명령(공격 대상 지정 등)으로 요청된 첫 경로는 대기열을 거치지 않는다.
+        bool playerRequested = ConsumeImmediatePath();
 
         destinationTimer = Mathf.Max(0.05f, destinationRefreshInterval);
 
@@ -210,9 +211,9 @@ public abstract class MobileCombatAI : CombatAIBase
             lastTargetPosition = targetPosition;
             lastDestination = destination;
             issuedDirectChase = cachedUseDirectChase;
-            hasDestination = GridMovement.TrySetAgentDestinationImmediate(
-                agent,
-                destination);
+            hasDestination = playerRequested
+                ? GridMovement.TrySetAgentPathNow(agent, destination)
+                : GridMovement.TrySetAgentDestinationImmediate(agent, destination);
         }
 
         if (hasDestination)

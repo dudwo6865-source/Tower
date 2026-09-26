@@ -173,11 +173,65 @@ public static class GridMovement
         if (!EnsureAgentOnNavMesh(agent))
             return false;
 
-        if (immediate || AiPathBudget.TryAcquireHeavy())
+        // 플레이어 명령은 NavMesh 비동기 경로 대기열을 거치지 않고 바로 경로를 깐다.
+        if (immediate)
+            return TrySetAgentPathNow(agent, destination);
+
+        if (AiPathBudget.TryAcquireHeavy())
             return TrySetAgentDestinationImmediate(agent, destination);
 
         AiPathBudget.EnqueueDestination(agent, destination);
         return true;
+    }
+
+    /// <summary>
+    /// 경로를 이 자리에서 동기로 계산해 바로 적용합니다(NavMesh.CalculatePath + SetPath).
+    /// SetDestination은 모든 에이전트가 공유하는 비동기 대기열에 줄을 서므로, 적이 한꺼번에
+    /// 경로를 요청하면 플레이어 유닛이 새 경로를 받기까지 여러 프레임 기존 경로로 걷는다.
+    /// 플레이어 명령처럼 즉시 반응해야 하는 경우에만 씁니다.
+    /// </summary>
+    public static bool TrySetAgentPathNow(NavMeshAgent agent, Vector3 destination)
+    {
+        if (!EnsureAgentOnNavMesh(agent))
+            return false;
+
+        destination = SampleAgentDestination(destination);
+
+        NavMeshPath path = new NavMeshPath();
+
+        if (NavMesh.CalculatePath(agent.nextPosition, destination, agent.areaMask, path) &&
+            path.status != NavMeshPathStatus.PathInvalid &&
+            path.corners.Length > 0)
+        {
+            if (agent.isStopped)
+                agent.isStopped = false;
+
+            if (agent.SetPath(path))
+                return true;
+        }
+
+        // 동기 계산이 실패하면 기존 방식(비동기)으로 맡긴다.
+        if (agent.isStopped)
+            agent.isStopped = false;
+
+        return agent.SetDestination(destination);
+    }
+
+    static Vector3 SampleAgentDestination(Vector3 destination)
+    {
+        if (UnitSpawnUtility.TrySampleNavMeshNearPreferredHeight(
+                destination,
+                destination.y,
+                MapGrid.Instance != null ? MapGrid.Instance.cellSize * 2f : 4f,
+                out Vector3 sampledDestination))
+        {
+            return sampledDestination;
+        }
+
+        if (TrySampleNavMesh(destination, out NavMeshHit hit))
+            return hit.position;
+
+        return destination;
     }
 
     public static bool TrySetAgentDestinationImmediate(
@@ -187,18 +241,7 @@ public static class GridMovement
         if (!EnsureAgentOnNavMesh(agent))
             return false;
 
-        if (UnitSpawnUtility.TrySampleNavMeshNearPreferredHeight(
-                destination,
-                destination.y,
-                MapGrid.Instance != null ? MapGrid.Instance.cellSize * 2f : 4f,
-                out Vector3 sampledDestination))
-        {
-            destination = sampledDestination;
-        }
-        else if (TrySampleNavMesh(destination, out NavMeshHit hit))
-        {
-            destination = hit.position;
-        }
+        destination = SampleAgentDestination(destination);
 
         if (agent.isStopped)
             agent.isStopped = false;

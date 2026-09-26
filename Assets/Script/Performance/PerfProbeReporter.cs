@@ -162,7 +162,10 @@ public class PerfProbeReporter : MonoBehaviour
                 if (batch.pathResolvedTimes[i] < 0f && !agent.pathPending)
                     batch.pathResolvedTimes[i] = now - batch.issuedTime;
 
+                // 이미 움직이던 유닛은 새 경로를 받기 전에도 속도가 있으므로,
+                // 경로가 확정된 뒤의 움직임만 '이동 시작'으로 본다.
                 if (batch.moveStartTimes[i] < 0f &&
+                    batch.pathResolvedTimes[i] >= 0f &&
                     agent.velocity.sqrMagnitude >= moveStartSpeed * moveStartSpeed)
                     batch.moveStartTimes[i] = now - batch.issuedTime;
 
