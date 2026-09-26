@@ -29,10 +29,10 @@ public class MapLoader : MonoBehaviour
 #if UNITY_EDITOR
     // 에디터에서 플레이 모드로 들어가면 Enter Play Mode Settings에 따라 도메인이
     // 리로드되며 위 static PendingConfig가 그대로 날아간다. SessionState는 도메인
-    // 리로드에도 살아남으므로, Stage Editor가 여기 경로를 남겨두면 Awake에서 복원한다.
+    // 리로드에도 살아남으므로, 스테이지 에디터가 여기 경로를 남겨두면 Awake에서 복원한다.
     const string PendingConfigPathSessionKey = "MapLoader.PendingConfigPath";
 
-    // Stage Editor 등 에디터 툴에서, 플레이 모드 진입 직전에 다음 로드할 스테이지를 지정할 때 사용합니다.
+    // 스테이지 에디터 등 에디터 툴에서, 플레이 모드 진입 직전에 다음 로드할 스테이지를 지정할 때 사용합니다.
     public static void SetPendingConfigForNextPlay(MapConfig config)
     {
         PendingConfig = config;

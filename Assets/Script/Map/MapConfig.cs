@@ -5,7 +5,7 @@ using UnityEngine;
 // 지형·정적 오브젝트·사전 배치물은 mapRootPrefab(프리팹)에 담고,
 // 경제/데이나잇/스포너 웨이브 등 숫자 파라미터는 여기서 관리합니다.
 // MapLoader가 이 에셋을 받아 맵을 인스턴스화하고 설정을 주입합니다.
-[CreateAssetMenu(menuName = "Tank/Map Config", fileName = "MapConfig")]
+[CreateAssetMenu(menuName = "Tank/스테이지 (Map Config)", fileName = "MapConfig")]
 public class MapConfig : ScriptableObject
 {
     [Header("기본 정보")]

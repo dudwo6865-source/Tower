@@ -11,7 +11,7 @@ using UnityEngine.SceneManagement;
 //   (Identity|Map Content, Economy|Day-Night, Wave|Win Condition) 세로로
 //   너무 길어지지 않게 한다.
 // - 씬 <-> 스테이지 값 동기화(가져오기/적용), 유효성 경고, 미리보기 요약 제공
-// Tools > Map > Stage Editor
+// Tools > 맵 > 스테이지 에디터
 public class StageEditorWindow : EditorWindow
 {
     const string LastSelectedPathKey = "StageEditorWindow.LastSelectedPath";
@@ -48,10 +48,10 @@ public class StageEditorWindow : EditorWindow
     MapConfig spawnerCacheOwner;
     string spawnerSource = "";
 
-    [MenuItem("Tools/Map/Stage Editor (스테이지 에디터)")]
+    [MenuItem("Tools/맵/스테이지 에디터")]
     static void Open()
     {
-        StageEditorWindow window = GetWindow<StageEditorWindow>(false, "Stage Editor", true);
+        StageEditorWindow window = GetWindow<StageEditorWindow>(false, "스테이지 에디터", true);
         window.minSize = new Vector2(760f, 560f);
         window.Show();
     }

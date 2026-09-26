@@ -27,7 +27,7 @@ public class TmpUnicodeCollectorWindow : EditorWindow
     {
         TmpUnicodeCollectorWindow window = GetWindow<TmpUnicodeCollectorWindow>(
             false,
-            "TMP Unicode Collector",
+            "TMP 유니코드 수집",
             true);
 
         window.minSize = new Vector2(520f, 420f);

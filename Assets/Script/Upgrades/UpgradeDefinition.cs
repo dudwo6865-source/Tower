@@ -12,7 +12,7 @@ public enum UpgradeValueMode
 
 // 게임 내 한정 업그레이드 하나의 정의입니다. (스타크래프트식 글로벌 업그레이드)
 // 레벨당 절댓값 또는 퍼센트로 강화되며, 마석으로 구매합니다.
-[CreateAssetMenu(fileName = "UpgradeDefinition", menuName = "Tank/Upgrade Definition")]
+[CreateAssetMenu(fileName = "UpgradeDefinition", menuName = "Tank/업그레이드 정의")]
 public class UpgradeDefinition : ScriptableObject
 {
     [Header("대상")]

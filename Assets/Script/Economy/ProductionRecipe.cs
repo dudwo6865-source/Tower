@@ -2,7 +2,7 @@ using UnityEngine;
 
 [CreateAssetMenu(
     fileName = "ProductionRecipe",
-    menuName = "Tank/Production Recipe")]
+    menuName = "Tank/생산 레시피")]
 public class ProductionRecipe : ScriptableObject
 {
     [Header("유닛")]

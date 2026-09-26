@@ -2,7 +2,7 @@ using UnityEngine;
 
 // 절벽(고지대) 모듈 프리팹 세트입니다.
 // 언덕은 별도 HillTileSet을 사용합니다.
-[CreateAssetMenu(fileName = "CliffTileSet", menuName = "Tank/Cliff Tile Set")]
+[CreateAssetMenu(fileName = "CliffTileSet", menuName = "Tank/절벽 타일 세트")]
 public class CliffTileSet : ScriptableObject
 {
     [Header("중앙")]

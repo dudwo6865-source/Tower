@@ -147,7 +147,7 @@ public class UpgradeDefinitionGenerator : EditorWindow
     {
         UpgradeDefinitionGenerator window = GetWindow<UpgradeDefinitionGenerator>(
             false,
-            "Upgrade Generator",
+            "업그레이드 정의 생성",
             true);
 
         window.minSize = new Vector2(440f, 520f);
@@ -272,7 +272,7 @@ public class UpgradeDefinitionGenerator : EditorWindow
         if (string.IsNullOrWhiteSpace(outputFolder) ||
             !outputFolder.StartsWith("Assets", System.StringComparison.Ordinal))
         {
-            EditorUtility.DisplayDialog("Upgrade Generator", "저장 폴더는 Assets/ 아래여야 합니다.", "확인");
+            EditorUtility.DisplayDialog("업그레이드 정의 생성", "저장 폴더는 Assets/ 아래여야 합니다.", "확인");
             return;
         }
 

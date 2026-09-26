@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "UnitData", menuName = "RTS/Unit Data")]
+[CreateAssetMenu(fileName = "UnitData", menuName = "Tank/유닛 데이터")]
 public class UnitData : ScriptableObject
 {
     [Header("기본 (Selection)")]

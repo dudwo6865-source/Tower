@@ -48,7 +48,7 @@ public class CliffMapEditorWindow : EditorWindow
     [MenuItem("Tools/맵/절벽 맵 에디터")]
     static void Open()
     {
-        CliffMapEditorWindow window = GetWindow<CliffMapEditorWindow>(false, "Cliff Map", true);
+        CliffMapEditorWindow window = GetWindow<CliffMapEditorWindow>(false, "절벽 맵", true);
         window.minSize = new Vector2(360f, 520f);
         window.Show();
     }
@@ -272,7 +272,7 @@ public class CliffMapEditorWindow : EditorWindow
         if (GUILayout.Button("Top/Hill만 지우기", GUILayout.Height(28f)))
         {
             if (EditorUtility.DisplayDialog(
-                    "Cliff Map",
+                    "절벽 맵",
                     "바닥(Ground)은 남기고 Top / Hill / 램프만 지울까요?",
                     "지우기",
                     "취소"))
@@ -286,7 +286,7 @@ public class CliffMapEditorWindow : EditorWindow
 
         if (GUILayout.Button("전부 지우기", GUILayout.Height(28f)))
         {
-            if (EditorUtility.DisplayDialog("Cliff Map", "모든 Top/바닥/언덕/램프를 지울까요?", "지우기", "취소"))
+            if (EditorUtility.DisplayDialog("절벽 맵", "모든 Top/바닥/언덕/램프를 지울까요?", "지우기", "취소"))
             {
                 Undo.RecordObject(painter, "Clear Cliffs");
                 painter.ClearAllTops();

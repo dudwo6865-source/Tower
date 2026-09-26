@@ -3,7 +3,7 @@ using UnityEngine;
 
 // 언덕(Hill) 전용 타일 세트입니다.
 // H 칸만 칠하면 주변 벽/코너가 WxH·HxW·HXH/HXW In/Out으로 자동 교체됩니다.
-[CreateAssetMenu(fileName = "HillTileSet", menuName = "Tank/Hill Tile Set")]
+[CreateAssetMenu(fileName = "HillTileSet", menuName = "Tank/언덕 타일 세트")]
 public class HillTileSet : ScriptableObject
 {
     // 3x3 중심 기준 8방위 (시계: N → NE → E → … → NW)

@@ -2,7 +2,7 @@ using UnityEngine;
 
 // 유물 하나의 정적 데이터입니다. 기획서 5~9장의 표 한 줄이 에셋 하나에 대응합니다.
 // Tools 메뉴 대신 프로젝트 창에서 우클릭 > Create > Tank > Relic Definition으로 만듭니다.
-[CreateAssetMenu(fileName = "RelicDefinition", menuName = "Tank/Relic Definition")]
+[CreateAssetMenu(fileName = "RelicDefinition", menuName = "Tank/유물 정의")]
 public class RelicDefinition : ScriptableObject
 {
     [Header("기본 정보")]

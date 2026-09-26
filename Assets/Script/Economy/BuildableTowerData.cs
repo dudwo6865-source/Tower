@@ -3,7 +3,7 @@ using UnityEngine;
 
 [CreateAssetMenu(
     fileName = "BuildableTowerData",
-    menuName = "Tank/Buildable Tower Data")]
+    menuName = "Tank/타워 데이터")]
 public class BuildableTowerData : ScriptableObject, IBuildablePlacementData
 {
     [Header("표시")]
