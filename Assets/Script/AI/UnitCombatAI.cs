@@ -66,6 +66,9 @@ public class UnitCombatAI : MobileCombatAI
     float moveStuckTimer;
     int moveRepathCount;
 
+    // 공격 이동 목적지로 가는 경로를 지금 깔아둔 상태인지. 교전 중엔 추격 경로로 바뀌므로 끈다.
+    bool attackMovePathIssued;
+
     bool manualMoveActive;
     bool manualFocusTarget;
     bool attackMoveActive;
@@ -134,8 +137,13 @@ public class UnitCombatAI : MobileCombatAI
             TickRetarget();
 
         // 공격 이동은 교전 중에도 명령을 유지하고, 끝난 뒤 목적지로 이어간다.
+        // 교전하느라 멈춘 시간은 막힘으로 치지 않는다.
         if (attackMoveActive && HasValidTarget())
+        {
+            ResetMoveStuckState();
+            attackMovePathIssued = false;
             return true;
+        }
 
         if (ReachedManualDestination())
         {
@@ -148,8 +156,11 @@ public class UnitCombatAI : MobileCombatAI
         if (attackMoveActive)
         {
             ResumeAttackMoveIfNeeded();
+
+            if (attackMovePathIssued && UpdateMoveStuckRecovery(attackMoveDestination))
+                return true;
         }
-        else if (UpdateMoveStuckRecovery())
+        else if (hasManualDestination && UpdateMoveStuckRecovery(manualDestination))
         {
             // 도착으로 보거나 포기해서 이동 명령이 끝났다. 이번 프레임부터 일반 AI로 돌아간다.
             return true;
@@ -165,19 +176,20 @@ public class UnitCombatAI : MobileCombatAI
         moveRepathCount = 0;
     }
 
-    // 일반 이동이 막혔는지 보고 경로 재탐색 → 포기 순으로 복구한다.
+    // 일반 이동/공격 이동이 막혔는지 보고 경로 재탐색 → 포기 순으로 복구한다.
     // 이동 명령이 끝났으면(혼잡 도착 또는 포기) true를 반환한다.
-    bool UpdateMoveStuckRecovery()
+    bool UpdateMoveStuckRecovery(Vector3 destination)
     {
-        if (moveStuckTimeout <= 0f || !hasManualDestination)
+        if (moveStuckTimeout <= 0f)
             return false;
 
         if (agent == null || !agent.isOnNavMesh || agent.pathPending)
             return false;
 
-        Vector3 flat = transform.position - manualDestination;
+        Vector3 flat = transform.position - destination;
         flat.y = 0f;
         float distance = flat.magnitude;
+        string moveName = attackMoveActive ? "공격 이동" : "이동";
 
         // 목적지에 가까워지고 있으면 막힘 타이머를 되돌린다.
         if (distance < moveBestDistance - moveProgressThreshold)
@@ -206,7 +218,7 @@ public class UnitCombatAI : MobileCombatAI
         // 목적지 근처에서 다른 유닛에 막힌 것이면 도착으로 본다.
         if (!pathInvalid && distance <= crowdedArrivalRadius)
         {
-            UnitCommandDebugLog.Log(this, $"이동: 목적지 근처 혼잡으로 도착 처리 (남은 거리 {distance:F1}m)");
+            UnitCommandDebugLog.Log(this, $"{moveName}: 목적지 근처 혼잡으로 도착 처리 (남은 거리 {distance:F1}m)");
             EndManualMove();
             return true;
         }
@@ -217,9 +229,9 @@ public class UnitCombatAI : MobileCombatAI
             moveStuckTimer = 0f;
             moveBestDistance = distance;
 
-            UnitCommandDebugLog.Log(this, $"이동: 막힘 감지, 경로 재탐색 {moveRepathCount}/{maxMoveRepathAttempts}");
+            UnitCommandDebugLog.Log(this, $"{moveName}: 막힘 감지, 경로 재탐색 {moveRepathCount}/{maxMoveRepathAttempts}");
 
-            if (GridMovement.TrySetAgentDestination(agent, manualDestination, immediate: true))
+            if (GridMovement.TrySetAgentDestination(agent, destination, immediate: true))
                 return false;
         }
 
@@ -227,7 +239,7 @@ public class UnitCombatAI : MobileCombatAI
         // 목적지는 갈 수 있는 곳이므로 표시 없이 그 자리에서 멈춘다.
         if (agent.pathStatus == NavMeshPathStatus.PathComplete)
         {
-            UnitCommandDebugLog.Log(this, $"이동: 다른 유닛에 막혀 그 자리에서 멈춤 (남은 거리 {distance:F1}m)");
+            UnitCommandDebugLog.Log(this, $"{moveName}: 다른 유닛에 막혀 그 자리에서 멈춤 (남은 거리 {distance:F1}m)");
             EndManualMove();
 
             if (agent.hasPath)
@@ -236,12 +248,12 @@ public class UnitCombatAI : MobileCombatAI
             return true;
         }
 
-        UnitCommandDebugLog.Log(this, $"이동: 목적지에 갈 수 없어 이동을 포기 ({FormatVector(manualDestination)})");
+        UnitCommandDebugLog.Log(this, $"{moveName}: 목적지에 갈 수 없어 이동을 포기 ({FormatVector(destination)})");
 
         if (showUnreachableMarker)
         {
             UnitCommandIndicatorTracker.ShowPointMarker(
-                manualDestination,
+                destination,
                 unreachableMarkerColor,
                 unreachableMarkerSeconds);
         }
@@ -258,6 +270,7 @@ public class UnitCombatAI : MobileCombatAI
     {
         manualMoveActive = false;
         attackMoveActive = false;
+        attackMovePathIssued = false;
         hasManualDestination = false;
     }
 
@@ -297,15 +310,22 @@ public class UnitCombatAI : MobileCombatAI
         if (agent == null || !agent.isOnNavMesh)
             return;
 
+        // 목적지까지 일부만 연결된 경로(Partial)는 agent.destination이 경로 끝으로 바뀌므로
+        // 목적지 비교만으로는 '이미 가는 중'을 알 수 없다. 직접 깔았는지 플래그로 판단한다.
         bool alreadyGoing =
-            (agent.hasPath || agent.pathPending) &&
-            (agent.destination - attackMoveDestination).sqrMagnitude <= 1f;
+            attackMovePathIssued &&
+            (agent.hasPath || agent.pathPending);
 
         if (alreadyGoing)
             return;
 
+        // 경로가 끝났으면(도착 전 멈춤) 막힘 복구가 재탐색/포기를 판단하게 둔다.
+        if (attackMovePathIssued)
+            return;
+
         agent.stoppingDistance = 0.15f;
-        GridMovement.TrySetAgentDestination(agent, attackMoveDestination, immediate: true);
+        attackMovePathIssued =
+            GridMovement.TrySetAgentDestination(agent, attackMoveDestination, immediate: true);
         hasDestination = false;
         destinationTimer = 0f;
     }
@@ -506,6 +526,8 @@ public class UnitCombatAI : MobileCombatAI
         manualFocusTarget = false;
         attackMoveActive = true;
         attackMoveDestination = destination;
+        attackMovePathIssued = true;
+        ResetMoveStuckState();
         hasManualDestination = false;
         currentTarget = null;
         currentTargetHealth = null;
