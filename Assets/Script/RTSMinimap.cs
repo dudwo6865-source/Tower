@@ -14,57 +14,73 @@ public class RTSMinimap : MonoBehaviour, IPointerClickHandler, IDragHandler
 {
     const string MapAreaName = "MapArea";
 
-    [Header("References")]
+    [Header("참조")]
+    [Label("카메라 컨트롤러")]
     [Tooltip("미니맵 클릭 시 카메라를 이동시킬 RTS 카메라 컨트롤러입니다. 비워두면 씬에서 자동으로 찾습니다.")]
     public RTSCameraPivotController cameraController;
 
-    [Header("Map Bounds")]
+    [Header("맵 범위")]
+    [Label("맵 범위 출처")]
     [Tooltip("Auto: MapGrid(NavMesh) → Manual 순으로 맵 크기를 찾습니다.")]
     public MapPlayBoundsSource boundsSource = MapPlayBoundsSource.Auto;
 
+    [Label("수동 맵 원점")]
     [Tooltip("Manual/Auto fallback용 맵 원점(왼쪽 아래)입니다.")]
     public Vector3 manualMapOrigin;
 
+    [Label("수동 맵 크기")]
     [Tooltip("Manual/Auto fallback용 맵 크기(X=가로, Y=세로)입니다.")]
     public Vector2 manualMapSize = new Vector2(256f, 256f);
 
-    [Header("Layout")]
+    [Header("레이아웃")]
+    [Label("여백 색")]
     [Tooltip("맵 비율을 맞추고 남는 여백을 채울 색입니다.")]
     public Color letterboxColor = Color.black;
 
+    [Label("맵 영역 여백")]
     [Tooltip("미니맵 테두리에서 안쪽으로 둘 여백(픽셀)입니다.")]
     public float mapAreaPadding = 0f;
 
-    [Header("Mesh Minimap Texture")]
+    [Header("미니맵 텍스처")]
+    [Label("기본 바닥 색")]
     [Tooltip("메쉬 지형용 기본 바닥 색입니다.")]
     public Color baseMapColor = new Color(0.22f, 0.48f, 0.18f, 1f);
 
+    [Label("빈 영역 색")]
     [Tooltip("레이캐스트에 맞지 않은 영역 색입니다.")]
     public Color emptyMapColor = new Color(0.08f, 0.1f, 0.12f, 1f);
 
+    [Label("높이별 색 변화")]
     [Tooltip("높이 차이에 따라 색을 약간 변화시킵니다.")]
     public bool tintByHeight = true;
 
+    [Label("높이 색 변화 강도")]
     [Tooltip("높이 1m당 밝기 변화량입니다.")]
     public float heightTintStrength = 0.015f;
 
+    [Label("지면 레이캐스트 마스크")]
     [Tooltip("미니맵 텍스처 생성 시 지면 레이캐스트 마스크입니다.")]
     public LayerMask groundRaycastMask = ~0;
 
+    [Label("레이캐스트 높이 여유")]
     [Tooltip("지면 레이캐스트 시작 높이 여유값입니다.")]
     public float raycastHeightPadding = 64f;
 
+    [Label("텍스처 해상도")]
     [Tooltip("미니맵 텍스처의 긴 변 해상도입니다. 짧은 변은 맵 비율에 맞춰 줄어듭니다.")]
     public int textureResolution = 256;
 
-    [Header("Camera View")]
+    [Header("카메라 시야")]
+    [Label("카메라 시야 색")]
     [Tooltip("미니맵에 표시할 현재 카메라 시야 테두리 색입니다.")]
     public Color cameraViewColor = new Color(1f, 1f, 1f, 0.9f);
 
+    [Label("카메라 시야 테두리 두께")]
     [Tooltip("카메라 시야 테두리 두께(픽셀)입니다.")]
     public float cameraViewBorderThickness = 2f;
 
-    [Header("Input")]
+    [Header("입력")]
+    [Label("드래그로 카메라 이동")]
     [Tooltip("켜면 미니맵을 누른 채 끌어서 카메라를 이동할 수 있습니다.")]
     public bool allowDragToPan = true;
 

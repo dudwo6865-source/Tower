@@ -13,23 +13,28 @@ public class WaveManager : MonoBehaviour
 {
     public static WaveManager Instance { get; private set; }
 
-    [Header("References")]
+    [Header("참조")]
+    [Label("낮밤 사이클")]
     [Tooltip("비워두면 씬에서 자동으로 찾습니다.")]
     public DayNightCycle dayNightCycle;
 
-    [Header("Wave Plan")]
+    [Header("웨이브 계획")]
+    [Label("웨이브 계획")]
     [Tooltip("웨이브별로 맵의 모든 EnemySpawner에 적용할 수치입니다. " +
              "표에 적은 웨이브 이후는 마지막 값에 증가율이 복리로 붙어 계속 이어집니다.")]
     public WavePlan wavePlan = new WavePlan();
 
-    [Header("Night Bonus")]
+    [Header("밤 보정")]
+    [Label("밤 보정 적용")]
     [Tooltip("켜면 밤 동안에만 아래 보정을 웨이브 수치에 한 번 더 곱합니다.")]
     public bool applyNightBonus = true;
 
+    [Label("밤 보정")]
     [Tooltip("밤 동안 추가로 곱할 보정입니다. 전부 1이면 낮과 같습니다.")]
     public WaveTuning nightBonus = new WaveTuning();
 
-    [Header("Debug")]
+    [Header("디버그")]
+    [Label("웨이브 변경 로그")]
     [Tooltip("웨이브가 바뀔 때 콘솔에 적용된 수치를 남깁니다.")]
     public bool logWaveChanges = true;
 

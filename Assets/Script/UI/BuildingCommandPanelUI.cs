@@ -3,19 +3,24 @@ using UnityEngine.UI;
 
 public class BuildingCommandPanelUI : MonoBehaviour
 {
-    [Header("Panel")]
+    [Header("패널")]
+    [Label("패널 루트")]
     [Tooltip("건물 선택 시에만 표시할 패널 루트입니다.")]
     public GameObject panelRoot;
 
-    [Header("Buttons")]
+    [Header("버튼")]
+    [Label("공격 버튼")]
     [Tooltip("방어 건물(타워) 공격 대상 지정 버튼입니다.")]
     public Button attackButton;
+    [Label("정지 버튼")]
     [Tooltip("방어 건물의 수동 공격 대상을 해제합니다.")]
     public Button stopButton;
+    [Label("집결지 버튼")]
     [Tooltip("생산 건물의 렐리 포인트를 지정합니다.")]
     public Button rallyPointButton;
 
-    [Header("Hotkeys")]
+    [Header("단축키")]
+    [Label("단축키 사용")]
     public bool enableHotkeys = true;
 
     UnitCommandController commandController;

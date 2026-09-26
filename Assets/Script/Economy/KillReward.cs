@@ -7,6 +7,7 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class KillReward : MonoBehaviour
 {
+    [Label("마석 보상")]
     [Tooltip("이 대상이 죽을 때 플레이어에게 지급하는 마석 양입니다.")]
     public int manaStoneReward = 5;
 

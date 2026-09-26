@@ -6,28 +6,36 @@ using UnityEngine;
     menuName = "Tank/Buildable Tower Data")]
 public class BuildableTowerData : ScriptableObject, IBuildablePlacementData
 {
-    [Header("Display")]
+    [Header("표시")]
+    [Label("표시 이름")]
     public string displayName = "Tower";
 
+    [Label("아이콘")]
     [Tooltip("빌드 버튼에 표시할 아이콘입니다. 비워두면 프리팹의 SelectableEntity.portrait를 사용합니다.")]
     public Sprite icon;
 
+    [Label("설명")]
     [TextArea]
     public string description;
 
-    [Header("Build")]
+    [Header("건설")]
+    [Label("타워 프리팹")]
     public GameObject prefab;
 
+    [Label("Watt 비용")]
     [Tooltip("배치 확정 시 소비되는 Watt입니다. 확정 후에는 환불되지 않습니다.")]
     public int wattCost = 50;
 
+    [Label("소유자 ID")]
     [Tooltip("배치되는 타워의 소유자 ID입니다.")]
     public int ownerId = 1;
 
+    [Label("타입 ID")]
     [Tooltip("더블클릭 시 같은 종류로 묶을 타입 ID입니다. 비워두면 프리팹 SelectableEntity 값을 사용합니다.")]
     public string entityTypeId;
 
-    [Header("Upgrade")]
+    [Header("업그레이드")]
+    [Label("업그레이드 분기")]
     [Tooltip("업그레이드 분기 목록입니다. 여러 개를 넣으면 플레이어가 갈래를 고를 수 있습니다. " +
         "각 분기 프리팹의 칸 수는 이 타워와 같아야 합니다.")]
     public List<TowerUpgradeOption> upgradeOptions = new List<TowerUpgradeOption>();

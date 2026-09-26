@@ -12,36 +12,46 @@ public class TowerUpgradePanelUI : MonoBehaviour
     [System.Serializable]
     public class UpgradeSlot
     {
+        [Label("버튼")]
         public Button button;
 
+        [Label("라벨 텍스트")]
         [Tooltip("분기 이름과 비용을 표시할 텍스트입니다. 비워두면 건너뜁니다.")]
         public TextMeshProUGUI label;
 
+        [Label("아이콘")]
         [Tooltip("상위 타워 썸네일을 표시할 Image입니다. 비워두면 건너뜁니다.")]
         public Image icon;
     }
 
-    [Header("Panel")]
+    [Header("패널")]
+    [Label("패널 루트")]
     [Tooltip("업그레이드 가능한 타워를 선택했을 때만 표시할 패널 루트입니다.")]
     public GameObject panelRoot;
 
-    [Header("Slots")]
+    [Header("슬롯")]
+    [Label("업그레이드 슬롯")]
     [Tooltip("BuildableTowerData의 Upgrade Options 순서대로 채워지고, 남는 슬롯은 숨겨집니다.")]
     public UpgradeSlot[] slots;
 
-    [Header("Labels")]
+    [Header("라벨")]
+    [Label("라벨 형식")]
     [Tooltip("{0}=상위 타워 이름, {1}=소비 Watt")]
     public string labelFormat = "{0}\n{1} W";
 
+    [Label("구매 가능 색")]
     [Tooltip("Watt가 충분할 때 아이콘 색상입니다.")]
     public Color affordableTint = Color.white;
 
+    [Label("구매 불가 색")]
     [Tooltip("Watt가 부족할 때 아이콘 색상입니다.")]
     public Color unaffordableTint = new Color(1f, 1f, 1f, 0.4f);
 
-    [Header("Hotkeys")]
+    [Header("단축키")]
+    [Label("단축키 사용")]
     public bool enableHotkeys = true;
 
+    [Label("단축키")]
     [Tooltip("슬롯 순서대로 대응하는 단축키입니다.")]
     public KeyCode[] hotkeys = { KeyCode.U, KeyCode.I, KeyCode.O };
 

@@ -128,13 +128,13 @@ public class CliffMapEditorWindow : EditorWindow
         Undo.RecordObject(painter, "Cliff Painter Settings");
 
         painter.tileSet = (CliffTileSet)EditorGUILayout.ObjectField(
-            "Cliff Tile Set",
+            "절벽 타일 세트",
             painter.tileSet,
             typeof(CliffTileSet),
             false);
 
         painter.hillTileSet = (HillTileSet)EditorGUILayout.ObjectField(
-            "Hill Tile Set",
+            "언덕 타일 세트",
             painter.hillTileSet,
             typeof(HillTileSet),
             false);
@@ -146,7 +146,7 @@ public class CliffMapEditorWindow : EditorWindow
             CreateDefaultHillTileSet();
         EditorGUILayout.EndHorizontal();
 
-        painter.gridOrigin = EditorGUILayout.Vector3Field("Grid Origin", painter.gridOrigin);
+        painter.gridOrigin = EditorGUILayout.Vector3Field("그리드 원점", painter.gridOrigin);
         painter.baseHeight = EditorGUILayout.FloatField("저지대 높이 (Y)", painter.baseHeight);
 
         if (painter.tileSet != null)
@@ -343,21 +343,21 @@ public class CliffMapEditorWindow : EditorWindow
     {
         int row1 = GUILayout.Toolbar(
             (int)brushMode <= 3 ? (int)brushMode : -1,
-            new[] { "Paint Top", "Erase Top", "Ramp", "Erase Ramp" });
+            new[] { "Top 칠하기", "Top 지우기", "램프", "램프 지우기" });
 
         if (row1 >= 0)
             brushMode = (BrushMode)row1;
 
         int row2 = GUILayout.Toolbar(
             (int)brushMode >= 4 && (int)brushMode <= 5 ? (int)brushMode - 4 : -1,
-            new[] { "Place Hill", "Erase Hill" });
+            new[] { "언덕 배치", "언덕 지우기" });
 
         if (row2 >= 0)
             brushMode = (BrushMode)(row2 + 4);
 
         int row3 = GUILayout.Toolbar(
             (int)brushMode >= 6 ? (int)brushMode - 6 : -1,
-            new[] { "Paint Ground", "Erase Ground" });
+            new[] { "바닥 칠하기", "바닥 지우기" });
 
         if (row3 >= 0)
             brushMode = (BrushMode)(row3 + 6);

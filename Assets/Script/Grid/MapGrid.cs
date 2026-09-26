@@ -9,52 +9,66 @@ public class MapGrid : MonoBehaviour
 {
     public static MapGrid Instance { get; private set; }
 
-    [Header("Grid")]
+    [Header("그리드")]
+    [Label("칸 크기")]
     [Tooltip("한 칸의 월드 크기(미터)입니다.")]
     public float cellSize = 2f;
 
-    [Header("Bounds")]
+    [Header("범위")]
+    [Label("NavMesh 범위 사용")]
     [Tooltip("Bake된 NavMesh 이동 가능 영역 AABB를 맵 bounds로 사용합니다.")]
     public bool useNavMeshBounds = true;
 
+    [Label("칸마다 NavMesh 필요")]
     [Tooltip("footprint 모든 칸이 같은 층의 NavMesh 위에 있어야 합니다.")]
     public bool requireNavMeshForCells = true;
 
+    [Label("NavMesh 검색 반경 비율")]
     [Tooltip("지면 스냅·층 탐색용 NavMesh 검색 반경(칸 크기 대비)입니다.")]
     [Range(0.1f, 1.5f)]
     public float navMeshSampleRadiusFactor = 0.45f;
 
+    [Label("칸 검증 반경 비율")]
     [Tooltip("칸 중심·모서리가 NavMesh에 얼마나 가까워야 건설 가능한지(칸 크기 대비)입니다. 작을수록 칸 전체가 길 위에 있어야 합니다.")]
     [Range(0.05f, 0.75f)]
     public float navMeshCellValidationRadiusFactor = 0.25f;
 
+    [Label("칸 검사 안쪽 비율")]
     [Tooltip("칸 모서리를 얼마나 안쪽에서 검사할지(칸 크기 대비)입니다. 0이면 진짜 모서리까지 NavMesh여야 합니다.")]
     [Range(0f, 0.45f)]
     public float navMeshCellSampleInsetFactor = 0.2f;
 
+    [Label("NavMesh 샘플 높이 여유")]
     [Tooltip("NavMesh 샘플 시 위에서 내려다볼 여유 높이(미터)입니다.")]
     public float navMeshSampleHeightOffset = 4f;
 
+    [Label("같은 층 높이 오차")]
     [Tooltip("같은 층으로 볼 높이 허용 오차(미터)입니다. 건물 footprint의 모든 칸이 이 오차 안의 높이에 있어야 건설됩니다.")]
     public float navMeshFloorHeightTolerance = 2.5f;
 
-    [Header("Building NavMesh")]
+    [Header("건물 NavMesh")]
+    [Label("NavMeshObstacle 크기 비율")]
     [Tooltip("건물 footprint(격자) 대비 NavMeshObstacle Box 가로·세로 비율입니다. 1에 가까울수록 격자와 같습니다.")]
     [Range(0.1f, 1f)]
     public float navObstacleSizeScale = 0.85f;
 
+    [Label("NavMesh 영역 마스크")]
     public int navMeshAreaMask = NavMesh.AllAreas;
 
-    [Header("Manual Bounds Fallback")]
+    [Header("수동 범위 (대체용)")]
+    [Label("수동 맵 원점")]
     [Tooltip("NavMesh를 못 찾을 때 사용할 맵 원점(왼쪽 아래)입니다.")]
     public Vector3 manualMapOrigin;
 
+    [Label("수동 맵 크기")]
     [Tooltip("NavMesh를 못 찾을 때 사용할 맵 크기(X=가로, Y=세로)입니다.")]
     public Vector2 manualMapSize = new Vector2(256f, 256f);
 
-    [Header("Debug")]
+    [Header("디버그")]
+    [Label("그리드 기즈모 표시")]
     public bool drawGridGizmos = true;
 
+    [Label("이동 가능 칸만 표시")]
     [Tooltip("NavMesh 모드에서 Gizmo를 walkable 칸만 그립니다.")]
     public bool drawOnlyWalkableCellsInGizmos = true;
 

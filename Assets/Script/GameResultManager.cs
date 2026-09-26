@@ -18,14 +18,17 @@ public class GameResultManager : MonoBehaviour
         Defeat,
     }
 
-    [Header("References")]
+    [Header("참조")]
+    [Label("낮밤 사이클")]
     [Tooltip("비워두면 씬에서 자동으로 찾습니다.")]
     public DayNightCycle dayNightCycle;
 
+    [Label("플레이어 ID")]
     [Tooltip("본부(HQ)를 찾을 때 사용하는 ownerId입니다.")]
     public int playerOwnerId = 1;
 
-    [Header("Win Condition - Survive N Nights")]
+    [Header("승리 조건 - N번째 밤까지 생존")]
+    [Label("승리까지 버틸 밤 수")]
     [Tooltip("본부가 파괴되지 않고 이 밤까지 버티면 승리합니다. (예: 5 = 5번째 밤이 끝나면 승리)")]
     public int survivalNightsToWin = 5;
 

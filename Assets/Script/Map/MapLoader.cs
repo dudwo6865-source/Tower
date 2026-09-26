@@ -42,17 +42,21 @@ public class MapLoader : MonoBehaviour
     }
 #endif
 
-    [Header("Config")]
+    [Header("설정")]
+    [Label("기본 스테이지")]
     [Tooltip("PendingConfig가 없을 때 로드할 기본 맵입니다. (에디터 단독 테스트용)")]
     public MapConfig defaultConfig;
 
+    [Label("맵 부모")]
     [Tooltip("맵 인스턴스를 담을 부모(선택). 비워두면 씬 루트에 생성합니다.")]
     public Transform mapParent;
 
+    [Label("Awake에서 로드")]
     [Tooltip("Awake에서 자동으로 맵을 로드합니다.")]
     public bool loadOnAwake = true;
 
-    [Header("Scene Map")]
+    [Header("씬 맵")]
+    [Label("씬 맵 처리 방식")]
     [Tooltip("씬에 맵(MapRoot)이 이미 놓여 있을 때 어떻게 할지입니다.\n" +
         "Replace: 씬의 맵을 제거하고 스테이지의 맵 프리팹을 새로 만듭니다. 맵이 두 장 겹치는 것을 막습니다.\n" +
         "Use Scene Map: 씬에 있는 맵을 그대로 쓰고 프리팹을 만들지 않습니다. 맵을 씬에 꺼내 편집하는 중에 씁니다.")]

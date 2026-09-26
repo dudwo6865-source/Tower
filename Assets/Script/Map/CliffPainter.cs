@@ -18,7 +18,9 @@ public class CliffPainter : MonoBehaviour
     [Serializable]
     public struct CellCoord : IEquatable<CellCoord>
     {
+        [Label("X")]
         public int x;
+        [Label("Z")]
         public int z;
 
         public CellCoord(int x, int z)
@@ -36,7 +38,9 @@ public class CliffPainter : MonoBehaviour
     [Serializable]
     public struct TopEntry
     {
+        [Label("칸")]
         public CellCoord cell;
+        [Label("최고 층")]
         [Tooltip("이 칸의 최고 층 (0=1층). 아래에 0..maxLayer 가 모두 있다고 봅니다.")]
         public int maxLayer;
     }
@@ -44,7 +48,9 @@ public class CliffPainter : MonoBehaviour
     [Serializable]
     public struct HillEntry
     {
+        [Label("칸")]
         public CellCoord cell;
+        [Label("층")]
         [Tooltip("Hill이 속한 Top 층 (0=1층).")]
         public int layer;
     }
@@ -52,49 +58,67 @@ public class CliffPainter : MonoBehaviour
     [Serializable]
     public struct RampEntry
     {
+        [Label("칸")]
         public CellCoord cell;
+        [Label("방향")]
         public int direction;
     }
 
-    [Header("Setup")]
+    [Header("설정")]
+    [Label("절벽 타일 세트")]
     public CliffTileSet tileSet;
 
+    [Label("언덕 타일 세트")]
     [Tooltip("언덕용 타일 세트입니다. 여러 종류를 만들어 바꿔 끼울 수 있습니다.")]
     public HillTileSet hillTileSet;
 
+    [Label("생성 부모")]
     [Tooltip("생성된 모듈이 들어갈 부모입니다. 비워두면 자동 생성합니다.")]
     public Transform generatedRoot;
 
+    [Label("그리드 원점")]
     [Tooltip("맵 원점(왼쪽 아래 코너). 타일 (0,0)의 남서 코너입니다.")]
     public Vector3 gridOrigin;
 
+    [Label("기본 높이")]
     [Tooltip("저지대(절벽면이 서는 바닥) 높이(Y)입니다. Top은 이 값 + cliffHeight×(층+1)에 배치됩니다.")]
     public float baseHeight;
 
-    [Header("Paint Data")]
+    [Header("칠 데이터")]
+    [Label("Top 목록")]
     [Tooltip("칠해진 Top입니다. maxLayer가 높을수록 윗층이 쌓입니다.")]
     public List<TopEntry> tops = new List<TopEntry>();
 
+    [Label("Top 칸 (구버전)")]
     [Tooltip("구버전 호환용. 자동으로 tops로 이전됩니다.")]
     public List<CellCoord> topCells = new List<CellCoord>();
 
+    [Label("Hill 목록")]
     [Tooltip("칠해진 Hill입니다. layer는 Top 층과 같습니다 (0=1층).")]
     public List<HillEntry> hills = new List<HillEntry>();
 
+    [Label("Hill 칸 (구버전)")]
     [Tooltip("구버전 호환용. 자동으로 hills로 이전됩니다.")]
     public List<CellCoord> hillCells = new List<CellCoord>();
 
+    [Label("바닥 칸")]
     [Tooltip("칠해진 바닥(Ground) 셀입니다.")]
     public List<CellCoord> groundCells = new List<CellCoord>();
 
+    [Label("램프 목록")]
     [Tooltip("수동으로 배치한 램프입니다.")]
     public List<RampEntry> ramps = new List<RampEntry>();
 
-    [Header("Gizmo")]
+    [Header("기즈모")]
+    [Label("기즈모 표시")]
     public bool drawGizmos = true;
+    [Label("Top 기즈모 색")]
     public Color topGizmoColor = new Color(0.2f, 0.8f, 0.3f, 0.35f);
+    [Label("Hill 기즈모 색")]
     public Color hillGizmoColor = new Color(0.3f, 0.6f, 1f, 0.4f);
+    [Label("바닥 기즈모 색")]
     public Color groundGizmoColor = new Color(0.55f, 0.4f, 0.25f, 0.3f);
+    [Label("램프 기즈모 색")]
     public Color rampGizmoColor = new Color(0.9f, 0.7f, 0.2f, 0.5f);
 
     readonly HashSet<CellCoord> elevatedSet = new HashSet<CellCoord>();

@@ -8,102 +8,131 @@ public class FogOfWarManager : MonoBehaviour
 {
     public static FogOfWarManager Instance { get; private set; }
 
-    [Header("Player")]
+    [Header("플레이어")]
+    [Label("로컬 플레이어 ID")]
     [Tooltip("이 ownerId와 같은 유닛·건물의 시야로 안개를 밝힙니다.")]
     public int localPlayerOwnerId = 1;
 
-    [Header("Grid")]
+    [Header("그리드")]
+    [Label("그리드 가로")]
     [Tooltip("안개 그리드 가로 해상도입니다.")]
     public int gridWidth = 256;
 
+    [Label("그리드 세로")]
     [Tooltip("안개 그리드 세로 해상도입니다.")]
     public int gridHeight = 256;
 
-    [Header("Vision")]
+    [Header("시야")]
+    [Label("시야 가장자리 부드러움")]
     [Tooltip("시야 원 가장자리를 부드럽게 fade-out하는 거리(월드 단위)입니다.")]
     public float visionEdgeSoftness = 4f;
 
+    [Label("시야 판정 기준")]
     [Tooltip("게임플레이 시야 판정에 필요한 최소 visible 값(0~1)입니다.")]
     [Range(0f, 1f)]
     public float visibilityThreshold = 0.35f;
 
-    [Header("Entity Visibility")]
+    [Header("유닛 가시성")]
+    [Label("가시성 판정 여유")]
     [Tooltip("유닛/건물 가시성 판정 시 bounds를 XZ로 확장하는 여유(미터)입니다.")]
     public float entityVisibilityPadding = 0.75f;
 
+    [Label("표시 기준")]
     [Tooltip("숨겨진 유닛이 다시 보일 때: 샘플 중 하나라도 이 값 이상이면 표시합니다.")]
     [Range(0f, 1f)]
     public float entityShowThreshold = 0.08f;
 
+    [Label("숨김 기준")]
     [Tooltip("보이는 유닛을 숨길 때: 모든 샘플이 이 값 이하면 완전히 시야 밖으로 판정합니다.")]
     [Range(0f, 1f)]
     public float entityHideThreshold = 0.02f;
 
-    [Header("Auto Grid Resolution")]
+    [Header("자동 그리드 해상도")]
+    [Label("자동 해상도")]
     [Tooltip("켜면 gridWidth/gridHeight 대신 맵 크기와 Auto Grid Cell Size로 해상도를 자동 계산합니다.")]
     public bool autoGridResolution;
 
+    [Label("자동 해상도 칸 크기")]
     [Tooltip("자동 해상도 사용 시, 안개 그리드 한 칸이 덮는 월드 크기(미터)입니다. 작을수록 정밀하지만 무거워집니다.")]
     public float autoGridCellSize = 1f;
 
+    [Label("자동 해상도 범위")]
     [Tooltip("자동 해상도의 최소/최대 한 변 칸 수입니다.")]
     public Vector2Int autoGridResolutionRange = new Vector2Int(64, 512);
 
-    [Header("Elevation Vision")]
+    [Header("고저 시야")]
+    [Label("고저 시야 사용")]
     [Tooltip("켜면 지형 높이 차이로 시야가 가려집니다(고지대 유리): 높은 곳에서는 낮은 곳이 보이고, 낮은 곳에서는 앞을 가로막는 높은 지형 너머가 안 보입니다.")]
     public bool enableElevationVision = true;
 
+    [Label("높이맵 해상도")]
     [Tooltip("지형 높이맵 해상도(가로 기준 칸 수)입니다. Start() 시점에 한 번만 굽습니다. 낮을수록 굽는 속도가 빠르고 가볍습니다.")]
     public int elevationGridResolution = 64;
 
+    [Label("기본 눈높이")]
     [Tooltip("시야 소스의 기본 눈높이(지면 기준, 미터)입니다. 유닛별로 다르게 하려면 FogOfWarVisionSource의 Eye Height Override를 쓰세요.")]
     public float defaultEyeHeight = 1.5f;
 
+    [Label("AI 지형 시야 가림")]
     [Tooltip("켜면 적 AI도 언덕·절벽에 가려진 대상은 어그로로 잡지 않습니다. 안개는 플레이어 한쪽 시야라 적 AI가 쓸 수 없으므로, 여기서는 구워둔 지형 높이만 보고 판정합니다(배열 조회뿐이라 거의 공짜입니다).")]
     public bool aiTerrainLineOfSight = true;
 
-    [Header("Update")]
+    [Header("갱신")]
+    [Label("갱신 간격(초)")]
     [Tooltip("안개 텍스처를 갱신하는 간격(초)입니다.")]
     public float updateInterval = 0.1f;
 
-    [Header("Overlay")]
+    [Header("오버레이")]
+    [Label("월드 오버레이 생성")]
     [Tooltip("월드 위 안개 오버레이를 자동 생성합니다.")]
     public bool createWorldOverlay = true;
 
+    [Label("MapGrid 기준 사용")]
     [Tooltip("MapGrid가 있으면 bounds/표면 높이를 MapGrid(NavMesh) 기준으로 사용합니다.")]
     public bool useMapGridWhenAvailable = true;
 
-    [Header("Surface Sampling")]
+    [Header("표면 샘플링")]
+    [Label("오버레이 샘플 방식")]
     [Tooltip("오버레이 메쉬 높이 샘플 방식입니다. 경사면이 있으면 Visual Geometry를 권장합니다.")]
     public FogSurfaceSampleMode overlaySampleMode =
         FogSurfaceSampleMode.VisualGeometry;
 
+    [Label("지면 레이캐스트 마스크")]
     [Tooltip("메쉬 Collider를 레이캐스트로 찾을 레이어입니다.")]
     public LayerMask groundRaycastMask = ~0;
 
+    [Label("레이캐스트 높이 여유")]
     [Tooltip("표면 레이캐스트 시작 높이(지형 위 추가값)입니다.")]
     public float surfaceRaycastHeightPadding = 32f;
 
+    [Label("표면 없는 곳 숨김")]
     [Tooltip("어떤 표면 샘플도 실패한 정점/삼각형을 오버레이에서 제외합니다.")]
     public bool hideOverlayWithoutSurface = true;
 
+    [Label("오버레이 메쉬 분할 수")]
     [Tooltip("지형 표면을 따라가는 메쉬 세그먼트 수입니다. 높을수록 경사에 잘 맞지만 무거워집니다.")]
     public int overlayMeshSegments = 64;
 
+    [Label("오버레이 높이")]
     [Tooltip("지형 표면 위로 띄울 높이입니다. 유닛/지형이 안개를 뚫을 때 올리세요.")]
     public float overlayHeightOffset = 1.2f;
 
+    [Label("오버레이 확장 거리")]
     [Tooltip("플레이 맵 바깥으로 오버레이 메쉬를 확장하는 거리(미터)입니다. 카메라 각도로 가장자리가 비칠 때 늘리세요.")]
     public float overlayMeshPadding = 48f;
 
-    [Header("Colors")]
+    [Header("색상")]
+    [Label("미탐색 색")]
     public Color unexploredColor = new Color(0f, 0f, 0f, 0.95f);
+    [Label("탐색됨 색")]
     public Color exploredColor = new Color(0f, 0f, 0f, 0.55f);
 
-    [Header("Shaders")]
+    [Header("셰이더")]
+    [Label("월드 안개 셰이더")]
     [Tooltip("월드 안개 오버레이에 쓸 셰이더입니다. Assets/Shaders/FogOfWar.shader를 넣어두세요. 비워두면 이름으로 찾지만, 그 셰이더를 쓰는 머티리얼이 없으면 빌드에서 잘려나가 안개가 깨집니다.")]
     public Shader worldFogShader;
 
+    [Label("미니맵 안개 셰이더")]
     [Tooltip("미니맵 안개에 쓸 셰이더입니다. Assets/Shaders/FogOfWarUI.shader를 넣어두세요. 비워두면 이름으로 찾지만, 그 셰이더를 쓰는 머티리얼이 없으면 빌드에서 잘려나가 안개가 깨집니다.")]
     public Shader uiFogShader;
 

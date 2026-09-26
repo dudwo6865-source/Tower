@@ -11,25 +11,32 @@ using UnityEngine;
 public class WaveTuning
 {
     [Header("스폰량")]
+    [Label("스폰 수 배율")]
     [Tooltip("한 번에 스폰할 적 수 배율입니다.")]
     public float spawnCountMultiplier = 1f;
 
+    [Label("스폰 수 추가")]
     [Tooltip("배율을 적용한 뒤 더할 적 수입니다.")]
     public int spawnCountBonus;
 
+    [Label("스폰 간격 배율")]
     [Tooltip("스폰 간격 배율입니다. 1보다 작을수록 더 자주 스폰합니다.")]
     public float spawnIntervalMultiplier = 1f;
 
+    [Label("최대 생존 수 배율")]
     [Tooltip("동시 생존 수 상한 배율입니다. 스포너 상한이 0(무제한)이면 무시됩니다.")]
     public float maxAliveMultiplier = 1f;
 
     [Header("적 스탯 가중치")]
+    [Label("체력 배율")]
     [Tooltip("스폰되는 적의 최대 체력 배율입니다.")]
     public float healthMultiplier = 1f;
 
+    [Label("공격력 배율")]
     [Tooltip("스폰되는 적의 공격력 배율입니다.")]
     public float damageMultiplier = 1f;
 
+    [Label("이동 속도 배율")]
     [Tooltip("스폰되는 적의 이동 속도 배율입니다.")]
     public float speedMultiplier = 1f;
 
@@ -156,9 +163,11 @@ public class WaveTuning
 [Serializable]
 public class WavePlan
 {
+    [Label("웨이브별 수치")]
     [Tooltip("웨이브별 수치입니다. 첫 번째 항목 = 웨이브 1.")]
     public List<WaveTuning> waves = new List<WaveTuning> { new WaveTuning() };
 
+    [Label("이후 웨이브 증가율")]
     [Tooltip("표에 없는 이후 웨이브에 매 웨이브마다 복리로 적용할 증가율입니다. " +
              "전부 1이면 마지막 웨이브 값을 그대로 유지합니다.")]
     public WaveTuning growthPerWaveAfterLast = new WaveTuning();

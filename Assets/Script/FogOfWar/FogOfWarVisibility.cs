@@ -3,6 +3,7 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class FogOfWarVisibility : MonoBehaviour
 {
+    [Label("시야 밖이면 숨김")]
     [Tooltip("탐색된 지역에서 현재 시야 밖일 때 숨깁니다. 한 번 시야에 들어온 적은 탐색 지역 안에서는 시야 밖에서도 계속 표시됩니다.")]
     public bool hideWhenNotVisible = true;
 

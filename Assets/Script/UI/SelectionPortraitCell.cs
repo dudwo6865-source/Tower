@@ -6,13 +6,16 @@ using UnityEngine.UI;
 // 그리드 셀 프리팹의 루트에 붙이고, 아래 필드에 각 UI 요소를 연결하세요.
 public class SelectionPortraitCell : MonoBehaviour
 {
-    [Header("References")]
+    [Header("참조")]
+    [Label("초상화 이미지")]
     [Tooltip("이 칸에 표시할 초상화 이미지입니다. (필수)")]
     public Image portraitImage;
 
+    [Label("체력 이미지")]
     [Tooltip("(선택) 대상 체력 비율을 표시할 Image입니다. Image Type을 Filled로 설정하면 fillAmount로 반영됩니다.")]
     public Image healthFillImage;
 
+    [Label("라벨 텍스트")]
     [Tooltip("(선택) 대상 이름 등을 표시할 텍스트입니다.")]
     public TextMeshProUGUI labelText;
 

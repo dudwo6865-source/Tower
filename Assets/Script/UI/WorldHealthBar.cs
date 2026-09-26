@@ -6,60 +6,76 @@ using UnityEngine.UI;
 [RequireComponent(typeof(SelectableEntity))]
 public class WorldHealthBar : MonoBehaviour
 {
-    [Header("Layout")]
+    [Header("레이아웃")]
+    [Label("높이 오프셋")]
     [Tooltip("체력바가 바닥(콜라이더 아래쪽)에서 떠 있는 높이입니다. 지면과 겹쳐 Z-fighting이 나지 " +
         "않을 정도로만 작게 두면 됩니다.")]
     public float heightOffset = 0.05f;
 
+    [Label("화면 아래 오프셋")]
     [Tooltip("카메라 시점 기준으로 체력바를 유닛보다 얼마나 아래쪽(화면 아래 방향)에 표시할지 " +
         "정하는 월드 거리입니다. heightOffset(수직 높이)과 달리 카메라가 보는 방향(화면 아래쪽 " +
         "지면 방향)으로 밀어내므로, 카메라 각도가 바뀌어도 항상 유닛보다 아래로 보이게 만들 수 " +
         "있습니다. 0이면 유닛 발밑에 그대로 표시됩니다.")]
     public float viewDownOffset = 3f;
 
+    [Label("바 높이")]
     [Tooltip("체력바의 월드 기준 높이입니다.")]
     public float barHeight = 0.5f;
 
+    [Label("월드 스케일")]
     [Tooltip("월드 스페이스 캔버스 스케일입니다.")]
     public float worldScale = 0.07f;
 
+    [Label("칸 너비")]
     [Tooltip("체력바 한 칸의 월드 기준 너비입니다.")]
     public float segmentWorldWidth = 0.4f;
 
-    [Header("Display")]
+    [Header("표시")]
+    [Label("로컬 플레이어 ID")]
     [Tooltip("로컬 플레이어 소유자 ID입니다. 아군/적 체력바 표시 규칙에 사용됩니다.")]
     public int localPlayerOwnerId = 1;
 
+    [Label("적 체력바 항상 표시")]
     [Tooltip("적 유닛·건물의 체력바를 항상 표시합니다.")]
     public bool alwaysShowEnemyBar = false;
 
+    [Label("선택 시 표시")]
     [Tooltip("아군이 선택되었을 때 체력바를 표시합니다.")]
     public bool showWhenSelected = true;
 
+    [Label("피해 후 표시 시간(초)")]
     [Tooltip("피해를 입은 뒤 체력바를 표시하는 시간(초)입니다.")]
     public float showAfterDamageDuration = 3f;
 
-    [Header("Colors")]
+    [Header("색상")]
+    [Label("아군 색")]
     [Tooltip("아군 체력바 색상입니다.")]
     public Color allyFillColor = new Color(0.2f, 0.9f, 0.3f, 1f);
 
+    [Label("적 색")]
     [Tooltip("적군 체력바 색상입니다.")]
     public Color enemyFillColor = new Color(0.95f, 0.2f, 0.2f, 1f);
 
+    [Label("낮은 체력 색")]
     [Tooltip("체력이 낮을 때 바 색상입니다.")]
     public Color lowHealthColor = new Color(0.95f, 0.55f, 0.1f, 1f);
 
+    [Label("낮은 체력 기준")]
     [Tooltip("낮은 체력으로 판정하는 비율입니다.")]
     [Range(0f, 1f)]
     public float lowHealthThreshold = 0.35f;
 
-    [Header("Segments")]
+    [Header("칸")]
+    [Label("칸당 체력")]
     [Tooltip("체력바 한 칸이 나타내는 체력량입니다. 최대 체력 ÷ 이 값 = 칸 개수입니다.")]
     public float healthPerSegment = 10f;
 
+    [Label("칸 간격")]
     [Tooltip("칸 사이 간격(캔버스 픽셀)입니다.")]
     public float segmentSpacing = 3f;
 
+    [Label("줄당 최대 칸 수")]
     [Tooltip("한 줄에 표시할 최대 칸 수입니다. 초과하면 다음 줄로 넘깁니다.")]
     public int maxSegmentsPerRow = 15;
 

@@ -9,9 +9,11 @@ using Unity.AI.Navigation;
 [DisallowMultipleComponent]
 public class MapRoot : MonoBehaviour
 {
+    [Label("NavMesh Surface")]
     [Tooltip("이 맵의 NavMesh를 굽는 NavMeshSurface입니다. 비워두면 자식에서 자동으로 찾습니다.")]
     public NavMeshSurface navMeshSurface;
 
+    [Label("시작 시 NavMesh 굽기")]
     [Tooltip("로드 직후 런타임에 NavMesh를 다시 굽습니다.\n" +
         "런타임 굽기는 소스 메쉬의 'Read/Write Enabled'가 필요하고 빌드에서 비용이 큽니다.\n" +
         "고정 맵은 이 옵션을 끄고 에디터에서 미리 Bake해 두는 것을 권장합니다.")]

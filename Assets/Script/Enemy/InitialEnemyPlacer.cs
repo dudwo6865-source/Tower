@@ -7,15 +7,19 @@ using UnityEngine;
 [Serializable]
 public class InitialEnemyGroup
 {
+    [Label("적 프리팹")]
     [Tooltip("배치할 적 프리팹입니다.")]
     public GameObject prefab;
 
+    [Label("무리당 적 수")]
     [Tooltip("무리 하나에 넣을 적 수입니다.")]
     public int countPerCluster = 3;
 
+    [Label("무리 수")]
     [Tooltip("맵에 흩뿌릴 무리 수입니다. 2 이상이면 같은 구성의 무리를 여러 곳에 만듭니다.")]
     public int clusterCount = 1;
 
+    [Label("무리 반경")]
     [Tooltip("무리를 이 반경(미터) 안에 모아서 배치합니다. 0이면 한 지점에 몰립니다.")]
     public float clusterRadius = 6f;
 
@@ -63,46 +67,58 @@ public class InitialEnemyPlacer : MonoBehaviour
 {
     public static InitialEnemyPlacer Instance { get; private set; }
 
-    [Header("Enemies")]
+    [Header("적")]
+    [Label("적 무리 목록")]
     [Tooltip("게임 시작 시 맵에 배치할 적 무리 목록입니다.")]
     public List<InitialEnemyGroup> groups = new List<InitialEnemyGroup>();
 
+    [Label("적 소속 ID")]
     [Tooltip("배치되는 적의 소속 ID입니다. 플레이어와 달라야 적으로 인식됩니다.")]
     public int enemyOwnerId = 2;
 
-    [Header("Behavior")]
+    [Header("행동")]
+    [Label("본부로 진군")]
     [Tooltip("켜면 배치 직후부터 플레이어 본부로 진군합니다.\n" +
         "끄면 배치된 자리를 지키며, 어그로 범위에 들어온 상대만 공격합니다.")]
     public bool advanceToPlayerBase = false;
 
-    [Header("Placement")]
+    [Header("배치")]
+    [Label("본부 최소 거리")]
     [Tooltip("플레이어 본부와 최소 이 거리 이상 떨어진 곳에만 배치합니다.")]
     public float minDistanceFromHq = 25f;
 
+    [Label("맵 가장자리 여백")]
     [Tooltip("맵 가장자리에서 안쪽으로 둘 여백(미터)입니다.")]
     public float mapEdgeMargin = 8f;
 
+    [Label("플레이어 시야 피하기")]
     [Tooltip("켜면 플레이어 시야 밖(안개 속)에 우선 배치합니다.")]
     public bool avoidPlayerVision = true;
 
+    [Label("배치 시도 횟수")]
     [Tooltip("무리 위치를 찾기 위한 최대 시도 횟수입니다.")]
     public int placementAttempts = 32;
 
-    [Header("Player")]
+    [Header("플레이어")]
+    [Label("플레이어 ID")]
     [Tooltip("본부를 찾을 때 사용하는 ownerId입니다.")]
     public int playerOwnerId = 1;
 
-    [Header("Map Bounds")]
+    [Header("맵 범위")]
+    [Label("맵 범위 출처")]
     [Tooltip("맵 범위를 어디서 얻을지입니다. 보통 Auto로 두면 baked NavMesh 범위를 씁니다.")]
     public MapPlayBoundsSource boundsSource = MapPlayBoundsSource.Auto;
 
+    [Label("수동 맵 원점")]
     [Tooltip("boundsSource가 Manual일 때 쓰는 맵 원점입니다.")]
     public Vector3 manualBoundsOrigin = Vector3.zero;
 
+    [Label("수동 맵 크기")]
     [Tooltip("boundsSource가 Manual일 때 쓰는 맵 크기(X=가로, Y=세로)입니다.")]
     public Vector2 manualBoundsSize = new Vector2(256f, 256f);
 
-    [Header("Debug")]
+    [Header("디버그")]
+    [Label("배치 로그")]
     [Tooltip("몇 마리를 어디에 배치했는지 콘솔에 남깁니다.")]
     public bool logPlacement = true;
 

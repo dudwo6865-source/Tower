@@ -15,53 +15,68 @@ public enum UnitSoundAttenuation
 [DisallowMultipleComponent]
 public class UnitSound : MonoBehaviour
 {
-    [Header("Clips")]
+    [Header("클립")]
+    [Label("공격 사운드")]
     [Tooltip("공격 시 재생할 사운드입니다. 여러 개면 무작위로 선택합니다.")]
     public AudioClip[] attackClips;
 
+    [Label("명중 사운드")]
     [Tooltip("이 유닛의 공격이 대상에 맞았을 때 재생할 사운드입니다. 히트 이펙트와 같은 시점에 납니다.")]
     public AudioClip[] attackHitClips;
 
+    [Label("사망 사운드")]
     [Tooltip("사망·파괴 시 재생할 사운드입니다.")]
     public AudioClip[] deathClips;
 
-    [Header("Playback")]
+    [Header("재생")]
+    [Label("오디오 소스")]
     [Tooltip("비워두면 이 오브젝트에 AudioSource를 자동으로 추가합니다.")]
     public AudioSource audioSource;
 
+    [Label("볼륨")]
     [Tooltip("재생 볼륨입니다.")]
     [Range(0f, 1f)]
     public float volume = 1f;
 
+    [Label("감쇠 방식")]
     [Tooltip("음량 감쇠 방식입니다.")]
     public UnitSoundAttenuation attenuation = UnitSoundAttenuation.RtsCamera;
 
+    [Label("최소 거리")]
     [Tooltip("3D 공간음향(Unity3D) 또는 RTS 맵 거리 감쇠의 최대 볼륨 거리입니다.")]
     public float minDistance = 8f;
 
+    [Label("최대 거리")]
     [Tooltip("3D 공간음향(Unity3D) 또는 RTS 맵 거리 감쇠의 무음 거리입니다.")]
     public float maxDistance = 120f;
 
+    [Label("줌에 따른 볼륨")]
     [Tooltip("직교 줌에 따른 볼륨 조절을 사용합니다. RtsCamera 모드에서만 적용됩니다.")]
     public bool attenuateByZoom = true;
 
+    [Label("확대 시 볼륨 배율")]
     [Tooltip("가장 확대(orthographicSize 최소)일 때의 볼륨 배율입니다.")]
     [Range(0f, 1f)]
     public float zoomedInVolume = 1f;
 
+    [Label("축소 시 볼륨 배율")]
     [Tooltip("가장 축소(orthographicSize 최대)일 때의 볼륨 배율입니다.")]
     [Range(0f, 1f)]
     public float zoomedOutVolume = 0.35f;
 
+    [Label("기준 최소 줌 크기")]
     [Tooltip("줌 계산에 쓰는 orthographicSize 최소값입니다. RTSCameraPivotController와 맞추세요.")]
     public float referenceMinOrthoSize = 12f;
 
+    [Label("기준 최대 줌 크기")]
     [Tooltip("줌 계산에 쓰는 orthographicSize 최대값입니다. RTSCameraPivotController와 맞추세요.")]
     public float referenceMaxOrthoSize = 45f;
 
+    [Label("피치 범위")]
     [Tooltip("재생 시 피치 무작위 범위입니다.")]
     public Vector2 pitchRange = new Vector2(0.95f, 1.05f);
 
+    [Label("명중 사운드 간격(초)")]
     [Tooltip("명중 사운드 최소 간격(초)입니다. 한 번의 공격이 여러 대상을 맞히거나 " +
              "연사가 빠를 때 소리가 겹치는 것을 줄입니다.")]
     public float attackHitSoundCooldown = 0.12f;

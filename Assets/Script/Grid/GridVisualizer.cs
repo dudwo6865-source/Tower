@@ -10,30 +10,38 @@ using UnityEngine.Rendering;
 [DefaultExecutionOrder(140)]
 public class GridVisualizer : MonoBehaviour
 {
-    [Header("Footprint (배치 미리보기)")]
+    [Header("배치 미리보기")]
+    [Label("건설 가능 색")]
     [Tooltip("건설 가능한 칸을 표시하는 하늘색 레이어 색상입니다.")]
     public Color validFootprintColor = new Color(0.25f, 0.65f, 1f, 0.65f);
 
+    [Label("건설 불가 색")]
     [Tooltip("건설할 수 없는 칸을 표시하는 색상입니다.")]
     public Color invalidFootprintColor = new Color(0.95f, 0.2f, 0.2f, 0.7f);
 
+    [Label("높이 오프셋")]
     [Tooltip("풋프린트를 지형 위로 띄울 높이입니다.")]
     public float heightOffset = 0.12f;
 
-    [Header("Build Zone (건설 가능 구역)")]
+    [Header("건설 가능 구역")]
+    [Label("구역 색")]
     [Tooltip("건설 가능 구역의 칸 색상입니다.")]
     public Color zoneFillColor = new Color(0.12f, 0.55f, 1f, 0.3f);
 
+    [Label("구역 높이 오프셋")]
     [Tooltip("구역을 지형 위로 띄울 추가 높이입니다. BuildZoneProvider.buildZoneHeightOffset에 더해집니다.")]
     public float zoneHeightOffset;
 
-    [Header("Cell Shape (풋프린트/구역 공통)")]
+    [Header("칸 모양 (미리보기/구역 공통)")]
+    [Label("칸 안쪽 여백")]
     [Tooltip("칸 테두리에서 안쪽으로 들어가는 두께(월드 단위)입니다. 값을 키우면 칸끼리 서로 떨어져 보입니다.")]
     public float cellInset = 0.12f;
 
+    [Label("칸 모서리 반경")]
     [Tooltip("칸 모서리를 둥글게 표시할 반경(월드 단위)입니다.")]
     public float cellCornerRadius = 0.28f;
 
+    [Label("모서리 분할 수")]
     [Tooltip("모서리 하나를 표현하는 곡선 분할 수입니다. 값이 클수록 더 둥글게 보입니다.")]
     [Range(1, 12)]
     public int cellCornerSegments = 6;

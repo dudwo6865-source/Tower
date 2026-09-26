@@ -3,18 +3,25 @@ using UnityEngine.UI;
 
 public class UnitCommandPanelUI : MonoBehaviour
 {
-    [Header("Panel")]
+    [Header("패널")]
+    [Label("패널 루트")]
     [Tooltip("유닛 선택 시에만 표시할 패널 루트입니다.")]
     public GameObject panelRoot;
 
-    [Header("Buttons")]
+    [Header("버튼")]
+    [Label("공격 버튼")]
     public Button attackButton;
+    [Label("이동 버튼")]
     public Button moveButton;
+    [Label("정지 버튼")]
     public Button stopButton;
+    [Label("위치 고수 버튼")]
     public Button holdButton;
+    [Label("정찰 버튼")]
     public Button scoutButton;
 
-    [Header("Hotkeys")]
+    [Header("단축키")]
+    [Label("단축키 사용")]
     public bool enableHotkeys = true;
 
     UnitCommandController commandController;

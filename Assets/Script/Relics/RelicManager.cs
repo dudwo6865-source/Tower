@@ -16,25 +16,30 @@ public class RelicManager : MonoBehaviour
 {
     public static RelicManager Instance { get; private set; }
 
-    [Header("Owner")]
+    [Header("소유자")]
+    [Label("플레이어 ID")]
     [Tooltip("유물 효과를 받는 플레이어 ID입니다.")]
     public int playerOwnerId = 1;
 
-    [Header("Pool")]
+    [Header("풀")]
+    [Label("유물 후보 풀")]
     [Tooltip("이 스테이지에서 후보로 등장할 수 있는 전체 유물 목록입니다. " +
         "만든 RelicDefinition 에셋을 여기에 모두 끌어다 놓으세요.")]
     public List<RelicDefinition> relicPool = new List<RelicDefinition>();
 
-    [Header("Slots")]
+    [Header("슬롯")]
+    [Label("슬롯 수")]
     [Tooltip("동시에 장착할 수 있는 유물 수입니다. (기획서 기준 5)")]
     [Min(1)]
     public int slotCount = 5;
 
+    [Label("후보 수")]
     [Tooltip("스포너 파괴 시 한 번에 제시할 후보 수입니다. (기획서 기준 3)")]
     [Min(1)]
     public int candidateCount = 3;
 
-    [Header("Debug")]
+    [Header("디버그")]
+    [Label("유물 로그")]
     [Tooltip("유물 후보 제시/장착/교체 로그를 콘솔에 남깁니다.")]
     public bool logRelicEvents = true;
 

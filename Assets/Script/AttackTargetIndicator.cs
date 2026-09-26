@@ -6,9 +6,13 @@ public class AttackTargetIndicator : MonoBehaviour
 
     static readonly Color IndicatorColor = new Color(1f, 0.25f, 0.2f, 0.95f);
 
+    [Label("반지름 여유")]
     [SerializeField] float radiusPadding = 0.35f;
+    [Label("선 두께")]
     [SerializeField] float lineWidth = 0.12f;
+    [Label("높이 오프셋")]
     [SerializeField] float heightOffset = 0.12f;
+    [Label("원 분할 수")]
     [SerializeField] int segments = 48;
 
     LineRenderer lineRenderer;

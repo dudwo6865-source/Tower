@@ -6,39 +6,50 @@ public class DayNightCycle : MonoBehaviour
 {
     public static DayNightCycle Instance { get; private set; }
 
-    [Header("Duration")]
+    [Header("지속 시간")]
+    [Label("낮 길이(초)")]
     [Tooltip("낮이 지속되는 시간(초)입니다.")]
     public float dayDuration = 120f;
 
+    [Label("밤 길이(초)")]
     [Tooltip("밤이 지속되는 시간(초)입니다.")]
     public float nightDuration = 60f;
 
-    [Header("Start")]
+    [Header("시작")]
+    [Label("시작 페이즈")]
     [Tooltip("게임 시작 시 낮/밤 중 어느 페이즈로 시작할지 지정합니다.")]
     public DayNightPhase startPhase = DayNightPhase.Day;
 
+    [Label("자동 시작")]
     [Tooltip("시작 시 자동으로 사이클을 진행합니다.")]
     public bool autoStart = true;
 
-    [Header("Lighting")]
+    [Header("조명")]
+    [Label("방향광")]
     [Tooltip("낮/밤에 색을 적용할 방향광입니다. 비워두면 RenderSettings.sun 또는 씬의 Directional Light를 찾습니다.")]
     public Light directionalLight;
 
+    [Label("낮 조명 색")]
     [Tooltip("낮 시간대 라이트 색상입니다.")]
     public Color dayLightColor = new Color(1f, 0.95686275f, 0.8392157f, 1f);
 
+    [Label("밤 조명 색")]
     [Tooltip("밤 시간대 라이트 색상입니다.")]
     public Color nightLightColor = new Color(0.35f, 0.45f, 0.75f, 1f);
 
+    [Label("낮 조명 강도")]
     [Tooltip("낮 시간대 라이트 강도입니다.")]
     public float dayLightIntensity = 1f;
 
+    [Label("밤 조명 강도")]
     [Tooltip("밤 시간대 라이트 강도입니다.")]
     public float nightLightIntensity = 0.35f;
 
+    [Label("페이즈 변경 시 조명 적용")]
     [Tooltip("페이즈 변경 시 라이트 색/강도를 적용합니다.")]
     public bool applyLightingOnPhaseChange = true;
 
+    [Label("조명 전환 시간(초)")]
     [Tooltip("낮/밤 전환 시 라이트가 먼저 변하는 시간(초)입니다. 완료 후 페이즈와 알림이 바뀝니다.")]
     public float lightTransitionDuration = 5f;
 

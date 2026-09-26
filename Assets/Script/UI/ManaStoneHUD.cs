@@ -4,17 +4,21 @@ using UnityEngine;
 // 보유 마석을 표시하는 HUD입니다.
 public class ManaStoneHUD : MonoBehaviour
 {
-    [Header("References")]
+    [Header("참조")]
+    [Label("마석 텍스트")]
     [Tooltip("현재 마석 수량 텍스트입니다.")]
     public TextMeshProUGUI manaStoneText;
 
+    [Label("마석 매니저")]
     [Tooltip("비워두면 씬에서 ManaStoneManager를 자동으로 찾습니다.")]
     public ManaStoneManager manaStoneManager;
 
-    [Header("Display")]
+    [Header("표시")]
+    [Label("상한 있을 때 형식")]
     [Tooltip("상한이 있을 때 표시 형식입니다. {0}=현재, {1}=최대")]
     public string cappedFormat = "{0:0} / {1:0} 마석";
 
+    [Label("상한 없을 때 형식")]
     [Tooltip("상한이 없을 때 표시 형식입니다. {0}=현재")]
     public string uncappedFormat = "{0:0} 마석";
 

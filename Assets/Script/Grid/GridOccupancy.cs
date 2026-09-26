@@ -8,7 +8,8 @@ public class GridOccupancy : MonoBehaviour
 {
     public static GridOccupancy Instance { get; private set; }
 
-    [Header("Scene Setup")]
+    [Header("씬 설정")]
+    [Label("기본 건물 칸 수")]
     [Tooltip("씬에 미리 배치된 건물 중 GridFootprint가 없으면 이 크기로 자동 등록합니다.")]
     public Vector2Int defaultBuildingFootprint = new Vector2Int(2, 2);
 

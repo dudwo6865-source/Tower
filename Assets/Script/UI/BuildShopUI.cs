@@ -8,12 +8,16 @@ public class BuildShopUI : MonoBehaviour
     [System.Serializable]
     public class ShopEntry
     {
+        [Label("건물 데이터")]
         [Tooltip("BuildableTowerData 또는 BuildableProductionData를 할당합니다.")]
         public ScriptableObject data;
 
+        [Label("버튼")]
         public Button button;
+        [Label("라벨 텍스트")]
         public TextMeshProUGUI label;
 
+        [Label("아이콘")]
         [Tooltip("건물 썸네일을 표시할 Image입니다. 비워두면 아이콘 표시를 건너뜁니다.")]
         public Image icon;
 
@@ -23,30 +27,39 @@ public class BuildShopUI : MonoBehaviour
         }
     }
 
-    [Header("References")]
+    [Header("참조")]
+    [Label("상점 항목")]
     public ShopEntry[] entries;
 
+    [Label("Watt 매니저")]
     [Tooltip("비워두면 씬에서 자동으로 찾습니다.")]
     public WattManager wattManager;
 
+    [Label("배치 컨트롤러")]
     [Tooltip("비워두면 씬에서 자동으로 찾습니다.")]
     public TowerPlacementController placementController;
 
-    [Header("Labels")]
+    [Header("라벨")]
+    [Label("구매 가능 형식")]
     public string affordableFormat = "[{2}] {0}\n{1} W";
+    [Label("구매 불가 형식")]
     public string unaffordableFormat = "[{2}] {0}\n{1} W";
 
-    [Header("Icon Tint")]
+    [Header("아이콘 색")]
+    [Label("구매 가능 아이콘 색")]
     [Tooltip("구매 가능할 때 아이콘 색상입니다.")]
     public Color iconAffordableTint = Color.white;
 
+    [Label("구매 불가 아이콘 색")]
     [Tooltip("구매 불가능(Watt 부족)할 때 아이콘 색상입니다.")]
     public Color iconUnaffordableTint = new Color(1f, 1f, 1f, 0.4f);
 
-    [Header("Hotkeys")]
+    [Header("단축키")]
+    [Label("단축키 사용")]
     [Tooltip("등록 순서대로 1~9 키로 구매·배치를 시작합니다.")]
     public bool enableHotkeys = true;
 
+    [Label("최대 단축키 슬롯 수")]
     [Tooltip("단축키로 사용할 최대 슬롯 수입니다.")]
     public int maxHotkeySlots = 9;
 

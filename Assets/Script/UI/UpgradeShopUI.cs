@@ -10,64 +10,83 @@ public class UpgradeShopUI : MonoBehaviour
     [System.Serializable]
     public class ShopEntry
     {
+        [Label("업그레이드")]
         [Tooltip("이 버튼이 구매할 업그레이드 정의입니다.")]
         public UpgradeDefinition upgrade;
 
+        [Label("버튼")]
         public Button button;
 
+        [Label("라벨 텍스트")]
         [Tooltip("이름/레벨/비용을 표시할 텍스트입니다. 비워두면 버튼 자식에서 자동으로 찾습니다.")]
         public TextMeshProUGUI label;
 
+        [Label("아이콘")]
         [Tooltip("업그레이드 아이콘 Image입니다. 비워두면 버튼 자식에서 자동으로 찾습니다.")]
         public Image icon;
     }
 
-    [Header("Auto Build")]
+    [Header("자동 배정")]
+    [Label("버튼 패널")]
     [Tooltip("지정하면 이 패널의 자식 버튼들을 업그레이드 목록 순서대로 자동 배정합니다.\n" +
              "이 경우 아래 Entries는 무시됩니다.")]
     public Transform buttonPanel;
 
+    [Label("업그레이드 순서")]
     [Tooltip("자동 배정에 사용할 업그레이드 순서입니다. 비워두면 UpgradeManager의 목록을 사용합니다.")]
     public UpgradeDefinition[] upgradeList;
 
+    [Label("남는 버튼 숨기기")]
     [Tooltip("자동 배정 시 업그레이드보다 버튼이 많으면 남는 버튼을 숨깁니다.")]
     public bool hideExtraButtons = true;
 
-    [Header("References")]
+    [Header("참조")]
+    [Label("수동 항목")]
     [Tooltip("패널 자동 배정을 쓰지 않을 때 수동으로 지정하는 항목들입니다.")]
     public ShopEntry[] entries;
 
+    [Label("업그레이드 매니저")]
     [Tooltip("비워두면 씬에서 자동으로 찾습니다.")]
     public UpgradeManager upgradeManager;
 
+    [Label("마석 매니저")]
     [Tooltip("비워두면 씬에서 자동으로 찾습니다.")]
     public ManaStoneManager manaStoneManager;
 
-    [Header("Labels")]
+    [Header("라벨")]
+    [Label("항목 형식")]
     [Tooltip("{0}=이름, {1}=현재레벨, {2}=최대레벨, {3}=다음비용")]
     public string entryFormat = "{0}\nLv {1}/{2}  ({3} 마석)";
 
+    [Label("최대 레벨 형식")]
     [Tooltip("최대 레벨일 때 표시 형식입니다. {0}=이름, {1}=최대레벨")]
     public string maxedFormat = "{0}\nLv {1} (MAX)";
 
+    [Label("연구 중 형식")]
     [Tooltip("연구 중일 때(이 항목) 표시 형식입니다. {0}=이름, {1}=남은 초")]
     public string researchingFormat = "{0}\n연구 중 {1:0.0}s";
 
+    [Label("다른 연구 중 형식")]
     [Tooltip("다른 연구가 진행 중일 때 표시 형식입니다. {0}=이름, {1}=연구 중인 업그레이드")]
     public string researchBusyFormat = "{0}\n연구 중: {1}";
 
-    [Header("Icon Tint")]
+    [Header("아이콘 색")]
+    [Label("구매 가능 아이콘 색")]
     public Color iconAffordableTint = Color.white;
+    [Label("구매 불가 아이콘 색")]
     public Color iconUnaffordableTint = new Color(1f, 1f, 1f, 0.4f);
 
-    [Header("Visibility")]
+    [Header("표시 조건")]
+    [Label("패널 루트")]
     [Tooltip("보이고/숨길 업그레이드 패널 루트입니다. 이 스크립트가 붙은 오브젝트가 아닌 별도 자식이어야 합니다.\n" +
              "비워두면 항상 표시됩니다.")]
     public GameObject panelRoot;
 
+    [Label("건물 선택 시에만 표시")]
     [Tooltip("켜면 UpgradeBuilding이 붙은 건물을 선택했을 때만 패널을 보여줍니다.")]
     public bool showOnlyWhenBuildingSelected = true;
 
+    [Label("선택 매니저")]
     [Tooltip("선택을 감지하는 매니저입니다. 비워두면 자동으로 찾습니다.")]
     public UnitSelectionManager selectionManager;
 

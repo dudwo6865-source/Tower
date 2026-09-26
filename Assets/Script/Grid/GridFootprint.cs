@@ -7,15 +7,19 @@ public class GridFootprint : MonoBehaviour
 {
     public static Vector2Int DefaultBuildingFootprint = new Vector2Int(2, 2);
 
+    [Label("점유 칸 수")]
     [Tooltip("배치·겹침 검사에 사용할 칸 수입니다. 배치 미리보기 격자 크기도 이 값을 따릅니다.")]
     public Vector2Int footprintCells = new Vector2Int(2, 2);
 
+    [Label("칸 점유")]
     [Tooltip("켜면 footprint 칸을 격자에 점유하고 NavMeshObstacle 크기를 footprint에 맞춥니다.")]
     public bool blockCells = true;
 
+    [Label("NavMesh 구멍 뚫기")]
     [Tooltip("켜면 NavMesh에 구멍을 뚫습니다(카빙). 적 스포너처럼 유닛이 위에서 스폰돼 나와야 하는 건물은 끄세요.")]
     public bool carveNavMesh = true;
 
+    [Label("등록 시 격자에 맞추기")]
     [Tooltip("등록 시 transform.position을 footprint 중심 격자에 맞춥니다.")]
     public bool snapTransformOnRegister;
 

@@ -16,27 +16,36 @@ public class CommandCursorIndicator : MonoBehaviour
 
     static readonly Color FallbackColor = new Color(1f, 0.25f, 0.2f, 0.85f);
 
-    [Header("Ring")]
+    [Header("링")]
+    [Label("선 두께")]
     [SerializeField] float lineWidth = 0.1f;
+    [Label("높이 오프셋")]
     [SerializeField] float heightOffset = 0.1f;
+    [Label("원 분할 수")]
     [SerializeField] int segments = 48;
 
     [Header("대기 맥동 (명령 모드가 켜져 있는 동안)")]
+    [Label("대기 맥동 크기")]
     [Tooltip("반지름이 커졌다 작아지는 폭입니다. 0.08이면 ±8%입니다.")]
     [SerializeField] float idlePulseScale = 0.08f;
 
+    [Label("대기 맥동 속도(회/초)")]
     [Tooltip("1초에 커졌다 작아지기를 몇 번 반복할지입니다.")]
     [SerializeField] float idlePulseCyclesPerSecond = 0.9f;
 
     [Header("펄스 (명령 입력 / 확정 피드백)")]
+    [Label("모드 진입 튐 크기")]
     [Tooltip("명령 모드에 들어갈 때 한 번 튀는 크기입니다. 0.25면 최대 +25%입니다.")]
     [SerializeField] float activationPulseScale = 0.25f;
 
+    [Label("모드 진입 튐 시간(초)")]
     [SerializeField] float activationPulseDuration = 0.18f;
 
+    [Label("명령 확정 튐 크기")]
     [Tooltip("명령을 확정할 때 튀는 크기입니다. 대기 맥동보다 확실히 커야 눈에 띕니다.")]
     [SerializeField] float confirmPulseScale = 0.5f;
 
+    [Label("명령 확정 튐 시간(초)")]
     [SerializeField] float confirmPulseDuration = 0.22f;
 
     LineRenderer lineRenderer;

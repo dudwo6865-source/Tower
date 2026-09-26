@@ -3,91 +3,116 @@ using UnityEngine.EventSystems;
 
 public class RTSCameraPivotController : MonoBehaviour
 {
-    [Header("Movement")]
+    [Header("이동")]
+    [Label("가장자리 이동 범위(픽셀)")]
     [Tooltip("화면 가장자리에서 이 픽셀 범위 안에 마우스가 들어오면 카메라가 자동으로 이동합니다. 키보드 이동은 방향키(↑↓←→)입니다.")]
     public float edgeSize = 20f;
 
-    [Header("Middle Mouse Drag")]
+    [Header("휠 드래그")]
+    [Label("드래그 이동 속도")]
     [Tooltip("마우스 휠(가운데 버튼)을 누른 채 드래그할 때 카메라가 이동하는 속도입니다. 값이 클수록 빠르게 팬됩니다.")]
     public float dragPanSpeed = 0.15f;
 
-    [Header("Speed")]
+    [Header("속도")]
+    [Label("최소 이동 속도")]
     [Tooltip("줌이 최대로 가까울 때(최소 거리) 카메라 이동 속도입니다.")]
     public float minMoveSpeed = 10f;
 
+    [Label("최대 이동 속도")]
     [Tooltip("줌이 최대로 멀 때(최대 거리) 카메라 이동 속도입니다.")]
     public float maxMoveSpeed = 50f;
 
-    [Header("Smoothing")]
+    [Header("부드러움")]
+    [Label("위치 부드러움 시간")]
     [Tooltip("카메라 위치가 목표 지점에 도달할 때 부드럽게 따라가는 시간입니다. 값이 작을수록 반응이 빠릅니다.")]
     public float positionSmoothTime = 0.12f;
 
+    [Label("회전 부드러움 시간")]
     [Tooltip("카메라 회전이 목표 각도에 도달할 때 부드럽게 따라가는 시간입니다.")]
     public float rotationSmoothTime = 0.1f;
 
-    [Header("Zoom")]
+    [Header("줌")]
+    [Label("메인 카메라")]
     [Tooltip("줌 및 팬에 사용할 메인 카메라입니다. CameraRig의 자식 카메라를 연결하세요.")]
     public Camera mainCamera;
 
+    [Label("줌 속도")]
     [Tooltip("마우스 휠 스크롤 한 칸당 줌 이동량입니다. 값이 클수록 빠르게 확대/축소됩니다.")]
     public float zoomSpeed = 5f;
 
+    [Label("직교 투영 사용")]
     [Tooltip("직교(Orthographic) 투영을 사용합니다. 거리와 무관하게 일정한 크기로 보여 일정한 뷰를 원할 때 적합합니다.")]
     public bool useOrthographic = true;
 
+    [Label("최소 직교 크기")]
     [Tooltip("[직교 모드] 가장 확대했을 때의 크기(orthographicSize)입니다. 작을수록 확대됩니다.")]
     public float minOrthoSize = 12f;
 
+    [Label("최대 직교 크기")]
     [Tooltip("[직교 모드] 가장 축소했을 때의 크기(orthographicSize)입니다. 클수록 더 넓게 보입니다.")]
     public float maxOrthoSize = 45f;
 
+    [Label("최소 카메라 거리")]
     [Tooltip("[원근 모드] 카메라가 가장 가까이 접근할 수 있는 최소 거리입니다.")]
     public float minCameraDistance = 15f;
 
+    [Label("최대 카메라 거리")]
     [Tooltip("[원근 모드] 카메라가 가장 멀리 떨어질 수 있는 최대 거리입니다.")]
     public float maxCameraDistance = 60f;
 
-    [Header("Focus")]
+    [Header("포커스")]
+    [Label("포커스 화면 위치")]
     [Tooltip("선택·더블클릭 포커스 시 대상이 맞춰질 화면 위치입니다. Y를 낮출수록 유닛이 화면 아래쪽에 배치됩니다.")]
     public Vector2 focusViewport = new Vector2(0.5f, 0.38f);
 
-    [Header("Start Focus")]
+    [Header("시작 포커스")]
+    [Label("시작 포커스 대상")]
     [Tooltip("게임 시작 시 카메라가 이 대상(예: 본진 건물)을 Focus Viewport 위치에 맞춥니다. 비워두면 맵 중앙에서 시작합니다.")]
     public Transform startFocusTarget;
 
+    [Label("Home 키로 시작 위치 복귀")]
     [Tooltip("켜면 Home 키를 눌렀을 때도 Start Focus Target 위치로 돌아갑니다. (Use Custom Home Position이 꺼져 있을 때)")]
     public bool homeReturnsToStartFocus = true;
 
-    [Header("Home")]
+    [Header("홈")]
+    [Label("사용자 지정 Home 위치 사용")]
     [Tooltip("켜면 Home 키 입력 시 아래 Custom Home Position으로 이동합니다. 끄면 게임 시작 시 맵 중앙으로 이동합니다.")]
     public bool useCustomHomePosition;
 
+    [Label("사용자 지정 Home 위치")]
     [Tooltip("Home 키를 눌렀을 때 카메라가 이동할 월드 좌표입니다. Use Custom Home Position이 켜져 있을 때만 사용됩니다.")]
     public Vector3 customHomePosition;
 
-    [Header("Lock")]
+    [Header("잠금")]
+    [Label("화면 고정")]
     [Tooltip("켜져 있으면 카메라 이동/줌/드래그가 모두 막혀 화면이 고정됩니다. 런타임에 Lock Key로 켜고 끌 수 있습니다.")]
     public bool isLocked;
 
+    [Label("화면 고정 키")]
     [Tooltip("화면 고정을 켜고 끄는 키입니다. H는 유닛 Hold 명령 단축키와 겹쳐서 기본값을 L로 뒀습니다.")]
     public KeyCode lockKey = KeyCode.L;
 
     public bool IsLocked => isLocked;
 
-    [Header("Map Bounds")]
+    [Header("맵 범위")]
+    [Label("맵 범위 출처")]
     [Tooltip("Auto: MapGrid(NavMesh) → Manual 순으로 맵 크기를 찾습니다.")]
     public MapPlayBoundsSource boundsSource = MapPlayBoundsSource.Auto;
 
+    [Label("수동 맵 원점")]
     [Tooltip("Manual/Auto fallback용 맵 원점(왼쪽 아래 모서리)입니다.")]
     public Vector3 manualMapOrigin;
 
+    [Label("수동 맵 크기")]
     [Tooltip("Manual/Auto fallback용 맵 크기(X=가로, Y=세로)입니다.")]
     public Vector2 manualMapSize = new Vector2(256f, 256f);
 
-    [Header("Camera Edge Limit")]
+    [Header("카메라 가장자리 제한")]
+    [Label("가장자리 여백")]
     [Tooltip("플레이 맵 가장자리 안쪽으로 남길 여백(미터)입니다. 0이면 화면 끝이 맵 끝에 맞춰집니다.")]
     public float edgeMargin = 0f;
 
+    [Label("맵 밖 최대 이동 거리")]
     [Tooltip("플레이 맵 밖으로 카메라가 더 보여줄 수 있는 최대 거리(미터)입니다. 검은 void 배경 크기는 이 값 이상으로 잡으세요.")]
     public float maxPanBeyondMap = 24f;
 

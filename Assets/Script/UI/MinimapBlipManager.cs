@@ -12,41 +12,52 @@ public class MinimapBlipManager : MonoBehaviour
         public Image image;
     }
 
-    [Header("Player")]
+    [Header("플레이어")]
+    [Label("로컬 플레이어 ID")]
     [Tooltip("비워두면(-1) FogOfWarManager 또는 UnitSelectionManager의 로컬 플레이어 ID를 사용합니다.")]
     public int localPlayerOwnerId = -1;
 
-    [Header("Ally Colors")]
+    [Header("아군 색")]
+    [Label("아군 유닛 색")]
     [Tooltip("아군 유닛 블립 색입니다.")]
     public Color allyUnitColor = new Color(0.25f, 0.95f, 0.35f, 1f);
 
+    [Label("아군 건물 색")]
     [Tooltip("아군 건물 블립 색입니다.")]
     public Color allyBuildingColor = new Color(0.25f, 0.75f, 1f, 1f);
 
-    [Header("Enemy Colors")]
+    [Header("적 색")]
+    [Label("적 유닛 색")]
     [Tooltip("현재 시야 안에 있는 적 유닛 블립 색입니다.")]
     public Color enemyUnitColor = new Color(1f, 0.25f, 0.25f, 1f);
 
+    [Label("적 건물 색")]
     [Tooltip("현재 시야 안에 있는 적 건물 블립 색입니다.")]
     public Color enemyBuildingColor = new Color(1f, 0.35f, 0.35f, 1f);
 
+    [Label("발견한 적 건물 색")]
     [Tooltip("한번 본 적 건물이 현재 시야 밖일 때 표시 색입니다.")]
     public Color seenEnemyBuildingColor = new Color(0.85f, 0.35f, 0.35f, 0.75f);
 
-    [Header("Sizes")]
+    [Header("크기")]
+    [Label("아군 유닛 크기")]
     [Tooltip("아군 유닛 블립 크기(픽셀)입니다.")]
     public float allyUnitSize = 6f;
 
+    [Label("적 유닛 크기")]
     [Tooltip("적 유닛 블립 크기(픽셀)입니다.")]
     public float enemyUnitSize = 6f;
 
+    [Label("건물 칸당 픽셀")]
     [Tooltip("건물 블립 크기(픽셀). GridFootprint 칸 수 × 이 값으로 가로·세로가 결정됩니다.")]
     public float buildingBlipPixelsPerCell = 5f;
 
+    [Label("선택 시 크기 배율")]
     [Tooltip("선택된 유닛·건물 블립에 곱할 크기 배율입니다.")]
     public float selectedScale = 1.35f;
 
-    [Header("Pool")]
+    [Header("풀")]
+    [Label("초기 풀 크기")]
     [Tooltip("미리 만들어 둘 블립 UI 개수입니다. 유닛/건물 수보다 크게 두면 런타임 생성이 줄어듭니다.")]
     public int initialPoolSize = 32;
 

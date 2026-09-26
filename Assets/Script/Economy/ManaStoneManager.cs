@@ -9,14 +9,17 @@ public class ManaStoneManager : MonoBehaviour
 {
     public static ManaStoneManager Instance { get; private set; }
 
-    [Header("Owner")]
+    [Header("소유자")]
+    [Label("소유자 ID")]
     [Tooltip("이 마석을 보유하는 플레이어 ID입니다. 이 소속의 유닛/건물이 적을 처치하면 마석을 얻습니다.")]
     public int ownerId = 1;
 
-    [Header("Mana Stone")]
+    [Header("마석")]
+    [Label("최대 마석")]
     [Tooltip("보유 가능한 최대 마석입니다. 0 이하면 상한이 없습니다.")]
     public float maxManaStone = 0f;
 
+    [Label("시작 마석")]
     [Tooltip("배틀 시작 시 보유 마석입니다.")]
     public float startingManaStone = 0f;
 

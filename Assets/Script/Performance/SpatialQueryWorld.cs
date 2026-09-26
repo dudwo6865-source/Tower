@@ -24,6 +24,7 @@ public class SpatialQueryWorld : MonoBehaviour
 
     public static SpatialQueryWorld Instance { get; private set; }
 
+    [Label("격자 크기")]
     [Tooltip("공간 해시 격자 크기(m)입니다. 어그로 범위가 30이면 8 전후가 적당합니다.")]
     public float cellSize = 8f;
 
