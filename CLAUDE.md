@@ -58,8 +58,10 @@ Unity **2022.3.26f1** 타워 디펜스 RTS. 낮/밤이 한 사이클(= 웨이브
   **컴포넌트만** 지웁니다 — `Destroy(gameObject)`는 같은 오브젝트의 다른 매니저까지
   날려버립니다.
 - 인디케이터(`CommandCursorIndicator`, `MoveDestinationIndicator`,
-  `AttackTargetIndicator`)는 씬에 없으면 `EnsureInstance()`가 런타임에 만듭니다.
-  그래서 **씬에서 인스펙터 값을 조절하려면 직접 오브젝트에 붙여야** 합니다.
+  `AttackTargetIndicator`)와 `EnemySpawnScheduler`는 씬에 없으면 `EnsureInstance()`가
+  런타임에 만듭니다. 그래서 **씬에서 인스펙터 값을 조절하려면 직접 오브젝트에 붙여야** 합니다.
+  `AiPathBudgetSettings`도 씬에 없으면 코드 기본값(경로 예산 16회/프레임,
+  NavMesh 경로 처리량 1000)이 쓰입니다.
 
 ---
 
@@ -100,7 +102,9 @@ Unity **2022.3.26f1** 타워 디펜스 RTS. 낮/밤이 한 사이클(= 웨이브
 - `Tools > 맵 > 스테이지 에디터`에서 편집합니다. 웨이브 표, 낮/밤, 경제, 승리 조건.
 - **`MapConfig` 값은 씬에 `MapLoader`가 있어야 적용됩니다.** `MapLoader`가 실행
   순서 -1000으로 각 매니저에 값을 주입합니다. 없으면 씬 매니저의 인스펙터 값이
-  그대로 쓰입니다. (예: `Test 2.unity`에는 `MapLoader`가 없습니다.)
+  그대로 쓰입니다. `Test 2.unity`는 `MapLoader`가 `Assets/Data/Maps/1Stage.asset`을
+  불러오므로, 경제·낮밤·웨이브·초기 적·승리 조건은 **씬 매니저 인스펙터가 아니라
+  1Stage 값**이 적용됩니다.
 
 ### 명령 입력
 
@@ -113,6 +117,13 @@ Unity **2022.3.26f1** 타워 디펜스 RTS. 낮/밤이 한 사이클(= 웨이브
   공격합니다. 소속으로 대상을 거르지 마세요.
 - 공격 모드에서 빈 지형을 찍으면 **공격 이동**(그 지점으로 가면서 마주치는 적과
   교전)입니다. 움직일 수 없는 타워만 선택한 경우엔 이동 없이 지면 표시만 남깁니다.
+- 타워도 적을 우클릭하면 공격 대상이 바뀝니다. 유닛과 함께 선택했으면 둘 다 공격합니다.
+- 유닛은 기본적으로 **공격받아도 플레이어의 이동/지정 공격 명령을 유지**합니다.
+  (`UnitCombatAI`의 '이동 중 피격 무시', '지정 대상 유지')
+- **플레이어 명령의 경로는 `GridMovement.TrySetAgentDestination(..., immediate: true)`로
+  깝니다.** 내부에서 `NavMesh.CalculatePath` + `SetPath`로 즉시 계산해 비동기 경로
+  대기열을 건너뜁니다. 플레이어 명령에 `SetDestination`을 직접 쓰면 적이 많을 때
+  새 경로가 여러 프레임 늦게 적용돼 "명령이 안 먹는" 것처럼 보입니다.
 
 ### 안개 / 시야
 
@@ -126,6 +137,12 @@ Unity **2022.3.26f1** 타워 디펜스 RTS. 낮/밤이 한 사이클(= 웨이브
   건물은 `carveNavMesh`를 꺼서 NavMesh에 구멍을 뚫지 않습니다.
 - 이동 목적지는 `GridMovement.SnapMoveDestination`으로 격자에 스냅하고
   NavMesh 위로 보정합니다.
+- 유닛의 일반 이동·공격 이동에는 **막힘 복구**가 있습니다(`UnitCombatAI` '이동 막힘 복구').
+  전진이 없으면 경로 재탐색 → 목적지 근처면 도착 처리 → 다른 유닛에 막히면 멈춤 →
+  갈 수 없으면 포기하고 노란 이동 불가 표시를 남깁니다.
+- 건물 배치 위치는 `TowerPlacementController`의 `지면 레이어` Collider를 먼저 찾고,
+  실패하면 마우스 광선을 따라 NavMesh 표면을 직접 찾습니다. `Test 2.unity`의 지면 레이어는
+  지형(`Default`)과 맞지 않게 `Effect`로 되어 있어 대부분 두 번째 방식으로 동작합니다.
 
 ---
 
@@ -135,3 +152,9 @@ Unity **2022.3.26f1** 타워 디펜스 RTS. 낮/밤이 한 사이클(= 웨이브
   확인할 수 있습니다: `WaveManager: 웨이브 1 (낮) — 스포너 3개에 적용: ...`
 - `UnitCommandDebugLog`가 유닛에 내려간 명령을 기록합니다.
 - 스폰 실패는 경고로 남습니다: `EnemySpawnUtility: 스폰 위치가 NavMesh에서 너무 멉니다.`
+- **성능 측정은 `PerfProbeReporter`를 씬 오브젝트에 붙여서** 합니다. 프레임이 튈 때
+  적 생성/초기화/목표 탐색/경로 계산 시간과 경로 대기 에이전트 수를, 플레이어 명령마다
+  경로 확정·이동 시작 지연을 콘솔에 남깁니다. Profiler에는 `Tank.*` 마커로 보입니다.
+  측정이 끝나면 끕니다(로그 자체가 에디터를 무겁게 합니다).
+- Profiler에서 튀는 프레임이 `EditorLoop`로만 커져 있으면 에디터 부담(콘솔 로그,
+  인스펙터, Scene 뷰 기즈모)이라 빌드와는 무관합니다. 게임 성능은 `PlayerLoop`로 판단합니다.
