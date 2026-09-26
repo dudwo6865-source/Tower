@@ -4,15 +4,19 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class BuildZoneProvider : MonoBehaviour
 {
+    [Label("소유자 ID")]
     [Tooltip("비워두면 SelectableEntity의 ownerId를 사용합니다.")]
     public int ownerId = 1;
 
+    [Label("건설 반경(칸)")]
     [Tooltip("건물 중심 기준 원형 건설 가능 반경(칸)입니다.")]
     public int buildRadiusCells = 12;
 
+    [Label("건설 구역 높이 오프셋")]
     [Tooltip("건설 구역(푸른 타일)을 지면 위로 띄울 높이(미터)입니다.")]
     public float buildZoneHeightOffset = 0.06f;
 
+    [Label("건설 구역 밖 배치 허용")]
     [Tooltip("이 건물 자체는 기존 건설 구역 밖에도 배치할 수 있습니다.")]
     public bool canPlaceOutsideBuildZones;
 

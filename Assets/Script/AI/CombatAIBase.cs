@@ -4,20 +4,25 @@
 [RequireComponent(typeof(UnitAttacker))]
 public abstract class CombatAIBase : MonoBehaviour
 {
-    [Header("Combat")]
+    [Header("전투")]
+    [Label("어그로 범위")]
     [Tooltip("이 범위 안의 적을 자동으로 탐지해 교전합니다.")]
     public float aggroRange = 30f;
 
+    [Label("공격 대상 우선순위")]
     [Tooltip("교전 대상 선택 우선순위입니다.")]
     public CombatTargetPriority targetPriority = CombatTargetPriority.Nearest;
 
+    [Label("대상 재탐색 간격(초)")]
     [Tooltip("목표를 다시 탐색하는 간격(초)입니다.")]
     public float retargetInterval = 0.5f;
 
+    [Label("대상 전환 거리 여유")]
     [Tooltip("이미 다른 대상과 교전/추격 중일 때, 새 공격자가 현재 대상보다 이만큼(m) 더 가까워야 대상을 전환합니다. 두 적이 번갈아 때릴 때 왔다 갔다 하는 것을 막습니다.")]
     public float damageFocusSwitchMargin = 2f;
 
-    [Header("Debug")]
+    [Header("디버그")]
+    [Label("명령 디버그 로그")]
     [Tooltip("전투 AI 결정을 Console에 출력합니다.")]
     public bool debugCommandLog;
 

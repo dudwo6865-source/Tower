@@ -15,12 +15,15 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class BuildingPlacementDissolveFX : MonoBehaviour
 {
+    [Label("지속 시간(초)")]
     [Tooltip("디졸브가 아래에서 위로 차오르는 시간(초)입니다.")]
     public float duration = 2.5f;
 
+    [Label("시작 여유")]
     [Tooltip("메시 하단 경계보다 얼마나 더 아래에서 시작할지(오브젝트 공간 단위)입니다.")]
     public float startMargin = 0.25f;
 
+    [Label("이징 커브")]
     public AnimationCurve easing = AnimationCurve.EaseInOut(0, 0, 1, 1);
 
     static readonly int DissolveHeightId = Shader.PropertyToID("_DissolveHeight");

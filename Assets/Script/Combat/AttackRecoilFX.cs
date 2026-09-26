@@ -11,18 +11,23 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class AttackRecoilFX : MonoBehaviour
 {
+    [Label("반동 대상")]
     [Tooltip("비워두면 UnitAttacker.aimTransform(타워는 포탑 피벗)을 자동으로 사용합니다.")]
     public Transform recoilTarget;
 
+    [Label("반동 거리")]
     [Tooltip("뒤로 밀리는 거리(로컬 단위)입니다.")]
     public float distance = 0.12f;
 
+    [Label("밀림 시간(초)")]
     [Tooltip("뒤로 튕기는(킥아웃) 시간(초)입니다.")]
     public float kickTime = 0.04f;
 
+    [Label("복귀 시간(초)")]
     [Tooltip("원위치로 돌아오는 시간(초)입니다.")]
     public float returnTime = 0.18f;
 
+    [Label("반동 축(로컬)")]
     [Tooltip("recoilTarget의 로컬 공간 기준 반동 축입니다. 기본은 뒤쪽(-Z)입니다.")]
     public Vector3 recoilAxisLocal = Vector3.back;
 

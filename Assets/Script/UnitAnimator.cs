@@ -4,24 +4,30 @@ using UnityEngine.AI;
 [DisallowMultipleComponent]
 public class UnitAnimator : MonoBehaviour
 {
-    [Header("Animator")]
+    [Header("애니메이터")]
+    [Label("애니메이터")]
     [Tooltip("애니메이터입니다. 비워두면 자식에서 자동으로 찾습니다.")]
     public Animator animator;
 
-    [Header("Parameters")]
+    [Header("파라미터")]
+    [Label("속도 파라미터")]
     [Tooltip("이동 속도 파라미터입니다. 0에 가까우면 Idle, 크면 Move로 전환합니다.")]
     public string speedParameter = "Speed";
 
+    [Label("공격 트리거")]
     [Tooltip("공격 1회 재생 트리거입니다.")]
     public string attackTrigger = "Attack";
 
+    [Label("사망 트리거")]
     [Tooltip("사망 상태 전환 트리거입니다.")]
     public string dieTrigger = "Die";
 
-    [Header("Movement")]
+    [Header("이동")]
+    [Label("이동 판정 속도")]
     [Tooltip("이 속도 미만이면 Idle, 이상이면 Move로 판정합니다.")]
     public float moveSpeedThreshold = 0.1f;
 
+    [Label("이동 애니메이션 사용")]
     [Tooltip("이동 애니메이션이 없는 유닛(타워 등)은 끄세요.")]
     public bool useMoveAnimation = true;
 

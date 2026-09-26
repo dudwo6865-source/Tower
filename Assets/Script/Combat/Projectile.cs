@@ -4,13 +4,16 @@ using UnityEngine;
 
 public class Projectile : MonoBehaviour
 {
+    [Label("최대 수명(초)")]
     [Tooltip("투사체가 사라지기까지의 최대 생존 시간(초)입니다.")]
     public float maxLifeTime = 5f;
 
     [Header("회전(스핀) 연출")]
+    [Label("회전 속도")]
     [Tooltip("비행 중 초당 회전 각도입니다. 0이면 회전하지 않습니다.")]
     public float spinSpeed = 900f;
 
+    [Label("회전 축(로컬)")]
     [Tooltip("회전축(로컬 좌표)입니다. 발사 방향은 로컬 Z(forward)이므로, 기본값인 로컬 X(오른쪽)처럼 " +
         "forward와 수직한 축을 쓰면 총알이 옆으로 텀블링하며 날아가는 것처럼 보입니다.")]
     public Vector3 spinAxisLocal = Vector3.right;

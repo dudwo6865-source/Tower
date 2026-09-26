@@ -5,28 +5,36 @@ using UnityEngine;
     menuName = "Tank/Buildable Production Data")]
 public class BuildableProductionData : ScriptableObject, IBuildablePlacementData
 {
-    [Header("Display")]
+    [Header("표시")]
+    [Label("표시 이름")]
     public string displayName = "Barracks";
 
+    [Label("아이콘")]
     [Tooltip("빌드 버튼에 표시할 아이콘입니다. 비워두면 프리팹의 SelectableEntity.portrait를 사용합니다.")]
     public Sprite icon;
 
+    [Label("설명")]
     [TextArea]
     public string description;
 
-    [Header("Build")]
+    [Header("건설")]
+    [Label("건물 프리팹")]
     public GameObject prefab;
 
+    [Label("Watt 비용")]
     [Tooltip("배치 확정 시 소비되는 Watt입니다.")]
     public int wattCost = 75;
 
+    [Label("소유자 ID")]
     [Tooltip("배치되는 건물의 소유자 ID입니다.")]
     public int ownerId = 1;
 
+    [Label("타입 ID")]
     [Tooltip("더블클릭 시 같은 종류로 묶을 타입 ID입니다.")]
     public string entityTypeId;
 
-    [Header("Production")]
+    [Header("생산")]
+    [Label("생산 레시피")]
     public ProductionRecipe recipe;
 
     public string BuildAssetName => name;

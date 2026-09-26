@@ -14,10 +14,12 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class HitFlash : MonoBehaviour
 {
+    [Label("번쩍임 색")]
     [ColorUsage(true, true)]
     [Tooltip("피격 시 튕기는 발광 색상입니다. 색상 피커의 Intensity 슬라이더로 밝기(강도)를 조절하세요(1보다 큰 값일수록 더 강하게 번쩍입니다).")]
     public Color flashColor = new Color(191f, 22f, 0f, 1f);
 
+    [Label("지속 시간(초)")]
     [Tooltip("플래시 색에서 원래 색으로 돌아오는 데 걸리는 시간(초)입니다.")]
     public float duration = 0.5f;
 

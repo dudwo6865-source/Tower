@@ -109,7 +109,7 @@ public class UnitAttackerEditor : Editor
     {
         serializedObject.Update();
 
-        EditorGUILayout.LabelField("Attack", EditorStyles.boldLabel);
+        EditorGUILayout.LabelField("공격", EditorStyles.boldLabel);
         EditorGUILayout.PropertyField(attackType);
         EditorGUILayout.PropertyField(attackDamage);
         EditorGUILayout.PropertyField(attackRange);
@@ -126,38 +126,38 @@ public class UnitAttackerEditor : Editor
         bool showBeam = mixedType || type == AttackType.PiercingBeam;
 
         EditorGUILayout.Space();
-        EditorGUILayout.LabelField("Animation", EditorStyles.boldLabel);
+        EditorGUILayout.LabelField("애니메이션", EditorStyles.boldLabel);
         EditorGUILayout.PropertyField(useAttackAnimationEvent);
 
         EditorGUILayout.Space();
-        EditorGUILayout.LabelField("Fire Point", EditorStyles.boldLabel);
+        EditorGUILayout.LabelField("발사 위치", EditorStyles.boldLabel);
         EditorGUILayout.PropertyField(firePoint);
 
         if (showProjectile)
         {
             EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Ranged / Cannon", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("원거리 / 포", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(projectileSpeed);
         }
 
         if (showFlamethrower)
         {
             EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Flamethrower", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("화염방사", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(pierceHitRadius);
         }
 
         if (showBeam)
         {
             EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Piercing Beam", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("관통 빔", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(beamWidth);
         }
 
         if (showCannon)
         {
             EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Cannon", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("포", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(minAttackRange);
             EditorGUILayout.PropertyField(useBallisticArc);
 
@@ -190,27 +190,27 @@ public class UnitAttackerEditor : Editor
         if (showHitscan)
         {
             EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Hitscan / Piercing Beam Trail", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("히트스캔 / 관통 빔 궤적", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(hitscanTrailPrefab);
             EditorGUILayout.PropertyField(hitscanTrailDuration);
             EditorGUILayout.PropertyField(hitscanTrailWidth);
         }
 
         EditorGUILayout.Space();
-        EditorGUILayout.LabelField("Aim", EditorStyles.boldLabel);
+        EditorGUILayout.LabelField("조준", EditorStyles.boldLabel);
         EditorGUILayout.PropertyField(requireFacingToAttack);
         EditorGUILayout.PropertyField(aimAngleTolerance);
         EditorGUILayout.PropertyField(aimTransform);
         EditorGUILayout.PropertyField(aimYawOffset);
 
         EditorGUILayout.Space();
-        EditorGUILayout.LabelField("Visuals", EditorStyles.boldLabel);
+        EditorGUILayout.LabelField("시각 효과", EditorStyles.boldLabel);
         EditorGUILayout.PropertyField(spawnVisualEffects);
         EditorGUILayout.PropertyField(projectileColor);
         EditorGUILayout.PropertyField(hitColor);
 
         EditorGUILayout.Space();
-        EditorGUILayout.LabelField("Effect Prefabs", EditorStyles.boldLabel);
+        EditorGUILayout.LabelField("이펙트 프리팹", EditorStyles.boldLabel);
         EditorGUILayout.PropertyField(muzzleFlashPrefab);
         EditorGUILayout.PropertyField(hitEffectPrefab);
 

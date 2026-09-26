@@ -7,6 +7,7 @@ public class BuildZoneManager : MonoBehaviour
 {
     public static BuildZoneManager Instance { get; private set; }
 
+    [Label("본부 없이 건설 허용")]
     [Tooltip("건설 구역 제공 건물이 없을 때 건설을 허용합니다.")]
     public bool allowBuildWithoutHeadquarters;
 

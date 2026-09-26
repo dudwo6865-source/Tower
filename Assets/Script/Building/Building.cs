@@ -6,26 +6,33 @@ using UnityEngine.AI;
 [RequireComponent(typeof(SelectableEntity))]
 public class Building : MonoBehaviour
 {
+    [Label("유닛 데이터")]
     [Tooltip("건물 종류별 스탯 데이터입니다. 할당하면 시작 시 각 컴포넌트에 값을 적용합니다.")]
     public UnitData data;
 
-    [Header("Building")]
+    [Header("건물")]
+    [Label("본부")]
     [Tooltip("본부(HQ) 건물이면 Headquarters 컴포넌트를 사용합니다.")]
     public bool isHeadquarters;
 
+    [Label("건설 구역 제공")]
     [Tooltip("건설 구역을 추가로 제공하는 건물입니다. HQ 구역 밖에도 배치할 수 있습니다.")]
     public bool isBuildZoneProvider;
 
+    [Label("타워 AI 사용")]
     [Tooltip("공격 건물(타워)이면 TowerAI를 사용합니다. UnitCombatAI 대신 포탑 회전용 AI입니다.")]
     public bool useTowerAI = true;
 
+    [Label("생산 건물")]
     [Tooltip("일정 간격으로 유닛을 자동 생산하는 건물입니다.")]
     public bool isProductionBuilding;
 
+    [Label("생산 레시피")]
     [Tooltip("생산 규칙입니다. 비워두면 ProductionBuilding 컴포넌트 값을 사용합니다.")]
     public ProductionRecipe productionRecipe;
 
-    [Header("Relic")]
+    [Header("유물")]
+    [Label("벽 계열")]
     [Tooltip("벽 계열 건물이면 켭니다. '강화 장벽' 등 벽 전용 유물 효과의 적용 대상이 됩니다.")]
     public bool isWallCategory;
 

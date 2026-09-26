@@ -6,6 +6,7 @@ using UnityEngine.AI;
 [RequireComponent(typeof(SelectableEntity))]
 public class Unit : MonoBehaviour
 {
+    [Label("유닛 데이터")]
     [Tooltip("유닛 종류별 스탯 데이터입니다. 할당하면 시작 시 각 컴포넌트에 값을 적용합니다. 비워두면 각 컴포넌트의 인스펙터 값을 그대로 사용합니다.")]
     public UnitData data;
 

@@ -12,14 +12,17 @@ public class UpgradeManager : MonoBehaviour
 {
     public static UpgradeManager Instance { get; private set; }
 
-    [Header("Owner")]
+    [Header("소유자")]
+    [Label("플레이어 ID")]
     [Tooltip("업그레이드 혜택을 받는 플레이어 ID입니다.")]
     public int playerOwnerId = 1;
 
-    [Header("Upgrades")]
+    [Header("업그레이드")]
+    [Label("업그레이드 목록")]
     [Tooltip("이 게임에서 구매할 수 있는 업그레이드 목록입니다.")]
     public List<UpgradeDefinition> upgrades = new List<UpgradeDefinition>();
 
+    [Label("마석 매니저")]
     [Tooltip("비워두면 씬에서 ManaStoneManager를 자동으로 찾습니다.")]
     public ManaStoneManager manaStoneManager;
 

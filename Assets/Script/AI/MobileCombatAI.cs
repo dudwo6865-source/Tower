@@ -8,34 +8,43 @@ using UnityEngine.AI;
 [RequireComponent(typeof(NavMeshAgent))]
 public abstract class MobileCombatAI : CombatAIBase
 {
-    [Header("Movement")]
+    [Header("이동")]
+    [Label("정지 거리")]
     [Tooltip("대상에 접근할 때 NavMeshAgent stoppingDistance 상한입니다.")]
     public float stoppingDistance = 2f;
 
+    [Label("목적지 갱신 간격(초)")]
     [Tooltip("움직이는 대상을 추격할 때 목적지를 갱신하는 간격(초)입니다.")]
     public float destinationRefreshInterval = 0.25f;
 
+    [Label("목적지 갱신 이동 거리")]
     [Tooltip("대상이 이 거리(m) 이상 이동했을 때만 추격 목적지를 갱신합니다.")]
     public float destinationMoveThreshold = 1f;
 
+    [Label("경로 막힘 대기(초)")]
     [Tooltip("사거리 밖에서 진행이 없을 때 경로를 다시 계산하기까지 대기 시간(초)입니다.")]
     public float pathStuckTimeout = 0.75f;
 
+    [Label("조준 회전 속도")]
     [Tooltip("정지 후 대상을 바라보는 회전 속도입니다.")]
     public float facingSpeed = 8f;
 
+    [Label("회피 우선순위 최소")]
     [Tooltip("스폰 시 NavMeshAgent avoidancePriority 하한입니다.")]
     public int avoidancePriorityMin = 30;
 
+    [Label("회피 우선순위 최대")]
     [Tooltip("스폰 시 NavMeshAgent avoidancePriority 상한입니다.")]
     public int avoidancePriorityMax = 70;
 
-    [Header("Building Approach")]
+    [Header("건물 접근")]
+    [Label("건물 직행 추격 거리")]
     [Tooltip("건물 추격 중 우회 접근점 대신 건물로 직행하기 시작하는 거리(m)입니다. " +
         "건물 외곽과 자신 외곽 사이 간격 기준이며, 0 이하면 Aggro Range를 씁니다.")]
     public float buildingDirectChaseRange;
 
-    [Header("Group Aggro")]
+    [Header("무리 어그로")]
+    [Label("아군과 어그로 공유")]
     [Tooltip("켜면 이 유닛이나 같은 오너 건물이 공격받았을 때, 어그로 범위 안의 아군 유닛들이 같은 적을 함께 공격합니다.")]
     public bool shareAggroWithAllies = true;
 

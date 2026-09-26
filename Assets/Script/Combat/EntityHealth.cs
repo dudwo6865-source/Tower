@@ -7,20 +7,25 @@ using UnityEngine.AI;
 [RequireComponent(typeof(SelectableEntity))]
 public class EntityHealth : MonoBehaviour
 {
-    [Header("Health")]
+    [Header("체력")]
+    [Label("최대 체력")]
     [Tooltip("이 엔티티의 최대 체력입니다.")]
     public float maxHealth = 100f;
 
-    [Header("Death")]
+    [Header("사망")]
+    [Label("사망 연출 시간(초)")]
     [Tooltip("사망 시 가라앉으며 사라지는 연출 시간(초)입니다. 0이면 즉시 제거합니다.")]
     public float deathAnimationDuration = 1f;
 
+    [Label("사망 시 가라앉는 거리")]
     [Tooltip("사망 연출 동안 아래로 가라앉는 거리입니다.")]
     public float deathSinkDistance = 1.5f;
 
+    [Label("사망 이펙트 색")]
     [Tooltip("사망 시 표시할 이펙트 색상입니다. deathEffectPrefab이 없을 때만 사용됩니다.")]
     public Color deathEffectColor = new Color(0.3f, 0.3f, 0.3f, 1f);
 
+    [Label("사망 이펙트 프리팹")]
     [Tooltip("사망·파괴 시 재생할 이펙트·파티클 프리팹입니다.")]
     public GameObject deathEffectPrefab;
 

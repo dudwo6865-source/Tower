@@ -12,29 +12,36 @@ public enum SelectableEntityType
 
 public class SelectableEntity : MonoBehaviour
 {
-    [Header("Selection")]
+    [Header("선택")]
+    [Label("종류")]
     [Tooltip("이 오브젝트의 종류입니다. 유닛 또는 건물.")]
     public SelectableEntityType entityType = SelectableEntityType.Unit;
 
+    [Label("소유자 ID")]
     [Tooltip("소유 플레이어 ID입니다. 로컬 플레이어와 같아야 선택할 수 있습니다.")]
     public int ownerId = 1;
 
+    [Label("타입 ID")]
     [Tooltip("같은 타입 전체 선택(더블클릭)에 사용되는 타입 ID입니다. 예: tank, barracks")]
     public string entityTypeId = "unit";
 
+    [Label("타입 ID 자동 설정")]
     [Tooltip("체크하면 entityTypeId를 이 프리팹의 이름으로 자동 설정합니다. " +
         "직접 다른 값을 쓰고 싶다면(예: 여러 프리팹을 같은 그룹으로 묶기) 체크를 해제하세요. " +
         "UnitData의 entityTypeId가 채워져 있으면 런타임에는 그 값이 우선 적용됩니다.")]
     public bool autoAssignEntityTypeId = true;
 
+    [Label("선택 콜라이더")]
     [Tooltip("선택/체력바 기준이 되는 콜라이더입니다. 비워두면 자식에서 자동으로 찾습니다. (Root 본의 콜라이더 등)")]
     public Collider selectionCollider;
 
     [Header("UI")]
+    [Label("초상화")]
     [Tooltip("선택 정보 패널 등에 표시할 초상화입니다. 비워두면 UnitData.portrait를 사용합니다.")]
     public Sprite portrait;
 
-    [Header("Health")]
+    [Header("체력")]
+    [Label("체력 자동 설정")]
     [Tooltip("EntityHealth와 WorldHealthBar가 없으면 자동으로 추가합니다.")]
     public bool autoSetupHealth = true;
 

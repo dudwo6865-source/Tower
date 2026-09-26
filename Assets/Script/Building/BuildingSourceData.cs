@@ -7,6 +7,7 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class BuildingSourceData : MonoBehaviour
 {
+    [Label("원본 데이터")]
     [Tooltip("런타임 배치 시 자동으로 채워집니다. 씬에 미리 놓아둔 건물만 직접 지정하세요.")]
     public ScriptableObject sourceData;
 

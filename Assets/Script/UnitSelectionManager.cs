@@ -13,24 +13,30 @@ public class UnitSelectionManager : MonoBehaviour
 {
     public static UnitSelectionManager Instance { get; private set; }
 
-    [Header("References")]
+    [Header("참조")]
+    [Label("카메라 컨트롤러")]
     [Tooltip("유닛 더블클릭·스페이스바 중심 이동에 사용할 RTS 카메라 컨트롤러입니다.")]
     public RTSCameraPivotController cameraController;
 
-    [Header("Player")]
+    [Header("플레이어")]
+    [Label("로컬 플레이어 ID")]
     [Tooltip("로컬 플레이어의 소유자 ID입니다. 이 ID와 같은 유닛·건물만 선택할 수 있습니다.")]
     public int localPlayerOwnerId = 1;
 
-    [Header("Selection")]
+    [Header("선택")]
+    [Label("더블클릭 간격(초)")]
     [Tooltip("같은 유닛을 연속 클릭할 때 더블클릭으로 인식하는 최대 시간(초)입니다.")]
     public float doubleClickThreshold = 0.3f;
 
+    [Label("드래그 판정(픽셀)")]
     [Tooltip("이 픽셀 이상 드래그하면 클릭이 아닌 박스 선택으로 처리합니다.")]
     public float dragThreshold = 8f;
 
+    [Label("선택 타입 필터")]
     [Tooltip("단일 클릭·더블클릭 선택에만 적용됩니다. 드래그 박스 선택은 종류와 관계없이 범위 안 전체를 고릅니다.")]
     public SelectionTypeFilter typeFilter = SelectionTypeFilter.All;
 
+    [Label("적 단일 선택 허용")]
     [Tooltip("켜면 적(다른 오너) 유닛·건물도 단일 클릭으로 선택해 정보를 볼 수 있습니다. 드래그 박스·다중 선택에는 포함되지 않습니다.")]
     public bool allowEnemySingleSelect = true;
 

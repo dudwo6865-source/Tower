@@ -134,6 +134,7 @@ public class AiPathBudgetSettings : MonoBehaviour
 {
     public static AiPathBudgetSettings Instance { get; private set; }
 
+    [Label("프레임당 경로 계산 수")]
     [Tooltip("프레임당 허용하는 무거운 접근점/추격 경로 계산 횟수입니다. " +
              "0이면 제한 없음이라 유닛이 많을 때 한 프레임에 계산이 몰려 화면이 멈칫합니다. " +
              "예산을 넘긴 유닛은 기존 경로로 계속 걷다가 다음 프레임에 다시 시도합니다. " +
@@ -142,6 +143,7 @@ public class AiPathBudgetSettings : MonoBehaviour
     public int maxHeavyPathRequestsPerFrame =
         AiPathBudget.DefaultMaxHeavyPathRequestsPerFrame;
 
+    [Label("건물 접근 경로 계산 수")]
     [Tooltip("건물 주변 접근점 하나를 고를 때 돌려볼 경로 계산 최대 횟수입니다. " +
              "표적이 벽이나 타워로 완전히 막혔을 때만 이 횟수까지 올라갑니다. " +
              "낮출수록 가볍고, 올릴수록 막힌 건물 주변을 더 꼼꼼히 돌아봅니다.")]

@@ -6,6 +6,7 @@ public class UnitCommandIndicatorTracker : MonoBehaviour
 {
     public static UnitCommandIndicatorTracker Instance { get; private set; }
 
+    [Label("도착 판정 여유")]
     [SerializeField] float arrivalPadding = 0.35f;
 
     readonly List<MoveTrackEntry> moveTracks = new List<MoveTrackEntry>();

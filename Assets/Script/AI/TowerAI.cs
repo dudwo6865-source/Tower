@@ -2,17 +2,21 @@ using UnityEngine;
 
 public class TowerAI : CombatAIBase
 {
-    [Header("Turret")]
+    [Header("포탑")]
+    [Label("포탑 회전축")]
     [Tooltip("적을 향해 회전시킬 포탑 트랜스폼입니다. 비워두면 이 오브젝트 자신을 회전합니다. " +
              "모델 기울기(-90 X 등)는 이 트랜스폼의 '자식' 메쉬에 두어야 회전 시 똑바로 섭니다.")]
     public Transform turretPivot;
 
+    [Label("포탑 회전 속도")]
     [Tooltip("포탑이 대상을 바라보는 회전 속도입니다.")]
     public float facingSpeed = 8f;
 
+    [Label("조준 Yaw 보정")]
     [Tooltip("포신 방향에 더하는 Y축 보정(도)입니다. Fire Point를 포신 끝에 두면 0으로 두세요.")]
     public float aimYawOffset;
 
+    [Label("대상 없으면 원위치")]
     [Tooltip("대상이 없을 때 처음 바라보던 방향으로 천천히 돌아갑니다.")]
     public bool returnToIdleWhenNoTarget = true;
 

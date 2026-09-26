@@ -14,7 +14,8 @@ public enum UnitOrderState
 /// </summary>
 public class UnitCombatAI : MobileCombatAI
 {
-    [Header("Orders")]
+    [Header("명령")]
+    [Label("정찰 지점 도착 거리")]
     [Tooltip("순찰 지점 도착로 판정 거리입니다.")]
     public float patrolArrivalDistance = 1.25f;
 

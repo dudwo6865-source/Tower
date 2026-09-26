@@ -5,33 +5,42 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class ProductionBuilding : MonoBehaviour
 {
-    [Header("Production")]
+    [Header("생산")]
+    [Label("생산 레시피")]
     [Tooltip("생산 규칙입니다. 비워두면 Building 또는 배치 데이터의 recipe를 사용합니다.")]
     public ProductionRecipe recipe;
 
+    [Label("스폰 위치")]
     [Tooltip("유닛이 생성될 위치입니다. 비워두면 건물 위치에서 스폰합니다.")]
     public Transform spawnPoint;
 
+    [Label("스폰 링 간격")]
     [Tooltip("건물 외곽에서 얼마나 떨어져 링을 배치할지(미터)입니다. 0이면 모두 스폰 포인트에 겹칩니다.")]
     public float spawnScatterSpacing = 1.2f;
 
+    [Label("링당 슬롯 수")]
     [Tooltip("건물 둘레 한 링에 배치할 슬롯 수입니다. 슬롯이 가득 차면 바깥 링으로 확장합니다.")]
     [Min(3)]
     public int spawnRingSlots = 8;
 
+    [Label("자동 생산 시작")]
     [Tooltip("건물이 준비되면 자동으로 생산을 시작합니다.")]
     public bool autoStart = true;
 
-    [Header("Rally")]
+    [Header("집결지")]
+    [Label("집결지 사용")]
     [Tooltip("생산된 유닛이 이동할 렐리 포인트를 표시합니다.")]
     public bool hasRallyPoint;
 
+    [Label("집결지 좌표")]
     [Tooltip("렐리 포인트 월드 좌표입니다.")]
     public Vector3 rallyPointWorld;
 
+    [Label("집결지 표시 색")]
     [Tooltip("렐리 포인트 링 색상입니다.")]
     public Color rallyMarkerColor = new Color(1f, 0.65f, 0.15f, 0.95f);
 
+    [Label("집결지 표시 반지름")]
     [Tooltip("렐리 포인트 링 반지름입니다.")]
     public float rallyMarkerRadius = 1.1f;
 
@@ -131,6 +140,31 @@ public class ProductionBuilding : MonoBehaviour
 
     bool waitingForWatt;
 
+    // 활성화된 생산 건물 목록. WattManager가 전체 초당 소모량을 합산할 때 쓴다.
+    static readonly List<ProductionBuilding> activeBuildings = new List<ProductionBuilding>();
+
+    // 지금 생산 중인 모든 건물의 초당 Watt 소모량 합계를 구한다.
+    public static float GetTotalWattDrainPerSecond()
+    {
+        float total = 0f;
+
+        for (int i = 0; i < activeBuildings.Count; i++)
+        {
+            ProductionBuilding building = activeBuildings[i];
+
+            if (building != null)
+                total += building.CurrentWattDrainPerSecond;
+        }
+
+        return total;
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics()
+    {
+        activeBuildings.Clear();
+    }
+
     void Awake()
     {
         selectableEntity = GetComponent<SelectableEntity>();
@@ -139,6 +173,9 @@ public class ProductionBuilding : MonoBehaviour
 
     void OnEnable()
     {
+        if (!activeBuildings.Contains(this))
+            activeBuildings.Add(this);
+
         if (buildingHealth != null)
             buildingHealth.OnDied += HandleBuildingDied;
 
@@ -156,6 +193,8 @@ public class ProductionBuilding : MonoBehaviour
 
     void OnDisable()
     {
+        activeBuildings.Remove(this);
+
         if (buildingHealth != null)
             buildingHealth.OnDied -= HandleBuildingDied;
 

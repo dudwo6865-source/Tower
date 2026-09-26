@@ -10,18 +10,22 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class BuildingConstructionGate : MonoBehaviour
 {
-    [Header("Feature Lock")]
+    [Header("기능 잠금")]
+    [Label("기능 잠금 시간(초)")]
     [Tooltip("설치 후 명령/생산/공격이 막히는 시간(초)입니다. 0이면 잠금 없음.")]
     public float featureLockDuration = 2f;
 
-    [Header("Place Animation")]
+    [Header("배치 애니메이션")]
+    [Label("애니메이터")]
     [Tooltip("비워두면 자식 포함 Animator를 자동으로 찾습니다.")]
     public Animator animator;
 
+    [Label("배치 애니메이션 트리거")]
     [Tooltip("설치 시 재생할 Animator 트리거 이름입니다. 비우면 애니는 생략합니다.")]
     public string placeAnimationTrigger = "Place";
 
-    [Header("Place Shader FX")]
+    [Header("배치 셰이더 연출")]
+    [Label("디졸브 연출")]
     [Tooltip("비워두면 자식에서 찾거나 없으면 자동으로 추가합니다.")]
     public BuildingPlacementDissolveFX dissolveFX;
 

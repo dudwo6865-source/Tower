@@ -32,48 +32,61 @@ public class TowerPlacementController : MonoBehaviour
 {
     public static TowerPlacementController Instance { get; private set; }
 
-    [Header("Player")]
+    [Header("플레이어")]
+    [Label("로컬 플레이어 ID")]
     [Tooltip("비워두면 UnitSelectionManager의 로컬 플레이어 ID를 사용합니다.")]
     public int localPlayerOwnerId = 1;
 
-    [Header("Placement")]
+    [Header("배치")]
+    [Label("지면 레이어")]
     [Tooltip("배치 위치를 찾을 때 사용할 지면 레이어입니다. Everything이면 모든 Collider를 검사합니다.")]
     public LayerMask groundMask = ~0;
 
+    [Label("배치 가능 색")]
     [Tooltip("배치 가능할 때 고스트 색입니다.")]
     public Color validGhostColor = new Color(0.2f, 0.95f, 0.35f, 0.55f);
 
+    [Label("배치 불가 색")]
     [Tooltip("배치 불가일 때 고스트 색입니다.")]
     public Color invalidGhostColor = new Color(0.95f, 0.25f, 0.25f, 0.55f);
 
-    [Header("Audio")]
+    [Header("오디오")]
+    [Label("배치 사운드")]
     [Tooltip("건물 배치가 확정될 때 재생할 사운드입니다.")]
     public AudioClip placementSound;
 
+    [Label("배치 사운드 볼륨")]
     [Tooltip("배치 사운드 볼륨입니다.")]
     [Range(0f, 1f)]
     public float placementSoundVolume = 1f;
 
+    [Label("배치 실패 사운드")]
     [Tooltip("배치에 실패했을 때 재생할 사운드입니다.")]
     public AudioClip failedPlacementSound;
 
+    [Label("배치 실패 사운드 볼륨")]
     [Tooltip("배치 실패 사운드 볼륨입니다.")]
     [Range(0f, 1f)]
     public float failedPlacementSoundVolume = 1f;
 
+    [Label("맵 거리 기준 감쇠")]
     [Tooltip("켜면 맵 XZ 거리에 따라 볼륨을 줄입니다. 끄면 2D로 재생합니다.")]
     public bool placementSoundUseMapDistance;
 
+    [Label("사운드 최소 거리")]
     [Tooltip("맵 거리 감쇠 시작 거리입니다.")]
     public float placementSoundMinDistance = 8f;
 
+    [Label("사운드 최대 거리")]
     [Tooltip("맵 거리 감쇠 무음 거리입니다.")]
     public float placementSoundMaxDistance = 120f;
 
-    [Header("Construction")]
+    [Header("건설")]
+    [Label("기본 기능 잠금 시간(초)")]
     [Tooltip("프리팹에 BuildingConstructionGate가 없을 때 추가하며 쓰는 기본 기능 잠금 시간(초)입니다.")]
     public float defaultFeatureLockDuration = 2f;
 
+    [Label("기본 배치 애니메이션 트리거")]
     [Tooltip("프리팹에 BuildingConstructionGate가 없을 때 추가하며 쓰는 Place 애니 트리거 이름입니다.")]
     public string defaultPlaceAnimationTrigger = "Place";
 

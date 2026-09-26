@@ -6,23 +6,29 @@ public class UnitCommandController : MonoBehaviour
 {
     public static UnitCommandController Instance { get; private set; }
 
-    [Header("Input")]
+    [Header("입력")]
+    [Label("명령 마우스 버튼")]
     [Tooltip("Move/Attack/Patrol 모드에서 지형·대상을 지정할 마우스 버튼입니다. (0=좌클릭, 1=우클릭)")]
     public int commandMouseButton = 0;
 
+    [Label("Esc로 모드 취소")]
     [Tooltip("Esc 키로 대기 중인 명령 모드를 취소합니다.")]
     public bool cancelModeWithEscape = true;
 
+    [Label("우클릭으로 모드 취소")]
     [Tooltip("우클릭으로 대기 중인 명령 모드를 취소합니다. 취소에 쓰인 우클릭은 이동 명령으로 이어지지 않습니다.")]
     public bool cancelModeWithRightClick = true;
 
-    [Header("Command Cursor Ring")]
+    [Header("명령 커서 링")]
+    [Label("정찰 커서 색")]
     [Tooltip("정찰(Patrol) 명령의 커서 링 색입니다.")]
     public Color patrolCursorColor = new Color(0.3f, 0.7f, 1f, 0.95f);
 
+    [Label("집결지 커서 색")]
     [Tooltip("집결지(Rally Point) 명령의 커서 링 색입니다.")]
     public Color rallyCursorColor = new Color(1f, 0.85f, 0.25f, 0.95f);
 
+    [Label("지면 표시 유지 시간(초)")]
     [Tooltip("움직일 수 없는 건물만 선택한 채로 바닥에 명령을 찍었을 때, 지면 표시가 남아 있는 시간(초)입니다.")]
     public float groundCommandMarkerSeconds = 1.2f;
 

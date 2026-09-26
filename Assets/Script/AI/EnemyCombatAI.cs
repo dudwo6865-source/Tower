@@ -9,27 +9,34 @@ using UnityEngine.AI;
 /// </summary>
 public class EnemyCombatAI : MobileCombatAI
 {
-    [Header("Behavior")]
+    [Header("행동")]
+    [Label("적 건물로 진군")]
     [Tooltip("어그로 범위에 적이 없으면 상대 HQ로 진군합니다.")]
     public bool advanceToEnemyBuildings = true;
 
-    [Header("Squad")]
+    [Header("분대")]
+    [Label("주변 아군과 대상 공유")]
     [Tooltip("먼저 Update된 유닛이 리더가 되고, 범위 안 아군은 타겟 탐색과 SetDestination을 하지 않습니다. 어그로 범위의 적 유닛, 또는 사거리 안의 건물이 있으면 그 유닛만 리더를 무시합니다.")]
     public bool shareTargetWithNearbyAllies = true;
+    [Label("분대 반경")]
     [Tooltip("이 거리 안의 같은 진영 적 유닛을 한 스쿼드로 봅니다.")]
     public float squadRadius = 12f;
 
+    [Label("분대 좌우 간격")]
     [Tooltip("팔로워가 리더 기준 좌우로 벌어지는 폭(m)입니다. 0이면 리더 좌표로 몰립니다.")]
     public float squadFollowSpread = 2.5f;
 
+    [Label("분대 앞뒤 간격")]
     [Tooltip("팔로워가 리더 뒤로 물러나는 간격(m)입니다. 부채꼴 대형의 깊이입니다.")]
     public float squadFollowSpacing = 2f;
 
-    [Header("Building Chase")]
+    [Header("건물 추격")]
+    [Label("우회 판정 배수")]
     [Tooltip("직선 거리 대비 실제 경로가 이 배수 이상 길어지면(또는 경로가 끊기면) " +
         "가는 길을 막고 있는 다른 건물을 대신 공격 대상으로 삼습니다.")]
     public float detourRedirectMultiplier = 1.6f;
 
+    [Label("우회 검사 간격(초)")]
     [Tooltip("우회 여부를 다시 검사하는 간격(초)입니다.")]
     public float detourCheckInterval = 1f;
 

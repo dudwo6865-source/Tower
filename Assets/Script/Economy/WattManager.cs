@@ -7,12 +7,15 @@ public class WattManager : MonoBehaviour
     public static WattManager Instance { get; private set; }
 
     [Header("Watt")]
+    [Label("최대 Watt")]
     [Tooltip("Watt 최대 충전량입니다.")]
     public float maxWatt = 100f;
 
+    [Label("시작 Watt")]
     [Tooltip("배틀 시작 시 보유 Watt입니다.")]
     public float startingWatt = 50f;
 
+    [Label("초당 수입")]
     [Tooltip("초당 자동으로 증가하는 Watt입니다. HQ·점령지 연동은 나중에 추가할 수 있습니다.")]
     public float incomePerSecond = 5f;
 
@@ -43,6 +46,26 @@ public class WattManager : MonoBehaviour
         }
     }
 
+    // W01 고효율 발전기 보너스를 반영한 초당 수입입니다.
+    public float EffectiveIncomePerSecond
+    {
+        get
+        {
+            float income = Mathf.Max(0f, incomePerSecond);
+
+            if (RelicManager.Instance != null)
+                income = RelicManager.Instance.ApplyBonus(RelicEffectType.WattIncome, income);
+
+            return income;
+        }
+    }
+
+    // 생산 건물들이 지금 소모 중인 초당 Watt 합계입니다.
+    public float CurrentDrainPerSecond => ProductionBuilding.GetTotalWattDrainPerSecond();
+
+    // 초당 수입에서 초당 소모량을 뺀 순수입입니다. 음수면 Watt가 줄어듭니다.
+    public float NetIncomePerSecond => EffectiveIncomePerSecond - CurrentDrainPerSecond;
+
     public bool IsFull => MaxWatt > 0f && CurrentWatt >= MaxWatt - 0.001f;
 
     public event Action<float> OnWattChanged;
@@ -71,13 +94,7 @@ public class WattManager : MonoBehaviour
         if (incomePerSecond <= 0f || IsFull)
             return;
 
-        // W01 고효율 발전기: Watt 생산속도 보너스를 반영합니다.
-        float income = incomePerSecond;
-
-        if (RelicManager.Instance != null)
-            income = RelicManager.Instance.ApplyBonus(RelicEffectType.WattIncome, income);
-
-        AddWatt(income * Time.deltaTime);
+        AddWatt(EffectiveIncomePerSecond * Time.deltaTime);
     }
 
     public bool CanAfford(int cost)
