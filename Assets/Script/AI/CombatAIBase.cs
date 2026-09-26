@@ -100,10 +100,10 @@ public abstract class CombatAIBase : MonoBehaviour
     }
 
     // 스폰 직후 전원 동시 재탐색으로 프레임이 멈추지 않도록 타이머를 흩뿌린다.
+    // 인스턴스 ID는 연달아 생성하면 거의 같은 값이 나와 분산이 되지 않으므로 난수를 쓴다.
     protected void StaggerStartupTimers()
     {
-        float normalized = (GetInstanceID() & 0xFFFF) / 65535f;
-        retargetTimer = 0.05f + normalized * Mathf.Max(0.05f, retargetInterval);
+        retargetTimer = 0.05f + Random.value * Mathf.Max(0.05f, retargetInterval);
     }
 
     // 다음 프레임에 즉시 표적을 다시 탐색하도록 재탐색 타이머를 리셋한다.

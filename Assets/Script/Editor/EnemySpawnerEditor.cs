@@ -85,11 +85,15 @@ public class EnemySpawnerEditor : Editor
 
         EditorGUILayout.Space(4);
 
+        string pendingText = spawner.PendingSpawnCount > 0
+            ? $" · 생성 대기 {spawner.PendingSpawnCount}"
+            : string.Empty;
+
         EditorGUILayout.LabelField(
             "현재 생존",
-            spawner.EffectiveMaxAliveEnemies > 0
+            (spawner.EffectiveMaxAliveEnemies > 0
                 ? $"{spawner.AliveCount} / {spawner.EffectiveMaxAliveEnemies}"
-                : $"{spawner.AliveCount} (상한 없음)");
+                : $"{spawner.AliveCount} (상한 없음)") + pendingText);
 
         EditorGUILayout.LabelField("다음 스폰까지", $"{Mathf.Max(0f, spawner.SpawnCountdown):0.0}초");
         EditorGUILayout.LabelField("상태", DescribeState(spawner));

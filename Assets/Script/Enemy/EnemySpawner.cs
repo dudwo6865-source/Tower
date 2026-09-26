@@ -155,7 +155,11 @@ public class EnemySpawner : MonoBehaviour
 
     /// <summary>생존 상한에 걸려 스폰이 멈춰 있는지 여부입니다.</summary>
     public bool IsBlockedByAliveCap =>
-        EffectiveMaxAliveEnemies > 0 && AliveCount >= EffectiveMaxAliveEnemies;
+        EffectiveMaxAliveEnemies > 0 &&
+        AliveCount + PendingSpawnCount >= EffectiveMaxAliveEnemies;
+
+    /// <summary>생성 대기열(EnemySpawnScheduler)에 예약돼 아직 생성되지 않은 수입니다.</summary>
+    public int PendingSpawnCount { get; private set; }
 
     readonly List<EnemyCombatAI> spawnedAIs = new List<EnemyCombatAI>();
     EntityHealth health;
@@ -424,10 +428,10 @@ public class EnemySpawner : MonoBehaviour
 
         timer = Mathf.Max(0.1f, interval);
 
-        int spawned = SpawnBurst(count, respectAliveCap);
+        int queued = SpawnBurst(count, respectAliveCap);
 
-        if (logSpawnEvents && spawned > 0)
-            Debug.Log($"EnemySpawner '{name}': {triggerName} 스폰 {spawned}마리", this);
+        if (logSpawnEvents && queued > 0)
+            Debug.Log($"EnemySpawner '{name}': {triggerName} 스폰 {queued}마리 예약", this);
     }
 
     void HandlePhaseStarted(DayNightPhase phase)
@@ -461,29 +465,36 @@ public class EnemySpawner : MonoBehaviour
             return;
 
         // 파괴 시 방출은 생존 상한을 무시하고 정해진 수만큼 모두 스폰한다.
-        int spawned = SpawnBurst(EffectiveEnemiesOnDeath, respectAliveCap: false);
+        int queued = SpawnBurst(EffectiveEnemiesOnDeath, respectAliveCap: false);
 
         if (logSpawnEvents)
         {
             Debug.Log(
-                $"EnemySpawner '{name}': 파괴 방출 {spawned}/{EffectiveEnemiesOnDeath}마리",
+                $"EnemySpawner '{name}': 파괴 방출 {queued}/{EffectiveEnemiesOnDeath}마리 예약",
                 this);
         }
     }
 
-    /// <summary>실제로 스폰한 수를 돌려줍니다. (위치를 못 찾아 건너뛴 만큼 줄어듭니다)</summary>
+    /// <summary>
+    /// 생성 대기열에 예약한 수를 돌려줍니다. 실제 생성은 EnemySpawnScheduler가 여러 프레임에 나눠 합니다.
+    /// (위치를 못 찾으면 그 마리는 생성 시점에 건너뜁니다)
+    /// </summary>
     int SpawnBurst(int count, bool respectAliveCap)
     {
         if (count <= 0 || enemyPrefabs.Count == 0)
             return 0;
 
-        int spawned = 0;
+        // 예약 시점의 값을 붙잡아 둔다. 스포너가 먼저 파괴돼도(파괴 시 방출) 생성은 이어진다.
+        Vector3 center = transform.position;
+        WaveTuning spawnTuning = tuning;
+        int queued = 0;
 
         for (int i = 0; i < count; i++)
         {
+            // 아직 생성 전인 예약분도 생존 수로 친다. 안 그러면 대기 중에 상한을 넘겨 예약한다.
             if (respectAliveCap &&
                 EffectiveMaxAliveEnemies > 0 &&
-                AliveCount >= EffectiveMaxAliveEnemies)
+                AliveCount + PendingSpawnCount >= EffectiveMaxAliveEnemies)
                 break;
 
             GameObject prefab =
@@ -492,32 +503,44 @@ public class EnemySpawner : MonoBehaviour
             if (prefab == null)
                 continue;
 
-            Vector3 position = EnemySpawnUtility.GetRandomPositionInRadius(
-                transform.position,
-                spawnRadius,
-                avoidPlayerVision: false,
-                spawnPositionAttempts);
+            PendingSpawnCount++;
+            queued++;
 
-            // 웨이브 스탯 가중치를 여기서 적용한다. 스폰된 개체에만 붙으므로
-            // 이미 살아있는 적은 그대로 두고, 이후 스폰부터 강해진다.
-            GameObject enemyObject = EnemySpawnUtility.SpawnEnemy(
-                prefab,
-                position,
-                prefab.transform.rotation,
-                enemyOwnerId,
-                tuning.healthMultiplier,
-                tuning.damageMultiplier,
-                tuning.speedMultiplier,
-                TrackAlive);
-
-            if (enemyObject == null)
-                continue;
-
-            RegisterSpawnedEnemy(enemyObject);
-            spawned++;
+            EnemySpawnScheduler.Enqueue(() =>
+            {
+                PendingSpawnCount = Mathf.Max(0, PendingSpawnCount - 1);
+                SpawnOne(prefab, center, spawnTuning);
+            });
         }
 
-        return spawned;
+        return queued;
+    }
+
+    void SpawnOne(GameObject prefab, Vector3 center, WaveTuning spawnTuning)
+    {
+        if (prefab == null)
+            return;
+
+        Vector3 position = EnemySpawnUtility.GetRandomPositionInRadius(
+            center,
+            spawnRadius,
+            avoidPlayerVision: false,
+            spawnPositionAttempts);
+
+        // 웨이브 스탯 가중치를 여기서 적용한다. 스폰된 개체에만 붙으므로
+        // 이미 살아있는 적은 그대로 두고, 이후 스폰부터 강해진다.
+        GameObject enemyObject = EnemySpawnUtility.SpawnEnemy(
+            prefab,
+            position,
+            prefab.transform.rotation,
+            enemyOwnerId,
+            spawnTuning.healthMultiplier,
+            spawnTuning.damageMultiplier,
+            spawnTuning.speedMultiplier,
+            TrackAlive);
+
+        if (enemyObject != null)
+            RegisterSpawnedEnemy(enemyObject);
     }
 
     void RegisterSpawnedEnemy(GameObject enemyObject)

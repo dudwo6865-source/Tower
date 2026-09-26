@@ -106,8 +106,8 @@ public abstract class MobileCombatAI : CombatAIBase
         GridMovement.EnsureAgentOnNavMesh(agent);
         StaggerStartupTimers();
 
-        float normalized = (GetInstanceID() & 0xFFFF) / 65535f;
-        destinationTimer = 0.1f + normalized * Mathf.Max(0.2f, destinationRefreshInterval);
+        // 첫 경로 계산도 흩뿌린다. (연달아 생성된 적이 같은 프레임에 경로를 요청하지 않게)
+        destinationTimer = 0.1f + Random.value * Mathf.Max(0.2f, destinationRefreshInterval);
     }
 
     protected void UpdateCombat()
