@@ -27,6 +27,45 @@ public class UnitCombatAI : MobileCombatAI
     [Tooltip("켜면 플레이어가 지정한 공격 대상이 살아 있는 동안 다른 적에게 공격받아도 대상을 바꾸지 않습니다.")]
     public bool keepAttackOrderWhenAttacked = true;
 
+    [Header("이동 막힘 복구")]
+    [Label("막힘 판정 시간(초)")]
+    [Tooltip("일반 이동 중 이 시간 동안 목적지에 가까워지지 못하면 막힌 것으로 보고 경로를 다시 찾습니다. 0이면 막힘 복구를 하지 않습니다.")]
+    [Min(0f)]
+    public float moveStuckTimeout = 1.5f;
+
+    [Label("전진 판정 거리(m)")]
+    [Tooltip("막힘 판정 시간 안에 목적지까지 남은 거리가 이만큼 줄어야 전진한 것으로 봅니다.")]
+    [Min(0.01f)]
+    public float moveProgressThreshold = 0.3f;
+
+    [Label("경로 재탐색 횟수")]
+    [Tooltip("막혔을 때 경로를 다시 찾는 최대 횟수입니다. 모두 실패하면 이동을 포기합니다.")]
+    [Min(0)]
+    public int maxMoveRepathAttempts = 2;
+
+    [Label("혼잡 도착 반경(m)")]
+    [Tooltip("여러 유닛이 몰려 목적지에 딱 맞게 서지 못할 때, 목적지에서 이 거리 안에서 막히면 도착한 것으로 봅니다.")]
+    [Min(0f)]
+    public float crowdedArrivalRadius = 2.5f;
+
+    [Label("이동 불가 표시")]
+    [Tooltip("갈 수 없어 이동을 포기하면 목적지에 표시를 남깁니다.")]
+    public bool showUnreachableMarker = true;
+
+    [Label("이동 불가 표시 색")]
+    [Tooltip("이동을 포기했을 때 목적지에 남기는 표시 색입니다.")]
+    public Color unreachableMarkerColor = new Color(1f, 0.8f, 0.1f, 0.95f);
+
+    [Label("이동 불가 표시 시간(초)")]
+    [Tooltip("이동 불가 표시가 화면에 남아 있는 시간입니다.")]
+    [Min(0.05f)]
+    public float unreachableMarkerSeconds = 1.5f;
+
+    // 이동 막힘 판정 상태. 명령마다 새로 시작한다.
+    float moveBestDistance;
+    float moveStuckTimer;
+    int moveRepathCount;
+
     bool manualMoveActive;
     bool manualFocusTarget;
     bool attackMoveActive;
@@ -107,9 +146,119 @@ public class UnitCombatAI : MobileCombatAI
         }
 
         if (attackMoveActive)
+        {
             ResumeAttackMoveIfNeeded();
+        }
+        else if (UpdateMoveStuckRecovery())
+        {
+            // 도착으로 보거나 포기해서 이동 명령이 끝났다. 이번 프레임부터 일반 AI로 돌아간다.
+            return true;
+        }
 
         return false;
+    }
+
+    void ResetMoveStuckState()
+    {
+        moveBestDistance = float.MaxValue;
+        moveStuckTimer = 0f;
+        moveRepathCount = 0;
+    }
+
+    // 일반 이동이 막혔는지 보고 경로 재탐색 → 포기 순으로 복구한다.
+    // 이동 명령이 끝났으면(혼잡 도착 또는 포기) true를 반환한다.
+    bool UpdateMoveStuckRecovery()
+    {
+        if (moveStuckTimeout <= 0f || !hasManualDestination)
+            return false;
+
+        if (agent == null || !agent.isOnNavMesh || agent.pathPending)
+            return false;
+
+        Vector3 flat = transform.position - manualDestination;
+        flat.y = 0f;
+        float distance = flat.magnitude;
+
+        // 목적지에 가까워지고 있으면 막힘 타이머를 되돌린다.
+        if (distance < moveBestDistance - moveProgressThreshold)
+        {
+            moveBestDistance = distance;
+            moveStuckTimer = 0f;
+        }
+        else
+        {
+            moveStuckTimer += Time.deltaTime;
+        }
+
+        bool pathInvalid = agent.pathStatus == NavMeshPathStatus.PathInvalid;
+
+        // 경로가 끝났는데(혼잡해서 멈췄거나 경로를 잃음) 아직 목적지에 닿지 못한 경우.
+        bool pathLost = !agent.hasPath;
+
+        // 갈 수 있는 데까지만 경로가 잡혀(Partial) 그 끝에 도착한 경우.
+        bool partialPathEnded =
+            agent.pathStatus == NavMeshPathStatus.PathPartial &&
+            agent.remainingDistance <= agent.stoppingDistance + 0.1f;
+
+        if (!pathInvalid && !pathLost && !partialPathEnded && moveStuckTimer < moveStuckTimeout)
+            return false;
+
+        // 목적지 근처에서 다른 유닛에 막힌 것이면 도착으로 본다.
+        if (!pathInvalid && distance <= crowdedArrivalRadius)
+        {
+            UnitCommandDebugLog.Log(this, $"이동: 목적지 근처 혼잡으로 도착 처리 (남은 거리 {distance:F1}m)");
+            EndManualMove();
+            return true;
+        }
+
+        if (moveRepathCount < maxMoveRepathAttempts)
+        {
+            moveRepathCount++;
+            moveStuckTimer = 0f;
+            moveBestDistance = distance;
+
+            UnitCommandDebugLog.Log(this, $"이동: 막힘 감지, 경로 재탐색 {moveRepathCount}/{maxMoveRepathAttempts}");
+
+            if (GridMovement.TrySetAgentDestination(agent, manualDestination, immediate: true))
+                return false;
+        }
+
+        // 경로 자체는 온전한데(Complete) 못 가는 것은 다른 유닛에 막힌 경우다.
+        // 목적지는 갈 수 있는 곳이므로 표시 없이 그 자리에서 멈춘다.
+        if (agent.pathStatus == NavMeshPathStatus.PathComplete)
+        {
+            UnitCommandDebugLog.Log(this, $"이동: 다른 유닛에 막혀 그 자리에서 멈춤 (남은 거리 {distance:F1}m)");
+            EndManualMove();
+
+            if (agent.hasPath)
+                agent.ResetPath();
+
+            return true;
+        }
+
+        UnitCommandDebugLog.Log(this, $"이동: 목적지에 갈 수 없어 이동을 포기 ({FormatVector(manualDestination)})");
+
+        if (showUnreachableMarker)
+        {
+            UnitCommandIndicatorTracker.ShowPointMarker(
+                manualDestination,
+                unreachableMarkerColor,
+                unreachableMarkerSeconds);
+        }
+
+        EndManualMove();
+
+        if (agent.hasPath)
+            agent.ResetPath();
+
+        return true;
+    }
+
+    void EndManualMove()
+    {
+        manualMoveActive = false;
+        attackMoveActive = false;
+        hasManualDestination = false;
     }
 
     bool ReachedManualDestination()
@@ -316,6 +465,7 @@ public class UnitCombatAI : MobileCombatAI
         attackMoveActive = false;
         hasManualDestination = knownDestination;
         manualDestination = destination;
+        ResetMoveStuckState();
         currentTarget = null;
         currentTargetHealth = null;
         hasDestination = false;
