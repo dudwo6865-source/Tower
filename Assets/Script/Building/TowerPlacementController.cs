@@ -42,6 +42,21 @@ public class TowerPlacementController : MonoBehaviour
     [Tooltip("배치 위치를 찾을 때 사용할 지면 레이어입니다. Everything이면 모든 Collider를 검사합니다.")]
     public LayerMask groundMask = ~0;
 
+    [Label("지면 탐색 간격(m)")]
+    [Tooltip("지면 레이어에 맞는 Collider가 없을 때, 마우스 광선을 따라가며 NavMesh 표면을 찾는 간격입니다. 작을수록 정확하지만 무거워집니다.")]
+    [Min(0.05f)]
+    public float navMeshRayMarchStep = 0.5f;
+
+    [Label("지면 탐색 높이 여유(m)")]
+    [Tooltip("NavMesh 최고/최저 높이보다 이만큼 위아래까지 광선을 따라가며 찾습니다.")]
+    [Min(0f)]
+    public float navMeshRayMarchHeightPadding = 2f;
+
+    [Label("지면 탐색 최대 횟수")]
+    [Tooltip("한 프레임에 NavMesh 표면을 찾으려고 샘플링하는 최대 횟수입니다.")]
+    [Min(1)]
+    public int navMeshRayMarchMaxSteps = 400;
+
     [Label("배치 가능 색")]
     [Tooltip("배치 가능할 때 고스트 색입니다.")]
     public Color validGhostColor = new Color(0.2f, 0.95f, 0.35f, 0.55f);
@@ -525,39 +540,31 @@ public class TowerPlacementController : MonoBehaviour
             return false;
 
         Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
-
         MapGrid grid = MapGrid.Instance;
+        bool usesNavMesh = grid != null && grid.UsesNavMesh;
 
-        if (grid != null &&
-            grid.UsesNavMesh &&
-            NavMesh.Raycast(
-                ray.origin,
-                ray.origin + ray.direction * 1000f,
-                out NavMeshHit navRayHit,
-                grid.navMeshAreaMask))
-        {
-            placementPoint = navRayHit.position;
-            return true;
-        }
-
+        // 1순위: 지면 레이어 Collider. 맞은 지점 바로 아래 NavMesh로 보정한다.
         if (Physics.Raycast(ray, out RaycastHit hit, 1000f, groundMask))
         {
-            Vector3 candidate = hit.point;
+            if (!usesNavMesh)
+                return TryFinalizePlacementPoint(SnapToGround(hit.point), out placementPoint);
 
-            if (grid != null && grid.UsesNavMesh)
+            if (grid.TrySampleNavMeshAtXZ(hit.point, out NavMeshHit navHit))
             {
-                if (grid.TrySampleNavMeshAtXZ(candidate, out NavMeshHit navHit))
-                {
-                    placementPoint = navHit.position;
-                    return true;
-                }
-
-                return false;
+                placementPoint = navHit.position;
+                return true;
             }
 
-            return TryFinalizePlacementPoint(SnapToGround(candidate), out placementPoint);
+            // 유닛·건물 위를 맞혔거나 지면 레이어 설정이 틀렸을 수 있으므로
+            // 실패로 끝내지 않고 아래 NavMesh 탐색으로 넘어간다.
         }
 
+        // 2순위: 마우스 광선을 따라가며 NavMesh 표면을 직접 찾는다.
+        // Collider나 레이어 설정과 무관하게 동작하고, 위에서부터 찾으므로 다층 지형에서도 윗면을 고른다.
+        if (usesNavMesh)
+            return TryMarchRayToNavMesh(ray, grid, out placementPoint);
+
+        // NavMesh를 쓰지 않는 맵: 화면 중앙 지면 높이의 평면에 광선을 맞춘다.
         float groundY = MapPlayBounds.SampleGroundHeight(
             ray.origin + ray.direction * 50f);
 
@@ -569,7 +576,67 @@ public class TowerPlacementController : MonoBehaviour
             return false;
 
         placementPoint = SnapToGround(ray.GetPoint(distance));
-        return TryFinalizePlacementPoint(placementPoint, out placementPoint);
+        return true;
+    }
+
+    // 광선이 NavMesh 높이 범위에 들어오는 지점부터 일정 간격으로 내려가며,
+    // 광선이 NavMesh 표면에 닿거나 그 아래로 내려간 첫 지점을 찾는다.
+    bool TryMarchRayToNavMesh(Ray ray, MapGrid grid, out Vector3 placementPoint)
+    {
+        placementPoint = Vector3.zero;
+
+        // 위에서 내려다보는 광선만 처리한다. 수평에 가까우면 지면을 만나지 않는다.
+        if (ray.direction.y > -0.0001f)
+            return false;
+
+        float topY = grid.NavMeshMaxY + navMeshRayMarchHeightPadding;
+        float bottomY = grid.NavMeshMinY - navMeshRayMarchHeightPadding;
+
+        if (topY <= bottomY)
+        {
+            // NavMesh 높이 범위를 모르면(수동 바운즈 등) 넉넉한 범위로 찾는다.
+            topY = ray.origin.y;
+            bottomY = ray.origin.y - 1000f;
+        }
+
+        float startT = Mathf.Max(0f, (topY - ray.origin.y) / ray.direction.y);
+        float endT = (bottomY - ray.origin.y) / ray.direction.y;
+
+        if (endT <= startT)
+            return false;
+
+        float step = Mathf.Max(0.05f, navMeshRayMarchStep);
+        int maxSteps = Mathf.Max(1, navMeshRayMarchMaxSteps);
+        float sampleRadius = Mathf.Max(step, grid.CellSize * 0.5f);
+
+        for (int i = 0; i <= maxSteps; i++)
+        {
+            float t = startT + step * i;
+
+            if (t > endT)
+                break;
+
+            Vector3 point = ray.GetPoint(t);
+
+            if (!NavMesh.SamplePosition(point, out NavMeshHit hit, sampleRadius, grid.navMeshAreaMask))
+                continue;
+
+            // 광선이 아직 표면보다 한참 위면 계속 내려간다. (옆 칸의 표면이 잡힌 경우)
+            if (point.y - hit.position.y > step)
+                continue;
+
+            // 광선이 지나는 XZ에서 다시 표면을 잡아 커서 바로 아래 지점으로 맞춘다.
+            // 절벽 옆처럼 잡힌 표면이 커서 아래가 아니면 계속 내려간다.
+            if (!grid.TrySampleNavMeshAtXZ(
+                    new Vector3(point.x, hit.position.y, point.z),
+                    out NavMeshHit surfaceHit))
+                continue;
+
+            placementPoint = surfaceHit.position;
+            return true;
+        }
+
+        return false;
     }
 
     bool TryFinalizePlacementPoint(Vector3 candidate, out Vector3 placementPoint)
