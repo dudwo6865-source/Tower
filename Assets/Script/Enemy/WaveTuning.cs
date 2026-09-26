@@ -23,9 +23,12 @@ public class WaveTuning
     [Tooltip("스폰 간격 배율입니다. 1보다 작을수록 더 자주 스폰합니다.")]
     public float spawnIntervalMultiplier = 1f;
 
-    [Label("최대 생존 수 배율")]
-    [Tooltip("동시 생존 수 상한 배율입니다. 스포너 상한이 0(무제한)이면 무시됩니다.")]
-    public float maxAliveMultiplier = 1f;
+    [Label("최대 생존 수")]
+    [Tooltip("이 웨이브에 스포너 하나가 동시에 유지할 최대 생존 적 수(절댓값)입니다. " +
+             "0이면 스포너 인스펙터의 '최대 생존 적 수'를 그대로 씁니다. " +
+             "'이후 웨이브 증가율'에서는 웨이브마다 더할 수입니다.")]
+    [Min(0)]
+    public int maxAliveEnemies;
 
     [Header("적 스탯 가중치")]
     [Label("체력 배율")]
@@ -57,7 +60,7 @@ public class WaveTuning
         spawnCountMultiplier = source.spawnCountMultiplier;
         spawnCountBonus = source.spawnCountBonus;
         spawnIntervalMultiplier = source.spawnIntervalMultiplier;
-        maxAliveMultiplier = source.maxAliveMultiplier;
+        maxAliveEnemies = source.maxAliveEnemies;
         healthMultiplier = source.healthMultiplier;
         damageMultiplier = source.damageMultiplier;
         speedMultiplier = source.speedMultiplier;
@@ -72,7 +75,7 @@ public class WaveTuning
             spawnCountBonus = spawnCountBonus,
             // 0 이하가 되면 스폰 간격이 사라져 한 프레임에 무한 스폰한다.
             spawnIntervalMultiplier = Mathf.Max(0.01f, spawnIntervalMultiplier),
-            maxAliveMultiplier = Mathf.Max(0f, maxAliveMultiplier),
+            maxAliveEnemies = Mathf.Max(0, maxAliveEnemies),
             healthMultiplier = Mathf.Max(0.01f, healthMultiplier),
             damageMultiplier = Mathf.Max(0f, damageMultiplier),
             speedMultiplier = Mathf.Max(0.01f, speedMultiplier)
@@ -93,7 +96,10 @@ public class WaveTuning
         result.spawnCountMultiplier *= Mathf.Pow(growth.spawnCountMultiplier, times);
         result.spawnCountBonus += growth.spawnCountBonus * times;
         result.spawnIntervalMultiplier *= Mathf.Pow(growth.spawnIntervalMultiplier, times);
-        result.maxAliveMultiplier *= Mathf.Pow(growth.maxAliveMultiplier, times);
+        // 최대 생존 수는 절댓값이라 증가율을 웨이브마다 더한다.
+        // 0(스포너 값 사용)이면 더할 기준이 없으므로 그대로 둔다.
+        if (result.maxAliveEnemies > 0)
+            result.maxAliveEnemies = Mathf.Max(1, result.maxAliveEnemies + growth.maxAliveEnemies * times);
         result.healthMultiplier *= Mathf.Pow(growth.healthMultiplier, times);
         result.damageMultiplier *= Mathf.Pow(growth.damageMultiplier, times);
         result.speedMultiplier *= Mathf.Pow(growth.speedMultiplier, times);
@@ -136,7 +142,8 @@ public class WaveTuning
             spawnCountMultiplier = a.spawnCountMultiplier * b.spawnCountMultiplier,
             spawnCountBonus = a.spawnCountBonus + b.spawnCountBonus,
             spawnIntervalMultiplier = a.spawnIntervalMultiplier * b.spawnIntervalMultiplier,
-            maxAliveMultiplier = a.maxAliveMultiplier * b.maxAliveMultiplier,
+            // 최대 생존 수는 절댓값이라 곱하지 않고, b에 값이 있으면 b로 덮어쓴다.
+            maxAliveEnemies = b.maxAliveEnemies > 0 ? b.maxAliveEnemies : a.maxAliveEnemies,
             healthMultiplier = a.healthMultiplier * b.healthMultiplier,
             damageMultiplier = a.damageMultiplier * b.damageMultiplier,
             speedMultiplier = a.speedMultiplier * b.speedMultiplier
@@ -150,7 +157,9 @@ public class WaveTuning
             ? $"스폰 x{spawnCountMultiplier:0.##}{(spawnCountBonus > 0 ? "+" : "")}{spawnCountBonus}"
             : $"스폰 x{spawnCountMultiplier:0.##}";
 
-        return $"{count} / 간격 x{spawnIntervalMultiplier:0.##} / " +
+        string cap = maxAliveEnemies > 0 ? $" / 상한 {maxAliveEnemies}" : string.Empty;
+
+        return $"{count} / 간격 x{spawnIntervalMultiplier:0.##}{cap} / " +
                $"체력 x{healthMultiplier:0.##} / 공격 x{damageMultiplier:0.##} / 속도 x{speedMultiplier:0.##}";
     }
 }

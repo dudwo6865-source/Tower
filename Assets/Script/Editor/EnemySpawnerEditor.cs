@@ -180,15 +180,6 @@ public class EnemySpawnerEditor : Editor
                 MessageType.Error);
         }
 
-        if (spawner.BaseMaxAliveEnemies > 1 && spawner.EffectiveMaxAliveEnemies == 1)
-        {
-            EditorGUILayout.HelpBox(
-                $"동시 생존 상한이 1로 줄었습니다. 웨이브의 Max Alive Multiplier가 0에 가깝습니다.\n" +
-                $"(기준 {spawner.BaseMaxAliveEnemies} × 배율 {spawner.AppliedTuning.maxAliveMultiplier:0.##} → 1)\n" +
-                "배율 0은 '무제한'이 아니라 '최소 1마리'입니다. 무제한으로 두려면 스포너의 Max Alive Enemies를 0으로 설정하세요.",
-                MessageType.Warning);
-        }
-
         if (spawner.EffectiveEnemiesPerSpawn == 0)
         {
             EditorGUILayout.HelpBox(
@@ -282,7 +273,7 @@ public class EnemySpawnerEditor : Editor
         return Mathf.Approximately(x.spawnCountMultiplier, y.spawnCountMultiplier) &&
                x.spawnCountBonus == y.spawnCountBonus &&
                Mathf.Approximately(x.spawnIntervalMultiplier, y.spawnIntervalMultiplier) &&
-               Mathf.Approximately(x.maxAliveMultiplier, y.maxAliveMultiplier) &&
+               x.maxAliveEnemies == y.maxAliveEnemies &&
                Mathf.Approximately(x.healthMultiplier, y.healthMultiplier) &&
                Mathf.Approximately(x.damageMultiplier, y.damageMultiplier) &&
                Mathf.Approximately(x.speedMultiplier, y.speedMultiplier);

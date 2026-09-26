@@ -56,8 +56,7 @@ public class EnemySpawner : MonoBehaviour
     public bool detectUnitsOnly = true;
 
     [Label("근접 1회 스폰 수")]
-    [Tooltip("근접 감지로 한 번에 추가 스폰할 적 수입니다. 0이면 근접 추가 스폰을 하지 않습니다.
-웨이브 배율과 생존 상한의 영향을 받지 않습니다.")]
+    [Tooltip("근접 감지로 한 번에 추가 스폰할 적 수입니다. 0이면 근접 추가 스폰을 하지 않습니다. 웨이브 배율과 생존 상한의 영향을 받지 않습니다.")]
     public int proximityEnemiesPerSpawn = 2;
 
     [Label("근접 스폰 간격(초)")]
@@ -74,8 +73,7 @@ public class EnemySpawner : MonoBehaviour
     public float attackedSpawnDuration = 8f;
 
     [Label("피격 1회 스폰 수")]
-    [Tooltip("피격 반응으로 한 번에 추가 스폰할 적 수입니다. 0이면 피격 추가 스폰을 하지 않습니다.
-웨이브 배율과 생존 상한의 영향을 받지 않습니다.")]
+    [Tooltip("피격 반응으로 한 번에 추가 스폰할 적 수입니다. 0이면 피격 추가 스폰을 하지 않습니다. 웨이브 배율과 생존 상한의 영향을 받지 않습니다.")]
     public int attackedEnemiesPerSpawn = 2;
 
     [Label("피격 스폰 간격(초)")]
@@ -84,8 +82,7 @@ public class EnemySpawner : MonoBehaviour
 
     [Header("파괴 시 스폰")]
     [Label("파괴 시 스폰 수")]
-    [Tooltip("스포너가 파괴될 때 스폰할 적 수입니다. 0이면 파괴 시 스폰하지 않습니다.
-웨이브 배율과 생존 상한의 영향을 받지 않습니다.")]
+    [Tooltip("스포너가 파괴될 때 스폰할 적 수입니다. 0이면 파괴 시 스폰하지 않습니다. 웨이브 배율과 생존 상한의 영향을 받지 않습니다.")]
     public int enemiesOnDeath = 5;
 
     [Header("적 행동")]
@@ -275,16 +272,16 @@ public class EnemySpawner : MonoBehaviour
         return Mathf.Max(0.1f, baseInterval * tuning.spawnIntervalMultiplier);
     }
 
-    /// <summary>기준값이 0(무제한)이면 배율을 곱해도 무제한으로 둡니다.</summary>
+    /// <summary>
+    /// 웨이브에 최대 생존 수(절댓값)가 있으면 그 값을, 0이면 스포너 기준값을 씁니다.
+    /// 결과가 0이면 무제한입니다.
+    /// </summary>
     public static int GetEffectiveMaxAlive(int baseMaxAlive, WaveTuning tuning)
     {
-        if (baseMaxAlive <= 0)
-            return 0;
+        if (tuning != null && tuning.maxAliveEnemies > 0)
+            return tuning.maxAliveEnemies;
 
-        if (tuning == null)
-            return baseMaxAlive;
-
-        return Mathf.Max(1, Mathf.RoundToInt(baseMaxAlive * tuning.maxAliveMultiplier));
+        return Mathf.Max(0, baseMaxAlive);
     }
 
     void OnDestroy()

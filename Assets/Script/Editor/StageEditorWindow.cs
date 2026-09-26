@@ -682,7 +682,7 @@ public class StageEditorWindow : EditorWindow
         return Mathf.Approximately(growth.spawnCountMultiplier, 1f) &&
                growth.spawnCountBonus == 0 &&
                Mathf.Approximately(growth.spawnIntervalMultiplier, 1f) &&
-               Mathf.Approximately(growth.maxAliveMultiplier, 1f) &&
+               growth.maxAliveEnemies == 0 &&
                Mathf.Approximately(growth.healthMultiplier, 1f) &&
                Mathf.Approximately(growth.damageMultiplier, 1f) &&
                Mathf.Approximately(growth.speedMultiplier, 1f);
