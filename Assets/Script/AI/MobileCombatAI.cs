@@ -202,13 +202,18 @@ public abstract class MobileCombatAI : CombatAIBase
 
         destinationTimer = Mathf.Max(0.05f, destinationRefreshInterval);
 
-        Vector3 destination = GetChaseDestination();
-        lastTargetPosition = targetPosition;
-        lastDestination = destination;
-        issuedDirectChase = cachedUseDirectChase;
-        hasDestination = GridMovement.TrySetAgentDestinationImmediate(
-            agent,
-            destination);
+        Vector3 destination;
+
+        using (PerfProbe.Measure(PerfCategory.PathCalc))
+        {
+            destination = GetChaseDestination();
+            lastTargetPosition = targetPosition;
+            lastDestination = destination;
+            issuedDirectChase = cachedUseDirectChase;
+            hasDestination = GridMovement.TrySetAgentDestinationImmediate(
+                agent,
+                destination);
+        }
 
         if (hasDestination)
         {

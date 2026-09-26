@@ -410,12 +410,17 @@ public class EnemyCombatAI : MobileCombatAI
 
         // TargetFinder는 중심 좌표 기준 거리라 콜라이더가 큰 건물엔 실제 사거리보다 빡빡할 수 있다.
         // 여유를 두고 후보를 찾은 뒤, 콜라이더 경계 기준인 attacker.IsInRange로 다시 확인한다.
-        SelectableEntity candidate = TargetFinder.FindBestEnemyInRange(
-            transform.position,
-            selfEntity.ownerId,
-            range + 2f,
-            targetPriority,
-            attacker);
+        SelectableEntity candidate;
+
+        using (PerfProbe.Measure(PerfCategory.TargetSearch))
+        {
+            candidate = TargetFinder.FindBestEnemyInRange(
+                transform.position,
+                selfEntity.ownerId,
+                range + 2f,
+                targetPriority,
+                attacker);
+        }
 
         return candidate != null && attacker.IsInRange(candidate) ? candidate : null;
     }

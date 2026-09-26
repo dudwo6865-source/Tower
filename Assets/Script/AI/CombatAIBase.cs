@@ -179,7 +179,10 @@ public abstract class CombatAIBase : MonoBehaviour
 
         retargetTimer = retargetInterval;
 
-        SelectableEntity newTarget = FindTarget();
+        SelectableEntity newTarget;
+
+        using (PerfProbe.Measure(PerfCategory.TargetSearch))
+            newTarget = FindTarget();
 
         if (newTarget != null)
         {

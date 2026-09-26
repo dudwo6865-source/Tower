@@ -107,26 +107,37 @@ public static class EnemySpawnUtility
         if (prefab == null)
             return null;
 
-        if (!UnitSpawnUtility.TrySampleSpawnSurface(position, out Vector3 spawnPosition))
+        Vector3 spawnPosition;
+
+        using (PerfProbe.Measure(PerfCategory.EnemyInit))
         {
-            Debug.LogWarning(
-                $"EnemySpawnUtility: 스폰 위치가 NavMesh에서 너무 멉니다. 생성을 건너뜁니다. pos={position}");
-            return null;
+            if (!UnitSpawnUtility.TrySampleSpawnSurface(position, out spawnPosition))
+            {
+                Debug.LogWarning(
+                    $"EnemySpawnUtility: 스폰 위치가 NavMesh에서 너무 멉니다. 생성을 건너뜁니다. pos={position}");
+                return null;
+            }
         }
 
-        GameObject enemyObject =
-            UnityEngine.Object.Instantiate(prefab, spawnPosition, rotation);
+        // Instantiate 안에서 도는 Awake/OnEnable 비용도 여기에 포함된다.
+        GameObject enemyObject;
 
-        UnityEngine.AI.NavMeshAgent spawnedAgent = enemyObject.GetComponent<UnityEngine.AI.NavMeshAgent>();
-        UnitSpawnUtility.SnapAgentToPosition(spawnedAgent, spawnPosition);
+        using (PerfProbe.Measure(PerfCategory.EnemySpawn))
+            enemyObject = UnityEngine.Object.Instantiate(prefab, spawnPosition, rotation);
 
-        ConfigureEnemy(
-            enemyObject,
-            enemyOwnerId,
-            healthMultiplier,
-            damageMultiplier,
-            speedMultiplier,
-            onHealthConfigured);
+        using (PerfProbe.Measure(PerfCategory.EnemyInit))
+        {
+            UnityEngine.AI.NavMeshAgent spawnedAgent = enemyObject.GetComponent<UnityEngine.AI.NavMeshAgent>();
+            UnitSpawnUtility.SnapAgentToPosition(spawnedAgent, spawnPosition);
+
+            ConfigureEnemy(
+                enemyObject,
+                enemyOwnerId,
+                healthMultiplier,
+                damageMultiplier,
+                speedMultiplier,
+                onHealthConfigured);
+        }
 
         return enemyObject;
     }

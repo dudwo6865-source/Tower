@@ -209,6 +209,7 @@ public static class UnitCommandHandler
 
     static bool IssueAttack(List<SelectableEntity> units, SelectableEntity target)
     {
+        PerfProbe.BeginCommand("공격");
         bool anyIssued = false;
         var attackTracks = new List<(UnitAttacker attacker, SelectableEntity target)>();
 
@@ -223,6 +224,7 @@ public static class UnitCommandHandler
             UnitCommandDebugLog.Log(combatAI, $"플레이어 명령: 공격 -> {target.name}");
 
             combatAI.AttackTarget(target);
+            PerfProbe.TrackCommandAgent(unit.GetComponent<NavMeshAgent>());
             attackTracks.Add((attacker, target));
             anyIssued = true;
         }
@@ -236,6 +238,7 @@ public static class UnitCommandHandler
 
     static bool IssueMove(List<SelectableEntity> units, Vector3 hitPoint)
     {
+        PerfProbe.BeginCommand("이동");
         bool anyIssued = false;
         var moveTracks = new List<(NavMeshAgent agent, Vector3 destination)>();
 
@@ -262,6 +265,7 @@ public static class UnitCommandHandler
             else
                 agent.isStopped = false;
 
+            PerfProbe.TrackCommandAgent(agent);
             moveTracks.Add((agent, destination));
             anyIssued = true;
         }
@@ -275,6 +279,7 @@ public static class UnitCommandHandler
 
     static bool IssueAttackMove(List<SelectableEntity> units, Vector3 hitPoint)
     {
+        PerfProbe.BeginCommand("공격 이동");
         bool anyIssued = false;
         var moveTracks = new List<(NavMeshAgent agent, Vector3 destination)>();
 
@@ -297,6 +302,7 @@ public static class UnitCommandHandler
             if (!combatAI.BeginAttackMove(destination))
                 continue;
 
+            PerfProbe.TrackCommandAgent(agent);
             moveTracks.Add((agent, destination));
             anyIssued = true;
         }
@@ -313,6 +319,7 @@ public static class UnitCommandHandler
 
     static bool IssuePatrol(List<SelectableEntity> units, Vector3 hitPoint)
     {
+        PerfProbe.BeginCommand("정찰");
         bool anyIssued = false;
         var moveTracks = new List<(NavMeshAgent agent, Vector3 destination)>();
 
@@ -330,6 +337,7 @@ public static class UnitCommandHandler
             if (!combatAI.IssuePatrol(destination))
                 continue;
 
+            PerfProbe.TrackCommandAgent(agent);
             moveTracks.Add((agent, destination));
             anyIssued = true;
         }
