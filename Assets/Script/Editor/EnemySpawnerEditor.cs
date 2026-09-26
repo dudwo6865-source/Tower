@@ -119,6 +119,9 @@ public class EnemySpawnerEditor : Editor
         EditorGUILayout.Space(4);
         EditorGUILayout.LabelField("추가 스폰 트리거", EditorStyles.boldLabel);
         EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+        EditorGUILayout.LabelField(
+            "근접·피격·파괴 시 스폰은 웨이브 배율과 생존 상한을 받지 않습니다.",
+            EditorStyles.miniLabel);
 
         if (spawner.EffectiveProximityEnemiesPerSpawn > 0)
         {

@@ -56,11 +56,12 @@ public class EnemySpawner : MonoBehaviour
     public bool detectUnitsOnly = true;
 
     [Label("근접 1회 스폰 수")]
-    [Tooltip("근접 감지로 한 번에 추가 스폰할 적 수입니다. 0이면 근접 추가 스폰을 하지 않습니다.")]
+    [Tooltip("근접 감지로 한 번에 추가 스폰할 적 수입니다. 0이면 근접 추가 스폰을 하지 않습니다.
+웨이브 배율과 생존 상한의 영향을 받지 않습니다.")]
     public int proximityEnemiesPerSpawn = 2;
 
     [Label("근접 스폰 간격(초)")]
-    [Tooltip("근접 추가 스폰의 간격(초)입니다. 0 이하면 주기 스폰 간격을 그대로 씁니다.")]
+    [Tooltip("근접 추가 스폰의 간격(초)입니다. 0 이하면 스포너의 스폰 간격(웨이브 보정 전 값)을 씁니다.")]
     public float proximitySpawnInterval = 0f;
 
     [Label("아군 확인 주기(초)")]
@@ -73,16 +74,18 @@ public class EnemySpawner : MonoBehaviour
     public float attackedSpawnDuration = 8f;
 
     [Label("피격 1회 스폰 수")]
-    [Tooltip("피격 반응으로 한 번에 추가 스폰할 적 수입니다. 0이면 피격 추가 스폰을 하지 않습니다.")]
+    [Tooltip("피격 반응으로 한 번에 추가 스폰할 적 수입니다. 0이면 피격 추가 스폰을 하지 않습니다.
+웨이브 배율과 생존 상한의 영향을 받지 않습니다.")]
     public int attackedEnemiesPerSpawn = 2;
 
     [Label("피격 스폰 간격(초)")]
-    [Tooltip("피격 추가 스폰의 간격(초)입니다. 0 이하면 주기 스폰 간격을 그대로 씁니다.")]
+    [Tooltip("피격 추가 스폰의 간격(초)입니다. 0 이하면 스포너의 스폰 간격(웨이브 보정 전 값)을 씁니다.")]
     public float attackedSpawnInterval = 0f;
 
     [Header("파괴 시 스폰")]
     [Label("파괴 시 스폰 수")]
-    [Tooltip("스포너가 파괴될 때 스폰할 적 수입니다. 0이면 파괴 시 스폰하지 않습니다.")]
+    [Tooltip("스포너가 파괴될 때 스폰할 적 수입니다. 0이면 파괴 시 스폰하지 않습니다.
+웨이브 배율과 생존 상한의 영향을 받지 않습니다.")]
     public int enemiesOnDeath = 5;
 
     [Header("적 행동")]
@@ -232,24 +235,23 @@ public class EnemySpawner : MonoBehaviour
         IsAwakeForCurrentWave = waveNumber >= Mathf.Max(1, activateFromWave);
 
         EffectiveEnemiesPerSpawn = GetEffectiveSpawnCount(baseEnemiesPerSpawn, tuning);
-        EffectiveEnemiesOnDeath = GetEffectiveDeathSpawnCount(baseEnemiesOnDeath, tuning);
         EffectiveSpawnInterval = GetEffectiveSpawnInterval(baseSpawnInterval, tuning);
         EffectiveMaxAliveEnemies = GetEffectiveMaxAlive(baseMaxAliveEnemies, tuning);
 
-        // 추가 스폰도 같은 웨이브 보정을 받는다. 간격이 0 이하면 주기 스폰 간격을 그대로 쓴다.
-        EffectiveProximityEnemiesPerSpawn =
-            GetEffectiveDeathSpawnCount(baseProximityEnemiesPerSpawn, tuning);
+        // 근접/피격/파괴 시 스폰은 웨이브 배율(스폰 수·간격)을 받지 않고 인스펙터 값을 그대로 쓴다.
+        // 웨이브 표에서 스폰 수 배율을 0으로 두어도 이 트리거들은 꺼지지 않는다.
+        // (체력·공격력·이동 속도 가중치는 SpawnBurst에서 그대로 적용된다.)
+        EffectiveEnemiesOnDeath = Mathf.Max(0, baseEnemiesOnDeath);
+        EffectiveProximityEnemiesPerSpawn = Mathf.Max(0, baseProximityEnemiesPerSpawn);
+        EffectiveProximitySpawnInterval = GetExtraTriggerInterval(baseProximitySpawnInterval);
+        EffectiveAttackedEnemiesPerSpawn = Mathf.Max(0, baseAttackedEnemiesPerSpawn);
+        EffectiveAttackedSpawnInterval = GetExtraTriggerInterval(baseAttackedSpawnInterval);
+    }
 
-        EffectiveProximitySpawnInterval = baseProximitySpawnInterval > 0f
-            ? GetEffectiveSpawnInterval(baseProximitySpawnInterval, tuning)
-            : EffectiveSpawnInterval;
-
-        EffectiveAttackedEnemiesPerSpawn =
-            GetEffectiveDeathSpawnCount(baseAttackedEnemiesPerSpawn, tuning);
-
-        EffectiveAttackedSpawnInterval = baseAttackedSpawnInterval > 0f
-            ? GetEffectiveSpawnInterval(baseAttackedSpawnInterval, tuning)
-            : EffectiveSpawnInterval;
+    // 간격이 0 이하면 스포너 인스펙터의 스폰 간격(웨이브 보정 전)을 쓴다.
+    float GetExtraTriggerInterval(float baseInterval)
+    {
+        return Mathf.Max(0.1f, baseInterval > 0f ? baseInterval : baseSpawnInterval);
     }
 
     // 아래 계산식은 에디터 미리보기(EnemySpawnerEditor)와 공유한다.
@@ -263,14 +265,6 @@ public class EnemySpawner : MonoBehaviour
         return Mathf.Max(
             0,
             Mathf.RoundToInt(baseCount * tuning.spawnCountMultiplier) + tuning.spawnCountBonus);
-    }
-
-    public static int GetEffectiveDeathSpawnCount(int baseCount, WaveTuning tuning)
-    {
-        if (tuning == null)
-            return Mathf.Max(0, baseCount);
-
-        return Mathf.Max(0, Mathf.RoundToInt(baseCount * tuning.spawnCountMultiplier));
     }
 
     public static float GetEffectiveSpawnInterval(float baseInterval, WaveTuning tuning)
@@ -373,7 +367,8 @@ public class EnemySpawner : MonoBehaviour
             ref spawnTimer,
             EffectiveSpawnInterval,
             EffectiveEnemiesPerSpawn,
-            "주기");
+            "주기",
+            respectAliveCap: true);
     }
 
     void TickProximitySpawn()
@@ -390,7 +385,8 @@ public class EnemySpawner : MonoBehaviour
             ref proximityTimer,
             EffectiveProximitySpawnInterval,
             EffectiveProximityEnemiesPerSpawn,
-            "근접");
+            "근접",
+            respectAliveCap: false);
     }
 
     void TickAttackedSpawn()
@@ -405,17 +401,23 @@ public class EnemySpawner : MonoBehaviour
             ref attackedSpawnTimer,
             EffectiveAttackedSpawnInterval,
             EffectiveAttackedEnemiesPerSpawn,
-            "피격");
+            "피격",
+            respectAliveCap: false);
     }
 
-    void TickSpawnTrigger(ref float timer, float interval, int count, string triggerName)
+    void TickSpawnTrigger(
+        ref float timer,
+        float interval,
+        int count,
+        string triggerName,
+        bool respectAliveCap)
     {
         if (count <= 0)
             return;
 
         // 생존 상한에 걸려 있으면 타이머도 멈춘다. 상한이 풀리자마자 몰아서
-        // 터지는 것을 막는다.
-        if (IsBlockedByAliveCap)
+        // 터지는 것을 막는다. 상한을 무시하는 트리거(근접/피격)는 그대로 돈다.
+        if (respectAliveCap && IsBlockedByAliveCap)
             return;
 
         timer -= Time.deltaTime;
@@ -425,7 +427,7 @@ public class EnemySpawner : MonoBehaviour
 
         timer = Mathf.Max(0.1f, interval);
 
-        int spawned = SpawnBurst(count, respectAliveCap: true);
+        int spawned = SpawnBurst(count, respectAliveCap);
 
         if (logSpawnEvents && spawned > 0)
             Debug.Log($"EnemySpawner '{name}': {triggerName} 스폰 {spawned}마리", this);
