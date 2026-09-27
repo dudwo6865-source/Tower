@@ -4,8 +4,12 @@ using UnityEngine;
 public class FogOfWarVisibility : MonoBehaviour
 {
     [Label("시야 밖이면 숨김")]
-    [Tooltip("탐색된 지역에서 현재 시야 밖일 때 숨깁니다. 한 번 시야에 들어온 적은 탐색 지역 안에서는 시야 밖에서도 계속 표시됩니다.")]
+    [Tooltip("현재 시야 밖일 때 숨깁니다. 유닛은 지금 시야로 밝히고 있을 때만 보이고, 건물은 한 번 발견하면 탐색 지역 안에서 시야 밖이어도 계속 표시됩니다.")]
     public bool hideWhenNotVisible = true;
+
+    [Label("탐색 지역에서 유닛도 계속 표시")]
+    [Tooltip("켜면 유닛도 건물처럼, 한 번 발견한 뒤에는 탐색 지역 안에서 시야 밖이어도 계속 표시합니다. 끄면 유닛은 현재 시야 안에서만 보입니다.")]
+    public bool rememberUnitsInExplored = false;
 
     private SelectableEntity selectableEntity;
     private Renderer[] renderers;
@@ -112,6 +116,10 @@ public class FogOfWarVisibility : MonoBehaviour
             return true;
 
         if (!hasBeenRevealed)
+            return false;
+
+        // 유닛은 움직이므로 탐색 지역에 기억해 두지 않는다. 건물만 마지막 모습을 남긴다.
+        if (selectableEntity.entityType != SelectableEntityType.Building && !rememberUnitsInExplored)
             return false;
 
         return manager.IsEntityExplored(GetVisibilityBounds());
