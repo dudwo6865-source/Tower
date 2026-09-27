@@ -115,7 +115,15 @@ public class MapConfig : ScriptableObject
     [Tooltip("켜면 이 스테이지의 승리 조건 설정으로 GameResultManager를 덮어씁니다.")]
     public bool overrideWinCondition = true;
 
+    [Label("생존 승리 사용")]
+    [Tooltip("켜면 본부가 파괴되지 않고 지정한 밤까지 버텼을 때 승리합니다.")]
+    public bool winBySurvivingNights = true;
+
     [Label("승리까지 버틸 밤 수")]
     [Tooltip("본부가 파괴되지 않고 이 밤까지 버티면 승리합니다. (예: 5 = 5번째 밤이 끝나면 승리)")]
     public int survivalNightsToWin = 5;
+
+    [Label("스포너 전멸 승리 사용")]
+    [Tooltip("켜면 맵의 적 스포너를 모두 파괴했을 때 승리합니다.")]
+    public bool winWhenAllSpawnersDestroyed = true;
 }

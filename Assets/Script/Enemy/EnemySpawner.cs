@@ -103,6 +103,9 @@ public class EnemySpawner : MonoBehaviour
 
     public int AliveCount { get; private set; }
 
+    /// <summary>파괴되었는지 여부입니다. 사망 연출 중에도 true입니다. (승리 조건 판정용)</summary>
+    public bool IsDead => isDead;
+
     /// <summary>씬에서 활성화된 모든 스포너입니다. WaveManager가 웨이브 수치를 적용할 때 씁니다.</summary>
     public static IReadOnlyList<EnemySpawner> Active => active;
 

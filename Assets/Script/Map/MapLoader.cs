@@ -328,6 +328,8 @@ public class MapLoader : MonoBehaviour
         if (result == null)
             return;
 
+        result.winBySurvivingNights = config.winBySurvivingNights;
         result.survivalNightsToWin = config.survivalNightsToWin;
+        result.winWhenAllSpawnersDestroyed = config.winWhenAllSpawnersDestroyed;
     }
 }

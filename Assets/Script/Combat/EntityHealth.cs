@@ -33,6 +33,10 @@ public class EntityHealth : MonoBehaviour
     public event Action OnDied;
     // 실제 피해를 입었을 때 발생합니다. (피해량, 공격자)
     public event Action<float, SelectableEntity> OnDamaged;
+    // 어떤 엔티티든 사망하면 발생합니다. (게임 통계용)
+    public static event Action<EntityHealth> OnAnyDied;
+
+    public SelectableEntity Entity => selectableEntity;
 
     public float CurrentHealth { get; private set; }
     // 최대 체력 = 기본값 + 업그레이드 보너스입니다.
@@ -159,6 +163,7 @@ public class EntityHealth : MonoBehaviour
 
         isDying = true;
         OnDied?.Invoke();
+        OnAnyDied?.Invoke(this);
 
         if (selectableEntity.entityType == SelectableEntityType.Building)
             BuildingRegistry.NotifyRemoved(selectableEntity);

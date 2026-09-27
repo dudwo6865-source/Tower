@@ -69,6 +69,8 @@ public class WattManager : MonoBehaviour
     public bool IsFull => MaxWatt > 0f && CurrentWatt >= MaxWatt - 0.001f;
 
     public event Action<float> OnWattChanged;
+    // 와트를 소모했을 때 발생합니다. (소모량, 게임 통계용)
+    public event Action<float> OnWattSpent;
 
     void Awake()
     {
@@ -112,6 +114,7 @@ public class WattManager : MonoBehaviour
 
         CurrentWatt = ClampWatt(CurrentWatt - cost);
         NotifyChanged();
+        OnWattSpent?.Invoke(cost);
         return true;
     }
 
@@ -126,6 +129,7 @@ public class WattManager : MonoBehaviour
 
         CurrentWatt = ClampWatt(CurrentWatt - amount);
         NotifyChanged();
+        OnWattSpent?.Invoke(amount);
         return true;
     }
 

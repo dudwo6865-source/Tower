@@ -106,6 +106,18 @@ Unity **2022.3.26f1** 타워 디펜스 RTS. 낮/밤이 한 사이클(= 웨이브
   불러오므로, 경제·낮밤·웨이브·초기 적·승리 조건은 **씬 매니저 인스펙터가 아니라
   1Stage 값**이 적용됩니다.
 
+### 승패 / 결과 창
+
+- `GameResultManager`(`Assets/Script/GameResultManager.cs`)가 승패를 판정합니다.
+  패배 = 본부 파괴, 승리 = 지정한 밤까지 생존 **또는** 적 스포너 전멸(켜 둔 조건 중 먼저).
+  스테이지에 `MapLoader`가 있으면 승리 조건은 `MapConfig` 값으로 덮어씁니다.
+- 스포너 전멸 판정은 `EnemySpawner.Active` 중 `IsDead`가 아닌 스포너 수로 합니다.
+  스포너가 한 번도 없던 맵에서는 이 조건으로 승리하지 않습니다.
+- 게임 통계(게임 시간·파괴한 스포너·처치한 적 유닛·소모한 와트)도 이 매니저가 기록합니다.
+  `EntityHealth.OnAnyDied`(static), `WattManager.OnWattSpent`를 구독합니다.
+- 결과 창은 `GameResultUI`가 `OnResultScreenShown`을 받아 띄웁니다. 결과 창이 뜨면
+  `Time.timeScale = 0`으로 멈추고, 재시작/로비 이동 때 1로 되돌립니다.
+
 ### 명령 입력
 
 - **우클릭** = 기본 명령(이동/공격). 명령 모드가 켜져 있으면 우클릭은 **취소**입니다.

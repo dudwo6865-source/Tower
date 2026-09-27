@@ -1062,17 +1062,35 @@ public class StageEditorWindow : EditorWindow
         DrawOverrideToggle("overrideWinCondition", "이 스테이지 값으로 GameResultManager 덮어쓰기");
 
         EditorGUI.BeginDisabledGroup(!selected.overrideWinCondition);
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("winBySurvivingNights"), new GUIContent("생존 승리 사용"));
+        EditorGUI.BeginDisabledGroup(!selected.winBySurvivingNights);
         EditorGUILayout.PropertyField(serializedObject.FindProperty("survivalNightsToWin"), new GUIContent("생존 목표 (몇 번째 밤까지)"));
+        EditorGUI.EndDisabledGroup();
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("winWhenAllSpawnersDestroyed"), new GUIContent("적 스포너 전멸 시 승리"));
         EditorGUI.EndDisabledGroup();
 
         if (selected.overrideWinCondition)
         {
-            if (selected.survivalNightsToWin <= 0)
+            if (selected.winBySurvivingNights && selected.survivalNightsToWin <= 0)
                 EditorGUILayout.HelpBox("생존 목표가 0 이하입니다. 게임 시작과 거의 동시에 승리 조건이 충족됩니다.", MessageType.Warning);
 
-            EditorGUILayout.LabelField(
-                $"미리보기: 본부가 파괴되지 않고 {selected.survivalNightsToWin}번째 밤이 끝나면 승리합니다.",
-                EditorStyles.miniLabel);
+            if (!selected.winBySurvivingNights && !selected.winWhenAllSpawnersDestroyed)
+                EditorGUILayout.HelpBox("승리 조건이 모두 꺼져 있습니다. 이 스테이지는 승리할 수 없습니다.", MessageType.Warning);
+
+            if (selected.winBySurvivingNights)
+            {
+                EditorGUILayout.LabelField(
+                    $"미리보기: 본부가 파괴되지 않고 {selected.survivalNightsToWin}번째 밤이 끝나면 승리합니다.",
+                    EditorStyles.miniLabel);
+            }
+
+            if (selected.winWhenAllSpawnersDestroyed)
+            {
+                EditorGUILayout.LabelField(
+                    "미리보기: 맵의 적 스포너를 모두 파괴하면 승리합니다.",
+                    EditorStyles.miniLabel);
+            }
+
             EditorGUILayout.LabelField(
                 "다른 승리/패배 조건은 GameResultManager.EndGame()을 호출하는 방식으로 나중에 추가할 수 있습니다.",
                 EditorStyles.miniLabel);
@@ -1222,7 +1240,11 @@ public class StageEditorWindow : EditorWindow
 
         GameResultManager result = UnityEngine.Object.FindFirstObjectByType<GameResultManager>();
         if (result != null)
+        {
+            selected.winBySurvivingNights = result.winBySurvivingNights;
             selected.survivalNightsToWin = result.survivalNightsToWin;
+            selected.winWhenAllSpawnersDestroyed = result.winWhenAllSpawnersDestroyed;
+        }
 
         EditorUtility.SetDirty(selected);
         serializedObject.Update();
@@ -1298,7 +1320,9 @@ public class StageEditorWindow : EditorWindow
             if (result != null)
             {
                 Undo.RecordObject(result, "Apply Stage To Scene");
+                result.winBySurvivingNights = selected.winBySurvivingNights;
                 result.survivalNightsToWin = selected.survivalNightsToWin;
+                result.winWhenAllSpawnersDestroyed = selected.winWhenAllSpawnersDestroyed;
                 EditorUtility.SetDirty(result);
                 appliedAny = true;
             }
