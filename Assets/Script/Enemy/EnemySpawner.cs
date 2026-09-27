@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -57,6 +58,22 @@ public class EnemySpawner : MonoBehaviour
 
     public int AliveCount { get; private set; }
 
+    // 현재 살아있는 스포너 목록입니다. (승리 조건 판정용)
+    static readonly List<EnemySpawner> activeSpawners = new List<EnemySpawner>();
+    public static IReadOnlyList<EnemySpawner> ActiveSpawners => activeSpawners;
+
+    // 스포너가 생성(등록)되거나 파괴될 때 발생합니다.
+    public static event Action<EnemySpawner> OnSpawnerRegistered;
+    public static event Action<EnemySpawner> OnSpawnerDestroyed;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics()
+    {
+        activeSpawners.Clear();
+        OnSpawnerRegistered = null;
+        OnSpawnerDestroyed = null;
+    }
+
     readonly List<EnemyCombatAI> spawnedAIs = new List<EnemyCombatAI>();
     EntityHealth health;
     DayNightCycle dayNightCycle;
@@ -76,6 +93,9 @@ public class EnemySpawner : MonoBehaviour
 
         if (spawnPeriodically)
             spawnTimer = Mathf.Max(0.1f, spawnInterval);
+
+        activeSpawners.Add(this);
+        OnSpawnerRegistered?.Invoke(this);
     }
 
     void OnEnable()
@@ -91,6 +111,7 @@ public class EnemySpawner : MonoBehaviour
     void OnDestroy()
     {
         UnbindDayNightCycle();
+        activeSpawners.Remove(this);
 
         if (health != null)
         {
@@ -171,6 +192,8 @@ public class EnemySpawner : MonoBehaviour
             return;
 
         isDead = true;
+        activeSpawners.Remove(this);
+        OnSpawnerDestroyed?.Invoke(this);
 
         // 파괴 시 방출은 생존 상한을 무시하고 정해진 수만큼 모두 스폰한다.
         SpawnBurst(enemiesOnDeath, respectAliveCap: false);
@@ -189,7 +212,7 @@ public class EnemySpawner : MonoBehaviour
                 break;
 
             GameObject prefab =
-                enemyPrefabs[Random.Range(0, enemyPrefabs.Count)];
+                enemyPrefabs[UnityEngine.Random.Range(0, enemyPrefabs.Count)];
 
             if (prefab == null)
                 continue;
