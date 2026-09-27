@@ -79,6 +79,9 @@ public class GameResultManager : MonoBehaviour
     public int KilledEnemyUnitCount { get; private set; }
     public float SpentWatt { get; private set; }
 
+    // 지금까지 동시에 살아 있던 적 스포너의 최대 수입니다. 승리 조건 표시(VictoryConditionHUD)에서 전체 수로 씁니다.
+    public int MaxSpawnersSeen => maxSpawnersSeen;
+
     EntityHealth hqHealth;
     WattManager wattManager;
     int maxSpawnersSeen;
