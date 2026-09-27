@@ -115,7 +115,8 @@ Unity **2022.3.26f1** 타워 디펜스 RTS. 낮/밤이 한 사이클(= 웨이브
   스포너가 한 번도 없던 맵에서는 이 조건으로 승리하지 않습니다.
 - 게임 통계(게임 시간·파괴한 스포너·처치한 적 유닛·소모한 와트)도 이 매니저가 기록합니다.
   `EntityHealth.OnAnyDied`(static), `WattManager.OnWattSpent`를 구독합니다.
-- 결과 창은 `GameResultUI`가 `OnResultScreenShown`을 받아 띄웁니다. 결과 창이 뜨면
+- 결과 창은 `GameResultUI`가 `OnResultScreenShown`을 받아 띄웁니다. 소제목·통계 이름·아이콘·
+  버튼 글자 같은 고정 항목은 UI 오브젝트에 직접 두고, 스크립트는 제목·통계 값·보상 칸만 채웁니다. 결과 창이 뜨면
   `Time.timeScale = 0`으로 멈추고, 재시작/로비 이동 때 1로 되돌립니다.
 
 ### 명령 입력

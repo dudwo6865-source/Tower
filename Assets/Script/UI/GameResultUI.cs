@@ -5,8 +5,9 @@ using UnityEngine;
 using UnityEngine.UI;
 
 // 게임 승리/패배 결과 창입니다.
-// - 제목(미션 성공/실패), 게임 통계, 승리 보상, 재침공/함선으로 버튼을 표시합니다.
-// - 각 항목의 텍스트·이미지는 인스펙터에서 지정합니다.
+// - 제목(미션 성공/실패), 게임 통계 값, 승리 보상, 재침공/함선으로 버튼을 처리합니다.
+// - 소제목·통계 이름·아이콘·버튼 글자 같은 고정 항목은 결과 창 오브젝트에 직접 배치하고,
+//   이 스크립트는 판마다 바뀌는 값만 채운다.
 // 결과 창 오브젝트(또는 그 부모)에 붙이고, '결과 창'에 실제 창 오브젝트를 연결합니다.
 public class GameResultUI : MonoBehaviour
 {
@@ -25,14 +26,6 @@ public class GameResultUI : MonoBehaviour
         [Tooltip("이 줄에 표시할 통계 종류입니다.")]
         public StatType type;
 
-        [Label("이름 텍스트")]
-        [Tooltip("항목 이름을 표시할 텍스트입니다. (예: 게임 시간)")]
-        public TextMeshProUGUI labelText;
-
-        [Label("이름")]
-        [Tooltip("항목 이름입니다. 비워두면 이름 텍스트에 입력된 글자를 그대로 둡니다.")]
-        public string label;
-
         [Label("값 텍스트")]
         [Tooltip("통계 값을 표시할 텍스트입니다.")]
         public TextMeshProUGUI valueText;
@@ -40,14 +33,6 @@ public class GameResultUI : MonoBehaviour
         [Label("값 형식")]
         [Tooltip("값 표시 형식입니다. {0} 자리에 값이 들어갑니다. (예: {0} 개)")]
         public string valueFormat = "{0}";
-
-        [Label("아이콘 이미지")]
-        [Tooltip("항목 아이콘 Image입니다.")]
-        public Image iconImage;
-
-        [Label("아이콘")]
-        [Tooltip("아이콘 스프라이트입니다. 비워두면 아이콘 이미지에 들어 있는 그림을 그대로 둡니다.")]
-        public Sprite icon;
     }
 
     [Serializable]
@@ -117,21 +102,14 @@ public class GameResultUI : MonoBehaviour
     public Sprite defeatTitleBackground;
 
     [Header("게임 통계")]
-    [Label("통계 소제목 텍스트")]
-    [Tooltip("'게임 통계' 소제목 텍스트입니다. (선택)")]
-    public TextMeshProUGUI statsHeaderText;
-
-    [Label("통계 소제목")]
-    public string statsHeader = "게임 통계";
-
     [Label("통계 줄 목록")]
-    [Tooltip("통계 줄 목록입니다. 각 줄에 표시할 통계 종류와 텍스트·아이콘을 지정합니다.")]
+    [Tooltip("통계 줄 목록입니다. 각 줄에 표시할 통계 종류와 값 텍스트를 지정합니다.")]
     public List<StatRow> statRows = new List<StatRow>
     {
-        new StatRow { type = StatType.PlayTime, label = "게임 시간" },
-        new StatRow { type = StatType.DestroyedSpawners, label = "파괴한 적 스포너" },
-        new StatRow { type = StatType.KilledEnemyUnits, label = "처치한 적 유닛" },
-        new StatRow { type = StatType.SpentWatt, label = "소모한 와트" },
+        new StatRow { type = StatType.PlayTime },
+        new StatRow { type = StatType.DestroyedSpawners },
+        new StatRow { type = StatType.KilledEnemyUnits },
+        new StatRow { type = StatType.SpentWatt },
     };
 
     [Label("게임 시간 형식")]
@@ -139,35 +117,13 @@ public class GameResultUI : MonoBehaviour
     public string playTimeFormat = "{0:00}:{1:00}";
 
     [Header("보상")]
-    [Label("보상 영역")]
-    [Tooltip("'승리 보상' 영역 전체 오브젝트입니다. 패배 시 숨길 수 있습니다.")]
-    public GameObject rewardSectionRoot;
-
-    [Label("보상 소제목 텍스트")]
-    [Tooltip("'승리 보상' 소제목 텍스트입니다. (선택)")]
-    public TextMeshProUGUI rewardHeaderText;
-
-    [Label("승리 보상 소제목")]
-    public string victoryRewardHeader = "승리 보상";
-
-    [Label("패배 보상 소제목")]
-    public string defeatRewardHeader = "보상";
-
-    [Label("패배 시 보상 표시")]
-    [Tooltip("켜면 패배 시에도 보상 영역을 표시합니다. (패배 보상 목록 사용)")]
-    public bool showRewardsOnDefeat = false;
-
     [Label("보상 칸 목록")]
     [Tooltip("화면에 있는 보상 칸 목록입니다.")]
     public List<RewardSlot> rewardSlots = new List<RewardSlot>();
 
     [Label("승리 보상 목록")]
-    [Tooltip("승리 시 표시할 보상 목록입니다. 순서대로 보상 칸에 채워집니다.")]
+    [Tooltip("승리 시 표시할 보상 목록입니다. 순서대로 보상 칸에 채워집니다. 패배 시에는 보상 칸을 비웁니다.")]
     public List<RewardItem> victoryRewards = new List<RewardItem>();
-
-    [Label("패배 보상 목록")]
-    [Tooltip("패배 시 표시할 보상 목록입니다. ('패배 시 보상 표시'가 켜져 있을 때)")]
-    public List<RewardItem> defeatRewards = new List<RewardItem>();
 
     [Label("빈 보상 칸 숨기기")]
     [Tooltip("켜면 보상이 없는 칸은 숨깁니다. 끄면 빈 칸으로 남겨둡니다.")]
@@ -178,23 +134,9 @@ public class GameResultUI : MonoBehaviour
     [Tooltip("미션을 처음부터 다시 시작하는 버튼입니다.")]
     public Button restartButton;
 
-    [Label("재침공 버튼 텍스트")]
-    [Tooltip("재침공 버튼 글자 텍스트입니다. (선택)")]
-    public TextMeshProUGUI restartButtonText;
-
-    [Label("재침공 버튼 글자")]
-    public string restartButtonLabel = "재침공";
-
     [Label("함선으로 버튼")]
     [Tooltip("로비 씬으로 이동하는 버튼입니다.")]
     public Button lobbyButton;
-
-    [Label("함선으로 버튼 텍스트")]
-    [Tooltip("함선으로 버튼 글자 텍스트입니다. (선택)")]
-    public TextMeshProUGUI lobbyButtonText;
-
-    [Label("함선으로 버튼 글자")]
-    public string lobbyButtonLabel = "함선으로";
 
     void Awake()
     {
@@ -239,7 +181,6 @@ public class GameResultUI : MonoBehaviour
         ApplyTitle(victory);
         ApplyStats();
         ApplyRewards(victory);
-        ApplyButtons();
 
         if (panelRoot != null)
             panelRoot.SetActive(true);
@@ -261,25 +202,13 @@ public class GameResultUI : MonoBehaviour
 
     void ApplyStats()
     {
-        if (statsHeaderText != null && !string.IsNullOrEmpty(statsHeader))
-            statsHeaderText.text = statsHeader;
-
         foreach (StatRow row in statRows)
         {
-            if (row == null)
+            if (row == null || row.valueText == null)
                 continue;
 
-            if (row.labelText != null && !string.IsNullOrEmpty(row.label))
-                row.labelText.text = row.label;
-
-            if (row.iconImage != null && row.icon != null)
-                row.iconImage.sprite = row.icon;
-
-            if (row.valueText != null)
-            {
-                string format = string.IsNullOrEmpty(row.valueFormat) ? "{0}" : row.valueFormat;
-                row.valueText.text = string.Format(format, GetStatValue(row.type));
-            }
+            string format = string.IsNullOrEmpty(row.valueFormat) ? "{0}" : row.valueFormat;
+            row.valueText.text = string.Format(format, GetStatValue(row.type));
         }
     }
 
@@ -306,19 +235,6 @@ public class GameResultUI : MonoBehaviour
 
     void ApplyRewards(bool victory)
     {
-        bool showRewards = victory || showRewardsOnDefeat;
-
-        if (rewardSectionRoot != null)
-            rewardSectionRoot.SetActive(showRewards);
-
-        if (!showRewards)
-            return;
-
-        if (rewardHeaderText != null)
-            rewardHeaderText.text = victory ? victoryRewardHeader : defeatRewardHeader;
-
-        List<RewardItem> rewards = victory ? victoryRewards : defeatRewards;
-
         for (int i = 0; i < rewardSlots.Count; i++)
         {
             RewardSlot slot = rewardSlots[i];
@@ -327,7 +243,9 @@ public class GameResultUI : MonoBehaviour
                 continue;
 
             RewardItem reward =
-                (rewards != null && i < rewards.Count) ? rewards[i] : null;
+                (victory && victoryRewards != null && i < victoryRewards.Count)
+                    ? victoryRewards[i]
+                    : null;
             bool hasReward = reward != null && reward.icon != null;
 
             if (slot.slotRoot != null)
@@ -342,15 +260,6 @@ public class GameResultUI : MonoBehaviour
             if (slot.amountText != null)
                 slot.amountText.text = reward != null ? reward.amount : "";
         }
-    }
-
-    void ApplyButtons()
-    {
-        if (restartButtonText != null && !string.IsNullOrEmpty(restartButtonLabel))
-            restartButtonText.text = restartButtonLabel;
-
-        if (lobbyButtonText != null && !string.IsNullOrEmpty(lobbyButtonLabel))
-            lobbyButtonText.text = lobbyButtonLabel;
     }
 
     void HandleRestartClicked()
