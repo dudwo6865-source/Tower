@@ -220,6 +220,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   hideWhenNotVisible: 1
+  rememberUnitsInExplored: 0
 --- !u!114 &1122199003445391147
 MonoBehaviour:
   m_ObjectHideFlags: 0

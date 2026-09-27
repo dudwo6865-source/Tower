@@ -164,7 +164,7 @@ MonoBehaviour:
   damageFocusSwitchMargin: 2
   debugCommandLog: 0
   turretPivot: {fileID: 6622224403959530083}
-  facingSpeed: 5
+  facingSpeed: 2
   aimYawOffset: 0
   returnToIdleWhenNoTarget: 1
 --- !u!114 &1592581109618303991

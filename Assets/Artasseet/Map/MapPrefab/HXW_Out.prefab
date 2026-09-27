@@ -95,6 +95,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 32194c57bf6806140b82a27287628eec, type: 3}
       insertIndex: -1
       addedObject: {fileID: 9049235270377620222}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 32194c57bf6806140b82a27287628eec, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6320989248070479599}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 32194c57bf6806140b82a27287628eec, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 94278099986877727}
   m_SourcePrefab: {fileID: 100100000, guid: 32194c57bf6806140b82a27287628eec, type: 3}
 --- !u!1 &8287958152153877782 stripped
 GameObject:
@@ -123,6 +129,38 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 8701264112661588609, guid: 32194c57bf6806140b82a27287628eec, type: 3}
+--- !u!114 &6320989248070479599
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8287958152153877782}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 35e95dc5ff2b64380880dd7ac5922847, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Size: {x: 2, y: 3, z: 4}
+  m_Center: {x: 1, y: 1, z: 0}
+  m_Area: 1
+  m_AffectedAgents: ffffffff
+--- !u!114 &94278099986877727
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8287958152153877782}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 35e95dc5ff2b64380880dd7ac5922847, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Size: {x: 4, y: 3, z: 2}
+  m_Center: {x: 0, y: 1, z: -1}
+  m_Area: 0
+  m_AffectedAgents: ffffffff
 --- !u!4 &8669269491632248748 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 32194c57bf6806140b82a27287628eec, type: 3}
