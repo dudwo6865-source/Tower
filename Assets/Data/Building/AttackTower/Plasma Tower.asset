@@ -16,7 +16,7 @@ MonoBehaviour:
   icon: {fileID: 21300000, guid: d0749fcbbcf383846a09b0debba64667, type: 3}
   description: 
   prefab: {fileID: 6894192069859626715, guid: 01feb490ba2c2d34faaeab57552bc61a, type: 3}
-  wattCost: 50
+  wattCost: 100
   ownerId: 1
   entityTypeId: 
   upgradeOptions: []

@@ -17,7 +17,7 @@ MonoBehaviour:
   description: B3C4 \uC9C0\uC744 \uC218 \uC788\uC73C\uBA70, \uC8FC\uBCC0\uC5D0 \uCD94\uAC00
     \uAC74\uC124 \uAD6C\uC5ED\uC744 \uC81C\uACF5\uD569\uB2C8\uB2E4.
   prefab: {fileID: 4959391725108964735, guid: 26c9473bced988943989e053c066bbd8, type: 3}
-  wattCost: 50
+  wattCost: 30
   ownerId: 1
   entityTypeId: 
   upgradeOptions: []

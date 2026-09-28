@@ -165,6 +165,7 @@ MonoBehaviour:
   visionRange: 60
   edgeSoftnessOverride: -1
   eyeHeightOverride: -1
+  fallbackOwnerId: 0
 --- !u!114 &8844226611335577990
 MonoBehaviour:
   m_ObjectHideFlags: 0

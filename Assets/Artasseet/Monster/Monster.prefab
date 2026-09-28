@@ -312,6 +312,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   hideWhenNotVisible: 1
+  rememberUnitsInExplored: 0
 --- !u!114 &5980050621119853254
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -355,7 +356,7 @@ MonoBehaviour:
   attackDamage: 10
   attackRange: 0.3
   attackCooldown: 1
-  useAttackAnimationEvent: 1
+  useAttackAnimationEvent: 0
   projectileSpeed: 25
   firePoint: {fileID: 0}
   pierceHitRadius: 0.6
