@@ -46,6 +46,11 @@ public class StageBuildingSpawnPoint : MonoBehaviour
     [Tooltip("'기능 잠금 시간 지정'이 켜져 있을 때 쓸 시간입니다. 0이면 잠그지 않습니다.")]
     public float featureLockDuration = 0f;
 
+    [Header("시야")]
+    [Label("건설 후 마커 시야 끄기")]
+    [Tooltip("이 마커에 FogOfWarVisionSource를 붙여 건설 전 시야를 밝힌 경우, 켜 두면 건물이 지어진 뒤 마커의 시야를 끕니다. (이후엔 건물 자체 시야를 씁니다)")]
+    public bool disableMarkerVisionAfterSpawn = true;
+
     [Header("에디터 미리보기")]
     [Label("미리보기 표시")]
     [Tooltip("Scene 뷰에 지어질 건물의 모양과 점유 칸을 그립니다.")]
@@ -179,6 +184,14 @@ public class StageBuildingSpawnPoint : MonoBehaviour
 
         if (playConstructionEffect)
             BeginConstructionPresentation(building);
+
+        if (disableMarkerVisionAfterSpawn)
+        {
+            FogOfWarVisionSource markerVision = GetComponent<FogOfWarVisionSource>();
+
+            if (markerVision != null)
+                markerVision.enabled = false;
+        }
 
         ReleasePendingCount();
         OnAnyBuildingSpawned?.Invoke(building);

@@ -15,10 +15,14 @@ public class FogOfWarVisionSource : MonoBehaviour
     [Tooltip("0 이상이면 FogOfWarManager의 기본 Default Eye Height 대신 이 값을 사용합니다. 음수면 매니저 기본값을 따릅니다. 고지대 시야 계산(높은 곳에서 아래가 보이는 정도)에 씁니다.")]
     public float eyeHeightOverride = -1f;
 
+    [Label("소유자 ID (유닛·건물이 아닐 때)")]
+    [Tooltip("SelectableEntity가 없는 오브젝트(예: 본부 배치 마커)에서 쓸 소유자 ID입니다. 1(플레이어)로 두면 플레이어 시야로 안개를 밝힙니다. 유닛·건물에서는 SelectableEntity의 소유자를 쓰므로 무시됩니다.")]
+    public int fallbackOwnerId = 0;
+
     private SelectableEntity selectableEntity;
 
     public int OwnerId =>
-        selectableEntity != null ? selectableEntity.ownerId : 0;
+        selectableEntity != null ? selectableEntity.ownerId : fallbackOwnerId;
 
     public Vector3 Position => transform.position;
 
