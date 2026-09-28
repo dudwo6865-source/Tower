@@ -30,6 +30,10 @@ public class EnemyCombatAI : MobileCombatAI
     [Tooltip("팔로워가 리더 뒤로 물러나는 간격(m)입니다. 부채꼴 대형의 깊이입니다.")]
     public float squadFollowSpacing = 2f;
 
+    [Label("앞선 팔로워 판정 여유")]
+    [Tooltip("팔로워가 리더보다 대상에 이 거리(m) 이상 더 가까우면 리더 뒤 자리로 돌아가지 않고 스스로 경로를 잡아 대상 쪽으로 계속 전진합니다. 리더 근처에서 판정이 매 프레임 뒤집히지 않게 하는 여유입니다.")]
+    public float squadAheadMargin = 1f;
+
     [Header("건물 추격")]
     [Label("우회 판정 배수")]
     [Tooltip("직선 거리 대비 실제 경로가 이 배수 이상 길어지면(또는 경로가 끊기면) " +
@@ -61,6 +65,7 @@ public class EnemyCombatAI : MobileCombatAI
     bool hasLocalEnemy;
     float squadOffsetFactor;
     bool isBusyAttacking;
+    bool wasAheadOfLeader;
 
     // 검사 주기는 deltaTime을 빼는 대신 '다음 검사 시각'으로 관리한다. IsBusyAttacking 같은
     // 함수는 팔로워들이 리더를 평가할 때도 불리는데, 타이머를 깎는 방식이면 한 프레임에
@@ -146,6 +151,8 @@ public class EnemyCombatAI : MobileCombatAI
 
         if (!HasValidTarget())
             return;
+
+        UpdateAheadOfLeader(follower);
 
         // 아직 사거리 밖이면(=이동/우회 중), 다른 건물이 가는 길을 막고 있는지 확인한다.
         if (!attacker.IsInRange(currentTarget))
@@ -583,10 +590,46 @@ public class EnemyCombatAI : MobileCombatAI
         if (IsPathStuck())
             return false;
 
+        // 리더보다 앞서 있으면 리더 뒤로 되돌아가지 않고 스스로 경로를 잡아 계속 전진한다.
+        if (IsAheadOfSquadLeader())
+            return false;
+
         // 리더와 다른 표적을 쫓고 있으면 공유 경로가 의미 없다 - 직접 경로를 계산한다.
         // (표적을 잃은 팔로워가 자기 기준으로 새 표적을 개별로 찾을 수 있어, 더 이상
         // "팔로워는 항상 리더와 같은 표적"이라고 가정할 수 없다.)
         return LeaderHasSameTarget();
+    }
+
+    /// <summary>
+    /// 팔로워가 리더를 앞지른 순간 한 번, 리더 뒤 자리/리더 경로로 걷던 목적지를 버린다.
+    /// 그래야 다음 추격에서 스스로 경로를 계산해 대상 쪽으로 계속 전진한다.
+    /// </summary>
+    void UpdateAheadOfLeader(bool follower)
+    {
+        bool ahead = follower && !damageFocusTarget && IsAheadOfSquadLeader();
+
+        // 이미 자기 경로(NavMeshAgent 경로)로 걷는 중이면 새로 계산할 필요가 없다.
+        if (ahead && !wasAheadOfLeader && agent != null && !agent.hasPath)
+            ForgetSharedPath();
+
+        wasAheadOfLeader = ahead;
+    }
+
+    /// <summary>
+    /// 이 팔로워가 리더보다 대상에 '앞선 팔로워 판정 여유' 이상 더 가까운지 확인한다.
+    /// </summary>
+    bool IsAheadOfSquadLeader()
+    {
+        if (squadLeader == null || squadLeader == this || currentTarget == null)
+            return false;
+
+        Vector3 targetPosition = currentTarget.transform.position;
+        Vector3 leaderDelta = squadLeader.transform.position - targetPosition;
+        Vector3 myDelta = transform.position - targetPosition;
+        leaderDelta.y = 0f;
+        myDelta.y = 0f;
+
+        return myDelta.magnitude + Mathf.Max(0f, squadAheadMargin) < leaderDelta.magnitude;
     }
 
     bool LeaderHasSameTarget()
@@ -625,6 +668,10 @@ public class EnemyCombatAI : MobileCombatAI
             return false;
 
         if (squadFollowSpread <= 0.01f && squadFollowSpacing <= 0.01f)
+            return false;
+
+        // 리더보다 앞선 팔로워는 리더 뒤 자리로 되돌아가지 않는다.
+        if (IsAheadOfSquadLeader())
             return false;
 
         Vector3 anchor = squadLeader.transform.position;
@@ -705,6 +752,7 @@ public class EnemyCombatAI : MobileCombatAI
         squadRadius = 12f;
         squadFollowSpread = 2.5f;
         squadFollowSpacing = 2f;
+        squadAheadMargin = 1f;
         detourRedirectMultiplier = 1.6f;
         detourCheckInterval = 1f;
         targetPriority = CombatTargetPriority.UnitsFirst;

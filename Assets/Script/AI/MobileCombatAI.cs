@@ -499,6 +499,15 @@ public abstract class MobileCombatAI : CombatAIBase
         cachedPathCornerIndex = 0;
     }
 
+    /// <summary>
+    /// 따라가던 공유 경로/목적지를 버리고, 다음 추격 때 이 유닛 기준으로 경로를 새로 계산하게 한다.
+    /// </summary>
+    protected void ForgetSharedPath()
+    {
+        ClearCachedPath();
+        hasDestination = false;
+    }
+
     protected virtual bool ShouldSkipSetDestination() => false;
 
     protected virtual bool PreferImmediatePath() => false;
