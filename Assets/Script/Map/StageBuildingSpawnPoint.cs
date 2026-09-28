@@ -47,8 +47,16 @@ public class StageBuildingSpawnPoint : MonoBehaviour
     public float featureLockDuration = 0f;
 
     [Header("시야")]
+    [Label("건설 전 시야 밝히기")]
+    [Tooltip("켜면 건물이 지어지기 전에도 마커 위치의 안개를 밝힙니다. 본부 마커에 켜 두면 시작 화면이 까맣게 보이지 않습니다. 시야는 건물 소유자 기준이라 적 스포너 마커에서는 밝혀지지 않습니다.")]
+    public bool revealBeforeSpawn = true;
+
+    [Label("건설 전 시야 반경")]
+    [Tooltip("건설 전에 밝힐 시야 반경입니다. 0이면 건물 프리팹의 시야 반경을 그대로 씁니다.")]
+    public float revealRange = 0f;
+
     [Label("건설 후 마커 시야 끄기")]
-    [Tooltip("이 마커에 FogOfWarVisionSource를 붙여 건설 전 시야를 밝힌 경우, 켜 두면 건물이 지어진 뒤 마커의 시야를 끕니다. (이후엔 건물 자체 시야를 씁니다)")]
+    [Tooltip("켜 두면 건물이 지어진 뒤 마커의 시야를 끕니다. (이후엔 건물 자체 시야를 씁니다)")]
     public bool disableMarkerVisionAfterSpawn = true;
 
     [Header("에디터 미리보기")]
@@ -74,6 +82,49 @@ public class StageBuildingSpawnPoint : MonoBehaviour
     bool countedAsHeadquarters;
     bool countedAsSpawner;
     bool spawned;
+
+    void Awake()
+    {
+        if (Application.isPlaying)
+            SetupMarkerVision();
+    }
+
+    // 마커의 시야 소유자를 건물 소유자로 맞춘다. 마커에는 SelectableEntity가 없어
+    // 그대로 두면 소유자 0으로 취급돼 안개를 밝히지 못한다.
+    void SetupMarkerVision()
+    {
+        FogOfWarVisionSource vision = GetComponent<FogOfWarVisionSource>();
+
+        if (vision == null)
+        {
+            if (!revealBeforeSpawn || buildingPrefab == null)
+                return;
+
+            vision = gameObject.AddComponent<FogOfWarVisionSource>();
+
+            FogOfWarVisionSource prefabVision =
+                buildingPrefab.GetComponentInChildren<FogOfWarVisionSource>(true);
+
+            if (revealRange > 0f)
+                vision.visionRange = revealRange;
+            else if (prefabVision != null)
+                vision.visionRange = prefabVision.visionRange;
+        }
+
+        if (vision.fallbackOwnerId == 0)
+            vision.fallbackOwnerId = ResolveBuildingOwnerId();
+    }
+
+    int ResolveBuildingOwnerId()
+    {
+        if (overrideOwner)
+            return ownerId;
+
+        SelectableEntity prefabEntity =
+            buildingPrefab != null ? buildingPrefab.GetComponent<SelectableEntity>() : null;
+
+        return prefabEntity != null ? prefabEntity.ownerId : 0;
+    }
 
     void OnEnable()
     {
