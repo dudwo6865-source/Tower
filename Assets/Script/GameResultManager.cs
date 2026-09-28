@@ -109,6 +109,11 @@ public class GameResultManager : MonoBehaviour
             dayNightCycle.OnPhaseStarted += HandlePhaseStarted;
 
         EntityHealth.OnAnyDied += HandleAnyDied;
+
+        // 본부가 스테이지 시작 후에 건설되는 경우(StageBuildingSpawnPoint)를 위해,
+        // 건물이 생길 때마다 본부 연결을 다시 시도한다.
+        BuildingRegistry.OnBuildingRegistered += HandleBuildingRegistered;
+        StageBuildingSpawnPoint.OnAnyBuildingSpawned += HandleStageBuildingSpawned;
     }
 
     void OnDisable()
@@ -117,6 +122,8 @@ public class GameResultManager : MonoBehaviour
             dayNightCycle.OnPhaseStarted -= HandlePhaseStarted;
 
         EntityHealth.OnAnyDied -= HandleAnyDied;
+        BuildingRegistry.OnBuildingRegistered -= HandleBuildingRegistered;
+        StageBuildingSpawnPoint.OnAnyBuildingSpawned -= HandleStageBuildingSpawned;
 
         if (wattManager != null)
             wattManager.OnWattSpent -= HandleWattSpent;
@@ -183,6 +190,19 @@ public class GameResultManager : MonoBehaviour
         hqHealth = null;
     }
 
+    void HandleBuildingRegistered(SelectableEntity building)
+    {
+        if (!IsGameOver && hqHealth == null)
+            TrySubscribeHq();
+    }
+
+    // 마커가 소유자를 바꾼 경우 등록 시점에는 아직 소유자가 달라 못 찾을 수 있어, 건설 직후 한 번 더 확인한다.
+    void HandleStageBuildingSpawned(GameObject building)
+    {
+        if (!IsGameOver && hqHealth == null)
+            TrySubscribeHq();
+    }
+
     void HandleHqDied()
     {
         EndGame(Result.Defeat);
@@ -219,6 +239,10 @@ public class GameResultManager : MonoBehaviour
             maxSpawnersSeen = alive;
 
         if (PlayTime < spawnerCheckStartDelay || maxSpawnersSeen == 0)
+            return;
+
+        // 아직 건설 대기 중인 스포너 마커가 있으면 전멸로 보지 않는다.
+        if (StageBuildingSpawnPoint.PendingSpawnerCount > 0)
             return;
 
         if (alive == 0)

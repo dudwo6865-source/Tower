@@ -161,6 +161,16 @@ public class InitialEnemyPlacer : MonoBehaviour
         // 맵 인스턴스화와 NavMesh 등록, 씬 건물의 격자 점유가 끝난 다음에 배치한다.
         yield return null;
 
+        // 본부가 스테이지 시작 후에 건설되면(StageBuildingSpawnPoint) 본부 거리·시야 기준이
+        // 맞도록 건설이 끝날 때까지 기다린다. 본부 시야가 등록되도록 한 프레임 더 기다린다.
+        if (StageBuildingSpawnPoint.PendingHeadquartersCount > 0)
+        {
+            while (StageBuildingSpawnPoint.PendingHeadquartersCount > 0)
+                yield return null;
+
+            yield return null;
+        }
+
         PlaceAll();
     }
 

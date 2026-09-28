@@ -118,9 +118,13 @@ public class VictoryConditionHUD : MonoBehaviour
 
         if (spawnerOn && spawnerText != null)
         {
+            // 아직 건설 전인 스포너 마커도 남은 수에 넣는다.
             int alive = GameResultManager.CountAliveSpawners();
-            int total = Mathf.Max(resultManager.MaxSpawnersSeen, alive);
-            spawnerText.text = string.Format(spawnerFormat, total - alive, total, alive);
+            int remaining = alive + StageBuildingSpawnPoint.PendingSpawnerCount;
+            int total = Mathf.Max(
+                resultManager.MaxSpawnersSeen,
+                resultManager.DestroyedSpawnerCount + remaining);
+            spawnerText.text = string.Format(spawnerFormat, Mathf.Max(0, total - remaining), total, remaining);
         }
     }
 

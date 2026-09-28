@@ -106,6 +106,12 @@ Unity **2022.3.26f1** 타워 디펜스 RTS. 낮/밤이 한 사이클(= 웨이브
   불러오므로, 경제·낮밤·웨이브·초기 적·승리 조건은 **씬 매니저 인스펙터가 아니라
   1Stage 값**이 적용됩니다.
 
+- 본부·적 스포너는 맵에 미리 두지 않고 **`StageBuildingSpawnPoint` 마커**로 배치할 수 있습니다.
+  맵 루트 프리팹에 빈 오브젝트 + 마커를 두면 시작 시 건설 연출과 함께 지어집니다
+  (건물 메쉬가 NavMesh 굽기에 섞이지 않음). 건설 대기 중인 마커 수는
+  `PendingHeadquartersCount` / `PendingSpawnerCount`로 노출되며, 초기 적 배치는 본부 건설을,
+  스포너 전멸 판정은 스포너 건설을 기다립니다.
+
 ### 승패 / 결과 창
 
 - `GameResultManager`(`Assets/Script/GameResultManager.cs`)가 승패를 판정합니다.
