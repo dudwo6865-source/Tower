@@ -196,6 +196,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   hideWhenNotVisible: 1
+  rememberUnitsInExplored: 0
 --- !u!114 &7207891143941755624
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -209,7 +210,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   enemyPrefabs:
-  - {fileID: 4697029455683187683, guid: 819e706f8f24e334da3f97fc8b7c955c, type: 3}
+  - {fileID: 4389994320296523517, guid: 8b37dda2a95a2fc4b8ea8d0bb2600499, type: 3}
   enemyOwnerId: 2
   spawnRadius: 6
   spawnPositionAttempts: 16
