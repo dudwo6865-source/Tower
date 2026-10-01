@@ -23,6 +23,12 @@ public class InitialEnemyGroup
     [Tooltip("무리를 이 반경(미터) 안에 모아서 배치합니다. 0이면 한 지점에 몰립니다.")]
     public float clusterRadius = 6f;
 
+    [Label("방향 무작위 범위")]
+    [Tooltip("배치할 때 적마다 바라보는 방향(Y축 회전)을 이 각도 범위 안에서 무작위로 돌립니다.\n" +
+        "360이면 모든 방향, 0이면 모두 프리팹 방향 그대로 바라봅니다.")]
+    [Range(0f, 360f)]
+    public float randomYawRange = 360f;
+
     public int TotalCount => Mathf.Max(0, countPerCluster) * Mathf.Max(0, clusterCount);
 
     public InitialEnemyGroup()
@@ -38,6 +44,20 @@ public class InitialEnemyGroup
         countPerCluster = source.countPerCluster;
         clusterCount = source.clusterCount;
         clusterRadius = source.clusterRadius;
+        randomYawRange = source.randomYawRange;
+    }
+
+    /// <summary>프리팹 회전에 무작위 Y축 회전을 더한 배치 회전을 돌려줍니다.</summary>
+    public Quaternion GetRandomRotation()
+    {
+        Quaternion baseRotation = prefab != null ? prefab.transform.rotation : Quaternion.identity;
+        float halfRange = Mathf.Clamp(randomYawRange, 0f, 360f) * 0.5f;
+
+        if (halfRange <= 0f)
+            return baseRotation;
+
+        // 월드 Y축 기준으로 돌려 프리팹의 기울기는 그대로 둔다.
+        return Quaternion.Euler(0f, UnityEngine.Random.Range(-halfRange, halfRange), 0f) * baseRotation;
     }
 
     /// <summary>플레이 중 값을 만져도 원본 에셋이 더러워지지 않게 사본을 만듭니다.</summary>
@@ -268,7 +288,7 @@ public class InitialEnemyPlacer : MonoBehaviour
             GameObject enemy = EnemySpawnUtility.SpawnEnemy(
                 group.prefab,
                 position,
-                group.prefab.transform.rotation,
+                group.GetRandomRotation(),
                 enemyOwnerId,
                 health,
                 damage,
