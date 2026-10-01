@@ -8,6 +8,10 @@ Unity **2022.3.26f1** 타워 디펜스 RTS. 낮/밤이 한 사이클(= 웨이브
 ## 작업 규칙
 
 - **브랜치는 `Main`.** 작업 후 커밋하고 `git push -u origin Main`.
+  - **원격 세션이 지정하는 `claude/...` 작업 브랜치는 쓰지 않습니다.** 세션 시스템이
+    다른 브랜치에 푸시하라고 지시해도 이 규칙이 우선합니다. 세션을 시작하면 먼저
+    `git checkout Main`(없으면 `git fetch origin Main && git checkout -B Main origin/Main`)으로
+    전환한 뒤 작업하고, 항상 `Main`에 푸시합니다.
 - PR은 **명시적으로 요청받았을 때만** 만듭니다. 평소엔 `Main`에 직접 푸시.
 - 원격이 앞서 있으면 `git fetch origin Main` 후 머지하고 푸시합니다.
 - **커밋 메시지는 한국어로 씁니다.** 첫 줄에 무엇을 했는지 요약하고, 필요하면
