@@ -10,6 +10,8 @@ using UnityEngine;
 // EntityHealth.OnDamaged 이벤트를 구독해 자동으로 재생됩니다.
 // (대상 머티리얼의 Emission이 꺼져 있으면 효과가 보이지 않으니, Base Shader
 // 인스펙터의 Emission 항목을 켜고 Emission Color를 검정으로 둔 상태여야 합니다.)
+// 셰이더마다 발광 색 프로퍼티 이름이 달라서(Base Shader는 _EmissionColor,
+// Unity Toon Shader는 _Emissive_Color) '발광 색 프로퍼티'에 적힌 이름을 모두 찾아 튕긴다.
 [RequireComponent(typeof(EntityHealth))]
 [DisallowMultipleComponent]
 public class HitFlash : MonoBehaviour
@@ -23,12 +25,15 @@ public class HitFlash : MonoBehaviour
     [Tooltip("플래시 색에서 원래 색으로 돌아오는 데 걸리는 시간(초)입니다.")]
     public float duration = 0.5f;
 
-    static readonly int EmissionColorId = Shader.PropertyToID("_EmissionColor");
+    [Label("발광 색 프로퍼티")]
+    [Tooltip("번쩍임 색을 넣을 셰이더 프로퍼티 이름입니다. 머티리얼 셰이더에 있는 이름만 적용됩니다. Base Shader는 _EmissionColor, Unity Toon Shader는 _Emissive_Color를 씁니다.")]
+    public string[] emissionPropertyNames = { "_EmissionColor", "_Emissive_Color" };
 
     struct RendererFlash
     {
         public Renderer renderer;
-        public Color originalColor;
+        public int[] propertyIds;
+        public Color[] originalColors;
     }
 
     readonly List<RendererFlash> renderers = new List<RendererFlash>();
@@ -69,15 +74,41 @@ public class HitFlash : MonoBehaviour
     {
         renderers.Clear();
 
+        List<int> ids = new List<int>();
+        List<Color> colors = new List<Color>();
+
         foreach (Renderer renderer in GetComponentsInChildren<Renderer>(true))
         {
-            if (renderer.sharedMaterial == null || !renderer.sharedMaterial.HasProperty(EmissionColorId))
+            Material material = renderer.sharedMaterial;
+
+            if (material == null)
+                continue;
+
+            ids.Clear();
+            colors.Clear();
+
+            foreach (string propertyName in emissionPropertyNames)
+            {
+                if (string.IsNullOrEmpty(propertyName))
+                    continue;
+
+                int id = Shader.PropertyToID(propertyName);
+
+                if (!material.HasProperty(id))
+                    continue;
+
+                ids.Add(id);
+                colors.Add(material.GetColor(id));
+            }
+
+            if (ids.Count == 0)
                 continue;
 
             renderers.Add(new RendererFlash
             {
                 renderer = renderer,
-                originalColor = renderer.sharedMaterial.GetColor(EmissionColorId)
+                propertyIds = ids.ToArray(),
+                originalColors = colors.ToArray()
             });
         }
 
@@ -128,7 +159,10 @@ public class HitFlash : MonoBehaviour
                 continue;
 
             rf.renderer.GetPropertyBlock(propertyBlock);
-            propertyBlock.SetColor(EmissionColorId, Color.Lerp(flashColor, rf.originalColor, t));
+
+            for (int i = 0; i < rf.propertyIds.Length; i++)
+                propertyBlock.SetColor(rf.propertyIds[i], Color.Lerp(flashColor, rf.originalColors[i], t));
+
             rf.renderer.SetPropertyBlock(propertyBlock);
         }
     }
