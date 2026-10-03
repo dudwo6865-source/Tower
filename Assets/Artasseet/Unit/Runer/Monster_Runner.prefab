@@ -22,7 +22,7 @@ GameObject:
   - component: {fileID: 1298450739954942294}
   - component: {fileID: 6389408054400618799}
   m_Layer: 0
-  m_Name: Runner
+  m_Name: Monster_Runner
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -201,9 +201,9 @@ NavMeshAgent:
   m_GameObject: {fileID: 4389994320296523517}
   m_Enabled: 1
   m_AgentTypeID: 0
-  m_Radius: 1
+  m_Radius: 0.68
   m_Speed: 4
-  m_Acceleration: 8
+  m_Acceleration: 30
   avoidancePriority: 20
   m_AngularSpeed: 120
   m_StoppingDistance: 0
@@ -213,7 +213,7 @@ NavMeshAgent:
   m_Height: 2
   m_BaseOffset: 0
   m_WalkableMask: 4294967295
-  m_ObstacleAvoidanceType: 1
+  m_ObstacleAvoidanceType: 4
 --- !u!114 &8136599298044150192
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -226,7 +226,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b2c3d4e5f60718293a4b5c6d7e8f901a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  aggroRange: 20
+  aggroRange: 30
   targetPriority: 3
   retargetInterval: 0.5
   damageFocusSwitchMargin: 10
@@ -241,7 +241,7 @@ MonoBehaviour:
   buildingDirectChaseRange: 5
   shareAggroWithAllies: 1
   advanceToEnemyBuildings: 1
-  shareTargetWithNearbyAllies: 1
+  shareTargetWithNearbyAllies: 0
   squadRadius: 20
   squadFollowSpread: 3
   squadFollowSpacing: 0

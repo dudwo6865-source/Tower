@@ -25,7 +25,7 @@ MonoBehaviour:
   dayDuration: 60
   nightDuration: 60
   dayLightColor: {r: 1, g: 0.95686275, b: 0.8392157, a: 1}
-  nightLightColor: {r: 0.51174796, g: 0.6018649, b: 0.8679245, a: 1}
+  nightLightColor: {r: 0.6650943, g: 0.7594442, b: 0.8867924, a: 1}
   dayLightIntensity: 1
   nightLightIntensity: 1
   lightTransitionDuration: 5
@@ -58,16 +58,20 @@ MonoBehaviour:
     speedMultiplier: 1.2
   overrideInitialEnemies: 1
   initialEnemies:
-  - prefab: {fileID: 4697029455683187683, guid: 819e706f8f24e334da3f97fc8b7c955c, type: 3}
+  - prefab: {fileID: 4389994320296523517, guid: 8b37dda2a95a2fc4b8ea8d0bb2600499, type: 3}
     countPerCluster: 5
     clusterCount: 10
     clusterRadius: 5
-  - prefab: {fileID: 4697029455683187683, guid: b86ae9ecf7ea34046b9a4efdf58fd728, type: 3}
+    randomYawRange: 360
+  - prefab: {fileID: 2361311785900166410, guid: fc3ef11110c821c4e94b35b9f97708dd, type: 3}
     countPerCluster: 2
     clusterCount: 10
     clusterRadius: 5
+    randomYawRange: 360
   initialEnemyMinDistanceFromHq: 25
   initialEnemyAvoidPlayerVision: 1
   initialEnemyAdvanceToPlayerBase: 0
   overrideWinCondition: 1
+  winBySurvivingNights: 1
   survivalNightsToWin: 5
+  winWhenAllSpawnersDestroyed: 1
