@@ -35,6 +35,12 @@ public class SelectableEntity : MonoBehaviour
     [Tooltip("선택/체력바 기준이 되는 콜라이더입니다. 비워두면 자식에서 자동으로 찾습니다. (Root 본의 콜라이더 등)")]
     public Collider selectionCollider;
 
+    [Header("사거리 표시")]
+    [Label("유닛도 사거리 원 표시")]
+    [Tooltip("선택했을 때 바닥에 공격 사거리 원을 그릴지 정합니다. 건물(포탑)은 항상 표시합니다. " +
+        "끄면 유닛은 선택해도 사거리 원을 그리지 않습니다.")]
+    public bool showAttackRangeForUnit = false;
+
     [Header("UI")]
     [Label("초상화")]
     [Tooltip("선택 정보 패널 등에 표시할 초상화입니다. 비워두면 UnitData.portrait를 사용합니다.")]
@@ -227,6 +233,9 @@ public class SelectableEntity : MonoBehaviour
 
         if (attacker == null)
             return;
+
+        // 포탑(건물)만 사거리 원을 그린다. 유닛은 '유닛도 사거리 원 표시'를 켰을 때만 그린다.
+        selected &= entityType == SelectableEntityType.Building || showAttackRangeForUnit;
 
         bool showRange = selected && attacker.AttackRange > 0f;
 
