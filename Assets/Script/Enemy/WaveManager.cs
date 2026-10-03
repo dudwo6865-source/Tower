@@ -72,6 +72,28 @@ public class WaveManager : MonoBehaviour
 
     DayNightPhase? lastPhase;
 
+#if UNITY_EDITOR
+    // 스테이지 에디터의 '웨이브 N부터 플레이'용. 플레이 모드 진입 시 도메인 리로드로
+    // static 값이 날아가므로 SessionState에 남겨두고, Awake에서 한 번 꺼내 쓴 뒤 지운다.
+    const string StartWaveSessionKey = "WaveManager.StartWaveForNextPlay";
+
+    /// <summary>다음 플레이를 이 웨이브부터 시작합니다. 한 번 쓰면 지워집니다. (에디터 전용)</summary>
+    public static void SetStartWaveForNextPlay(int waveNumber)
+    {
+        if (waveNumber > 1)
+            UnityEditor.SessionState.SetInt(StartWaveSessionKey, waveNumber);
+        else
+            UnityEditor.SessionState.EraseInt(StartWaveSessionKey);
+    }
+
+    static int ConsumeStartWaveForNextPlay()
+    {
+        int waveNumber = UnityEditor.SessionState.GetInt(StartWaveSessionKey, 1);
+        UnityEditor.SessionState.EraseInt(StartWaveSessionKey);
+        return Mathf.Max(1, waveNumber);
+    }
+#endif
+
     void Awake()
     {
         if (Instance != null && Instance != this)
@@ -84,6 +106,13 @@ public class WaveManager : MonoBehaviour
 
         Instance = this;
         ResolveReferences();
+
+#if UNITY_EDITOR
+        CurrentWaveNumber = ConsumeStartWaveForNextPlay();
+
+        if (CurrentWaveNumber > 1)
+            Debug.Log($"WaveManager: 스테이지 에디터 설정으로 웨이브 {CurrentWaveNumber}부터 시작합니다.");
+#endif
 
         // 스포너(실행 순서 0)의 Awake보다 먼저 현재 웨이브 수치를 준비해 둔다.
         RefreshTuning(notify: false);

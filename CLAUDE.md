@@ -111,6 +111,11 @@ Unity **2022.3.26f1** 타워 디펜스 RTS. 낮/밤이 한 사이클(= 웨이브
 ### 스테이지 (MapConfig)
 
 - `Tools > 맵 > 스테이지 에디터`에서 편집합니다. 웨이브 표, 낮/밤, 경제, 승리 조건.
+  웨이브 섹션(`StageEditorWindow.Wave.cs`, partial)은 전체 폭으로 그리며 상단 요약 칩,
+  설정 점검, 웨이브 구성 표(줄=웨이브, 칸=적 종류, 색 막대), 웨이브별 상세, '웨이브 N부터 플레이'가 있습니다.
+  표의 추가/삭제/이동은 `QueueStageEdit`로 모아 `ApplyModifiedProperties` 뒤에 객체를 직접 고칩니다
+  (빈 리스트를 SerializedProperty로 늘리면 배율이 0으로 채워지기 때문).
+  '웨이브 N부터 플레이'는 `WaveManager.SetStartWaveForNextPlay`(SessionState, 한 번 쓰고 지움)로 전달합니다.
 - **`MapConfig` 값은 씬에 `MapLoader`가 있어야 적용됩니다.** `MapLoader`가 실행
   순서 -1000으로 각 매니저에 값을 주입합니다. 없으면 씬 매니저의 인스펙터 값이
   그대로 쓰입니다. `Test 2.unity`는 `MapLoader`가 `Assets/Data/Maps/1Stage.asset`을

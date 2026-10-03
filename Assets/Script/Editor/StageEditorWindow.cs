@@ -7,12 +7,13 @@ using UnityEngine.SceneManagement;
 
 // 스테이지(MapConfig) 통합 관리 에디터입니다.
 // - 좌측: 프로젝트의 모든 MapConfig(스테이지) 목록 (검색/추가/복제/삭제)
-// - 우측: 선택한 스테이지의 설정을 카테고리(섹션)별로 편집. 섹션을 2열로 배치해
-//   (Identity|Map Content, Economy|Day-Night, Wave|Win Condition) 세로로
-//   너무 길어지지 않게 한다.
+// - 우측: 선택한 스테이지의 설정을 카테고리(섹션)별로 편집. 작은 섹션은 2열로 배치해
+//   (Identity|Map Content, Economy|Day-Night, Win Condition|Initial Enemies) 세로로
+//   너무 길어지지 않게 하고, 내용이 많은 웨이브 섹션은 전체 폭으로 그린다.
+//   (웨이브 섹션은 StageEditorWindow.Wave.cs)
 // - 씬 <-> 스테이지 값 동기화(가져오기/적용), 유효성 경고, 미리보기 요약 제공
 // Tools > 맵 > 스테이지 에디터
-public class StageEditorWindow : EditorWindow
+public partial class StageEditorWindow : EditorWindow
 {
     const string LastSelectedPathKey = "StageEditorWindow.LastSelectedPath";
     const string DefaultStageFolder = "Assets/Data/Maps";
@@ -221,6 +222,7 @@ public class StageEditorWindow : EditorWindow
         serializedObject.Update();
 
         DrawSceneSyncBar();
+        DrawStageSummaryChips();
 
         detailScroll = EditorGUILayout.BeginScrollView(detailScroll);
 
@@ -230,8 +232,10 @@ public class StageEditorWindow : EditorWindow
         // 섹션 자체를 2열로 배치해 세로로 길어지는 걸 줄인다.
         DrawSectionRow(DrawIdentitySection, DrawMapContentSection);
         DrawSectionRow(DrawEconomySection, DrawDayNightSection);
-        DrawSectionRow(DrawWaveSection, DrawWinConditionSection);
-        DrawSectionRow(DrawInitialEnemySection, DrawEmptySection);
+        DrawSectionRow(DrawWinConditionSection, DrawInitialEnemySection);
+
+        // 웨이브는 표·그래프가 들어가므로 전체 폭을 쓴다.
+        DrawWaveSection();
 
         EditorGUIUtility.labelWidth = previousLabelWidth;
 
@@ -241,6 +245,9 @@ public class StageEditorWindow : EditorWindow
         {
             // 값이 바뀌면 즉시 반영되도록. (파일 저장 자체는 '전체 저장' 또는 프로젝트 저장 시 이뤄짐)
         }
+
+        // 웨이브 표의 추가/삭제/이동 같은 구조 변경은 그리는 도중에 하지 않고 여기서 몰아서 한다.
+        RunPendingStageEdits();
 
         EditorGUILayout.EndVertical();
     }
@@ -258,7 +265,7 @@ public class StageEditorWindow : EditorWindow
             PushToScene();
 
         if (GUILayout.Button("이 스테이지로 플레이", GUILayout.Width(140)))
-            PlayThisStage();
+            PlayThisStage(1);
 
         EditorGUILayout.EndHorizontal();
         EditorGUILayout.Space(4);
@@ -570,56 +577,6 @@ public class StageEditorWindow : EditorWindow
                 $"미리보기: 한 사이클(낮+밤) = {selected.dayDuration + selected.nightDuration:0.#}초 " +
                 $"(낮 {selected.dayDuration:0.#}s / 밤 {selected.nightDuration:0.#}s)",
                 EditorStyles.miniLabel);
-        }
-
-        EditorGUILayout.Space(6);
-    }
-
-    void DrawWaveSection()
-    {
-        foldWave = DrawSectionFoldout("Wave (적 웨이브)", WaveColor, foldWave);
-        if (!foldWave)
-            return;
-
-        DrawOverrideToggle("overrideWave", "이 스테이지 값으로 WaveManager 덮어쓰기");
-
-        EditorGUILayout.HelpBox(
-            "스포너(EnemySpawner)는 맵 프리팹에 미리 배치합니다.\n" +
-            "여기서는 웨이브마다 그 스포너들의 스폰량과 스폰되는 적의 스탯 가중치를 조절합니다.\n" +
-            "웨이브 칸의 '적 구성'을 채우면 그 웨이브 동안 스포너마다 적은 종류·수만큼만 스폰합니다.",
-            MessageType.Info);
-
-        EditorGUI.BeginDisabledGroup(!selected.overrideWave);
-
-        SerializedProperty plan = serializedObject.FindProperty("wavePlan");
-
-        EditorGUILayout.LabelField("웨이브별 수치", EditorStyles.boldLabel);
-        EditorGUILayout.PropertyField(
-            plan.FindPropertyRelative("waves"),
-            new GUIContent("웨이브 표 (0번 = 웨이브 1)"),
-            true);
-
-        EditorGUILayout.PropertyField(
-            plan.FindPropertyRelative("growthPerWaveAfterLast"),
-            new GUIContent("표 이후 웨이브 증가율"),
-            true);
-
-        EditorGUILayout.Space(4);
-        EditorGUILayout.LabelField("밤 보정", EditorStyles.boldLabel);
-        EditorGUILayout.PropertyField(
-            serializedObject.FindProperty("applyNightBonus"),
-            new GUIContent("밤에 추가 보정 적용"));
-        EditorGUILayout.PropertyField(
-            serializedObject.FindProperty("nightBonus"),
-            new GUIContent("밤 보정"),
-            true);
-
-        EditorGUI.EndDisabledGroup();
-
-        if (selected.overrideWave)
-        {
-            DrawWavePreview();
-            DrawSpawnRateSection();
         }
 
         EditorGUILayout.Space(6);
@@ -974,11 +931,6 @@ public class StageEditorWindow : EditorWindow
         float perMinute = SpawnsPerMinute(info, tuning, waveNumber);
 
         return $"{count}마리 / {interval:0.#}초 → 분당 {perMinute:0}마리";
-    }
-
-    // 2열 배치에서 짝이 없는 섹션의 반대편 칸입니다.
-    void DrawEmptySection()
-    {
     }
 
     void DrawInitialEnemySection()
@@ -1377,20 +1329,29 @@ public class StageEditorWindow : EditorWindow
         }
     }
 
-    void PlayThisStage()
+    void PlayThisStage(int startWave)
     {
         if (selected == null)
             return;
+
+        if (EditorApplication.isPlaying)
+        {
+            ShowNotification(new GUIContent("이미 플레이 중입니다. 플레이를 멈춘 뒤 다시 누르세요."));
+            return;
+        }
 
         // static 필드만 설정하면 플레이 모드 진입 시 도메인 리로드로 초기화되어
         // MapLoader.Awake()가 값을 받기 전에 사라진다. SessionState까지 같이 남겨
         // 리로드 후에도 복원되게 한다. (MapLoader.SetPendingConfigForNextPlay 참고)
         MapLoader.SetPendingConfigForNextPlay(selected);
+        WaveManager.SetStartWaveForNextPlay(startWave);
 
-        if (!EditorApplication.isPlaying)
-            EditorApplication.isPlaying = true;
+        EditorApplication.isPlaying = true;
 
-        ShowNotification(new GUIContent($"'{selected.displayName}' 스테이지로 플레이합니다."));
+        ShowNotification(new GUIContent(
+            startWave > 1
+                ? $"'{selected.displayName}' 스테이지를 웨이브 {startWave}부터 플레이합니다."
+                : $"'{selected.displayName}' 스테이지로 플레이합니다."));
     }
 
     static void EnsureFolderExists(string folder)
