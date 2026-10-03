@@ -559,8 +559,10 @@ public class SelectionInfoPanelUI : MonoBehaviour
 
     void RefreshProduction(ProductionBuilding production)
     {
+        // 건설 연출이 끝나 건물이 활성화되기 전(기능 잠금 중)에는 생산 정보를 숨긴다.
         bool showProduction = productionSection != null && production != null &&
-            production.recipe != null && production.recipe.unitPrefab != null;
+            production.recipe != null && production.recipe.unitPrefab != null &&
+            !BuildingConstructionGate.IsFeatureLockedOn(production);
 
         SetSectionActive(productionSection, showProduction);
 
@@ -798,7 +800,20 @@ public static class SelectionInfoUtility
         if (data != null && !string.IsNullOrWhiteSpace(data.entityTypeId))
             return data.entityTypeId;
 
-        return source != null ? source.name : string.Empty;
+        return source != null ? StripCloneSuffix(source.name) : string.Empty;
+    }
+
+    // Instantiate로 만든 오브젝트 이름 끝의 "(Clone)"을 떼고 프리팹 이름만 남긴다.
+    static string StripCloneSuffix(string objectName)
+    {
+        const string cloneSuffix = "(Clone)";
+
+        string result = objectName;
+
+        while (result.EndsWith(cloneSuffix, System.StringComparison.Ordinal))
+            result = result.Substring(0, result.Length - cloneSuffix.Length).TrimEnd();
+
+        return result;
     }
 
     public static string GetDisplayName(GameObject source, UnitData data)
