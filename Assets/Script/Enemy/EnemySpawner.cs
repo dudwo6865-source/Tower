@@ -7,6 +7,7 @@ using UnityEngine;
 // - 근접 스폰: 반경 안에 아군이 있는 동안 추가로 스폰한다.
 // - 피격 스폰: 공격받은 뒤 일정 시간 동안 추가로 스폰한다.
 // 그리고 스포너가 파괴되면 생존 상한을 무시하고 한 번에 방출한다.
+// 웨이브 표에 '적 구성'이 있으면 주기 스폰은 그 구성(종류·총량)만 내보내고 멈춘다.
 // 스폰된 적은 낮에는 어그로만 반응하고, 밤이 되면 플레이어 HQ로 진군한다.
 [DisallowMultipleComponent]
 public class EnemySpawner : MonoBehaviour
@@ -161,6 +162,22 @@ public class EnemySpawner : MonoBehaviour
     /// <summary>생성 대기열(EnemySpawnScheduler)에 예약돼 아직 생성되지 않은 수입니다.</summary>
     public int PendingSpawnCount { get; private set; }
 
+    /// <summary>
+    /// 이번 웨이브에 웨이브 표의 '적 구성'(총량)으로 주기 스폰하는지 여부입니다.
+    /// 꺼져 있으면 스포너 인스펙터의 적 프리팹 목록에서 무작위로 계속 스폰합니다.
+    /// </summary>
+    public bool UsesWaveComposition { get; private set; }
+
+    /// <summary>이번 웨이브 적 구성의 총 마리 수입니다.</summary>
+    public int WaveCompositionTotal => UsesWaveComposition ? waveSpawnOrder.Count : 0;
+
+    /// <summary>이번 웨이브 적 구성 중 아직 내보내지 않은(예약하지 않은) 수입니다.</summary>
+    public int WaveCompositionRemaining =>
+        UsesWaveComposition ? Mathf.Max(0, waveSpawnOrder.Count - waveSpawnIndex) : 0;
+
+    /// <summary>이번 웨이브 적 구성을 모두 내보내 주기 스폰이 멈춘 상태인지 여부입니다.</summary>
+    public bool IsWaveCompositionDone => UsesWaveComposition && WaveCompositionRemaining <= 0;
+
     readonly List<EnemyCombatAI> spawnedAIs = new List<EnemyCombatAI>();
     EntityHealth health;
     DayNightCycle dayNightCycle;
@@ -185,6 +202,12 @@ public class EnemySpawner : MonoBehaviour
     float allyCheckTimer;
 
     WaveTuning tuning = new WaveTuning();
+
+    // 웨이브 표 '적 구성'을 스폰 순서대로 펼친 목록과 다음에 내보낼 위치.
+    // 같은 웨이브 안에서 낮→밤으로 보정만 바뀔 때는 다시 만들지 않아야 총량이 유지된다.
+    readonly List<GameObject> waveSpawnOrder = new List<GameObject>();
+    int waveSpawnIndex;
+    int waveSpawnOrderWave; // 목록을 만든 웨이브 번호. 0 = 아직 만들지 않음
 
     void Awake()
     {
@@ -238,6 +261,16 @@ public class EnemySpawner : MonoBehaviour
         EffectiveEnemiesPerSpawn = GetEffectiveSpawnCount(baseEnemiesPerSpawn, tuning);
         EffectiveSpawnInterval = GetEffectiveSpawnInterval(baseSpawnInterval, tuning);
         EffectiveMaxAliveEnemies = GetEffectiveMaxAlive(baseMaxAliveEnemies, tuning);
+
+        UsesWaveComposition = tuning.HasEnemyComposition;
+
+        // 웨이브가 바뀌었을 때만 총량을 다시 채운다.
+        if (UsesWaveComposition && waveSpawnOrderWave != AppliedWaveNumber)
+        {
+            tuning.enemyComposition.BuildSpawnOrder(waveSpawnOrder);
+            waveSpawnIndex = 0;
+            waveSpawnOrderWave = AppliedWaveNumber;
+        }
 
         // 근접/피격/파괴 시 스폰은 웨이브 배율(스폰 수·간격)을 받지 않고 인스펙터 값을 그대로 쓴다.
         // 웨이브 표에서 스폰 수 배율을 0으로 두어도 이 트리거들은 꺼지지 않는다.
@@ -358,7 +391,8 @@ public class EnemySpawner : MonoBehaviour
 
     void TickPeriodicSpawn()
     {
-        if (!spawnPeriodically)
+        // 이번 웨이브의 적 구성(총량)을 다 내보냈으면 다음 웨이브까지 주기 스폰을 쉰다.
+        if (!spawnPeriodically || IsWaveCompositionDone)
         {
             spawnTimer = Mathf.Max(0.1f, EffectiveSpawnInterval);
             return;
@@ -368,8 +402,9 @@ public class EnemySpawner : MonoBehaviour
             ref spawnTimer,
             EffectiveSpawnInterval,
             EffectiveEnemiesPerSpawn,
-            "주기",
-            respectAliveCap: true);
+            UsesWaveComposition ? "주기(웨이브 구성)" : "주기",
+            respectAliveCap: true,
+            useWaveComposition: UsesWaveComposition);
     }
 
     void TickProximitySpawn()
@@ -411,7 +446,8 @@ public class EnemySpawner : MonoBehaviour
         float interval,
         int count,
         string triggerName,
-        bool respectAliveCap)
+        bool respectAliveCap,
+        bool useWaveComposition = false)
     {
         if (count <= 0)
             return;
@@ -428,10 +464,16 @@ public class EnemySpawner : MonoBehaviour
 
         timer = Mathf.Max(0.1f, interval);
 
-        int queued = SpawnBurst(count, respectAliveCap);
+        int queued = SpawnBurst(count, respectAliveCap, useWaveComposition);
 
         if (logSpawnEvents && queued > 0)
-            Debug.Log($"EnemySpawner '{name}': {triggerName} 스폰 {queued}마리 예약", this);
+        {
+            string remaining = useWaveComposition
+                ? $" (웨이브 구성 남은 수 {WaveCompositionRemaining}/{WaveCompositionTotal})"
+                : string.Empty;
+
+            Debug.Log($"EnemySpawner '{name}': {triggerName} 스폰 {queued}마리 예약{remaining}", this);
+        }
     }
 
     void HandlePhaseStarted(DayNightPhase phase)
@@ -478,10 +520,14 @@ public class EnemySpawner : MonoBehaviour
     /// <summary>
     /// 생성 대기열에 예약한 수를 돌려줍니다. 실제 생성은 EnemySpawnScheduler가 여러 프레임에 나눠 합니다.
     /// (위치를 못 찾으면 그 마리는 생성 시점에 건너뜁니다)
+    /// useWaveComposition이면 스포너의 프리팹 목록 대신 웨이브 표 '적 구성'에서 순서대로 꺼냅니다.
     /// </summary>
-    int SpawnBurst(int count, bool respectAliveCap)
+    int SpawnBurst(int count, bool respectAliveCap, bool useWaveComposition = false)
     {
-        if (count <= 0 || enemyPrefabs.Count == 0)
+        if (count <= 0)
+            return 0;
+
+        if (!useWaveComposition && enemyPrefabs.Count == 0)
             return 0;
 
         // 예약 시점의 값을 붙잡아 둔다. 스포너가 먼저 파괴돼도(파괴 시 방출) 생성은 이어진다.
@@ -497,8 +543,19 @@ public class EnemySpawner : MonoBehaviour
                 AliveCount + PendingSpawnCount >= EffectiveMaxAliveEnemies)
                 break;
 
-            GameObject prefab =
-                enemyPrefabs[Random.Range(0, enemyPrefabs.Count)];
+            GameObject prefab;
+
+            if (useWaveComposition)
+            {
+                if (waveSpawnIndex >= waveSpawnOrder.Count)
+                    break;
+
+                prefab = waveSpawnOrder[waveSpawnIndex++];
+            }
+            else
+            {
+                prefab = enemyPrefabs[Random.Range(0, enemyPrefabs.Count)];
+            }
 
             if (prefab == null)
                 continue;

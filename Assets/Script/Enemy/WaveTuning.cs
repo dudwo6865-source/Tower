@@ -43,6 +43,18 @@ public class WaveTuning
     [Tooltip("스폰되는 적의 이동 속도 배율입니다.")]
     public float speedMultiplier = 1f;
 
+    // 인스펙터 제목은 WaveEnemyCompositionDrawer가 한글로 그린다.
+    // (이 필드에 [Label]을 붙이면 그 드로어가 쓰이지 않는다)
+    [Tooltip("이 웨이브 동안 스포너 하나가 내보낼 적의 종류와 마리 수(총량)입니다.\n" +
+             "비워두면 스포너 인스펙터의 '적 프리팹 목록'과 '1회 스폰 수'로 계속 스폰합니다.\n" +
+             "채우면 목록 순서대로 스폰 간격마다 '1회 스폰 수'씩 나눠 내보내고, " +
+             "다 내보내면 그 웨이브의 주기 스폰을 멈춥니다.\n" +
+             "표에 없는 이후 웨이브는 마지막 웨이브의 구성을 그대로 씁니다.")]
+    public WaveEnemyComposition enemyComposition = new WaveEnemyComposition();
+
+    /// <summary>웨이브 표에 적 구성이 하나라도 들어 있는지 여부입니다.</summary>
+    public bool HasEnemyComposition => enemyComposition != null && enemyComposition.HasAny;
+
     public WaveTuning()
     {
     }
@@ -64,6 +76,9 @@ public class WaveTuning
         healthMultiplier = source.healthMultiplier;
         damageMultiplier = source.damageMultiplier;
         speedMultiplier = source.speedMultiplier;
+        enemyComposition = source.enemyComposition != null
+            ? source.enemyComposition.Clone()
+            : new WaveEnemyComposition();
     }
 
     /// <summary>0이나 음수처럼 게임을 멈추게 하는 값을 안전한 범위로 맞춘 사본입니다.</summary>
@@ -78,7 +93,10 @@ public class WaveTuning
             maxAliveEnemies = Mathf.Max(0, maxAliveEnemies),
             healthMultiplier = Mathf.Max(0.01f, healthMultiplier),
             damageMultiplier = Mathf.Max(0f, damageMultiplier),
-            speedMultiplier = Mathf.Max(0.01f, speedMultiplier)
+            speedMultiplier = Mathf.Max(0.01f, speedMultiplier),
+            enemyComposition = enemyComposition != null
+                ? enemyComposition.Clone()
+                : new WaveEnemyComposition()
         };
     }
 
@@ -146,7 +164,11 @@ public class WaveTuning
             maxAliveEnemies = b.maxAliveEnemies > 0 ? b.maxAliveEnemies : a.maxAliveEnemies,
             healthMultiplier = a.healthMultiplier * b.healthMultiplier,
             damageMultiplier = a.damageMultiplier * b.damageMultiplier,
-            speedMultiplier = a.speedMultiplier * b.speedMultiplier
+            speedMultiplier = a.speedMultiplier * b.speedMultiplier,
+            // 적 구성은 웨이브 표(a)에만 있다. 밤 보정(b)은 구성을 바꾸지 않는다.
+            enemyComposition = a.enemyComposition != null
+                ? a.enemyComposition.Clone()
+                : new WaveEnemyComposition()
         };
     }
 
@@ -159,8 +181,130 @@ public class WaveTuning
 
         string cap = maxAliveEnemies > 0 ? $" / 상한 {maxAliveEnemies}" : string.Empty;
 
+        string composition = HasEnemyComposition
+            ? $" / 구성 {enemyComposition.ToSummary()}"
+            : string.Empty;
+
         return $"{count} / 간격 x{spawnIntervalMultiplier:0.##}{cap} / " +
-               $"체력 x{healthMultiplier:0.##} / 공격 x{damageMultiplier:0.##} / 속도 x{speedMultiplier:0.##}";
+               $"체력 x{healthMultiplier:0.##} / 공격 x{damageMultiplier:0.##} / 속도 x{speedMultiplier:0.##}" +
+               composition;
+    }
+}
+
+/// <summary>적 구성의 한 줄입니다. (적 프리팹 + 마리 수)</summary>
+[Serializable]
+public class WaveEnemyEntry
+{
+    [Label("적 프리팹")]
+    [Tooltip("스폰할 적 프리팹입니다.")]
+    public GameObject prefab;
+
+    [Label("마리 수")]
+    [Tooltip("이 웨이브 동안 스포너 하나가 내보낼 이 적의 수입니다.")]
+    [Min(0)]
+    public int count = 1;
+
+    public WaveEnemyEntry()
+    {
+    }
+
+    public WaveEnemyEntry(WaveEnemyEntry source)
+    {
+        if (source == null)
+            return;
+
+        prefab = source.prefab;
+        count = Mathf.Max(0, source.count);
+    }
+}
+
+/// <summary>
+/// 한 웨이브에 스포너 하나가 내보낼 적 종류와 마리 수(총량)입니다.
+/// 목록 순서대로 스폰합니다. 섞어서 내보내고 싶으면 줄을 나눠 적습니다.
+/// (예: 고블린 2 → 오크 1 → 고블린 2)
+/// </summary>
+[Serializable]
+public class WaveEnemyComposition
+{
+    public List<WaveEnemyEntry> entries = new List<WaveEnemyEntry>();
+
+    /// <summary>프리팹과 1 이상의 수가 들어 있는 줄이 하나라도 있는지 여부입니다.</summary>
+    public bool HasAny => TotalCount > 0;
+
+    /// <summary>스포너 하나가 이 웨이브에 내보낼 총 마리 수입니다.</summary>
+    public int TotalCount
+    {
+        get
+        {
+            if (entries == null)
+                return 0;
+
+            int total = 0;
+
+            for (int i = 0; i < entries.Count; i++)
+            {
+                WaveEnemyEntry entry = entries[i];
+
+                if (entry != null && entry.prefab != null && entry.count > 0)
+                    total += entry.count;
+            }
+
+            return total;
+        }
+    }
+
+    public WaveEnemyComposition Clone()
+    {
+        WaveEnemyComposition clone = new WaveEnemyComposition();
+
+        if (entries == null)
+            return clone;
+
+        for (int i = 0; i < entries.Count; i++)
+            clone.entries.Add(new WaveEnemyEntry(entries[i]));
+
+        return clone;
+    }
+
+    /// <summary>스폰 순서대로 프리팹을 펼쳐 담습니다. (고블린 2, 오크 1 → 고블린, 고블린, 오크)</summary>
+    public void BuildSpawnOrder(List<GameObject> result)
+    {
+        result.Clear();
+
+        if (entries == null)
+            return;
+
+        for (int i = 0; i < entries.Count; i++)
+        {
+            WaveEnemyEntry entry = entries[i];
+
+            if (entry == null || entry.prefab == null)
+                continue;
+
+            for (int n = 0; n < entry.count; n++)
+                result.Add(entry.prefab);
+        }
+    }
+
+    /// <summary>에디터 표시용 요약입니다. (예: "고블린 4 · 오크 1")</summary>
+    public string ToSummary()
+    {
+        if (entries == null)
+            return string.Empty;
+
+        List<string> parts = new List<string>();
+
+        for (int i = 0; i < entries.Count; i++)
+        {
+            WaveEnemyEntry entry = entries[i];
+
+            if (entry == null || entry.prefab == null || entry.count <= 0)
+                continue;
+
+            parts.Add($"{entry.prefab.name} {entry.count}");
+        }
+
+        return string.Join(" · ", parts);
     }
 }
 

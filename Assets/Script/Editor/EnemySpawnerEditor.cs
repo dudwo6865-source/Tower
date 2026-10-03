@@ -95,6 +95,14 @@ public class EnemySpawnerEditor : Editor
                 ? $"{spawner.AliveCount} / {spawner.EffectiveMaxAliveEnemies}"
                 : $"{spawner.AliveCount} (상한 없음)") + pendingText);
 
+        if (spawner.UsesWaveComposition)
+        {
+            EditorGUILayout.LabelField(
+                "웨이브 적 구성",
+                $"남은 {spawner.WaveCompositionRemaining} / {spawner.WaveCompositionTotal}마리 · " +
+                (tuning != null ? tuning.enemyComposition.ToSummary() : "-"));
+        }
+
         EditorGUILayout.LabelField("다음 스폰까지", $"{Mathf.Max(0f, spawner.SpawnCountdown):0.0}초");
         EditorGUILayout.LabelField("상태", DescribeState(spawner));
 
@@ -166,10 +174,14 @@ public class EnemySpawnerEditor : Editor
         if (!spawner.IsAwakeForCurrentWave)
             return $"대기 중 — 웨이브 {Mathf.Max(1, spawner.activateFromWave)}부터 활동";
 
+        if (spawner.IsWaveCompositionDone)
+            return "이번 웨이브 적 구성을 모두 내보냄 (다음 웨이브까지 주기 스폰 정지)";
+
         if (spawner.IsBlockedByAliveCap)
             return "생존 상한에 걸려 정지 (적이 죽어야 재개)";
 
-        if (spawner.enemyPrefabs == null || spawner.enemyPrefabs.Count == 0)
+        if (!spawner.UsesWaveComposition &&
+            (spawner.enemyPrefabs == null || spawner.enemyPrefabs.Count == 0))
             return "스폰할 적 프리팹이 없음";
 
         return "스폰 중";
@@ -179,9 +191,20 @@ public class EnemySpawnerEditor : Editor
     {
         if (spawner.enemyPrefabs == null || spawner.enemyPrefabs.Count == 0)
         {
-            EditorGUILayout.HelpBox(
-                "Enemy Prefabs가 비어 있어 아무것도 스폰하지 않습니다.",
-                MessageType.Error);
+            // 웨이브 '적 구성'은 주기 스폰에만 쓰인다. 근접·피격·파괴 시 스폰은 여전히 이 목록을 쓴다.
+            if (spawner.UsesWaveComposition)
+            {
+                EditorGUILayout.HelpBox(
+                    "적 프리팹 목록이 비어 있습니다. 주기 스폰은 웨이브 '적 구성'을 쓰지만, " +
+                    "근접·피격·파괴 시 스폰은 이 목록을 쓰므로 스폰하지 않습니다.",
+                    MessageType.Info);
+            }
+            else
+            {
+                EditorGUILayout.HelpBox(
+                    "Enemy Prefabs가 비어 있어 아무것도 스폰하지 않습니다.",
+                    MessageType.Error);
+            }
         }
 
         if (spawner.EffectiveEnemiesPerSpawn == 0)

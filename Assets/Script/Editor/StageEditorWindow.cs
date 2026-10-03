@@ -585,7 +585,8 @@ public class StageEditorWindow : EditorWindow
 
         EditorGUILayout.HelpBox(
             "스포너(EnemySpawner)는 맵 프리팹에 미리 배치합니다.\n" +
-            "여기서는 웨이브마다 그 스포너들의 스폰량과 스폰되는 적의 스탯 가중치만 조절합니다.",
+            "여기서는 웨이브마다 그 스포너들의 스폰량과 스폰되는 적의 스탯 가중치를 조절합니다.\n" +
+            "웨이브 칸의 '적 구성'을 채우면 그 웨이브 동안 스포너마다 적은 종류·수만큼만 스폰합니다.",
             MessageType.Info);
 
         EditorGUI.BeginDisabledGroup(!selected.overrideWave);
@@ -830,6 +831,27 @@ public class StageEditorWindow : EditorWindow
             WaveTuning dayTuning = BuildTuning(wave, false);
             WaveTuning nightTuning = BuildTuning(wave, true);
 
+            // 적 구성이 있는 웨이브는 분당 수가 아니라 웨이브 총량으로 보여준다.
+            if (dayTuning.HasEnemyComposition)
+            {
+                int perSpawner = dayTuning.enemyComposition.TotalCount;
+                int compositionSpawners = 0;
+
+                foreach (SpawnerInfo info in spawners)
+                {
+                    if (info.spawnPeriodically && wave >= info.activateFromWave)
+                        compositionSpawners++;
+                }
+
+                EditorGUILayout.LabelField(
+                    $"웨이브 {wave}",
+                    compositionSpawners > 0
+                        ? $"웨이브 총 {perSpawner * compositionSpawners}마리  (스포너 {compositionSpawners}개 · 개당 {perSpawner}마리)"
+                        : "  (활동 중인 스포너 없음)",
+                    EditorStyles.miniLabel);
+                continue;
+            }
+
             float dayTotal = 0f;
             float nightTotal = 0f;
             int activeSpawners = 0;
@@ -861,7 +883,7 @@ public class StageEditorWindow : EditorWindow
         DrawAliveCapNote(spawners);
 
         EditorGUILayout.HelpBox(
-            "주기 스폰(Spawn Periodically)만 계산한 값입니다.\n" +
+            "주기 스폰(Spawn Periodically)만 계산한 값입니다. '적 구성'이 있는 웨이브는 웨이브 총량을 표시합니다.\n" +
             "근처에 아군이 있거나 피격당했을 때의 추가 스폰, 스포너 파괴 시 방출은 포함하지 않습니다.",
             MessageType.None);
 
@@ -923,6 +945,21 @@ public class StageEditorWindow : EditorWindow
 
     static string DescribeSpawner(SpawnerInfo info, WaveTuning tuning, int waveNumber)
     {
+        if (tuning.HasEnemyComposition)
+        {
+            if (!info.spawnPeriodically)
+                return "주기 스폰 꺼짐 — 웨이브 '적 구성'을 쓰려면 스포너의 '주기 스폰'을 켜세요";
+
+            if (waveNumber < info.activateFromWave)
+                return $"웨이브 {info.activateFromWave}부터 활동";
+
+            int perSpawn = EnemySpawner.GetEffectiveSpawnCount(info.enemiesPerSpawn, tuning);
+            float spawnInterval = EnemySpawner.GetEffectiveSpawnInterval(info.spawnInterval, tuning);
+
+            return $"웨이브 구성 {tuning.enemyComposition.ToSummary()} " +
+                   $"(총 {tuning.enemyComposition.TotalCount}마리, {perSpawn}마리 / {spawnInterval:0.#}초씩)";
+        }
+
         if (!info.hasPrefab)
             return "적 프리팹이 비어 있음";
 
