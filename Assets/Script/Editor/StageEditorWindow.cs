@@ -679,12 +679,16 @@ public partial class StageEditorWindow : EditorWindow
         if (selected == null)
             return spawnerCache;
 
-        List<EnemySpawner> found = new List<EnemySpawner>();
+        // (스포너, 표시 이름) 목록. 맵에 직접 둔 스포너와 건설 마커가 지을 스포너를 함께 모은다.
+        List<KeyValuePair<EnemySpawner, string>> found = new List<KeyValuePair<EnemySpawner, string>>();
 
         // 스포너는 맵 프리팹에 미리 배치하는 것이 원칙이다. 거기 없으면 열려 있는 씬에서 찾는다.
         if (selected.mapRootPrefab != null)
         {
-            found.AddRange(selected.mapRootPrefab.GetComponentsInChildren<EnemySpawner>(true));
+            CollectSpawners(
+                selected.mapRootPrefab.GetComponentsInChildren<EnemySpawner>(true),
+                selected.mapRootPrefab.GetComponentsInChildren<StageBuildingSpawnPoint>(true),
+                found);
 
             if (found.Count > 0)
                 spawnerSource = $"맵 프리팹 '{selected.mapRootPrefab.name}'";
@@ -692,23 +696,22 @@ public partial class StageEditorWindow : EditorWindow
 
         if (found.Count == 0)
         {
-            found.AddRange(
-                FindObjectsByType<EnemySpawner>(
-                    FindObjectsInactive.Include,
-                    FindObjectsSortMode.None));
+            CollectSpawners(
+                FindObjectsByType<EnemySpawner>(FindObjectsInactive.Include, FindObjectsSortMode.None),
+                FindObjectsByType<StageBuildingSpawnPoint>(FindObjectsInactive.Include, FindObjectsSortMode.None),
+                found);
 
             if (found.Count > 0)
                 spawnerSource = $"열려 있는 씬 '{SceneManager.GetActiveScene().name}'";
         }
 
-        foreach (EnemySpawner spawner in found)
+        foreach (KeyValuePair<EnemySpawner, string> pair in found)
         {
-            if (spawner == null)
-                continue;
+            EnemySpawner spawner = pair.Key;
 
             spawnerCache.Add(new SpawnerInfo
             {
-                name = spawner.name,
+                name = pair.Value,
                 enemiesPerSpawn = spawner.enemiesPerSpawn,
                 spawnInterval = spawner.spawnInterval,
                 maxAliveEnemies = spawner.maxAliveEnemies,
@@ -719,6 +722,31 @@ public partial class StageEditorWindow : EditorWindow
         }
 
         return spawnerCache;
+    }
+
+    // 맵에 직접 둔 스포너와, StageBuildingSpawnPoint 마커가 시작 시 지을 스포너 프리팹을 함께 모은다.
+    // 마커로 짓는 스포너는 편집 중에는 맵에 없으므로 마커의 건물 프리팹에서 설정을 읽는다.
+    static void CollectSpawners(
+        EnemySpawner[] placedSpawners,
+        StageBuildingSpawnPoint[] markers,
+        List<KeyValuePair<EnemySpawner, string>> result)
+    {
+        foreach (EnemySpawner spawner in placedSpawners)
+        {
+            if (spawner != null)
+                result.Add(new KeyValuePair<EnemySpawner, string>(spawner, spawner.name));
+        }
+
+        foreach (StageBuildingSpawnPoint marker in markers)
+        {
+            if (marker == null || marker.buildingPrefab == null)
+                continue;
+
+            EnemySpawner spawner = marker.buildingPrefab.GetComponentInChildren<EnemySpawner>(true);
+
+            if (spawner != null)
+                result.Add(new KeyValuePair<EnemySpawner, string>(spawner, $"{marker.name} (마커)"));
+        }
     }
 
     WaveTuning BuildTuning(int waveNumber, bool night)
@@ -768,7 +796,7 @@ public partial class StageEditorWindow : EditorWindow
         if (spawners.Count == 0)
         {
             EditorGUILayout.HelpBox(
-                "맵 프리팹에도, 열려 있는 씬에도 EnemySpawner가 없습니다.\n" +
+                "맵 프리팹에도, 열려 있는 씬에도 EnemySpawner나 스포너를 짓는 건설 마커가 없습니다.\n" +
                 "스포너를 맵 프리팹에 배치하거나 그 씬을 연 뒤 '다시 스캔'을 누르세요.",
                 MessageType.Info);
             return;

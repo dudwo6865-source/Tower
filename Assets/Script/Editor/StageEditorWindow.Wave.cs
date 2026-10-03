@@ -446,7 +446,8 @@ public partial class StageEditorWindow
         {
             issues.Add(new WaveIssue(
                 WaveIssueLevel.Warning,
-                "맵 프리팹과 열려 있는 씬에서 EnemySpawner를 찾지 못했습니다. 웨이브 설정이 적용될 스포너가 없습니다."));
+                "맵 프리팹과 열려 있는 씬에서 EnemySpawner나 스포너를 짓는 건설 마커(StageBuildingSpawnPoint)를 찾지 못했습니다. " +
+                "웨이브 설정이 적용될 스포너가 없습니다."));
         }
         else
         {
