@@ -49,6 +49,8 @@ public class UnitAnimator : MonoBehaviour
         if (animator == null)
             animator = GetComponentInChildren<Animator>();
 
+        EnsureEventRelay();
+
         agent = GetComponent<NavMeshAgent>();
         health = GetComponent<EntityHealth>();
 
@@ -125,6 +127,21 @@ public class UnitAnimator : MonoBehaviour
     public void OnAttackFire()
     {
         OnAttackHit();
+    }
+
+    // Animator가 자식 모델에 있으면 공격 애니메이션 이벤트가 이 컴포넌트에 닿지 않으므로
+    // 그 오브젝트에 중계 컴포넌트를 붙여 이벤트를 넘겨받는다.
+    void EnsureEventRelay()
+    {
+        if (animator == null || animator.gameObject == gameObject)
+            return;
+
+        AnimationEventRelay relay = animator.GetComponent<AnimationEventRelay>();
+        if (relay == null)
+            relay = animator.gameObject.AddComponent<AnimationEventRelay>();
+
+        if (relay.target == null)
+            relay.target = this;
     }
 
     UnitAttacker ResolveAttacker()
