@@ -62,6 +62,7 @@ MonoBehaviour:
   entityTypeId: GunTower
   autoAssignEntityTypeId: 1
   selectionCollider: {fileID: 0}
+  showAttackRangeForUnit: 0
   portrait: {fileID: 21300000, guid: a6d934f41fab89d49b867a21f0f1e4f7, type: 3}
   autoSetupHealth: 1
 --- !u!114 &2544994321938817267
@@ -348,6 +349,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   flashColor: {r: 1.1577258, g: 0.13335063, b: 0, a: 1}
   duration: 0.5
+  emissionPropertyNames:
+  - _EmissionColor
+  - _Emissive_Color
 --- !u!1 &8750845808705704242
 GameObject:
   m_ObjectHideFlags: 0

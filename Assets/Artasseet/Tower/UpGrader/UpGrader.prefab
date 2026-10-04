@@ -61,6 +61,7 @@ MonoBehaviour:
   entityTypeId: UpGrader
   autoAssignEntityTypeId: 1
   selectionCollider: {fileID: 0}
+  showAttackRangeForUnit: 0
   portrait: {fileID: 0}
   autoSetupHealth: 1
 --- !u!114 &8309233575429532713
@@ -263,6 +264,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   flashColor: {r: 1.1577258, g: 0.13335063, b: 0, a: 1}
   duration: 0.5
+  emissionPropertyNames:
+  - _EmissionColor
+  - _Emissive_Color
 --- !u!1001 &4625197307505398800
 PrefabInstance:
   m_ObjectHideFlags: 0

@@ -46,7 +46,7 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _: 0.32
+    - _: 0.39
     - _Float: 5.66
     - _Float_1: 50
     - _Float_2: 50

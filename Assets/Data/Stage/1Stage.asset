@@ -39,6 +39,14 @@ MonoBehaviour:
       healthMultiplier: 1
       damageMultiplier: 1
       speedMultiplier: 1
+      enemyComposition:
+        entries:
+        - prefab: {fileID: 2361311785900166410, guid: fc3ef11110c821c4e94b35b9f97708dd, type: 3}
+          count: 1
+        - prefab: {fileID: 4389994320296523517, guid: 8924176a55da7874abdcdb12dbb1e645, type: 3}
+          count: 3
+        - prefab: {fileID: 4389994320296523517, guid: 8b37dda2a95a2fc4b8ea8d0bb2600499, type: 3}
+          count: 10
     growthPerWaveAfterLast:
       spawnCountMultiplier: 0
       spawnCountBonus: 0
@@ -47,6 +55,8 @@ MonoBehaviour:
       healthMultiplier: 1.1
       damageMultiplier: 1
       speedMultiplier: 1
+      enemyComposition:
+        entries: []
   applyNightBonus: 0
   nightBonus:
     spawnCountMultiplier: 1
@@ -56,6 +66,8 @@ MonoBehaviour:
     healthMultiplier: 1
     damageMultiplier: 1.2
     speedMultiplier: 1.2
+    enemyComposition:
+      entries: []
   overrideInitialEnemies: 1
   initialEnemies:
   - prefab: {fileID: 4389994320296523517, guid: 8b37dda2a95a2fc4b8ea8d0bb2600499, type: 3}
@@ -64,8 +76,13 @@ MonoBehaviour:
     clusterRadius: 5
     randomYawRange: 360
   - prefab: {fileID: 2361311785900166410, guid: fc3ef11110c821c4e94b35b9f97708dd, type: 3}
-    countPerCluster: 2
+    countPerCluster: 1
     clusterCount: 10
+    clusterRadius: 5
+    randomYawRange: 360
+  - prefab: {fileID: 4389994320296523517, guid: 8924176a55da7874abdcdb12dbb1e645, type: 3}
+    countPerCluster: 3
+    clusterCount: 5
     clusterRadius: 5
     randomYawRange: 360
   initialEnemyMinDistanceFromHq: 25
