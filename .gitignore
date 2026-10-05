@@ -46,6 +46,9 @@ sysinfo.txt
 # Crashlytics
 crashlytics-build.properties
 
+# Claude Code 개인 설정
+.claude/settings.local.json
+
 # OS files
 .DS_Store
 Thumbs.db
