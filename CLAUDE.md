@@ -45,9 +45,15 @@ Unity **2022.3.26f1** 타워 디펜스 RTS. 낮/밤이 한 사이클(= 웨이브
   `%LOCALAPPDATA%\Unity\Editor\Editor.log`(= `~/AppData/Local/Unity/Editor/Editor.log`)에서
   **직접 읽어 확인합니다.** 콘솔 메시지를 붙여넣어 달라고 하지 않습니다.
   컴파일 오류는 `error CS` 로 검색합니다. 로그는 에디터를 켤 때마다 새로 시작합니다.
-- 프로젝트 루트에 `.sln` / `.csproj`가 있으면 `dotnet build`로 유니티 전환 전에
-  먼저 컴파일을 검사할 수 있습니다. (유니티의 Visual Studio Editor 패키지와
-  `External Script Editor` 설정으로 생성되며, git에는 올라가지 않습니다)
+- 프로젝트 루트의 `.csproj`로 유니티 전환 전에 먼저 컴파일을 검사할 수 있습니다.
+  .NET SDK가 없으므로 `dotnet build`가 아니라 **Visual Studio 2022의 MSBuild**를 씁니다.
+  `Assembly-CSharp-Editor.csproj`를 빌드하면 런타임 스크립트까지 함께 검사됩니다.
+  ```
+  "/c/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/MSBuild.exe" Assembly-CSharp-Editor.csproj -nologo -v:q -p:OutputPath="$TEMP/tankbuild/" 2>&1 | grep -E "error CS"
+  ```
+  MSB3277·CS8032 경고는 유니티 참조 구성 탓이라 무시합니다.
+  `.sln`/`.csproj`는 git에 올라가지 않으며, 새 스크립트 파일을 추가하면 유니티가
+  재컴파일할 때 갱신됩니다(그 전에는 새 파일이 빌드에 빠집니다).
 
 **원격 세션:** 유니티 CI가 없고 컨테이너에도 유니티가 없습니다
 (프록시가 `download.unity3d.com` / `license.unity3d.com`을 차단, docker 데몬 없음).
