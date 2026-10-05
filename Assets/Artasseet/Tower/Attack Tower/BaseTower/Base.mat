@@ -25,6 +25,7 @@ Material:
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
+  - _DISSOLVE_CAP
   - _DISSOLVE_ON
   - _EMISSION
   - _METALLICSPECGLOSSMAP
@@ -307,7 +308,7 @@ Material:
     - _CoatMask: 0
     - _ColorShift_Speed: 0
     - _ComposerMaskMode: 0
-    - _Cull: 2
+    - _Cull: 0
     - _CullMode: 2
     - _CullModeForward: 2
     - _Cutoff: 0.319
@@ -323,6 +324,7 @@ Material:
     - _DisplacementLockTilingScale: 1
     - _DisplacementMode: 3
     - _DissolveEdge: 0.72
+    - _DissolveCapEnabled: 1
     - _DissolveEnabled: 1
     - _DissolveHeight: 11
     - _DissolveNoiseScale: 50

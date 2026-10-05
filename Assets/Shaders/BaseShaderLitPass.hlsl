@@ -8,6 +8,11 @@
     #endif
 #endif
 
+// 잘린 단면 채우기는 디졸브가 켜져 있을 때만 의미가 있다.
+#if defined(_DISSOLVE_ON) && defined(_DISSOLVE_CAP)
+    #define BASE_SHADER_DISSOLVE_CAP
+#endif
+
 #define LitPassFragment LitPassFragment_URP
 #include "Packages/com.unity.render-pipelines.universal/Shaders/LitForwardPass.hlsl"
 #undef LitPassFragment
@@ -18,6 +23,9 @@
 
 void LitPassFragment(
     Varyings input
+#ifdef BASE_SHADER_DISSOLVE_CAP
+    , FRONT_FACE_TYPE isFrontFace : FRONT_FACE_SEMANTIC
+#endif
     , out half4 outColor : SV_Target0
 #ifdef _WRITE_RENDERING_LAYERS
     , out float4 outRenderingLayers : SV_Target1
@@ -35,7 +43,23 @@ void LitPassFragment(
 #if defined(_DISSOLVE_ON)
     half3 dissolveViewDirWS = GetWorldSpaceNormalizeViewDir(input.positionWS);
     float3 positionOS = TransformWorldToObject(input.positionWS);
-    BaseShader_ApplyDissolve(positionOS, input.uv, input.normalWS, dissolveViewDirWS, surfaceData);
+#ifdef BASE_SHADER_DISSOLVE_CAP
+    if (!IS_FRONT_VFACE(isFrontFace, true, false))
+    {
+        // 남아 있어야 할 높이의 뒷면만 단면으로 쓴다.
+        BaseShader_ClipDissolve(positionOS, input.uv);
+        BaseShader_ApplyDissolveCapSurface(surfaceData);
+
+        // 단면은 절단 평면 위에 있는 것처럼 위쪽(오브젝트 +Y) 노멀로 조명한다.
+        float3 capPositionOS = BaseShader_DissolveCapPositionOS(positionOS, dissolveViewDirWS);
+        input.positionWS = TransformObjectToWorld(capPositionOS);
+        input.normalWS = TransformObjectToWorldNormal(float3(0.0, 1.0, 0.0));
+    }
+    else
+#endif
+    {
+        BaseShader_ApplyDissolve(positionOS, input.uv, input.normalWS, dissolveViewDirWS, surfaceData);
+    }
 #endif
 
 #ifdef LOD_FADE_CROSSFADE

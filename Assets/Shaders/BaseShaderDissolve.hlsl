@@ -12,6 +12,8 @@ half4 _DissolveEdgeColor;
 float _DissolveNoiseScale;
 float _DissolveNoiseStrength;
 half4 _DissolveFresnelColor;
+half4 _DissolveCapColor;
+half4 _DissolveCapEmission;
 
 float BaseShader_ValueNoise(float2 uv)
 {
@@ -87,6 +89,35 @@ void BaseShader_ApplyDissolve(
     surfaceData.albedo += fresnel * _DissolveFresnelColor.rgb;
     surfaceData.emission += edgeMask * _DissolveEdgeColor.rgb;
 #endif
+}
+
+// 잘린 단면 채우기.
+// 디졸브로 앞면이 잘리면 그 구멍으로 메시 안쪽 뒷면이 보인다. 그 뒷면을 단면 색으로 칠하면
+// 스텐실이나 별도 뚜껑 메시 없이도 속이 꽉 찬 것처럼 보인다.
+// 조명 계산 위치는 뒷면 대신, 시선이 절단 높이(_DissolveHeight) 평면과 만나는 점으로 옮긴다.
+float3 BaseShader_DissolveCapPositionOS(float3 positionOS, half3 viewDirWS)
+{
+    // 직교 카메라에서도 맞도록 위치 차이가 아니라 시선 방향으로 평면 교차를 구한다.
+    float3 viewDirOS = TransformWorldToObjectDir(viewDirWS, false);
+    if (viewDirOS.y <= 1e-4)
+        return positionOS;
+
+    float distanceToCap = (_DissolveHeight - positionOS.y) / viewDirOS.y;
+    return positionOS + viewDirOS * max(distanceToCap, 0.0);
+}
+
+void BaseShader_ApplyDissolveCapSurface(inout SurfaceData surfaceData)
+{
+    surfaceData.albedo = _DissolveCapColor.rgb;
+    surfaceData.specular = half3(0.0, 0.0, 0.0);
+    surfaceData.metallic = 0.0;
+    surfaceData.smoothness = 0.0;
+    surfaceData.normalTS = half3(0.0, 0.0, 1.0);
+    surfaceData.occlusion = 1.0;
+    surfaceData.emission = _DissolveCapEmission.rgb;
+    surfaceData.clearCoatMask = 0.0;
+    surfaceData.clearCoatSmoothness = 0.0;
+    surfaceData.alpha = 1.0;
 }
 
 #endif
