@@ -21,6 +21,7 @@ GameObject:
   - component: {fileID: 6629162137175184675}
   - component: {fileID: 338935201204366862}
   - component: {fileID: 322594388562245454}
+  - component: {fileID: 1717588552250266143}
   m_Layer: 0
   m_Name: Marin
   m_TagString: Untagged
@@ -226,7 +227,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   aggroRange: 30
   targetPriority: 0
-  retargetInterval: 0.1
+  retargetInterval: 0.5
   damageFocusSwitchMargin: 2
   debugCommandLog: 0
   stoppingDistance: 2
@@ -318,6 +319,34 @@ MonoBehaviour:
   dieTrigger: Die
   moveSpeedThreshold: 0.1
   useMoveAnimation: 1
+--- !u!114 &1717588552250266143
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1258975795556199837}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cb8a6c9de3fe8b1458e4548a1aea8319, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  heightOffset: 0.05
+  viewDownOffset: 1.5
+  barHeight: 0.5
+  worldScale: 0.07
+  segmentWorldWidth: 0.4
+  localPlayerOwnerId: 1
+  alwaysShowEnemyBar: 0
+  showWhenSelected: 1
+  showAfterDamageDuration: 3
+  allyFillColor: {r: 0.2, g: 0.9, b: 0.3, a: 1}
+  enemyFillColor: {r: 0.95, g: 0.2, b: 0.2, a: 1}
+  lowHealthColor: {r: 0.95, g: 0.55, b: 0.1, a: 1}
+  lowHealthThreshold: 0.35
+  healthPerSegment: 10
+  segmentSpacing: 3
+  maxSegmentsPerRow: 15
 --- !u!1 &3803874327906014221
 GameObject:
   m_ObjectHideFlags: 0

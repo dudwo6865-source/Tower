@@ -17,10 +17,10 @@ GameObject:
   - component: {fileID: 2238863894075100490}
   - component: {fileID: 8844226611335577990}
   - component: {fileID: 9223372036854775807}
-  - component: {fileID: 1292566576071216317}
   - component: {fileID: 493344982007910691}
   - component: {fileID: 1085186090901106335}
   - component: {fileID: -5852210448441303800}
+  - component: {fileID: 5609028864792554256}
   m_Layer: 0
   m_Name: HQ
   m_TagString: Biulding
@@ -199,27 +199,6 @@ MonoBehaviour:
   buildRadiusCells: 10
   buildZoneHeightOffset: 0.06
   canPlaceOutsideBuildZones: 0
---- !u!95 &1292566576071216317
-Animator:
-  serializedVersion: 5
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1362446224610192768}
-  m_Enabled: 1
-  m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 9100000, guid: c36ce97cd5ac53b45af33831699b225d, type: 2}
-  m_CullingMode: 0
-  m_UpdateMode: 0
-  m_ApplyRootMotion: 0
-  m_LinearVelocityBlending: 0
-  m_StabilizeFeet: 0
-  m_WarningMessage: 
-  m_HasTransformHierarchy: 1
-  m_AllowConstantClipSamplingOptimization: 1
-  m_KeepAnimatorStateOnDisable: 0
-  m_WriteDefaultValuesOnDisable: 0
 --- !u!114 &493344982007910691
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -281,3 +260,41 @@ MonoBehaviour:
   emissionPropertyNames:
   - _EmissionColor
   - _Emissive_Color
+--- !u!114 &5609028864792554256
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1362446224610192768}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 62dcbb6dbc19e3b4eb97433bd9090c0f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  duration: 2.5
+  startMargin: 0.25
+  easing:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4

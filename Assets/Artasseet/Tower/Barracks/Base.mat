@@ -28,6 +28,7 @@ Material:
   - _DISSOLVE_ON
   - _EMISSION
   - _METALLICSPECGLOSSMAP
+  - _NORMALMAP
   m_InvalidKeywords: []
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 1
