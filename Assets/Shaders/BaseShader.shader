@@ -19,6 +19,10 @@ Shader "Base Shader"
         _DissolveNoiseScale("Scale", Float) = 50.0
         _DissolveNoiseStrength("Strength", Float) = 1.0
         [HDR] _DissolveFresnelColor("Fresnel Color", Color) = (0, 8, 8, 1)
+        // 잘린 단면 채우기: 켜면 ForwardLit의 Cull을 Off로 두고, 뚫린 자리로 보이는 뒷면을 단면 색으로 칠한다.
+        [Toggle(_DISSOLVE_CAP)] _DissolveCapEnabled("Fill Cut Section", Float) = 0
+        _DissolveCapColor("Cap Color", Color) = (0.2, 0.2, 0.2, 1)
+        [HDR] _DissolveCapEmission("Cap Emission", Color) = (0, 0, 0, 1)
 
         // ===== Surface (항상 표시) =====
         [MainTexture] _BaseMap("Albedo", 2D) = "white" {}
@@ -218,6 +222,7 @@ Shader "Base Shader"
             #pragma shader_feature_local_fragment _ENVIRONMENTREFLECTIONS_OFF
             #pragma shader_feature_local_fragment _SPECULAR_SETUP
             #pragma shader_feature_local _DISSOLVE_ON
+            #pragma shader_feature_local_fragment _DISSOLVE_CAP
             #pragma shader_feature_local_fragment _ALBEDO_RECOLOR
 
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN

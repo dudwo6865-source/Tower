@@ -99,6 +99,9 @@ public class TankBaseShaderGUI : ShaderGUI
         public MaterialProperty dissolveNoiseScale;
         public MaterialProperty dissolveNoiseStrength;
         public MaterialProperty dissolveFresnelColor;
+        public MaterialProperty dissolveCapEnabled;
+        public MaterialProperty dissolveCapColor;
+        public MaterialProperty dissolveCapEmission;
         public MaterialProperty baseMap;
         public MaterialProperty baseColor;
         public MaterialProperty albedoRecolorEnabled;
@@ -139,6 +142,9 @@ public class TankBaseShaderGUI : ShaderGUI
             dissolveNoiseScale = FindProperty("_DissolveNoiseScale", properties, false),
             dissolveNoiseStrength = FindProperty("_DissolveNoiseStrength", properties, false),
             dissolveFresnelColor = FindProperty("_DissolveFresnelColor", properties, false),
+            dissolveCapEnabled = FindProperty("_DissolveCapEnabled", properties, false),
+            dissolveCapColor = FindProperty("_DissolveCapColor", properties, false),
+            dissolveCapEmission = FindProperty("_DissolveCapEmission", properties, false),
             baseMap = FindProperty("_BaseMap", properties, false),
             baseColor = FindProperty("_BaseColor", properties, false),
             albedoRecolorEnabled = FindProperty("_AlbedoRecolorEnabled", properties, false),
@@ -220,6 +226,41 @@ public class TankBaseShaderGUI : ShaderGUI
                     p.dissolveFresnelColor,
                     new GUIContent("Fresnel Color", "디졸브 활성 시 프레넬 오버레이(HDR)"));
             }
+
+            DrawDissolveCap(editor, material, p);
+        }
+    }
+
+    static void DrawDissolveCap(MaterialEditor editor, Material material, Props p)
+    {
+        if (p.dissolveCapEnabled == null)
+            return;
+
+        EditorGUILayout.Space(4f);
+        bool capEnabled = material.IsKeywordEnabled("_DISSOLVE_CAP");
+        EditorGUI.BeginChangeCheck();
+        capEnabled = EditorGUILayout.Toggle(
+            new GUIContent(
+                "잘린 단면 채우기",
+                "디졸브로 잘린 자리에 보이는 메시 안쪽을 단면 색으로 칠해 속이 꽉 찬 것처럼 보이게 합니다. " +
+                "켜면 Render Face가 Both(Cull Off)로 바뀝니다. 메시가 닫혀 있어야(구멍 없이) 깔끔하게 보입니다."),
+            capEnabled);
+        if (EditorGUI.EndChangeCheck())
+        {
+            SetKeyword(material, "_DISSOLVE_CAP", capEnabled);
+            p.dissolveCapEnabled.floatValue = capEnabled ? 1f : 0f;
+
+            // 끌 때는 기본값(앞면만 그리기)으로 되돌린다.
+            if (p.cull != null)
+                p.cull.floatValue = capEnabled ? (float)CullMode.Off : (float)CullMode.Back;
+        }
+
+        using (new EditorGUI.DisabledScope(!capEnabled))
+        {
+            if (p.dissolveCapColor != null)
+                editor.ShaderProperty(p.dissolveCapColor, new GUIContent("단면 색", "잘린 단면의 기본 색입니다. 조명을 받습니다."));
+            if (p.dissolveCapEmission != null)
+                editor.ShaderProperty(p.dissolveCapEmission, new GUIContent("단면 발광", "잘린 단면에 더해지는 HDR 발광색입니다. 검정이면 발광하지 않습니다."));
         }
     }
 
@@ -393,6 +434,16 @@ public class TankBaseShaderGUI : ShaderGUI
     {
         if (material.HasProperty("_DissolveEnabled"))
             SetKeyword(material, "_DISSOLVE_ON", material.GetFloat("_DissolveEnabled") > 0.5f);
+
+        if (material.HasProperty("_DissolveCapEnabled"))
+        {
+            bool capEnabled = material.GetFloat("_DissolveCapEnabled") > 0.5f;
+            SetKeyword(material, "_DISSOLVE_CAP", capEnabled);
+
+            // 단면은 뒷면으로 그리므로 켜져 있으면 항상 양면 렌더링이어야 한다.
+            if (capEnabled && material.HasProperty("_Cull"))
+                material.SetFloat("_Cull", (float)CullMode.Off);
+        }
 
         if (material.HasProperty("_AlbedoRecolorEnabled"))
             SetKeyword(material, "_ALBEDO_RECOLOR", material.GetFloat("_AlbedoRecolorEnabled") > 0.5f);
