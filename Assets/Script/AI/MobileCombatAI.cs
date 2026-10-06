@@ -122,6 +122,7 @@ public abstract class MobileCombatAI : CombatAIBase
         }
 
         UpdatePathStuckTimer();
+        attacker.NotifyAttackInterrupted();
         ChaseTarget();
     }
 

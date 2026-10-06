@@ -211,8 +211,10 @@ public class UnitAttacker : MonoBehaviour
         unitSound = GetComponent<UnitSound>();
         selfEntity = GetComponent<SelectableEntity>();
 
+        // 반동 연출은 타워 포탑용이다. 유닛은 몸 전체가 밀려 이동 판정까지 흔들리므로
+        // 건물에만 자동으로 붙이고, 유닛은 프리팹에 직접 붙인 경우에만 쓴다.
         recoilFX = GetComponent<AttackRecoilFX>();
-        if (recoilFX == null)
+        if (recoilFX == null && selfEntity != null && selfEntity.entityType == SelectableEntityType.Building)
             recoilFX = gameObject.AddComponent<AttackRecoilFX>();
     }
 
@@ -220,6 +222,13 @@ public class UnitAttacker : MonoBehaviour
     {
         if (cooldownTimer > 0f)
             cooldownTimer -= Time.deltaTime;
+    }
+
+    // 사거리를 벗어나 추격하는 등 공격이 끊겼을 때 공격 애니메이션 상태를 바로 푼다.
+    public void NotifyAttackInterrupted()
+    {
+        if (unitAnimator != null)
+            unitAnimator.CancelAttacking();
     }
 
     public bool IsInRange(SelectableEntity target)
@@ -308,7 +317,7 @@ public class UnitAttacker : MonoBehaviour
             pendingAttackActive = true;
 
             if (unitAnimator != null)
-                unitAnimator.PlayAttack();
+                unitAnimator.PlayAttack(GetEffectiveCooldown());
 
             return true;
         }
@@ -555,7 +564,7 @@ public class UnitAttacker : MonoBehaviour
         recoilFX?.Play();
 
         if (!ShouldUseAttackAnimationEvent() && unitAnimator != null)
-            unitAnimator.PlayAttack();
+            unitAnimator.PlayAttack(GetEffectiveCooldown());
 
         PlayAttackSound();
     }

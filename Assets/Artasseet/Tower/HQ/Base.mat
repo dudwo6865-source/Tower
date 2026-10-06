@@ -322,8 +322,8 @@ Material:
     - _DisplacementLockObjectScale: 1
     - _DisplacementLockTilingScale: 1
     - _DisplacementMode: 3
-    - _DissolveEdge: 0.72
     - _DissolveCapEnabled: 1
+    - _DissolveEdge: 0.72
     - _DissolveEnabled: 1
     - _DissolveHeight: 11
     - _DissolveNoiseScale: 50
@@ -564,6 +564,8 @@ Material:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _ColorShift: {r: 0, g: 0, b: 0, a: 1}
     - _DiffusionProfileAsset: {r: 0, g: 0, b: 0, a: 0}
+    - _DissolveCapColor: {r: 0, g: 0.34774005, b: 0.3584906, a: 1}
+    - _DissolveCapEmission: {r: 0, g: 0, b: 0, a: 1}
     - _DissolveEdgeColor: {r: 0, g: 2.1132076, b: 1.9700394, a: 1}
     - _DissolveFresnelColor: {r: 0, g: 0, b: 0, a: 1}
     - _DoubleSidedConstants: {r: 1, g: 1, b: -1, a: 0}
