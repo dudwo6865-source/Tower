@@ -41,15 +41,16 @@ public static class TerrainRGBMaskBrushMath
             float falloff = distance <= hardness ? 1f :
                 1f - Mathf.SmoothStep(0f, 1f, (distance - hardness) / (1f - hardness));
             int index = z * resolution + x;
-            if (falloff <= coverage[index])
+            float amount = falloff * strength;
+            if (amount <= coverage[index])
                 continue;
 
             // 한 번의 드래그에서는 최대 적용량만 사용해 이벤트 빈도에 따라 진해지는 것을 막는다.
-            coverage[index] = falloff;
+            coverage[index] = amount;
             Color original = strokeStart[index];
             float sum = original.r + original.g + original.b;
             original = sum > 0.00001f ? new Color(original.r / sum, original.g / sum, original.b / sum, 1f) : Color.red;
-            Color32 result = Color.Lerp(original, target, falloff * strength);
+            Color32 result = Color.Lerp(original, target, amount);
             Color32 current = pixels[index];
             if (current.r == result.r && current.g == result.g && current.b == result.b && current.a == result.a)
                 continue;

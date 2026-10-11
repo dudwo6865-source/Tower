@@ -25,6 +25,7 @@ public sealed class TerrainRGBMaskPainterWindow : EditorWindow
     [SerializeField] float radius = 4f;
     [SerializeField] float radiusKeyStep = 0.5f;
     [SerializeField] float strength = 0.5f;
+    [SerializeField] bool usePressure = true;
     [SerializeField] float hardness = 0.5f;
     [SerializeField] float planeHeight;
     [SerializeField] bool usePlaneFallback;
@@ -181,6 +182,7 @@ public sealed class TerrainRGBMaskPainterWindow : EditorWindow
         radiusKeyStep = Mathf.Max(0.01f, EditorGUILayout.FloatField(
             new GUIContent("단축키 반경 변경량", "[ 또는 ] 키를 한 번 누를 때 바뀌는 월드 단위 반경입니다."), radiusKeyStep));
         strength = EditorGUILayout.Slider("칠하기 강도", strength, 0.01f, 1f);
+        usePressure = EditorGUILayout.Toggle(new GUIContent("필압으로 강도 조절", "펜 입력의 필압을 칠하기 강도에 곱합니다. 마우스는 설정한 강도를 그대로 사용합니다."), usePressure);
         hardness = EditorGUILayout.Slider(new GUIContent("경계 단단함", "0은 부드러운 경계, 1은 단단한 경계입니다."), hardness, 0f, 1f);
         usePlaneFallback = EditorGUILayout.Toggle(new GUIContent("Collider 없으면 기준 평면 사용", "높이가 다른 지형은 Collider를 사용하는 편이 정확합니다."), usePlaneFallback);
         if (usePlaneFallback)
@@ -541,9 +543,11 @@ public sealed class TerrainRGBMaskPainterWindow : EditorWindow
     void Paint(Vector3 point)
     {
         Vector2 next = new Vector2(point.x, point.z);
+        Event input = Event.current;
+        float pressure = usePressure && input.pointerType == PointerType.Pen ? Mathf.Clamp01(input.pressure) : 1f;
         bool changed = TerrainRGBMaskBrushMath.PaintSegment(data.pixels, strokeStart, coverage,
             data.resolution, data.origin, data.size, hasLastPoint ? lastPoint : next, next,
-            radius, strength, hardness, strokeChannel);
+            radius, strength * pressure, hardness, strokeChannel);
         lastPoint = next;
         hasLastPoint = true;
         if (!changed) return;
