@@ -131,6 +131,108 @@ public static class BuildingCommandHandler
         return buildings.Count > 0;
     }
 
+    /// <summary>
+    /// 생산 패널 표시 여부를 정하고, 표시할 레시피 목록과 기준 건물을 함께 채웁니다.
+    /// 여러 생산 건물을 선택했으면 첫 번째 건물의 목록을 보여줍니다.
+    /// </summary>
+    public static bool ShouldShowProductionPanel(
+        List<ProductionRecipe> results,
+        out ProductionBuilding primary)
+    {
+        results.Clear();
+        primary = null;
+
+        if (UnitCommandHandler.HasCommandableUnits())
+            return false;
+
+        if (!TryGetProductionBuildings(out List<SelectableEntity> buildings))
+            return false;
+
+        foreach (SelectableEntity building in buildings)
+        {
+            ProductionBuilding production = building.GetComponent<ProductionBuilding>();
+
+            if (production == null)
+                continue;
+
+            IReadOnlyList<ProductionRecipe> options = production.RecipeOptions;
+
+            if (options.Count == 0)
+                continue;
+
+            for (int i = 0; i < options.Count; i++)
+                results.Add(options[i]);
+
+            primary = production;
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// 선택된 생산 건물 중 이 레시피를 고를 수 있는 건물 모두의 생산 레시피를 바꿉니다.
+    /// </summary>
+    public static bool IssueRecipeToSelection(ProductionRecipe recipe)
+    {
+        if (recipe == null)
+            return false;
+
+        if (!TryGetProductionBuildings(out List<SelectableEntity> buildings))
+            return false;
+
+        bool changed = false;
+
+        foreach (SelectableEntity building in buildings)
+        {
+            ProductionBuilding production = building.GetComponent<ProductionBuilding>();
+
+            if (production != null && production.SelectRecipe(recipe))
+                changed = true;
+        }
+
+        return changed;
+    }
+
+    /// <summary>선택된 생산 건물이 모두 일시정지 상태인지 여부입니다.</summary>
+    public static bool AreSelectedProductionsPaused()
+    {
+        if (!TryGetProductionBuildings(out List<SelectableEntity> buildings))
+            return false;
+
+        foreach (SelectableEntity building in buildings)
+        {
+            ProductionBuilding production = building.GetComponent<ProductionBuilding>();
+
+            if (production != null && !production.IsPaused)
+                return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// 선택된 생산 건물의 일시정지를 전환합니다.
+    /// 하나라도 생산 중이면 모두 멈추고, 모두 멈춰 있으면 모두 재개합니다.
+    /// </summary>
+    public static bool ToggleProductionPauseForSelection()
+    {
+        if (!TryGetProductionBuildings(out List<SelectableEntity> buildings))
+            return false;
+
+        bool pause = !AreSelectedProductionsPaused();
+
+        foreach (SelectableEntity building in buildings)
+        {
+            ProductionBuilding production = building.GetComponent<ProductionBuilding>();
+
+            if (production != null)
+                production.SetPaused(pause);
+        }
+
+        return true;
+    }
+
     public static bool CanAttack(SelectableEntity entity)
     {
         if (entity == null)
@@ -153,14 +255,14 @@ public static class BuildingCommandHandler
 
     public static bool CanUpgrade(SelectableEntity entity)
     {
-        return TowerUpgradeService.CanUpgrade(entity);
+        return BuildingUpgradeService.CanUpgrade(entity);
     }
 
     /// <summary>
     /// 업그레이드 패널 표시 여부를 정하고, 표시할 분기 목록을 함께 채웁니다.
     /// ready는 건설 잠금이 풀려 실제로 누를 수 있는 상태인지를 나타냅니다.
     /// </summary>
-    public static bool ShouldShowUpgradePanel(List<TowerUpgradeOption> results, out bool ready)
+    public static bool ShouldShowUpgradePanel(List<BuildingUpgradeOption> results, out bool ready)
     {
         results.Clear();
         ready = false;
@@ -173,10 +275,10 @@ public static class BuildingCommandHandler
 
         foreach (SelectableEntity building in buildings)
         {
-            if (!TowerUpgradeService.TryGetOptions(building, results))
+            if (!BuildingUpgradeService.TryGetOptions(building, results))
                 continue;
 
-            ready = !TowerUpgradeService.IsConstructionLocked(building);
+            ready = !BuildingUpgradeService.IsConstructionLocked(building);
             return true;
         }
 
@@ -184,7 +286,7 @@ public static class BuildingCommandHandler
     }
 
     /// <summary>선택된 건물 중 첫 번째 업그레이드 가능한 건물의 분기 목록을 채웁니다.</summary>
-    public static bool TryGetUpgradeOptions(List<TowerUpgradeOption> results)
+    public static bool TryGetUpgradeOptions(List<BuildingUpgradeOption> results)
     {
         results.Clear();
 
@@ -193,7 +295,7 @@ public static class BuildingCommandHandler
 
         foreach (SelectableEntity building in buildings)
         {
-            if (TowerUpgradeService.TryGetOptions(building, results))
+            if (BuildingUpgradeService.TryGetOptions(building, results))
                 return true;
         }
 
@@ -204,7 +306,7 @@ public static class BuildingCommandHandler
     /// 선택된 건물 중 이 분기를 가진 것을 모두 교체합니다.
     /// 같은 종류를 여러 개 골랐을 때 한 번에 올라가고, 섞여 있으면 해당하는 것만 바뀝니다.
     /// </summary>
-    public static bool IssueUpgradeToSelection(BuildableTowerData targetTier)
+    public static bool IssueUpgradeToSelection(IBuildablePlacementData targetTier)
     {
         if (targetTier == null)
             return false;
@@ -216,7 +318,7 @@ public static class BuildingCommandHandler
 
         foreach (SelectableEntity building in buildings)
         {
-            SelectableEntity result = TowerUpgradeService.UpgradeTo(building, targetTier);
+            SelectableEntity result = BuildingUpgradeService.UpgradeTo(building, targetTier);
 
             if (result != null)
                 upgraded.Add(result);

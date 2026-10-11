@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -13,20 +12,8 @@ public class EntityHealth : MonoBehaviour
     public float maxHealth = 100f;
 
     [Header("사망")]
-    [Label("사망 연출 시간(초)")]
-    [Tooltip("사망 시 가라앉으며 사라지는 연출 시간(초)입니다. 0이면 즉시 제거합니다.")]
-    public float deathAnimationDuration = 1f;
-
-    [Label("사망 시 가라앉는 거리")]
-    [Tooltip("사망 연출 동안 아래로 가라앉는 거리입니다.")]
-    public float deathSinkDistance = 1.5f;
-
-    [Label("사망 이펙트 색")]
-    [Tooltip("사망 시 표시할 이펙트 색상입니다. deathEffectPrefab이 없을 때만 사용됩니다.")]
-    public Color deathEffectColor = new Color(0.3f, 0.3f, 0.3f, 1f);
-
     [Label("사망 이펙트 프리팹")]
-    [Tooltip("사망·파괴 시 재생할 이펙트·파티클 프리팹입니다.")]
+    [Tooltip("사망·파괴 시 재생할 이펙트·파티클 프리팹입니다. 비어 있으면 이펙트 없이 바로 사라집니다.")]
     public GameObject deathEffectPrefab;
 
     public event Action<float, float> OnHealthChanged;
@@ -170,25 +157,15 @@ public class EntityHealth : MonoBehaviour
 
         DisableGameplayComponents();
 
-        Vector3 effectPosition = selectableEntity.SelectionBounds.center;
-
         if (deathEffectPrefab != null)
-            CombatEffectSpawner.Spawn(deathEffectPrefab, effectPosition, Quaternion.identity);
-        else
         {
-            AttackVisuals.SpawnHitEffect(
-                effectPosition,
-                null,
-                deathEffectColor);
+            CombatEffectSpawner.Spawn(
+                deathEffectPrefab,
+                selectableEntity.SelectionBounds.center,
+                Quaternion.identity);
         }
 
-        if (deathAnimationDuration <= 0f)
-        {
-            Destroy(gameObject);
-            return;
-        }
-
-        StartCoroutine(DeathSequence());
+        Destroy(gameObject);
     }
 
     void DisableGameplayComponents()
@@ -216,30 +193,5 @@ public class EntityHealth : MonoBehaviour
         NavMeshObstacle obstacle = GetComponent<NavMeshObstacle>();
         if (obstacle != null)
             obstacle.enabled = false;
-    }
-
-    IEnumerator DeathSequence()
-    {
-        Vector3 startPosition = transform.position;
-        Vector3 endPosition = startPosition + Vector3.down * deathSinkDistance;
-        Vector3 startScale = transform.localScale;
-
-        float elapsed = 0f;
-
-        while (elapsed < deathAnimationDuration)
-        {
-            elapsed += Time.deltaTime;
-            float t = Mathf.Clamp01(elapsed / deathAnimationDuration);
-
-            transform.position =
-                Vector3.Lerp(startPosition, endPosition, t);
-
-            transform.localScale =
-                Vector3.Lerp(startScale, startScale * 0.4f, t);
-
-            yield return null;
-        }
-
-        Destroy(gameObject);
     }
 }

@@ -3,7 +3,7 @@ using UnityEngine.AI;
 
 /// <summary>
 /// 건물 프리팹 생성 + 그리드 등록 + 건설 게이트 시작을 한곳에서 처리합니다.
-/// 신규 배치(TowerPlacementController)와 업그레이드 교체(TowerUpgradeService)가 같이 씁니다.
+/// 신규 배치(TowerPlacementController)와 업그레이드 교체(BuildingUpgradeService)가 같이 씁니다.
 /// </summary>
 public static class BuildingSpawnUtility
 {
@@ -151,12 +151,13 @@ public static class BuildingSpawnUtility
         BuildableProductionData productionData = data as BuildableProductionData;
         ProductionBuilding producer = buildingObject.GetComponent<ProductionBuilding>();
 
-        if (productionData != null && productionData.recipe != null)
+        if (productionData != null && productionData.HasRecipes)
         {
             if (producer == null)
                 producer = buildingObject.AddComponent<ProductionBuilding>();
 
-            producer.SetRecipe(productionData.recipe);
+            producer.SetMaxPopulation(productionData.maxPopulation);
+            producer.SetRecipeOptions(productionData.Recipes, productionData.GetDefaultRecipe());
             producer.BeginProduction();
             return;
         }

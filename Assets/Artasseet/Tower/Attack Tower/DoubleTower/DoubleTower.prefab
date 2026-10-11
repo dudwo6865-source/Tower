@@ -112,6 +112,9 @@ MonoBehaviour:
   attackDamage: 20
   attackRange: 20
   attackCooldown: 1
+  engageHoldBonus: 1
+  approachInset: 0.5
+  engageHoldTimeout: 0.5
   useAttackAnimationEvent: 1
   projectileSpeed: 50
   firePoint: {fileID: 6988503337949376820}

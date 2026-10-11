@@ -15,6 +15,8 @@ public class BuildingSourceData : MonoBehaviour
 
     public BuildableTowerData TowerData => sourceData as BuildableTowerData;
 
+    public IUpgradableBuildableData UpgradableData => sourceData as IUpgradableBuildableData;
+
     public static void Assign(GameObject target, IBuildablePlacementData data)
     {
         if (target == null || !(data is ScriptableObject asset))
@@ -26,6 +28,15 @@ public class BuildingSourceData : MonoBehaviour
             source = target.AddComponent<BuildingSourceData>();
 
         source.sourceData = asset;
+    }
+
+    public static IUpgradableBuildableData ResolveUpgradableData(Component target)
+    {
+        if (target == null)
+            return null;
+
+        BuildingSourceData source = target.GetComponent<BuildingSourceData>();
+        return source != null ? source.UpgradableData : null;
     }
 
     public static BuildableTowerData ResolveTowerData(Component target)

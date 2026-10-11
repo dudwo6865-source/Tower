@@ -114,7 +114,9 @@ public abstract class MobileCombatAI : CombatAIBase
     {
         ApplyChaseStoppingDistance();
 
-        if (attacker.IsInRange(currentTarget))
+        // 추격 중이면 사거리보다 조금 더 들어와서 멈추고, 교전 중엔 여유 사거리까지 유지한다.
+        bool isMoving = agent != null && agent.velocity.sqrMagnitude > 0.01f;
+        if (attacker.IsInRangeWhileChasing(currentTarget, isMoving))
         {
             ResetPathStuck();
             StopAndAttack();

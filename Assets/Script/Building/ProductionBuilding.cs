@@ -6,9 +6,26 @@ using UnityEngine;
 public class ProductionBuilding : MonoBehaviour
 {
     [Header("생산")]
-    [Label("생산 레시피")]
-    [Tooltip("생산 규칙입니다. 비워두면 Building 또는 배치 데이터의 recipe를 사용합니다.")]
+    [Label("최대 인구수")]
+    [Tooltip("이 건물이 생산한 유닛들이 동시에 차지할 수 있는 인구수 합계입니다. 배치 데이터로 지은 건물은 데이터 값으로 덮어씁니다. 0이면 무제한입니다.")]
+    [Min(0)]
+    public int maxPopulation = 20;
+
+    [Label("현재 생산 레시피")]
+    [Tooltip("지금 생산 중인 레시피입니다. 배치 데이터로 지은 건물은 데이터의 기본 레시피로 채워집니다.")]
     public ProductionRecipe recipe;
+
+    [Label("생산 가능 레시피 목록")]
+    [Tooltip("생산 패널에서 고를 수 있는 레시피입니다. 배치 데이터로 지은 건물은 데이터의 목록으로 덮어씁니다. 비워두면 현재 레시피 하나만 생산합니다.")]
+    public List<ProductionRecipe> recipeOptions = new List<ProductionRecipe>();
+
+    [Label("교체 시 진행도 유지")]
+    [Tooltip("생산 중에 레시피를 바꿨을 때 진행 비율을 유지합니다. 끄면 진행도가 0부터 다시 시작합니다(이미 쓴 Watt는 돌려받지 않음).")]
+    public bool keepProgressOnRecipeChange;
+
+    [Label("생산 일시정지")]
+    [Tooltip("켜져 있으면 생산 진행과 Watt 소모를 멈춥니다. 진행도는 그대로 유지됩니다. 생산 패널의 일시정지 버튼으로도 바꿀 수 있습니다.")]
+    public bool isPaused;
 
     [Label("스폰 위치")]
     [Tooltip("유닛이 생성될 위치입니다. 비워두면 건물 위치에서 스폰합니다.")]
@@ -48,12 +65,19 @@ public class ProductionBuilding : MonoBehaviour
 
     public int AliveCount { get; private set; }
 
+    // 이 건물이 생산해 살아 있는 유닛들이 차지한 인구수 합계입니다.
+    public int UsedPopulation { get; private set; }
+
+    // 현재 레시피 유닛 한 마리가 차지하는 인구수입니다.
+    public int CurrentRecipePopulation => recipe != null ? Mathf.Max(0, recipe.population) : 0;
+
+    // 현재 레시피 유닛을 한 마리 더 만들면 최대 인구수를 넘는지 여부입니다.
     public bool IsAtCapacity
     {
         get
         {
-            int cap = EffectiveMaxAlive();
-            return cap > 0 && AliveCount >= cap;
+            int cap = EffectiveMaxPopulation();
+            return cap > 0 && UsedPopulation + CurrentRecipePopulation > cap;
         }
     }
 
@@ -74,19 +98,19 @@ public class ProductionBuilding : MonoBehaviour
         return modifiedRate > 0.0001f ? 1f / modifiedRate : interval;
     }
 
-    // 업그레이드(건물 유닛 스폰 수) 보너스를 반영한 최대 생존 수입니다.
-    // recipe 값이 0 이하면 무제한을 의미하므로 0을 반환합니다.
-    int EffectiveMaxAlive()
+    // 업그레이드(건물 유닛 스폰 수)·유물 보너스를 반영한 최대 인구수입니다.
+    // 0 이하면 무제한을 의미하므로 0을 반환합니다.
+    int EffectiveMaxPopulation()
     {
-        if (recipe == null || recipe.maxAlivePerBuilding <= 0)
+        if (maxPopulation <= 0)
             return 0;
 
         if (UpgradeManager.Instance == null || selectableEntity == null)
-            return recipe.maxAlivePerBuilding;
+            return maxPopulation;
 
         return UpgradeManager.Instance.GetModifiedSpawnCount(
             selectableEntity.ownerId,
-            recipe.maxAlivePerBuilding);
+            maxPopulation);
     }
 
     SelectableEntity selectableEntity;
@@ -97,18 +121,79 @@ public class ProductionBuilding : MonoBehaviour
     float cycleDuration;
     readonly List<ProducedUnitMarker> producedUnits = new List<ProducedUnitMarker>();
 
-    public int MaxAliveCount => EffectiveMaxAlive();
+    public int MaxPopulation => EffectiveMaxPopulation();
+
+    // 레시피가 바뀌면 진행 중인 생산 주기를 끊고 새 레시피로 다시 시작한다.
+    bool recipeChangePending;
+    float pendingStartProgress;
+
+    /// <summary>현재 레시피가 바뀌면 호출됩니다.</summary>
+    public event System.Action<ProductionBuilding> OnRecipeChanged;
+
+    // 목록이 비어 있으면 현재 레시피 하나만 고를 수 있다.
+    readonly List<ProductionRecipe> fallbackOptions = new List<ProductionRecipe>(1);
+
+    /// <summary>생산 패널에 표시할 레시피 목록입니다.</summary>
+    public IReadOnlyList<ProductionRecipe> RecipeOptions
+    {
+        get
+        {
+            if (recipeOptions != null && recipeOptions.Count > 0)
+                return recipeOptions;
+
+            fallbackOptions.Clear();
+
+            if (recipe != null)
+                fallbackOptions.Add(recipe);
+
+            return fallbackOptions;
+        }
+    }
+
+    public bool HasRecipeOption(ProductionRecipe candidate)
+    {
+        if (candidate == null)
+            return false;
+
+        IReadOnlyList<ProductionRecipe> options = RecipeOptions;
+
+        for (int i = 0; i < options.Count; i++)
+        {
+            if (options[i] == candidate)
+                return true;
+        }
+
+        return false;
+    }
 
     public bool IsProducing =>
         productionRoutine != null &&
+        !isPaused &&
         !IsAtCapacity &&
+        !IsRecipeLocked &&
         !BuildingConstructionGate.IsFeatureLockedOn(this);
 
+    public bool IsPaused => isPaused;
+
+    // 현재 레시피의 해금 조건을 채우지 못해 생산이 멈춰 있는지 여부입니다.
+    public bool IsRecipeLocked => recipe != null && !IsRecipeUnlocked(recipe);
+
+    // 이 건물에서 해당 레시피의 해금 조건을 모두 채웠는지 여부입니다. '생산 건물 자신' 범위 조건은 이 건물로 판정합니다.
+    public bool IsRecipeUnlocked(ProductionRecipe target) =>
+        target != null && target.IsUnlocked(OwnerId, selectableEntity);
+
+    // 이 건물 기준으로 채우지 못한 해금 조건 문구입니다.
+    public string DescribeMissingRequirements(ProductionRecipe target) =>
+        target != null ? target.DescribeMissingRequirements(OwnerId, selectableEntity) : string.Empty;
+
+    public int OwnerId => selectableEntity != null ? selectableEntity.ownerId : 1;
+
+    // 일시정지·한도 도달 중에도 쌓아 둔 진행도를 그대로 보여준다.
     public float ProductionProgress
     {
         get
         {
-            if (!IsProducing || cycleDuration <= 0f)
+            if (productionRoutine == null || cycleDuration <= 0f)
                 return 0f;
 
             return Mathf.Clamp01(cycleElapsed / cycleDuration);
@@ -225,7 +310,111 @@ public class ProductionBuilding : MonoBehaviour
 
     public void SetRecipe(ProductionRecipe newRecipe)
     {
+        if (recipe == newRecipe)
+            return;
+
+        float previousProgress = ProductionProgress;
         recipe = newRecipe;
+
+        if (productionRoutine != null)
+        {
+            recipeChangePending = true;
+            pendingStartProgress = keepProgressOnRecipeChange ? previousProgress : 0f;
+        }
+
+        OnRecipeChanged?.Invoke(this);
+    }
+
+    /// <summary>
+    /// 고를 수 있는 레시피 목록을 바꾸고 현재 레시피를 기본값으로 맞춥니다.
+    /// 현재 레시피가 새 목록에 있으면 그대로 둡니다.
+    /// </summary>
+    public void SetRecipeOptions(IReadOnlyList<ProductionRecipe> options, ProductionRecipe defaultRecipe)
+    {
+        recipeOptions.Clear();
+
+        if (options != null)
+        {
+            for (int i = 0; i < options.Count; i++)
+            {
+                if (options[i] != null && !recipeOptions.Contains(options[i]))
+                    recipeOptions.Add(options[i]);
+            }
+        }
+
+        if (recipe != null && recipeOptions.Contains(recipe))
+            return;
+
+        SetRecipe(defaultRecipe != null ? defaultRecipe : (recipeOptions.Count > 0 ? recipeOptions[0] : null));
+    }
+
+    /// <summary>
+    /// 플레이어가 생산 패널에서 레시피를 고를 때 씁니다. 목록에 없는 레시피는 무시합니다.
+    /// 생산이 멈춰 있었다면(레시피가 없던 경우 등) 다시 시작합니다.
+    /// </summary>
+    public bool SelectRecipe(ProductionRecipe newRecipe)
+    {
+        if (!HasRecipeOption(newRecipe) || !IsRecipeUnlocked(newRecipe))
+            return false;
+
+        SetRecipe(newRecipe);
+
+        if (productionRoutine == null && isActiveAndEnabled &&
+            (buildingHealth == null || buildingHealth.IsAlive))
+            BeginProduction();
+
+        return true;
+    }
+
+    /// <summary>
+    /// 건물 업그레이드로 교체될 때 생산 상태를 새 건물로 넘깁니다.
+    /// 집결지·생산한 유닛(인구)·일시정지를 옮기고, 새 건물이 같은 레시피를 생산할 수 있으면 이어서 생산합니다.
+    /// </summary>
+    public void TransferStateTo(ProductionBuilding target)
+    {
+        if (target == null || target == this)
+            return;
+
+        if (hasRallyPoint)
+            target.SetRallyPoint(rallyPointWorld);
+
+        target.SetPaused(isPaused);
+
+        if (recipe != null && target.HasRecipeOption(recipe) && target.IsRecipeUnlocked(recipe))
+            target.SetRecipe(recipe);
+
+        for (int i = 0; i < producedUnits.Count; i++)
+        {
+            ProducedUnitMarker marker = producedUnits[i];
+
+            if (marker == null)
+                continue;
+
+            marker.Initialize(target, marker.Population);
+            target.producedUnits.Add(marker);
+            target.AliveCount++;
+            target.UsedPopulation += marker.Population;
+        }
+
+        producedUnits.Clear();
+        AliveCount = 0;
+        UsedPopulation = 0;
+    }
+
+    public void SetMaxPopulation(int value)
+    {
+        maxPopulation = Mathf.Max(0, value);
+    }
+
+    public void SetPaused(bool paused)
+    {
+        if (isPaused == paused)
+            return;
+
+        isPaused = paused;
+
+        if (paused)
+            waitingForWatt = false;
     }
 
     public void SetRallyPoint(Vector3 worldPoint)
@@ -262,6 +451,8 @@ public class ProductionBuilding : MonoBehaviour
         cycleElapsed = 0f;
         cycleDuration = 0f;
         waitingForWatt = false;
+        recipeChangePending = false;
+        pendingStartProgress = 0f;
     }
 
     // WattManager는 로컬 플레이어의 자원이므로, 로컬 플레이어 소속 건물만 Watt를 소모한다.
@@ -294,10 +485,14 @@ public class ProductionBuilding : MonoBehaviour
 
         if (recipe != null && recipe.initialSpawnDelay > 0f)
         {
-            yield return RunProductionCycle(recipe.initialSpawnDelay);
+            // 첫 생산 대기는 건물 단위라 도중에 레시피를 바꿔도 끊지 않는다.
+            yield return RunProductionCycle(recipe.initialSpawnDelay, 0f, false);
 
             if (buildingHealth != null && !buildingHealth.IsAlive)
                 yield break;
+
+            recipeChangePending = false;
+            pendingStartProgress = 0f;
         }
 
         while (enabled)
@@ -305,7 +500,7 @@ public class ProductionBuilding : MonoBehaviour
             if (buildingHealth != null && !buildingHealth.IsAlive)
                 yield break;
 
-            if (BuildingConstructionGate.IsFeatureLockedOn(this) || IsAtCapacity)
+            if (IsProductionHeld())
             {
                 cycleElapsed = 0f;
                 cycleDuration = 0f;
@@ -313,20 +508,48 @@ public class ProductionBuilding : MonoBehaviour
                 continue;
             }
 
-            float interval = recipe != null ? Mathf.Max(0f, GetEffectiveSpawnInterval()) : 0f;
-            yield return RunProductionCycle(interval);
+            if (recipe == null || recipe.unitPrefab == null)
+            {
+                cycleElapsed = 0f;
+                cycleDuration = 0f;
+                yield return null;
+                continue;
+            }
+
+            float startProgress = pendingStartProgress;
+            pendingStartProgress = 0f;
+            recipeChangePending = false;
+
+            float interval = Mathf.Max(0f, GetEffectiveSpawnInterval());
+            yield return RunProductionCycle(interval, startProgress);
 
             if (buildingHealth != null && !buildingHealth.IsAlive)
                 yield break;
+
+            // 주기 도중 레시피가 바뀌었으면 스폰하지 않고 새 레시피로 다시 시작한다.
+            if (recipeChangePending)
+                continue;
 
             TrySpawnUnit();
         }
     }
 
-    IEnumerator RunProductionCycle(float duration)
+    // 진행을 멈추고 기다려야 하는 상태(건설 잠금·생산 한도·일시정지·해금 조건 미충족)인지 여부.
+    bool IsProductionHeld()
+    {
+        return isPaused ||
+            BuildingConstructionGate.IsFeatureLockedOn(this) ||
+            IsAtCapacity ||
+            IsRecipeLocked;
+    }
+
+    IEnumerator RunProductionCycle(
+        float duration,
+        float startProgress = 0f,
+        bool interruptOnRecipeChange = true)
     {
         cycleDuration = Mathf.Max(0f, duration);
-        cycleElapsed = 0f;
+        cycleElapsed = cycleDuration * Mathf.Clamp01(startProgress);
 
         if (cycleDuration <= 0f)
             yield break;
@@ -336,7 +559,13 @@ public class ProductionBuilding : MonoBehaviour
             if (buildingHealth != null && !buildingHealth.IsAlive)
                 yield break;
 
-            if (BuildingConstructionGate.IsFeatureLockedOn(this) || IsAtCapacity)
+            if (interruptOnRecipeChange && recipeChangePending)
+            {
+                waitingForWatt = false;
+                yield break;
+            }
+
+            if (IsProductionHeld())
             {
                 waitingForWatt = false;
                 yield return null;
@@ -405,6 +634,7 @@ public class ProductionBuilding : MonoBehaviour
 
         producedUnits.Remove(marker);
         AliveCount = Mathf.Max(0, AliveCount - 1);
+        UsedPopulation = Mathf.Max(0, UsedPopulation - marker.Population);
     }
 
     IEnumerator BeginWhenReady()
@@ -468,9 +698,10 @@ public class ProductionBuilding : MonoBehaviour
         if (marker == null)
             marker = unitObject.AddComponent<ProducedUnitMarker>();
 
-        marker.Initialize(this);
+        marker.Initialize(this, CurrentRecipePopulation);
         producedUnits.Add(marker);
         AliveCount++;
+        UsedPopulation += marker.Population;
         SendSpawnedUnitToRally(unitObject);
         return true;
     }

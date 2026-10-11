@@ -4,7 +4,7 @@ using UnityEngine;
 [CreateAssetMenu(
     fileName = "BuildableTowerData",
     menuName = "Tank/타워 데이터")]
-public class BuildableTowerData : ScriptableObject, IBuildablePlacementData
+public class BuildableTowerData : ScriptableObject, IUpgradableBuildableData
 {
     [Header("표시")]
     [Label("표시 이름")]
@@ -61,6 +61,18 @@ public class BuildableTowerData : ScriptableObject, IBuildablePlacementData
     public bool IsUsableOption(TowerUpgradeOption option)
     {
         return option != null && option.IsValid && option.tier != this;
+    }
+
+    public void GetUpgradeOptions(List<BuildingUpgradeOption> results)
+    {
+        if (upgradeOptions == null)
+            return;
+
+        for (int i = 0; i < upgradeOptions.Count; i++)
+        {
+            if (IsUsableOption(upgradeOptions[i]))
+                results.Add(upgradeOptions[i]);
+        }
     }
 
     public string BuildAssetName => name;

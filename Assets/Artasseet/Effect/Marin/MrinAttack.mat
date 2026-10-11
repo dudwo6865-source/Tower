@@ -8,21 +8,19 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: MrinAttack
-  m_Shader: {fileID: 4800000, guid: 933532a4fcc9baf4fa0491de14d08ed7, type: 3}
+  m_Shader: {fileID: 4800000, guid: 71c2866ffae12d24eae531d2f2a02815, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
   - _ALPHAPREMULTIPLY_ON
   - _ALPHATEST_ON
-  - _EMISSION
   - _SURFACE_TYPE_TRANSPARENT
   m_InvalidKeywords: []
   m_LightmapFlags: 1
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
-  m_CustomRenderQueue: 3000
-  stringTagMap:
-    RenderType: Transparent
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
   disabledShaderPasses:
   - DepthOnly
   - SHADOWCASTER
@@ -92,6 +90,9 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - _AlbedoRecolorEnabled: 0
+    - _AlbedoRecolorRange: 0.08
+    - _AlbedoRecolorSmoothness: 0.05
     - _AlphaClip: 1
     - _AlphaToMask: 0
     - _Blend: 0
@@ -110,21 +111,31 @@ Material:
     - _DetailNormalMapScale: 1
     - _DisolveSlider1: 1
     - _DisolveSlider2: 1
+    - _DissolveCapEnabled: 0
+    - _DissolveEdge: 0.1
+    - _DissolveEnabled: 0
+    - _DissolveHeight: 0
+    - _DissolveNoiseScale: 50
+    - _DissolveNoiseStrength: 1
     - _DistortionBlend: 0.5
     - _DistortionEnabled: 0
     - _DistortionStrength: 1
     - _DistortionStrengthScaled: 0.1
     - _DstBlend: 10
     - _DstBlendAlpha: 10
+    - _EmissionToggle: 0
     - _EnvironmentReflections: 1
     - _FlipbookBlending: 0
     - _FlipbookMode: 0
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0
+    - _MaskPackMode: 0
     - _Metallic: 0
     - _Mode: 0
+    - _NormalMapToggle: 0
     - _OcclusionStrength: 1
+    - _OutlineWidth: 0.02
     - _Parallax: 0.005
     - _QueueControl: 0
     - _QueueOffset: 0
@@ -140,16 +151,26 @@ Material:
     - _SrcBlendAlpha: 1
     - _Surface: 1
     - _UVSec: 0
+    - _UnitStencilRef: 128
+    - _UseMaskOcclusion: 0
     - _WorkflowMode: 1
     - _ZWrite: 0
     m_Colors:
+    - _AlbedoKeyColor: {r: 0.09999997, g: 0.34999996, b: 1, a: 1}
+    - _AlbedoRecolorColor: {r: 1, g: 0, b: 0, a: 1}
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
     - _BaseColorAddSubDiff: {r: 1, g: 0, b: 0, a: 0}
     - _CameraFadeParams: {r: 0, g: Infinity, b: 0, a: 0}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _DarkColor: {r: 6.498019, g: 4.803797, b: 0, a: 0}
+    - _DissolveCapColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
+    - _DissolveCapEmission: {r: 0, g: 0, b: 0, a: 1}
+    - _DissolveEdgeColor: {r: 8, g: 5, b: 0, a: 1}
+    - _DissolveFresnelColor: {r: 0, g: 8, b: 8, a: 1}
     - _EmissionColor: {r: 1.7207954, g: 0.32943428, b: 0, a: 1}
     - _FireColor: {r: 1, g: 1, b: 1, a: 0}
+    - _OutlineColor: {r: 0, g: 0, b: 0, a: 1}
+    - _OutlineViewOffset: {r: 0, g: 0, b: 0, a: 0}
     - _SoftParticleFadeParams: {r: 0, g: 0, b: 0, a: 0}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
   m_BuildTextureStacks: []

@@ -31,6 +31,22 @@ public class UnitAttacker : MonoBehaviour
     [Tooltip("공격 사이의 최소 간격(초)입니다.")]
     public float attackCooldown = 1f;
 
+    [Header("교전 유지")]
+    [Label("교전 유지 추가 사거리")]
+    [Tooltip("한 번 공격을 시작한 대상은 사거리 + 이 거리(m)를 벗어날 때까지 계속 공격합니다. " +
+        "대상이 조금 움직일 때마다 추격으로 바뀌며 공격이 끊기는 것을 막습니다. 0이면 사용하지 않습니다. " +
+        "건물(타워)에는 적용되지 않습니다.")]
+    public float engageHoldBonus = 1f;
+
+    [Label("추격 시 추가 접근 거리")]
+    [Tooltip("추격하며 다가갈 때 사거리보다 이 거리(m)만큼 더 들어와서 멈춥니다. " +
+        "다른 유닛에 막혀 멈춰 있으면 원래 사거리에서 바로 공격합니다. 0이면 사용하지 않습니다.")]
+    public float approachInset = 0.5f;
+
+    [Label("교전 유지 만료(초)")]
+    [Tooltip("이 시간 동안 사거리 확인이 없으면(이동 명령 등) 교전 상태를 풀어 추가 사거리를 없앱니다.")]
+    public float engageHoldTimeout = 0.5f;
+
     [Header("애니메이션")]
     [Label("애니메이션 이벤트로 공격")]
     [Tooltip("켜면 공격 애니메이션 이벤트(OnAttackHit)에서 피해/투사체를 적용합니다.")]
@@ -198,6 +214,10 @@ public class UnitAttacker : MonoBehaviour
     private EntityHealth pendingTargetHealth;
     private bool pendingAttackActive;
 
+    // 교전 유지(사거리 히스테리시스) 상태
+    private SelectableEntity engagedTarget;
+    private float engagedCheckTime = float.NegativeInfinity;
+
     public float AttackRange => GetEffectiveRange();
     public bool IsReady => cooldownTimer <= 0f;
     public bool HasPendingAttack => pendingAttackActive;
@@ -249,13 +269,66 @@ public class UnitAttacker : MonoBehaviour
 
     public bool IsWithinHorizontalRange(SelectableEntity target)
     {
+        return CheckRange(target, 0f);
+    }
+
+    /// <summary>
+    /// 추격 중 멈춰서 공격을 시작할지 판정합니다. 움직이는 중이면 '추격 시 추가 접근 거리'만큼
+    /// 더 들어와야 교전을 시작하고, 이미 교전 중인 대상은 '교전 유지 추가 사거리'까지 유지합니다.
+    /// </summary>
+    public bool IsInRangeWhileChasing(SelectableEntity target, bool isMoving)
+    {
+        float inset = isMoving ? Mathf.Max(0f, approachInset) : 0f;
+        return CheckRange(target, inset);
+    }
+
+    // entryInset: 새로 교전을 시작할 때 사거리에서 빼는 거리. 교전 중인 대상에는 쓰지 않는다.
+    bool CheckRange(SelectableEntity target, float entryInset)
+    {
         if (target == null)
             return false;
 
         if (IsTooCloseToEngage(target))
             return false;
 
-        return GetHorizontalBoundsGap(target) <= GetEffectiveRange();
+        float range = GetEffectiveRange();
+        float gap = GetHorizontalBoundsGap(target);
+
+        if (IsHoldingEngagement(target))
+        {
+            if (gap <= range + GetEngageHoldBonus())
+            {
+                engagedCheckTime = Time.time;
+                return true;
+            }
+
+            engagedTarget = null;
+            return false;
+        }
+
+        float entryRange = Mathf.Max(minAttackRange, range - entryInset);
+        if (gap > entryRange)
+            return false;
+
+        engagedTarget = target;
+        engagedCheckTime = Time.time;
+        return true;
+    }
+
+    bool IsHoldingEngagement(SelectableEntity target)
+    {
+        return engagedTarget != null &&
+               engagedTarget == target &&
+               Time.time - engagedCheckTime <= Mathf.Max(0f, engageHoldTimeout);
+    }
+
+    float GetEngageHoldBonus()
+    {
+        // 타워는 표시된 사거리 원 밖을 쏘면 어색하므로 추가 사거리를 주지 않는다.
+        if (selfEntity != null && selfEntity.entityType == SelectableEntityType.Building)
+            return 0f;
+
+        return Mathf.Max(0f, engageHoldBonus);
     }
 
     // 대포는 착탄이 포물선이라 아주 가까운 적은 맞힐 수 없습니다(사각지대).

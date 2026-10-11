@@ -48,6 +48,15 @@ public class WorldHealthBar : MonoBehaviour
     [Tooltip("피해를 입은 뒤 체력바를 표시하는 시간(초)입니다.")]
     public float showAfterDamageDuration = 3f;
 
+    [Label("모델 뒤로 숨기기")]
+    [Tooltip("켜면 유닛·건물 모델(BaseShader)이 그려진 자리에는 체력바를 그리지 않아 모델을 " +
+        "가리지 않습니다. 지면·언덕 위에는 그대로 보입니다. 끄면 모든 모델 위에 덮어 그립니다.")]
+    public bool hideBehindModels = true;
+
+    [Label("모델 스텐실 비트")]
+    [Tooltip("유닛 셰이더(BaseShader)의 _UnitStencilRef와 같은 값이어야 합니다. 보통 바꿀 필요가 없습니다.")]
+    public int modelStencilBit = HealthBarSpriteUtility.DefaultUnitStencilBit;
+
     [Header("색상")]
     [Label("아군 색")]
     [Tooltip("아군 체력바 색상입니다.")]
@@ -110,7 +119,8 @@ public class WorldHealthBar : MonoBehaviour
         entityHealth.OnDied += HandleDied;
 
         defaultSprite = HealthBarSpriteUtility.GetWhiteSprite();
-        overlayMaterial = HealthBarSpriteUtility.GetOverlayMaterial();
+        overlayMaterial = HealthBarSpriteUtility.GetOverlayMaterial(
+            hideBehindModels ? modelStencilBit : 0);
         baseFillColor = GetBaseFillColor();
     }
 

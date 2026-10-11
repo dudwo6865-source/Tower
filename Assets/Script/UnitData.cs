@@ -30,18 +30,6 @@ public class UnitData : ScriptableObject
     [Tooltip("최대 체력입니다.")]
     public float maxHealth = 100f;
 
-    [Label("사망 연출 시간(초)")]
-    [Tooltip("사망 시 가라앉으며 사라지는 연출 시간(초)입니다. 0이면 즉시 제거합니다.")]
-    public float deathAnimationDuration = 1f;
-
-    [Label("사망 시 가라앉는 거리")]
-    [Tooltip("사망 연출 동안 아래로 가라앉는 거리입니다.")]
-    public float deathSinkDistance = 1.5f;
-
-    [Label("사망 이펙트 색")]
-    [Tooltip("사망 시 표시할 이펙트 색상입니다.")]
-    public Color deathEffectColor = new Color(0.3f, 0.3f, 0.3f, 1f);
-
     [Header("공격 (Attacker)")]
     [Label("공격 가능")]
     [Tooltip("공격 컴포넌트를 사용합니다. 건물 등 공격하지 않는 엔티티는 꺼두세요.")]

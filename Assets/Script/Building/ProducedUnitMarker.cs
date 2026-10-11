@@ -20,12 +20,16 @@ public class ProducedUnitMarker : MonoBehaviour
 
     public ProductionBuilding Source => source;
 
+    // 생산될 때 차지한 인구수입니다. 사라지면 생산 건물의 사용 인구에서 뺀다.
+    public int Population { get; private set; }
+
     // 밤 복귀 이동 중인지 여부입니다. 복귀 중에는 플레이어 명령을 무시합니다.
     public bool IsRecalling => recalling;
 
-    public void Initialize(ProductionBuilding producer)
+    public void Initialize(ProductionBuilding producer, int population)
     {
         source = producer;
+        Population = Mathf.Max(0, population);
     }
 
     // 밤 전환 시 호출: 생산 건물로 이동한 뒤 도착하면 스스로 사라진다.

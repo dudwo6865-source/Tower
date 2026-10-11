@@ -220,6 +220,8 @@ MonoBehaviour:
   alwaysShowEnemyBar: 0
   showWhenSelected: 1
   showAfterDamageDuration: 3
+  hideBehindModels: 1
+  modelStencilBit: 128
   allyFillColor: {r: 0.2, g: 0.9, b: 0.3, a: 1}
   enemyFillColor: {r: 0.95, g: 0.2, b: 0.2, a: 1}
   lowHealthColor: {r: 0.95, g: 0.55, b: 0.1, a: 1}

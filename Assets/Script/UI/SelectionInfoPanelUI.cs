@@ -155,9 +155,9 @@ public class SelectionInfoPanelUI : MonoBehaviour
     [Label("혼합 다중 선택 제목")]
     [Tooltip("유닛과 건물을 함께 선택했을 때 제목 형식입니다. {0}=유닛 수, {1}=건물 수")]
     public string multiMixedFormat = "유닛 {0} / 건물 {1}";
-    [Label("보유 유닛 수 형식")]
-    [Tooltip("생산 건물 보유 유닛 수 형식입니다. {0}=현재 보유, {1}=최대 보유")]
-    public string productionCountFormat = "보유 {0} / {1}";
+    [Label("인구 형식")]
+    [Tooltip("생산 건물의 인구 표시 형식입니다. {0}=사용 중인 인구, {1}=최대 인구, {2}=생산한 유닛 수")]
+    public string productionCountFormat = "인구 {0} / {1}";
     [Label("생산 중 문구")]
     [Tooltip("유닛을 생산 중일 때 표시할 문구입니다. {0}=남은 초")]
     public string productionProgressFormat = "생산 중  {0:0.0}s";
@@ -170,6 +170,12 @@ public class SelectionInfoPanelUI : MonoBehaviour
     [Label("Watt 부족 문구")]
     [Tooltip("Watt가 부족해 생산이 멈췄을 때 표시할 문구입니다.")]
     public string productionNoWattFormat = "Watt 부족";
+    [Label("일시정지 문구")]
+    [Tooltip("생산을 일시정지했을 때 표시할 문구입니다.")]
+    public string productionPausedFormat = "일시정지";
+    [Label("해금 조건 미충족 문구")]
+    [Tooltip("현재 레시피의 해금 조건을 채우지 못해 생산이 멈췄을 때 표시할 문구입니다. {0}=부족한 조건")]
+    public string productionLockedFormat = "필요: {0}";
     [Label("초당 Watt 소모량 형식")]
     [Tooltip("초당 Watt 소모량 텍스트 형식입니다. {0}=현재 초당 소모량(생산 중이 아니면 0), {1}=레시피 기준 초당 소모량")]
     public string productionWattCostFormat = "Watt -{0:0.#}/s";
@@ -583,15 +589,31 @@ public class SelectionInfoPanelUI : MonoBehaviour
             productionTitleText,
             SelectionInfoUtility.GetDisplayName(recipe.unitPrefab, unitData));
 
-        int maxAlive = production.MaxAliveCount;
-        string countText = maxAlive > 0
-            ? string.Format(productionCountFormat, production.AliveCount, maxAlive)
+        int maxPopulation = production.MaxPopulation;
+        string countText = maxPopulation > 0
+            ? string.Format(
+                productionCountFormat,
+                production.UsedPopulation,
+                maxPopulation,
+                production.AliveCount)
             : string.Empty;
 
         string statusText;
         float sliderValue;
 
-        if (production.IsAtCapacity)
+        if (production.IsPaused)
+        {
+            statusText = productionPausedFormat;
+            sliderValue = production.ProductionProgress;
+        }
+        else if (production.IsRecipeLocked)
+        {
+            statusText = string.Format(
+                productionLockedFormat,
+                production.DescribeMissingRequirements(recipe));
+            sliderValue = production.ProductionProgress;
+        }
+        else if (production.IsAtCapacity)
         {
             statusText = productionCapacityFormat;
             sliderValue = 1f;

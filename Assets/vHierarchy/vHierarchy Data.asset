@@ -18,6 +18,7 @@ MonoBehaviour:
     - f67a07864b4119a43b2dcb3521fd46c7
     - eab5c6cf15a351347b1b21df5be46640
     - 1a55d33ac2eb9e9489884da5a013eeb9
+    - 74a4649df01f338419cf3fef7e3d8a3a
     values:
     - goDatas_byGlobalId:
         keys:
@@ -998,9 +999,17 @@ MonoBehaviour:
         - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-9130407086999981450-2463076609506958021
         - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-294754028-0
         - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-1564609966-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-1258481888-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-1646611964-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-636456585-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-540393831-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-1715312364-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-1436527802-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-341873219-0
+        - globalObjectIdString: GlobalObjectId_V1-2-eab5c6cf15a351347b1b21df5be46640-726527690-0
         values:
         - colorIndex: 2
-          iconNameOrGuid: 
+          iconNameOrGuid: Folder Icon
           isIconRecursive: 0
           isColorRecursive: 0
         - colorIndex: 1
@@ -1028,7 +1037,7 @@ MonoBehaviour:
           isIconRecursive: 0
           isColorRecursive: 0
         - colorIndex: 2
-          iconNameOrGuid: 
+          iconNameOrGuid: Folder Icon
           isIconRecursive: 0
           isColorRecursive: 0
         - colorIndex: 1
@@ -1076,7 +1085,7 @@ MonoBehaviour:
           isIconRecursive: 0
           isColorRecursive: 0
         - colorIndex: 5
-          iconNameOrGuid: 
+          iconNameOrGuid: Folder Icon
           isIconRecursive: 0
           isColorRecursive: 0
         - colorIndex: 4
@@ -1275,15 +1284,15 @@ MonoBehaviour:
           iconNameOrGuid: 
           isIconRecursive: 0
           isColorRecursive: 0
-        - colorIndex: 7
+        - colorIndex: 3
           iconNameOrGuid: 
           isIconRecursive: 0
           isColorRecursive: 0
-        - colorIndex: 7
+        - colorIndex: 3
           iconNameOrGuid: 
           isIconRecursive: 0
           isColorRecursive: 0
-        - colorIndex: 7
+        - colorIndex: 3
           iconNameOrGuid: 
           isIconRecursive: 0
           isColorRecursive: 0
@@ -1299,7 +1308,7 @@ MonoBehaviour:
           iconNameOrGuid: 
           isIconRecursive: 0
           isColorRecursive: 0
-        - colorIndex: 6
+        - colorIndex: 9
           iconNameOrGuid: 
           isIconRecursive: 0
           isColorRecursive: 0
@@ -1660,6 +1669,38 @@ MonoBehaviour:
           isIconRecursive: 0
           isColorRecursive: 0
         - colorIndex: 7
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 4
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 9
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 4
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 4
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 4
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 4
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 5
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 5
           iconNameOrGuid: 
           isIconRecursive: 0
           isColorRecursive: 0
@@ -2033,6 +2074,19 @@ MonoBehaviour:
           isIconRecursive: 0
           isColorRecursive: 0
         - colorIndex: 9
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+    - goDatas_byGlobalId:
+        keys:
+        - globalObjectIdString: GlobalObjectId_V1-2-74a4649df01f338419cf3fef7e3d8a3a-54143659-0
+        - globalObjectIdString: GlobalObjectId_V1-2-74a4649df01f338419cf3fef7e3d8a3a-1380989487-0
+        values:
+        - colorIndex: 2
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 2
           iconNameOrGuid: 
           isIconRecursive: 0
           isColorRecursive: 0

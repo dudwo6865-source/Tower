@@ -81,6 +81,9 @@ MonoBehaviour:
   attackDamage: 10
   attackRange: 20
   attackCooldown: 1
+  engageHoldBonus: 1
+  approachInset: 0.5
+  engageHoldTimeout: 0.5
   useAttackAnimationEvent: 1
   projectileSpeed: 50
   firePoint: {fileID: 2027668245274238783}
@@ -291,6 +294,8 @@ MonoBehaviour:
   alwaysShowEnemyBar: 0
   showWhenSelected: 1
   showAfterDamageDuration: 3
+  hideBehindModels: 1
+  modelStencilBit: 128
   allyFillColor: {r: 0.2, g: 0.9, b: 0.3, a: 1}
   enemyFillColor: {r: 0.95, g: 0.2, b: 0.2, a: 1}
   lowHealthColor: {r: 0.95, g: 0.55, b: 0.1, a: 1}

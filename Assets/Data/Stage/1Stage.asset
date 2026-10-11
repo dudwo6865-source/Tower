@@ -18,7 +18,7 @@ MonoBehaviour:
   mapRootPrefab: {fileID: 9130407086999981450, guid: 3958da6a75ee5ab438ef5e7f69adbe66, type: 3}
   overrideEconomy: 1
   maxWatt: 500
-  startingWatt: 300
+  startingWatt: 150
   incomePerSecond: 5
   overrideDayNight: 1
   startPhase: 0
@@ -32,6 +32,21 @@ MonoBehaviour:
   overrideWave: 1
   wavePlan:
     waves:
+    - spawnCountMultiplier: 1
+      spawnCountBonus: 10
+      spawnIntervalMultiplier: 1
+      maxAliveEnemies: 0
+      healthMultiplier: 1
+      damageMultiplier: 1
+      speedMultiplier: 1
+      enemyComposition:
+        entries:
+        - prefab: {fileID: 2361311785900166410, guid: fc3ef11110c821c4e94b35b9f97708dd, type: 3}
+          count: 1
+        - prefab: {fileID: 4389994320296523517, guid: 8924176a55da7874abdcdb12dbb1e645, type: 3}
+          count: 3
+        - prefab: {fileID: 4389994320296523517, guid: 8b37dda2a95a2fc4b8ea8d0bb2600499, type: 3}
+          count: 10
     - spawnCountMultiplier: 1
       spawnCountBonus: 10
       spawnIntervalMultiplier: 2

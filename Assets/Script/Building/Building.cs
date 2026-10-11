@@ -108,9 +108,6 @@ public class Building : MonoBehaviour
             return;
 
         target.maxHealth = source.maxHealth;
-        target.deathAnimationDuration = source.deathAnimationDuration;
-        target.deathSinkDistance = source.deathSinkDistance;
-        target.deathEffectColor = source.deathEffectColor;
     }
 
     void ApplyDeathEffects(UnitData source)

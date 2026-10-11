@@ -21,6 +21,12 @@ public class BuildShopUI : MonoBehaviour
         [Tooltip("건물 썸네일을 표시할 Image입니다. 비워두면 아이콘 표시를 건너뜁니다.")]
         public Image icon;
 
+        [Label("버튼 애니메이터")]
+        [Tooltip("선택 Bool을 넣을 Animator입니다. 비워두면 버튼 오브젝트의 Animator를 자동으로 찾습니다.")]
+        public Animator animator;
+
+        [System.NonSerialized] public bool hasSelectedParameter;
+
         public IBuildablePlacementData GetBuildData()
         {
             return data as IBuildablePlacementData;
@@ -53,6 +59,11 @@ public class BuildShopUI : MonoBehaviour
     [Label("구매 불가 아이콘 색")]
     [Tooltip("구매 불가능(Watt 부족)할 때 아이콘 색상입니다.")]
     public Color iconUnaffordableTint = new Color(1f, 1f, 1f, 0.4f);
+
+    [Header("선택 애니메이션")]
+    [Label("선택 Bool 파라미터")]
+    [Tooltip("배치를 시작한 버튼의 Animator에서 건설 확정·취소 전까지 켜 둘 Bool 파라미터 이름입니다.")]
+    public string selectedBoolParameter = "IsSelected";
 
     [Header("단축키")]
     [Label("단축키 사용")]
@@ -88,6 +99,8 @@ public class BuildShopUI : MonoBehaviour
 
     void Update()
     {
+        RefreshSelectionStates();
+
         if (!enableHotkeys || entries == null || entries.Length == 0)
             return;
 
@@ -118,8 +131,53 @@ public class BuildShopUI : MonoBehaviour
         if (entry == null || entry.button == null)
             return;
 
+        if (entry.animator == null)
+            entry.animator = entry.button.GetComponent<Animator>();
+
+        entry.hasSelectedParameter = HasBoolParameter(entry.animator, selectedBoolParameter);
+
         int capturedIndex = index;
         entry.button.onClick.AddListener(() => TryBeginPlacementByIndex(capturedIndex));
+    }
+
+    // 배치 대기 중인 건물 데이터와 같은 항목의 버튼만 선택 Bool을 켠다.
+    void RefreshSelectionStates()
+    {
+        if (entries == null)
+            return;
+
+        IBuildablePlacementData pending =
+            placementController != null ? placementController.PendingBuildData : null;
+
+        for (int i = 0; i < entries.Length; i++)
+        {
+            ShopEntry entry = entries[i];
+
+            if (entry == null || !entry.hasSelectedParameter || entry.animator == null)
+                continue;
+
+            if (!entry.animator.isActiveAndEnabled)
+                continue;
+
+            bool selected = pending != null && ReferenceEquals(pending, entry.GetBuildData());
+            entry.animator.SetBool(selectedBoolParameter, selected);
+        }
+    }
+
+    static bool HasBoolParameter(Animator animator, string parameterName)
+    {
+        if (animator == null || string.IsNullOrEmpty(parameterName) ||
+            animator.runtimeAnimatorController == null)
+            return false;
+
+        foreach (AnimatorControllerParameter parameter in animator.parameters)
+        {
+            if (parameter.type == AnimatorControllerParameterType.Bool &&
+                parameter.name == parameterName)
+                return true;
+        }
+
+        return false;
     }
 
     void HandleWattChanged(float currentWatt)

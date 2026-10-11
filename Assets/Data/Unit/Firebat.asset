@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3881b96314386b042badd45b0c66a0e8, type: 3}
+  m_Name: Firebat
+  m_EditorClassIdentifier: 
+  unitPrefab: {fileID: 1258975795556199837, guid: 2b64b01cf04562548b27a73f1eb5b47b, type: 3}
+  displayName: Firebat
+  icon: {fileID: 0}
+  description: 
+  initialSpawnDelay: 2
+  spawnInterval: 20
+  wattCostPerSecond: 1.5
+  population: 2
+  requiredBuildings:
+  - buildingData: {fileID: 11400000, guid: d1682e307c4b5cd49b9d5e57a2b8c705, type: 2}
+    entityTypeId: 
+    scope: 0
+  requiredUpgrades: []

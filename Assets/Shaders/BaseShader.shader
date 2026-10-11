@@ -89,6 +89,9 @@ Shader "Base Shader"
 
         [HideInInspector][ToggleUI] _ReceiveShadows("Receive Shadows", Float) = 1.0
         [HideInInspector] _QueueOffset("Queue offset", Float) = 0.0
+        // 유닛·건물 모델이 그린 픽셀에 남기는 스텐실 비트. 월드 체력바가 이 비트를 보고
+        // 모델 뒤로 숨는다(WorldHealthBar의 '모델 스텐실 비트'와 같은 값이어야 한다).
+        [HideInInspector] _UnitStencilRef("Unit Stencil Ref", Float) = 128
 
         [HideInInspector] _MainTex("BaseMap", 2D) = "white" {}
         [HideInInspector] _Color("Base Color", Color) = (1, 1, 1, 1)
@@ -125,6 +128,14 @@ Shader "Base Shader"
             Cull Front
             ZWrite On
             ZTest LEqual
+
+            Stencil
+            {
+                Ref[_UnitStencilRef]
+                WriteMask[_UnitStencilRef]
+                Comp Always
+                Pass Replace
+            }
 
             HLSLPROGRAM
             #pragma target 2.0
@@ -202,6 +213,14 @@ Shader "Base Shader"
             ZWrite[_ZWrite]
             Cull[_Cull]
             AlphaToMask[_AlphaToMask]
+
+            Stencil
+            {
+                Ref[_UnitStencilRef]
+                WriteMask[_UnitStencilRef]
+                Comp Always
+                Pass Replace
+            }
 
             HLSLPROGRAM
             #pragma target 2.0
