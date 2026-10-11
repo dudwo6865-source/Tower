@@ -22,6 +22,7 @@ public sealed class TerrainRGBMaskPainterWindow : EditorWindow
     [SerializeField] Vector2 newSize = new Vector2(100f, 100f);
     [SerializeField] int resolutionIndex = 2;
     [SerializeField] float radius = 4f;
+    [SerializeField] float radiusKeyStep = 0.5f;
     [SerializeField] float strength = 0.5f;
     [SerializeField] float hardness = 0.5f;
     [SerializeField] float planeHeight;
@@ -40,6 +41,7 @@ public sealed class TerrainRGBMaskPainterWindow : EditorWindow
     Texture2D preview;
     Vector2 scroll;
     bool paintEnabled;
+    bool toggleKeyHeld;
     bool strokeActive;
     bool strokeChanged;
     int strokeControl;
@@ -173,6 +175,8 @@ public sealed class TerrainRGBMaskPainterWindow : EditorWindow
         }
         channel = GUILayout.Toolbar(channel, ChannelNames);
         radius = Mathf.Max(0.01f, EditorGUILayout.FloatField(new GUIContent("브러시 반경", "월드 단위 반경입니다."), radius));
+        radiusKeyStep = Mathf.Max(0.01f, EditorGUILayout.FloatField(
+            new GUIContent("단축키 반경 변경량", "[ 또는 ] 키를 한 번 누를 때 바뀌는 월드 단위 반경입니다."), radiusKeyStep));
         strength = EditorGUILayout.Slider("칠하기 강도", strength, 0.01f, 1f);
         hardness = EditorGUILayout.Slider(new GUIContent("경계 단단함", "0은 부드러운 경계, 1은 단단한 경계입니다."), hardness, 0f, 1f);
         usePlaneFallback = EditorGUILayout.Toggle(new GUIContent("Collider 없으면 기준 평면 사용", "높이가 다른 지형은 Collider를 사용하는 편이 정확합니다."), usePlaneFallback);
@@ -181,13 +185,14 @@ public sealed class TerrainRGBMaskPainterWindow : EditorWindow
 
         using (new EditorGUI.DisabledScope(root == null || EditorUtility.IsPersistent(root)))
         {
-            if (GUILayout.Button(paintEnabled ? "칠하기 종료" : "미리보기 및 칠하기 시작", GUILayout.Height(30f)))
+            if (GUILayout.Button(paintEnabled ? "칠하기 종료 (B)" : "미리보기 및 칠하기 시작 (B)", GUILayout.Height(30f)))
             {
                 if (paintEnabled) StopPainting();
                 else StartPainting();
             }
         }
         EditorGUILayout.HelpBox("Scene 뷰에서 왼쪽 드래그: 칠하기 / Shift: 흙으로 복원\n" +
+            "B: 시작·종료 / [·]: 반경 축소·확대 (Scene 뷰)\n" +
             "Ctrl+Z: 실행 취소 / Esc: 종료 / Alt·오른쪽 버튼: 카메라 조작\n" +
             "다른 지형·Polybrush 도구의 칠하기 모드는 꺼주세요.", MessageType.None);
         using (new EditorGUI.DisabledScope(strokeActive))
@@ -357,6 +362,9 @@ public sealed class TerrainRGBMaskPainterWindow : EditorWindow
 
     void OnSceneGUI(SceneView sceneView)
     {
+        // 칠하기가 꺼져 있어도 B로 시작할 수 있도록 활성 상태 검사보다 먼저 처리한다.
+        if (HandleBrushShortcut(sceneView))
+            return;
         if (!paintEnabled || data == null || !data.IsValid || EditorApplication.isPlayingOrWillChangePlaymode)
             return;
         Event e = Event.current;
@@ -410,6 +418,49 @@ public sealed class TerrainRGBMaskPainterWindow : EditorWindow
             Paint(point);
             e.Use();
         }
+    }
+
+    bool HandleBrushShortcut(SceneView sceneView)
+    {
+        Event e = Event.current;
+        if (e.rawType == EventType.KeyUp && e.keyCode == KeyCode.B)
+            toggleKeyHeld = false;
+        if (focusedWindow != sceneView)
+        {
+            toggleKeyHeld = false;
+            return false;
+        }
+        if (e.type != EventType.KeyDown || EditorGUIUtility.editingTextField ||
+            EditorApplication.isPlayingOrWillChangePlaymode || e.alt || e.control || e.command ||
+            e.shift || Tools.viewToolActive || (GUIUtility.hotControl != 0 && !strokeActive))
+            return false;
+
+        if (e.keyCode == KeyCode.B)
+        {
+            if (!paintEnabled && (data == null || !data.IsValid || !IsCompatible(data.material) ||
+                root == null || EditorUtility.IsPersistent(root)))
+                return false;
+            // 키를 누르고 있을 때 반복 KeyDown으로 켜졌다 꺼지는 것을 막는다.
+            if (!toggleKeyHeld)
+            {
+                toggleKeyHeld = true;
+                if (paintEnabled) StopPainting();
+                else StartPainting();
+            }
+        }
+        else if (paintEnabled && (e.keyCode == KeyCode.LeftBracket || e.keyCode == KeyCode.RightBracket))
+        {
+            float direction = e.keyCode == KeyCode.LeftBracket ? -1f : 1f;
+            radius = Mathf.Max(0.01f, radius + direction * radiusKeyStep);
+            hasLastPoint = false;
+        }
+        else
+            return false;
+
+        e.Use();
+        Repaint();
+        sceneView.Repaint();
+        return true;
     }
 
     void BeginStroke(int control, int selectedChannel)
