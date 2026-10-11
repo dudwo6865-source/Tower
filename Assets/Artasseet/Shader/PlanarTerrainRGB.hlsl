@@ -1,7 +1,7 @@
 #ifndef TANK_PLANAR_TERRAIN_RGB_INCLUDED
 #define TANK_PLANAR_TERRAIN_RGB_INCLUDED
 
-#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/GlobalSamplers.hlsl"
+#include "TerrainRGBMaskWeights.hlsl"
 
 // 평지의 월드 XZ 투영에 사용한다. 수직 절벽에는 사용하지 않는다.
 float3 TankPlanarNormal(float4 packedNormal, float strength)
@@ -22,13 +22,7 @@ void PlanarTerrainRGB_float(
     float SedimentTiling, float SedimentStrength, float SedimentSmoothness,
     out float3 BaseColor, out float3 NormalWS, out float Smoothness)
 {
-    // 마스크는 반복하지 않고 가장자리 값을 유지한다. 크기 0 입력도 보호한다.
-    float2 maskUV = MaskUseUV0 ? UV0 :
-        (PositionWS.xz - MaskOrigin) / max(abs(MaskSize), float2(0.001, 0.001));
-    float3 weights = saturate(SAMPLE_TEXTURE2D(Mask.tex, sampler_LinearClamp, maskUV).rgb);
-    float total = dot(weights, float3(1.0, 1.0, 1.0));
-    // RGB의 합을 정규화한다. 마스크가 검정이면 기본 흙을 사용한다.
-    weights = total > 0.00001 ? weights / max(total, 0.00001) : float3(1.0, 0.0, 0.0);
+    float3 weights = TerrainRGBMaskWeights(Mask, MaskUseUV0, UV0, PositionWS, MaskOrigin, MaskSize);
 
     // 색상과 노멀은 같은 좌표와 반복 수치를 공유한다.
     float2 soilUV = PositionWS.xz * max(abs(SoilTiling), 0.0001);

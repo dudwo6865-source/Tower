@@ -11,13 +11,14 @@ public sealed class TerrainRGBMaskPainterWindow : EditorWindow
     static readonly int UVModeId = Shader.PropertyToID("_MaskUseUV0");
     static readonly int OriginId = Shader.PropertyToID("_MaskOrigin");
     static readonly int SizeId = Shader.PropertyToID("_MaskSize");
-    static readonly string[] ChannelNames = { "흙 (R)", "모래 (G)", "퇴적층 (B)" };
+    static readonly string[] ChannelNames = { "기본 (R)", "두 번째 (G)", "세 번째 (B)" };
     static readonly int[] Resolutions = { 256, 512, 1024, 2048 };
     static readonly string[] ResolutionNames = { "256", "512", "1024", "2048" };
 
     [SerializeField] TerrainRGBMaskData data;
     [SerializeField] GameObject root;
     [SerializeField] Material newMaterial;
+    [SerializeField] List<Material> newAdditionalMaterials = new List<Material>();
     [SerializeField] Vector2 newOrigin;
     [SerializeField] Vector2 newSize = new Vector2(100f, 100f);
     [SerializeField] int resolutionIndex = 2;
@@ -109,7 +110,7 @@ public sealed class TerrainRGBMaskPainterWindow : EditorWindow
     void OnGUI()
     {
         scroll = EditorGUILayout.BeginScrollView(scroll);
-        EditorGUILayout.HelpBox("평지의 흙·모래·퇴적층을 월드 XZ 좌표로 칠합니다.\n" +
+        EditorGUILayout.HelpBox("평지와 절벽의 RGB 재질을 같은 월드 XZ 마스크로 칠합니다.\n" +
             "편집 원본은 자동 보관되며, 게임에 반영하려면 PNG 저장 및 적용을 누릅니다.", MessageType.Info);
         using (new EditorGUI.DisabledScope(EditorApplication.isPlayingOrWillChangePlaymode))
         {
@@ -144,14 +145,15 @@ public sealed class TerrainRGBMaskPainterWindow : EditorWindow
 
     void DrawCreationGUI()
     {
-        newMaterial = (Material)EditorGUILayout.ObjectField("평지 머티리얼", newMaterial, typeof(Material), false);
+        newMaterial = (Material)EditorGUILayout.ObjectField("기본 머티리얼", newMaterial, typeof(Material), false);
         if (GUILayout.Button("지형에서 머티리얼과 범위 가져오기"))
             FindMaterialAndBounds();
+        EditorGUILayout.LabelField("함께 적용할 추가 머티리얼", newAdditionalMaterials.Count.ToString());
         newOrigin = EditorGUILayout.Vector2Field("시작 위치 (X,Z)", newOrigin);
         newSize = EditorGUILayout.Vector2Field("맵 크기 (X,Z)", newSize);
         resolutionIndex = EditorGUILayout.Popup("마스크 해상도", resolutionIndex, ResolutionNames);
         EditorGUILayout.HelpBox("기본 흙으로 채운 새 마스크를 만듭니다. 기존 UV0 마스크가 있다면 자동 변환하지 않습니다. " +
-            "맵별로 복제한 평지 머티리얼을 사용하는 것이 좋습니다.", MessageType.None);
+            "맵별로 복제한 지형 머티리얼을 사용하는 것이 좋습니다.", MessageType.None);
         using (new EditorGUI.DisabledScope(!IsCompatible(newMaterial) || newSize.x <= 0f || newSize.y <= 0f))
         {
             if (GUILayout.Button("새 편집 원본 만들기", GUILayout.Height(28f)))
@@ -168,9 +170,10 @@ public sealed class TerrainRGBMaskPainterWindow : EditorWindow
             EditorGUILayout.Vector2Field("맵 크기 (X,Z)", data.size);
             EditorGUILayout.ObjectField("저장된 PNG", data.exportedMask, typeof(Texture2D), false);
         }
-        if (!IsCompatible(data.material))
+        DrawMaterialTargets();
+        if (!HasValidMaterials())
         {
-            EditorGUILayout.HelpBox("RGB 평지 셰이더를 사용하는 머티리얼 에셋이 필요합니다.", MessageType.Error);
+            EditorGUILayout.HelpBox("RGB 마스크를 지원하는 머티리얼 에셋을 등록해주세요.", MessageType.Error);
             return;
         }
         channel = GUILayout.Toolbar(channel, ChannelNames);
@@ -191,7 +194,7 @@ public sealed class TerrainRGBMaskPainterWindow : EditorWindow
                 else StartPainting();
             }
         }
-        EditorGUILayout.HelpBox("Scene 뷰에서 왼쪽 드래그: 칠하기 / Shift: 흙으로 복원\n" +
+        EditorGUILayout.HelpBox("Scene 뷰에서 왼쪽 드래그: 칠하기 / Shift: 기본(R)으로 복원\n" +
             "B: 시작·종료 / [·]: 반경 축소·확대 (Scene 뷰)\n" +
             "Ctrl+Z: 실행 취소 / Esc: 종료 / Alt·오른쪽 버튼: 카메라 조작\n" +
             "다른 지형·Polybrush 도구의 칠하기 모드는 꺼주세요.", MessageType.None);
@@ -213,36 +216,91 @@ public sealed class TerrainRGBMaskPainterWindow : EditorWindow
         }
     }
 
-    void FindMaterialAndBounds()
+    bool HasValidMaterials()
     {
-        if (root == null || EditorUtility.IsPersistent(root))
-            return;
-        var renderers = root.GetComponentsInChildren<Renderer>(true);
-        if (!IsCompatible(newMaterial))
+        if (data == null) return false;
+        var targets = data.GetMaterials();
+        return targets.Count > 0 && targets.TrueForAll(IsCompatible);
+    }
+
+    List<Material> FindRootMaterials(out Bounds bounds)
+    {
+        var targets = new List<Material>();
+        bounds = default;
+        bool found = false;
+        if (root == null || EditorUtility.IsPersistent(root)) return targets;
+        foreach (var renderer in root.GetComponentsInChildren<Renderer>(true))
         {
-            foreach (var renderer in renderers)
+            bool matches = false;
             foreach (var material in renderer.sharedMaterials)
                 if (IsCompatible(material))
                 {
-                    newMaterial = material;
-                    break;
+                    if (!targets.Contains(material)) targets.Add(material);
+                    matches = true;
                 }
-        }
-        bool found = false;
-        Bounds bounds = default;
-        foreach (var renderer in renderers)
-        {
-            if (Array.IndexOf(renderer.sharedMaterials, newMaterial) < 0)
-                continue;
+            if (!matches) continue;
             if (!found) bounds = renderer.bounds;
             else bounds.Encapsulate(renderer.bounds);
             found = true;
         }
-        if (!found)
+        return targets;
+    }
+
+    void DrawMaterialTargets()
+    {
+        var targets = data.GetMaterials();
+        foreach (var material in targets)
         {
-            ShowNotification(new GUIContent("선택한 지형에서 RGB 평지 머티리얼을 찾지 못했습니다."));
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                using (new EditorGUI.DisabledScope(true))
+                    EditorGUILayout.ObjectField("등록된 머티리얼", material, typeof(Material), false);
+                if (GUILayout.Button("제외", GUILayout.Width(45f)))
+                {
+                    bool resume = paintEnabled;
+                    StopPainting();
+                    Undo.RecordObject(data, "지형 머티리얼 제외");
+                    if (data.material == material) data.material = null;
+                    data.additionalMaterials?.RemoveAll(item => item == material);
+                    PersistAndRefresh();
+                    if (resume) StartPainting();
+                    GUIUtility.ExitGUI();
+                }
+            }
+        }
+        if (GUILayout.Button("지형의 RGB 머티리얼 함께 등록"))
+        {
+            var found = FindRootMaterials(out Bounds bounds);
+            if (found.Count == 0)
+            {
+                ShowNotification(new GUIContent("지형 아래에 RGB 머티리얼이 없습니다."));
+                return;
+            }
+            bool resume = paintEnabled;
+            StopPainting();
+            Undo.RecordObject(data, "지형 RGB 머티리얼 등록");
+            if (data.additionalMaterials == null) data.additionalMaterials = new List<Material>();
+            foreach (var material in found)
+                if (!targets.Contains(material)) data.additionalMaterials.Add(material);
+            PersistAndRefresh();
+            if (resume) StartPainting();
+            if (bounds.min.x < data.origin.x - 0.01f || bounds.min.z < data.origin.y - 0.01f ||
+                bounds.max.x > data.origin.x + data.size.x + 0.01f || bounds.max.z > data.origin.y + data.size.y + 0.01f)
+                ShowNotification(new GUIContent("등록했습니다. 기존 마스크 범위 밖은 칠할 수 없습니다."));
+        }
+    }
+
+    void FindMaterialAndBounds()
+    {
+        var targets = FindRootMaterials(out Bounds bounds);
+        if (targets.Count == 0)
+        {
+            ShowNotification(new GUIContent("선택한 지형에서 RGB 머티리얼을 찾지 못했습니다."));
             return;
         }
+        if (!targets.Contains(newMaterial)) newMaterial = targets[0];
+        newAdditionalMaterials = targets;
+        newAdditionalMaterials.Remove(newMaterial);
         newOrigin = new Vector2(bounds.min.x, bounds.min.z);
         newSize = new Vector2(Mathf.Max(0.01f, bounds.size.x), Mathf.Max(0.01f, bounds.size.z));
         planeHeight = bounds.center.y;
@@ -256,6 +314,7 @@ public sealed class TerrainRGBMaskPainterWindow : EditorWindow
         path = AssetDatabase.GenerateUniqueAssetPath(path);
         data = CreateInstance<TerrainRGBMaskData>();
         data.Initialize(Resolutions[resolutionIndex], newOrigin, newSize, newMaterial);
+        data.additionalMaterials = new List<Material>(newAdditionalMaterials);
         AssetDatabase.CreateAsset(data, path);
         AssetDatabase.SaveAssetIfDirty(data);
         EditorGUIUtility.PingObject(data);
@@ -264,14 +323,15 @@ public sealed class TerrainRGBMaskPainterWindow : EditorWindow
     void StartPainting()
     {
         StopPainting();
-        if (data == null || !data.IsValid || !IsCompatible(data.material) || root == null)
+        if (data == null || !data.IsValid || !HasValidMaterials() || root == null)
             return;
+        var targets = new HashSet<Material>(data.GetMaterials());
         foreach (var renderer in root.GetComponentsInChildren<Renderer>())
         {
             var materials = renderer.sharedMaterials;
             for (int i = 0; i < materials.Length; i++)
             {
-                if (materials[i] != data.material) continue;
+                if (!targets.Contains(materials[i])) continue;
                 var saved = new MaterialPropertyBlock();
                 renderer.GetPropertyBlock(saved, i);
                 previewTargets.Add(new PreviewTarget { renderer = renderer, slot = i, original = saved });
@@ -437,7 +497,7 @@ public sealed class TerrainRGBMaskPainterWindow : EditorWindow
 
         if (e.keyCode == KeyCode.B)
         {
-            if (!paintEnabled && (data == null || !data.IsValid || !IsCompatible(data.material) ||
+            if (!paintEnabled && (data == null || !data.IsValid || !HasValidMaterials() ||
                 root == null || EditorUtility.IsPersistent(root)))
                 return false;
             // 키를 누르고 있을 때 반복 KeyDown으로 켜졌다 꺼지는 것을 막는다.
@@ -514,13 +574,18 @@ public sealed class TerrainRGBMaskPainterWindow : EditorWindow
 
     void OnUndoRedo()
     {
-        EndStroke();
-        if (data != null && data.IsValid) PersistAndRefresh();
-        else StopPainting();
+        bool resume = paintEnabled;
+        StopPainting();
+        if (data != null && data.IsValid)
+        {
+            PersistAndRefresh();
+            if (resume) StartPainting();
+        }
     }
 
     void ExportMask()
     {
+        if (!HasValidMaterials()) return;
         string path = data.exportedMask != null ? AssetDatabase.GetAssetPath(data.exportedMask) : "";
         if (string.IsNullOrEmpty(path))
             path = EditorUtility.SaveFilePanelInProject("게임용 RGB 마스크 저장", data.name + "_RGB", "png", "마스크 PNG를 저장합니다.");
@@ -549,14 +614,20 @@ public sealed class TerrainRGBMaskPainterWindow : EditorWindow
             importer.maxTextureSize = data.resolution;
             importer.npotScale = TextureImporterNPOTScale.None;
             importer.SaveAndReimport();
-            Undo.RecordObjects(new UnityEngine.Object[] { data, data.material }, "바닥 마스크 PNG 적용");
+            var materials = data.GetMaterials();
+            var undoTargets = new List<UnityEngine.Object> { data };
+            undoTargets.AddRange(materials);
+            Undo.RecordObjects(undoTargets.ToArray(), "바닥 마스크 PNG 적용");
             data.exportedMask = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
-            data.material.SetTexture(MaskId, data.exportedMask);
-            data.material.SetFloat(UVModeId, 0f);
-            data.material.SetVector(OriginId, new Vector4(data.origin.x, data.origin.y, 0f, 0f));
-            data.material.SetVector(SizeId, new Vector4(data.size.x, data.size.y, 0f, 0f));
-            EditorUtility.SetDirty(data.material);
-            AssetDatabase.SaveAssetIfDirty(data.material);
+            foreach (var material in materials)
+            {
+                material.SetTexture(MaskId, data.exportedMask);
+                material.SetFloat(UVModeId, 0f);
+                material.SetVector(OriginId, new Vector4(data.origin.x, data.origin.y, 0f, 0f));
+                material.SetVector(SizeId, new Vector4(data.size.x, data.size.y, 0f, 0f));
+                EditorUtility.SetDirty(material);
+                AssetDatabase.SaveAssetIfDirty(material);
+            }
             PersistAndRefresh();
             ShowNotification(new GUIContent("PNG 저장과 머티리얼 적용을 완료했습니다."));
         }

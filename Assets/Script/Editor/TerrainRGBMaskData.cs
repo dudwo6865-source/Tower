@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 // 픽셀 원본을 보관하여 PNG를 다시 읽지 않고 실행 취소와 편집 재개를 지원한다.
 [PreferBinarySerialization]
@@ -8,6 +9,7 @@ public sealed class TerrainRGBMaskData : ScriptableObject
     [HideInInspector] public Vector2 origin;
     [HideInInspector] public Vector2 size = new Vector2(100f, 100f);
     [HideInInspector] public Material material;
+    [HideInInspector] public List<Material> additionalMaterials = new List<Material>();
     [HideInInspector] public Texture2D exportedMask;
     [HideInInspector] public Color32[] pixels;
 
@@ -30,5 +32,16 @@ public sealed class TerrainRGBMaskData : ScriptableObject
         Color32 color = TerrainRGBMaskBrushMath.ChannelColor(channel);
         for (int i = 0; i < pixels.Length; i++)
             pixels[i] = color;
+    }
+
+    // 기존 편집 원본의 단일 머티리얼 필드는 유지한다.
+    public List<Material> GetMaterials()
+    {
+        var targets = new List<Material>();
+        if (material != null) targets.Add(material);
+        if (additionalMaterials != null)
+            foreach (var target in additionalMaterials)
+                if (target != null && !targets.Contains(target)) targets.Add(target);
+        return targets;
     }
 }
