@@ -6,7 +6,7 @@ using UnityEngine.AI;
 /// 이동 유닛 공통 전투(추격/공격/공유 어그로). 플레이어 명령은 UnitCombatAI, 적 AI는 EnemyCombatAI.
 /// </summary>
 [RequireComponent(typeof(NavMeshAgent))]
-public abstract class MobileCombatAI : CombatAIBase
+public abstract partial class MobileCombatAI : CombatAIBase
 {
     [Header("이동")]
     [Label("정지 거리")]
@@ -150,7 +150,8 @@ public abstract class MobileCombatAI : CombatAIBase
         bool targetRelocated =
             hasDestination &&
             (lastTargetPosition - targetPosition).sqrMagnitude >= moveThreshold * moveThreshold;
-        bool chaseModeChanged = cachedUseDirectChase != issuedDirectChase;
+        bool chaseModeChanged = cachedUseDirectChase != issuedDirectChase ||
+            ShouldSpreadAttackPosition != issuedSpreadApproach;
 
         bool needsPath = !hasDestination;
         bool stuck = IsPathStuck();
@@ -196,7 +197,7 @@ public abstract class MobileCombatAI : CombatAIBase
         // 시도하므로, 타워 설치(carve)처럼 전원이 동시에 경로를 다시 잡는 순간에도
         // 한 프레임에 계산이 몰리지 않는다.
         bool immediate =
-            immediatePathOnce || PreferImmediatePath() || chaseModeChanged;
+            immediatePathOnce || PreferImmediatePath();
 
         if (!immediate && !AiPathBudget.TryAcquireHeavy())
             return;
@@ -214,6 +215,7 @@ public abstract class MobileCombatAI : CombatAIBase
             lastTargetPosition = targetPosition;
             lastDestination = destination;
             issuedDirectChase = cachedUseDirectChase;
+            issuedSpreadApproach = ShouldSpreadAttackPosition;
             hasDestination = playerRequested
                 ? GridMovement.TrySetAgentPathNow(agent, destination)
                 : GridMovement.TrySetAgentDestinationImmediate(agent, destination);
@@ -471,6 +473,7 @@ public abstract class MobileCombatAI : CombatAIBase
     /// </summary>
     protected virtual void LateUpdate()
     {
+        UpdateCrowdPriority();
         if (!facedThisFrame && agent != null && agent.isOnNavMesh)
         {
             Vector3 velocity = agent.velocity;
@@ -558,6 +561,9 @@ public abstract class MobileCombatAI : CombatAIBase
 
     Vector3 GetChaseDestination()
     {
+        if (TryGetSpreadDestination(out Vector3 spreadDestination))
+            return spreadDestination;
+
         float attackRange = attacker != null ? attacker.AttackRange : stoppingDistance;
 
         Vector3 destination = cachedUseDirectChase
@@ -724,6 +730,10 @@ public abstract class MobileCombatAI : CombatAIBase
 
     protected void StopAndAttack()
     {
+        lastAttackPositionFrame = Time.frameCount;
+        // 후보에 닿기 전에 사거리 안에 들어오면 실제로 멈춘 자리만 예약한다.
+        if (reservedAttackPosition)
+            attackPosition = transform.position;
         if (agent.isOnNavMesh && agent.hasPath)
         {
             agent.ResetPath();
@@ -756,6 +766,8 @@ public abstract class MobileCombatAI : CombatAIBase
 
         float rangeStop = Mathf.Max(0.1f, attacker.AttackRange * 0.85f);
         float value = Mathf.Min(Mathf.Max(0.1f, stoppingDistance), rangeStop);
+        if (reservedAttackPosition)
+            value = Mathf.Min(value, agent.radius * 0.5f);
 
         // 매 프레임 같은 값을 다시 대입하지 않는다(에이전트 프로퍼티는 네이티브 호출).
         if (Mathf.Approximately(appliedStoppingDistance, value))

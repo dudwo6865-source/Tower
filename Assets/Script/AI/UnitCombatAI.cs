@@ -12,7 +12,7 @@ public enum UnitOrderState
 /// <summary>
 /// 플레이어 유닛 전투 AI. Move / Attack-Move / Stop / Hold / Patrol 명령을 처리합니다.
 /// </summary>
-public class UnitCombatAI : MobileCombatAI
+public partial class UnitCombatAI : MobileCombatAI
 {
     [Header("명령")]
     [Label("정찰 지점 도착 거리")]
@@ -87,6 +87,9 @@ public class UnitCombatAI : MobileCombatAI
 
     void Update()
     {
+        if (UpdateYieldMovement())
+            return;
+        TryRequestAllyYield();
         if (orderState == UnitOrderState.Stopped)
         {
             StopAgentMovement();
@@ -477,12 +480,15 @@ public class UnitCombatAI : MobileCombatAI
 
     void BeginManualMove(bool knownDestination, Vector3 destination)
     {
+        // 명령 처리기가 이미 설정한 새 경로는 유지한다.
+        CancelYieldMovement(false);
         UnitCommandDebugLog.Log(this, "명령: 수동 이동 시작 (Free)");
 
         orderState = UnitOrderState.Free;
         manualMoveActive = true;
         manualFocusTarget = false;
         attackMoveActive = false;
+        RefreshDirectMovePriority();
         hasManualDestination = knownDestination;
         manualDestination = destination;
         ResetMoveStuckState();
@@ -501,6 +507,8 @@ public class UnitCombatAI : MobileCombatAI
         if (target == null)
             return;
 
+        CancelYieldMovement();
+
         UnitCommandDebugLog.Log(this, $"명령: 공격 대상 지정 (target={DescribeTarget(target)})");
 
         orderState = UnitOrderState.Free;
@@ -516,6 +524,7 @@ public class UnitCombatAI : MobileCombatAI
 
     public bool BeginAttackMove(Vector3 destination)
     {
+        CancelYieldMovement();
         if (!GridMovement.TrySetAgentDestination(agent, destination, immediate: true))
             return false;
 
@@ -540,6 +549,7 @@ public class UnitCombatAI : MobileCombatAI
 
     public void IssueStop()
     {
+        CancelYieldMovement();
         UnitCommandDebugLog.Log(this, "명령: 정지 (Stopped)");
 
         orderState = UnitOrderState.Stopped;
@@ -556,6 +566,7 @@ public class UnitCombatAI : MobileCombatAI
 
     public void IssueHold()
     {
+        CancelYieldMovement();
         UnitCommandDebugLog.Log(this, $"명령: 홀드 (Hold @ {FormatVector(transform.position)})");
 
         orderState = UnitOrderState.Hold;
@@ -573,6 +584,7 @@ public class UnitCombatAI : MobileCombatAI
 
     public bool IssuePatrol(Vector3 patrolDestination)
     {
+        CancelYieldMovement();
         if (!GridMovement.TrySetAgentDestination(agent, patrolDestination, immediate: true))
             return false;
 

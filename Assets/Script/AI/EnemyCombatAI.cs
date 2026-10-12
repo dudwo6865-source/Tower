@@ -579,6 +579,8 @@ public class EnemyCombatAI : MobileCombatAI
 
     protected override bool ShouldSkipSetDestination()
     {
+        if (ShouldSpreadAttackPosition)
+            return false;
         if (!IsSquadFollower() || damageFocusTarget)
             return false;
 
