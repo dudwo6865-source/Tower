@@ -143,18 +143,22 @@ public abstract class CombatAIBase : MonoBehaviour
     // 표적이 파괴되면 Unity의 == 연산자 때문에 currentTarget은 "null처럼" 보이지만
     // 관리 참조는 그대로 남는다. 원래 여기 있던 검사(currentTarget != null && !currentTarget)는
     // 두 조건이 서로 반대라 절대 참이 될 수 없어서 아무 일도 하지 않았다. 실제로 끊어준다.
-    void DropDestroyedTarget()
+    // 파괴된 표적을 끊었으면 true를 돌려준다.
+    bool DropDestroyedTarget()
     {
-        if (currentTarget != null)
-            return;
+        if (currentTarget != null || ReferenceEquals(currentTarget, null))
+            return false;
 
         currentTarget = null;
         currentTargetHealth = null;
+        return true;
     }
 
     protected void TickRetarget()
     {
-        DropDestroyedTarget();
+        // 표적이 파괴돼 사라진 경우도 놓친 것으로 친다. 사망 시 오브젝트가 바로
+        // 제거되므로, 이걸 빼면 지정 공격(damageFocusTarget)이 풀리지 않고 멈춰 버린다.
+        bool targetDestroyed = DropDestroyedTarget();
 
         retargetTimer -= Time.deltaTime;
 
@@ -162,16 +166,20 @@ public abstract class CombatAIBase : MonoBehaviour
         // 파고든 경우) 타이머를 기다리지 않고 즉시 재탐색한다.
         // (여러 마리가 같은 대상을 공격하다 죽으면 동시에 다음 표적으로 전환되도록)
         bool targetLost =
-            currentTarget != null &&
-            (currentTargetHealth == null || !currentTargetHealth.IsAlive ||
-             (attacker != null && !attacker.CanEngage(currentTarget)));
+            targetDestroyed ||
+            (currentTarget != null &&
+             (currentTargetHealth == null || !currentTargetHealth.IsAlive ||
+              (attacker != null && !attacker.CanEngage(currentTarget))));
 
         if (damageFocusTarget)
         {
-            if (targetLost)
-                damageFocusTarget = false;
+            // 지정 표적을 유지하는 동안은 재탐색하지 않는다.
+            // 놓쳤으면 지정을 풀고 같은 프레임에 바로 다음 표적을 찾는다.
+            if (!targetLost && currentTarget != null)
+                return;
 
-            return;
+            damageFocusTarget = false;
+            targetLost = true;
         }
 
         if (retargetTimer > 0f && !targetLost)

@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.UI;
 
 [DisallowMultipleComponent]
@@ -77,6 +79,26 @@ public class FogOfWarManager : MonoBehaviour
     [Tooltip("켜면 적 AI도 언덕·절벽에 가려진 대상은 어그로로 잡지 않습니다. 안개는 플레이어 한쪽 시야라 적 AI가 쓸 수 없으므로, 여기서는 구워둔 지형 높이만 보고 판정합니다(배열 조회뿐이라 거의 공짜입니다).")]
     public bool aiTerrainLineOfSight = true;
 
+    [Label("아래에서 고지대 가림")]
+    [Tooltip("켜면 시야 주인이 서 있는 지면보다 '가림 높이 차' 이상 높은 지형은, 거리·각도와 상관없이 아래에서 보이지 않습니다. 절벽 벽에 붙었을 때 절벽 위가 보이는 현상을 막습니다.")]
+    public bool blockHigherGround = true;
+
+    [Label("가림 높이 차")]
+    [Tooltip("이 높이(미터) 이상 높은 지형은 아래에서 보이지 않습니다. 절벽 한 단 높이보다 작게, 완만한 경사의 높이 차보다는 크게 잡으세요.")]
+    public float highGroundBlockHeight = 1f;
+
+    [Label("절벽 경계 여유 거리")]
+    [Tooltip("높은 지형에서 이 거리(미터) 안에 있는 절벽 가장자리·경사 칸도 높은 지형으로 봅니다. 벽에 붙었을 때 절벽 위 가장자리가 띠처럼 보이면 늘리세요. 0이면 끕니다.")]
+    public float highGroundEdgeMargin = 1.5f;
+
+    [Label("경계로 볼 최소 높이")]
+    [Tooltip("'절벽 경계 여유 거리'를 적용할 칸의 최소 높이 차(미터)입니다. 이보다 낮은 칸은 절벽 바로 밑이어도 평지로 보고 그대로 보여줍니다.")]
+    public float highGroundEdgeMinRise = 0.3f;
+
+    [Label("시야 주인 지면 탐색 거리")]
+    [Tooltip("유닛·건물이 서 있는 지면 높이를 찾을 때, 실제 위치에서 가장 가까운 NavMesh를 이 거리(미터) 안에서 찾습니다. 못 찾으면 그 자리의 가장 높은 표면을 씁니다. 너무 크게 잡을 필요는 없습니다.")]
+    public float sourceGroundSnapDistance = 2f;
+
     [Header("갱신")]
     [Label("갱신 간격(초)")]
     [Tooltip("안개 텍스처를 갱신하는 간격(초)입니다.")]
@@ -90,6 +112,29 @@ public class FogOfWarManager : MonoBehaviour
     [Label("MapGrid 기준 사용")]
     [Tooltip("MapGrid가 있으면 bounds/표면 높이를 MapGrid(NavMesh) 기준으로 사용합니다.")]
     public bool useMapGridWhenAvailable = true;
+
+    [Header("깊이 기반 안개")]
+    [Label("깊이 기반 안개 사용")]
+    [Tooltip("켜면 지형을 따라가는 메쉬 대신, 카메라 깊이로 화면에 그려진 지형·절벽의 실제 위치를 찾아 안개를 칠합니다. 절벽에서 안개가 뚫리거나 겹쳐 보이는 문제가 없습니다. 끄면 예전 방식(지형을 따라가는 메쉬)을 씁니다.")]
+    public bool useDepthProjection = true;
+
+    [Label("카메라 깊이 텍스처 자동 켜기")]
+    [Tooltip("깊이 기반 안개에 필요한 카메라 깊이 텍스처를 시작 시 메인 카메라에 켭니다. 끄면 URP 파이프라인 에셋의 Depth Texture를 직접 켜야 합니다.")]
+    public bool autoEnableCameraDepthTexture = true;
+
+    [Label("안개 상자 위아래 범위")]
+    [Tooltip("깊이 기반 안개 상자가 맵 기준 높이에서 위아래로 덮는 거리(미터)입니다. 이 범위 밖에 있는 지형에는 안개가 칠해지지 않습니다.")]
+    public float depthVolumeVerticalExtent = 100f;
+
+    [Header("부드럽게 표시")]
+    [Label("표시 블러 횟수")]
+    [Tooltip("화면·미니맵에 그리는 안개 경계를 흐리게 하는 횟수입니다. 높을수록 계단 모양 경계가 부드러워집니다. 유닛 표시·스폰 같은 게임플레이 판정은 흐리기 전 값을 씁니다.")]
+    [Range(0, 4)]
+    public int displayBlurIterations = 1;
+
+    [Label("부드러운 전환")]
+    [Tooltip("안개를 갱신할 때 직전 모습에서 새 모습으로 갱신 간격 동안 서서히 넘어갑니다. 유닛이 움직일 때 경계가 툭툭 끊기는 것을 줄입니다.")]
+    public bool smoothTransition = true;
 
     [Header("표면 샘플링")]
     [Label("오버레이 샘플 방식")]
@@ -110,11 +155,11 @@ public class FogOfWarManager : MonoBehaviour
     public bool hideOverlayWithoutSurface = true;
 
     [Label("오버레이 메쉬 분할 수")]
-    [Tooltip("지형 표면을 따라가는 메쉬 세그먼트 수입니다. 높을수록 경사에 잘 맞지만 무거워집니다.")]
+    [Tooltip("지형 표면을 따라가는 메쉬 세그먼트 수입니다. 높을수록 경사에 잘 맞지만 무거워집니다. 깊이 기반 안개를 끈 경우에만 쓰입니다.")]
     public int overlayMeshSegments = 64;
 
     [Label("오버레이 높이")]
-    [Tooltip("지형 표면 위로 띄울 높이입니다. 유닛/지형이 안개를 뚫을 때 올리세요.")]
+    [Tooltip("지형 표면 위로 띄울 높이입니다. 유닛/지형이 안개를 뚫을 때 올리세요. 깊이 기반 안개를 끈 경우에만 쓰입니다.")]
     public float overlayHeightOffset = 1.2f;
 
     [Label("오버레이 확장 거리")]
@@ -153,9 +198,27 @@ public class FogOfWarManager : MonoBehaviour
     private Texture2D fogTexture;
     private Color32[] fogPixels;
 
+    // 화면 표시용 버퍼. fogPixels(게임플레이 판정용 원본)를 흐려서 담고, 부드러운 전환을
+    // 위해 직전 표시 결과를 fogPrevTexture에 남겨둔다.
+    private Texture2D fogPrevTexture;
+    private Color32[] displayPixels;
+    private Color32[] prevDisplayPixels;
+    private Color32[] blurScratchPixels;
+
+    static readonly int FogTexId = Shader.PropertyToID("_FogTex");
+    static readonly int FogPrevTexId = Shader.PropertyToID("_FogPrevTex");
+    static readonly int FogBlendId = Shader.PropertyToID("_FogBlend");
+    static readonly int CullId = Shader.PropertyToID("_Cull");
+    static readonly int ZTestId = Shader.PropertyToID("_ZTest");
+    const string DepthProjectionKeyword = "_FOG_DEPTH_PROJECTION";
+
     // 안개 그리드와 같은 해상도로 미리 펼쳐둔 지형 높이(칸당 값 1개). 레이마칭 중에는
     // 나눗셈·보간 없이 배열 조회 한 번으로 끝나도록 Start()에서 한 번만 굽는다.
     private float[] elevationHeightByCell;
+
+    // 각 칸 주변 '절벽 경계 여유 거리' 안의 가장 높은 지형 높이. 절벽 위 가장자리가
+    // 높이맵 보간으로 낮게 잡혀 아래에서 보이는 것을 막는 데 쓴다.
+    private float[] elevationEdgeHeightByCell;
 
     private float cellSizeX;
     private float cellSizeZ;
@@ -197,9 +260,15 @@ public class FogOfWarManager : MonoBehaviour
         ApplyMaterialSettings(uiFogMaterial);
 
         if (createWorldOverlay)
+        {
+            if (useDepthProjection && autoEnableCameraDepthTexture)
+                EnsureCameraDepthTexture();
+
             CreateWorldOverlay();
+        }
 
         BuildElevationHeightGrid();
+        BuildElevationEdgeHeightGrid();
 
         FogOfWarVisionSource[] existingSources =
             FindObjectsOfType<FogOfWarVisionSource>();
@@ -225,6 +294,9 @@ public class FogOfWarManager : MonoBehaviour
         if (fogTexture != null)
             Destroy(fogTexture);
 
+        if (fogPrevTexture != null)
+            Destroy(fogPrevTexture);
+
         if (worldFogMaterial != null)
             Destroy(worldFogMaterial);
 
@@ -239,11 +311,26 @@ public class FogOfWarManager : MonoBehaviour
     {
         updateTimer -= Time.deltaTime;
 
-        if (updateTimer > 0f)
+        if (updateTimer <= 0f)
+        {
+            updateTimer = updateInterval;
+            UpdateFogTexture();
+        }
+
+        UpdateFogBlend();
+    }
+
+    // 직전 갱신에서 지난 시간 비율만큼 이전 안개 → 새 안개로 섞는다.
+    void UpdateFogBlend()
+    {
+        if (worldFogMaterial == null)
             return;
 
-        updateTimer = updateInterval;
-        UpdateFogTexture();
+        float blend = smoothTransition && updateInterval > 0f
+            ? Mathf.Clamp01(1f - updateTimer / updateInterval)
+            : 1f;
+
+        worldFogMaterial.SetFloat(FogBlendId, blend);
     }
 
     void InitializeMap()
@@ -304,6 +391,9 @@ public class FogOfWarManager : MonoBehaviour
         if (fogTexture != null)
             Destroy(fogTexture);
 
+        if (fogPrevTexture != null)
+            Destroy(fogPrevTexture);
+
         InitializeTexture();
     }
 
@@ -318,27 +408,45 @@ public class FogOfWarManager : MonoBehaviour
         FogGroundUtility.overlaySampleMode = overlaySampleMode;
         FogGroundUtility.groundRaycastMask = groundRaycastMask;
         FogGroundUtility.raycastHeightPadding = surfaceRaycastHeightPadding;
+        FogGroundUtility.sourceGroundSnapDistance = sourceGroundSnapDistance;
     }
 
     void InitializeTexture()
     {
-        fogTexture = new Texture2D(
-            gridWidth,
-            gridHeight,
-            TextureFormat.RG16,
-            false,
-            true);
+        fogTexture = CreateFogTexture();
+        fogPrevTexture = CreateFogTexture();
 
-        fogTexture.filterMode = FilterMode.Bilinear;
-        fogTexture.wrapMode = TextureWrapMode.Clamp;
-
-        fogPixels = new Color32[gridWidth * gridHeight];
+        int pixelCount = gridWidth * gridHeight;
+        fogPixels = new Color32[pixelCount];
+        displayPixels = new Color32[pixelCount];
+        prevDisplayPixels = new Color32[pixelCount];
+        blurScratchPixels = new Color32[pixelCount];
 
         for (int i = 0; i < fogPixels.Length; i++)
             fogPixels[i] = new Color32(0, 0, 0, 255);
 
         fogTexture.SetPixels32(fogPixels);
         fogTexture.Apply(false);
+        fogPrevTexture.SetPixels32(fogPixels);
+        fogPrevTexture.Apply(false);
+
+        // 자동 해상도로 텍스처를 다시 만들어도 머티리얼이 새 텍스처를 보게 한다.
+        ApplyMaterialSettings(worldFogMaterial);
+        ApplyMaterialSettings(uiFogMaterial);
+    }
+
+    Texture2D CreateFogTexture()
+    {
+        Texture2D texture = new Texture2D(
+            gridWidth,
+            gridHeight,
+            TextureFormat.RG16,
+            false,
+            true);
+
+        texture.filterMode = FilterMode.Bilinear;
+        texture.wrapMode = TextureWrapMode.Clamp;
+        return texture;
     }
 
     void CreateMaterials()
@@ -392,7 +500,28 @@ public class FogOfWarManager : MonoBehaviour
         if (material == null)
             return;
 
-        material.SetTexture("_FogTex", fogTexture);
+        material.SetTexture(FogTexId, fogTexture);
+
+        if (material.HasProperty(FogPrevTexId))
+            material.SetTexture(FogPrevTexId, fogPrevTexture);
+
+        if (material == worldFogMaterial)
+        {
+            if (useDepthProjection)
+            {
+                // 상자 안쪽 면(뒷면)만, 가려짐과 무관하게 그린다. 실제 위치는 깊이로 복원한다.
+                material.EnableKeyword(DepthProjectionKeyword);
+                material.SetFloat(CullId, (float)CullMode.Front);
+                material.SetFloat(ZTestId, (float)CompareFunction.Always);
+            }
+            else
+            {
+                material.DisableKeyword(DepthProjectionKeyword);
+                material.SetFloat(CullId, (float)CullMode.Off);
+                material.SetFloat(ZTestId, (float)CompareFunction.LessEqual);
+            }
+        }
+
         material.SetVector(
             "_MapOrigin",
             new Vector4(mapOrigin.x, mapOrigin.z, 0f, 0f));
@@ -421,15 +550,25 @@ public class FogOfWarManager : MonoBehaviour
         overlayObject.transform.SetParent(transform, false);
 
         float padding = Mathf.Max(0f, overlayMeshPadding);
+        float verticalExtent = useDepthProjection
+            ? Mathf.Max(1f, depthVolumeVerticalExtent)
+            : 0f;
+
         overlayObject.transform.position = new Vector3(
             mapOrigin.x - padding,
-            mapOrigin.y,
+            mapOrigin.y - verticalExtent,
             mapOrigin.z - padding);
         overlayObject.transform.rotation = Quaternion.identity;
 
-        overlayMesh = BuildSurfaceFollowingMesh(
-            overlayMeshSegments,
-            overlayMeshSegments);
+        overlayMesh = useDepthProjection
+            ? BuildDepthVolumeMesh(
+                new Vector3(
+                    mapSize.x + padding * 2f,
+                    verticalExtent * 2f,
+                    mapSize.y + padding * 2f))
+            : BuildSurfaceFollowingMesh(
+                overlayMeshSegments,
+                overlayMeshSegments);
 
         if (overlayMesh == null)
             return;
@@ -442,6 +581,106 @@ public class FogOfWarManager : MonoBehaviour
         overlayRenderer.shadowCastingMode =
             UnityEngine.Rendering.ShadowCastingMode.Off;
         overlayRenderer.receiveShadows = false;
+    }
+
+    // 깊이 기반 안개용 상자. 면을 바깥으로 감아두면 셰이더의 Cull Front로 안쪽 면만 그려져,
+    // 카메라가 상자 밖이든 안이든 화면의 각 픽셀을 정확히 한 번 덮는다.
+    static Mesh BuildDepthVolumeMesh(Vector3 size)
+    {
+        Vector3[] vertices = new Vector3[8];
+
+        for (int i = 0; i < 8; i++)
+        {
+            vertices[i] = new Vector3(
+                (i & 1) != 0 ? size.x : 0f,
+                (i & 2) != 0 ? size.y : 0f,
+                (i & 4) != 0 ? size.z : 0f);
+        }
+
+        int[][] faces =
+        {
+            new[] { 0, 2, 6, 4 }, // -X
+            new[] { 1, 3, 7, 5 }, // +X
+            new[] { 0, 1, 5, 4 }, // -Y
+            new[] { 2, 3, 7, 6 }, // +Y
+            new[] { 0, 1, 3, 2 }, // -Z
+            new[] { 4, 5, 7, 6 }, // +Z
+        };
+
+        Vector3 center = size * 0.5f;
+        List<int> triangles = new List<int>(36);
+
+        foreach (int[] face in faces)
+        {
+            Vector3 faceCenter =
+                (vertices[face[0]] + vertices[face[1]] +
+                 vertices[face[2]] + vertices[face[3]]) * 0.25f;
+            Vector3 outward = faceCenter - center;
+
+            AddOutwardTriangle(triangles, vertices, face[0], face[1], face[2], outward);
+            AddOutwardTriangle(triangles, vertices, face[0], face[2], face[3], outward);
+        }
+
+        Mesh mesh = new Mesh
+        {
+            name = "FogOfWarDepthVolume"
+        };
+
+        mesh.vertices = vertices;
+        mesh.triangles = triangles.ToArray();
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
+        return mesh;
+    }
+
+    static void AddOutwardTriangle(
+        List<int> triangles,
+        Vector3[] vertices,
+        int a,
+        int b,
+        int c,
+        Vector3 outward)
+    {
+        // 유니티는 cross(b-a, c-a) 방향을 앞면으로 본다.
+        Vector3 normal = Vector3.Cross(vertices[b] - vertices[a], vertices[c] - vertices[a]);
+
+        triangles.Add(a);
+
+        if (Vector3.Dot(normal, outward) >= 0f)
+        {
+            triangles.Add(b);
+            triangles.Add(c);
+        }
+        else
+        {
+            triangles.Add(c);
+            triangles.Add(b);
+        }
+    }
+
+    // 깊이 기반 안개는 카메라 깊이 텍스처가 있어야 동작한다. 파이프라인 에셋에서 꺼져
+    // 있어도 메인 카메라만은 깊이 텍스처를 만들게 한다.
+    void EnsureCameraDepthTexture()
+    {
+        Camera camera = Camera.main;
+
+        if (camera == null)
+        {
+            Debug.LogWarning(
+                "FogOfWarManager: 메인 카메라가 없어 깊이 텍스처를 켜지 못했습니다. " +
+                "URP 파이프라인 에셋의 Depth Texture를 직접 켜주세요.",
+                this);
+
+            return;
+        }
+
+        camera.depthTextureMode |= DepthTextureMode.Depth;
+
+        UniversalAdditionalCameraData cameraData =
+            camera.GetUniversalAdditionalCameraData();
+
+        if (cameraData != null)
+            cameraData.requiresDepthOption = CameraOverrideOption.On;
     }
 
     Mesh BuildSurfaceFollowingMesh(int segmentsX, int segmentsZ)
@@ -669,6 +908,75 @@ public class FogOfWarManager : MonoBehaviour
         }
     }
 
+    // 각 칸 주변 '절벽 경계 여유 거리' 안의 최대 높이를 가로 → 세로 두 번에 나눠 구한다.
+    void BuildElevationEdgeHeightGrid()
+    {
+        elevationEdgeHeightByCell = null;
+
+        if (elevationHeightByCell == null || highGroundEdgeMargin <= 0f)
+            return;
+
+        int radiusX = Mathf.CeilToInt(highGroundEdgeMargin / Mathf.Max(0.0001f, cellSizeX));
+        int radiusZ = Mathf.CeilToInt(highGroundEdgeMargin / Mathf.Max(0.0001f, cellSizeZ));
+        float[] horizontal = new float[elevationHeightByCell.Length];
+
+        for (int z = 0; z < gridHeight; z++)
+        {
+            int row = z * gridWidth;
+
+            for (int x = 0; x < gridWidth; x++)
+            {
+                float max = float.NegativeInfinity;
+                int minX = Mathf.Max(0, x - radiusX);
+                int maxX = Mathf.Min(gridWidth - 1, x + radiusX);
+
+                for (int nx = minX; nx <= maxX; nx++)
+                    max = Mathf.Max(max, elevationHeightByCell[row + nx]);
+
+                horizontal[row + x] = max;
+            }
+        }
+
+        elevationEdgeHeightByCell = new float[elevationHeightByCell.Length];
+
+        for (int z = 0; z < gridHeight; z++)
+        {
+            int minZ = Mathf.Max(0, z - radiusZ);
+            int maxZ = Mathf.Min(gridHeight - 1, z + radiusZ);
+
+            for (int x = 0; x < gridWidth; x++)
+            {
+                float max = float.NegativeInfinity;
+
+                for (int nz = minZ; nz <= maxZ; nz++)
+                    max = Mathf.Max(max, horizontal[nz * gridWidth + x]);
+
+                elevationEdgeHeightByCell[z * gridWidth + x] = max;
+            }
+        }
+    }
+
+    /// <summary>
+    /// groundY(시야 주인이 선 지면)에서 볼 때 이 칸이 '고지대'라 안 보여야 하는지입니다.
+    /// 가림 높이 차 이상 높거나, 조금이라도 솟아 있으면서 경계 여유 거리 안에 고지대가 있으면
+    /// 가립니다(높이맵 보간으로 절벽 위 가장자리가 낮게 잡혀도 띠처럼 보이지 않도록).
+    /// </summary>
+    bool IsHigherGroundBlocked(int x, int z, float groundY)
+    {
+        if (!blockHigherGround || elevationHeightByCell == null)
+            return false;
+
+        int index = z * gridWidth + x;
+        float rise = elevationHeightByCell[index] - groundY;
+
+        if (rise >= highGroundBlockHeight)
+            return true;
+
+        return elevationEdgeHeightByCell != null &&
+               rise >= highGroundEdgeMinRise &&
+               elevationEdgeHeightByCell[index] - groundY >= highGroundBlockHeight;
+    }
+
     float SampleTerrainHeightAtCell(int x, int z)
     {
         return elevationHeightByCell != null
@@ -760,8 +1068,74 @@ public class FogOfWarManager : MonoBehaviour
                 fogPixels[i].r = fogPixels[i].g;
         }
 
-        fogTexture.SetPixels32(fogPixels);
+        UploadDisplayTexture();
+    }
+
+    // 게임플레이 판정용 원본(fogPixels)은 그대로 두고, 화면에 그릴 사본만 흐려서 올린다.
+    void UploadDisplayTexture()
+    {
+        if (smoothTransition)
+        {
+            Color32[] previous = prevDisplayPixels;
+            prevDisplayPixels = displayPixels;
+            displayPixels = previous;
+
+            fogPrevTexture.SetPixels32(prevDisplayPixels);
+            fogPrevTexture.Apply(false);
+        }
+
+        System.Array.Copy(fogPixels, displayPixels, fogPixels.Length);
+
+        for (int i = 0; i < displayBlurIterations; i++)
+            BlurDisplayPixels();
+
+        fogTexture.SetPixels32(displayPixels);
         fogTexture.Apply(false);
+    }
+
+    // 1-2-1 가중치로 가로 → 세로 한 번씩 흐린다(가장자리는 끝 칸을 반복).
+    void BlurDisplayPixels()
+    {
+        int width = gridWidth;
+        int height = gridHeight;
+
+        for (int z = 0; z < height; z++)
+        {
+            int row = z * width;
+
+            for (int x = 0; x < width; x++)
+            {
+                Color32 left = displayPixels[row + Mathf.Max(0, x - 1)];
+                Color32 center = displayPixels[row + x];
+                Color32 right = displayPixels[row + Mathf.Min(width - 1, x + 1)];
+
+                blurScratchPixels[row + x] = new Color32(
+                    (byte)((left.r + center.r * 2 + right.r + 2) >> 2),
+                    (byte)((left.g + center.g * 2 + right.g + 2) >> 2),
+                    0,
+                    255);
+            }
+        }
+
+        for (int z = 0; z < height; z++)
+        {
+            int below = Mathf.Max(0, z - 1) * width;
+            int row = z * width;
+            int above = Mathf.Min(height - 1, z + 1) * width;
+
+            for (int x = 0; x < width; x++)
+            {
+                Color32 down = blurScratchPixels[below + x];
+                Color32 center = blurScratchPixels[row + x];
+                Color32 up = blurScratchPixels[above + x];
+
+                displayPixels[row + x] = new Color32(
+                    (byte)((down.r + center.r * 2 + up.r + 2) >> 2),
+                    (byte)((down.g + center.g * 2 + up.g + 2) >> 2),
+                    0,
+                    255);
+            }
+        }
     }
 
     float ResolveEdgeSoftness(FogOfWarVisionSource source)
@@ -922,6 +1296,10 @@ public class FogOfWarManager : MonoBehaviour
 
             elevationVisible = atOrBelowEyeLevel || slope >= maxSlope - ElevationSlopeEpsilon;
             maxSlope = Mathf.Max(maxSlope, slope);
+
+            // 고지대 가림은 이 칸을 밝히지 않을 뿐 광선은 계속 진행한다(너머의 낮은 지형).
+            if (IsHigherGroundBlocked(x, z, sourceWorldPos.y))
+                elevationVisible = false;
         }
 
         if (elevationVisible)
@@ -1115,7 +1493,7 @@ public class FogOfWarManager : MonoBehaviour
                     atOrBelowEyeLevel || slope >= maxSlope - ElevationSlopeEpsilon;
 
                 if (isTargetCell)
-                    return visible;
+                    return visible && !IsHigherGroundBlocked(x, z, from.y);
 
                 maxSlope = Mathf.Max(maxSlope, slope);
             }

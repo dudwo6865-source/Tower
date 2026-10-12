@@ -253,6 +253,10 @@ public class UnitSelectionManager : MonoBehaviour
             SelectEntity(entity);
         }
 
+        // 더블클릭은 같은 유닛을 한 번 더 누른 것이라 첫 클릭에서 이미 소리가 났다.
+        if (!isDoubleClick)
+            PlaySelectSound(new[] { entity }, entity);
+
         lastClickedEntity = entity;
         lastClickTime = Time.time;
     }
@@ -286,6 +290,34 @@ public class UnitSelectionManager : MonoBehaviour
             foreach (SelectableEntity entity in entitiesInBox)
                 SelectEntity(entity);
         }
+
+        PlaySelectSound(entitiesInBox, null);
+    }
+
+    // 플레이어 소유이면서 지금 선택된 것만 골라, 그중 한 유닛의 선택 사운드를 낸다.
+    void PlaySelectSound(IReadOnlyList<SelectableEntity> candidates, SelectableEntity preferred)
+    {
+        List<SelectableEntity> owned = new List<SelectableEntity>();
+
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            SelectableEntity candidate = candidates[i];
+
+            if (candidate != null &&
+                candidate.ownerId == localPlayerOwnerId &&
+                selectedEntities.Contains(candidate))
+            {
+                owned.Add(candidate);
+            }
+        }
+
+        if (owned.Count == 0)
+            return;
+
+        UnitSound.PlayVoiceForGroup(
+            owned,
+            UnitSoundVoice.Select,
+            owned.Contains(preferred) ? preferred : null);
     }
 
     void SelectAllSameTypeOnScreen(SelectableEntity referenceEntity)

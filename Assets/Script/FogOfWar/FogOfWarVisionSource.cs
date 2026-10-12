@@ -26,7 +26,7 @@ public class FogOfWarVisionSource : MonoBehaviour
 
     public Vector3 Position => transform.position;
 
-    public Vector3 GroundPosition => FogGroundUtility.SnapToGround(transform.position);
+    public Vector3 GroundPosition => FogGroundUtility.SnapToNearestGround(transform.position);
 
     public float VisionRange => visionRange;
 

@@ -703,6 +703,15 @@ public class ProductionBuilding : MonoBehaviour
         AliveCount++;
         UsedPopulation += marker.Population;
         SendSpawnedUnitToRally(unitObject);
+
+        if (ownerId == localPlayerOwnerId)
+        {
+            UnitSound unitSound = unitObject.GetComponent<UnitSound>();
+
+            if (unitSound != null)
+                unitSound.PlayVoice(UnitSoundVoice.ProductionComplete);
+        }
+
         return true;
     }
 

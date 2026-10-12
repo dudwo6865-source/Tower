@@ -78,9 +78,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   maxHealth: 50
-  deathAnimationDuration: 1
-  deathSinkDistance: 1.5
-  deathEffectColor: {r: 0.3, g: 0.3, b: 0.3, a: 1}
   deathEffectPrefab: {fileID: 0}
 --- !u!114 &604732805822586057
 MonoBehaviour:
@@ -124,10 +121,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 918f8f2d20d0a3b459e03e4c1eb4f4a5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  attackClips:
-  - {fileID: 8300000, guid: da1f74d0e10db174b8b360f280b07683, type: 3}
-  attackHitClips: []
-  deathClips: []
+  attackSounds:
+  - clip: {fileID: 8300000, guid: da1f74d0e10db174b8b360f280b07683, type: 3}
+    volume: 1
+    initialized: 1
+  attackHitSounds: []
+  deathSounds: []
+  selectSounds:
+  - clip: {fileID: 8300000, guid: 1d7ef9dd2d56f83419066f6338be4b08, type: 3}
+    volume: 0
+    initialized: 0
+  productionCompleteSounds: []
+  attackOrderSounds: []
+  voiceIgnoreAttenuation: 1
+  voiceMinInterval: 0.15
+  legacyAttackClips: []
+  legacyAttackHitClips: []
+  legacyDeathClips: []
   audioSource: {fileID: 0}
   volume: 1
   attenuation: 2
@@ -156,7 +166,11 @@ MonoBehaviour:
   attackDamage: 5
   attackRange: 20
   attackCooldown: 1
+  engageHoldBonus: 1
+  approachInset: 0.5
+  engageHoldTimeout: 0.5
   useAttackAnimationEvent: 1
+  restartAttackOnRetarget: 1
   projectileSpeed: 80
   firePoint: {fileID: 8163317513608224882}
   pierceHitRadius: 0.6
@@ -230,6 +244,21 @@ MonoBehaviour:
   retargetInterval: 0.5
   damageFocusSwitchMargin: 2
   debugCommandLog: 0
+  dynamicAvoidancePriority: 1
+  directMovePriority: 20
+  attackPositionPriority: 35
+  chasePriority: 50
+  travelPriority: 65
+  idlePriority: 85
+  priorityChangeDelay: 0.4
+  priorityVariation: 3
+  spreadAttackPositions: 1
+  spreadApproachDistance: 6
+  attackPositionCandidates: 8
+  attackPositionRangeRatio: 0.65
+  attackPositionPadding: 0.25
+  attackPositionSampleRadius: 0.6
+  attackPositionHeightTolerance: 1
   stoppingDistance: 2
   destinationRefreshInterval: 0.25
   destinationMoveThreshold: 1
@@ -239,6 +268,13 @@ MonoBehaviour:
   avoidancePriorityMax: 70
   buildingDirectChaseRange: 0
   shareAggroWithAllies: 1
+  allowIdleYield: 1
+  yieldCheckInterval: 0.3
+  yieldRequestDistance: 2.5
+  yieldStepDistance: 1.5
+  yieldDuration: 1.5
+  yieldCooldown: 2
+  yieldSlowSpeedRatio: 0.25
   patrolArrivalDistance: 1.25
   keepMoveOrderWhenAttacked: 1
   keepAttackOrderWhenAttacked: 1

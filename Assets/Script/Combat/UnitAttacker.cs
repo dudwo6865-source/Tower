@@ -52,6 +52,11 @@ public class UnitAttacker : MonoBehaviour
     [Tooltip("켜면 공격 애니메이션 이벤트(OnAttackHit)에서 피해/투사체를 적용합니다.")]
     public bool useAttackAnimationEvent = true;
 
+    [Label("대상 변경 시 공격 다시 시작")]
+    [Tooltip("공격 모션 도중(피해가 들어가기 전)에 대상이 바뀌면, 그 모션은 피해 없이 끝나고 공격 간격만 소모됩니다. " +
+        "켜면 이때 공격 간격을 돌려주고 새 대상에게 바로 공격 모션을 다시 시작합니다.")]
+    public bool restartAttackOnRetarget = true;
+
     [Header("원거리")]
     [Label("투사체 속도")]
     [Tooltip("투사체 속도입니다. 원거리·화염방사기·대포 공격일 때만 사용됩니다. 대포는 이 값을 착탄 지점까지의 수평 이동 속도로 씁니다.")]
@@ -484,6 +489,16 @@ public class UnitAttacker : MonoBehaviour
 
     public void CancelPendingAttack()
     {
+        // 피해가 들어가기 전에 끊긴 공격은 헛스윙이다. 공격 간격을 돌려주고 아직 소비되지
+        // 않은 공격 트리거를 지워서, 피해 없는 모션이 한 번 더 나오지 않게 한다.
+        if (pendingAttackActive && restartAttackOnRetarget)
+        {
+            cooldownTimer = 0f;
+
+            if (unitAnimator != null)
+                unitAnimator.ResetAttackTrigger();
+        }
+
         ClearPendingAttack();
     }
 

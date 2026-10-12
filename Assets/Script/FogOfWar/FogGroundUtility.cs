@@ -18,6 +18,30 @@ public static class FogGroundUtility
     [Tooltip("표면 레이캐스트 시작 높이(맵 최고점 기준 추가값)입니다.")]
     public static float raycastHeightPadding = 32f;
 
+    // 시야 주인의 지면을 찾을 때 실제 위치에서 NavMesh를 찾는 최대 거리입니다.
+    public static float sourceGroundSnapDistance = 2f;
+
+    /// <summary>
+    /// 실제 위치에서 가장 가까운 NavMesh 지면으로 붙입니다. SnapToGround는 같은 XZ 주변의
+    /// 가장 높은 표면을 고르므로 절벽 벽에 붙은 유닛을 절벽 위로 올려버린다. 시야 주인처럼
+    /// 지금 서 있는 층이 중요한 경우에 쓴다. 못 찾으면 SnapToGround로 대신한다.
+    /// </summary>
+    public static Vector3 SnapToNearestGround(Vector3 worldPosition)
+    {
+        if (sourceGroundSnapDistance > 0f &&
+            NavMesh.SamplePosition(
+                worldPosition,
+                out NavMeshHit hit,
+                sourceGroundSnapDistance,
+                NavMesh.AllAreas))
+        {
+            worldPosition.y = hit.position.y;
+            return worldPosition;
+        }
+
+        return SnapToGround(worldPosition);
+    }
+
     public static Vector3 SnapToGround(Vector3 worldPosition)
     {
         if (TrySampleSurfaceHeight(

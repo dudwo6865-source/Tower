@@ -160,6 +160,14 @@ public class UnitAnimator : MonoBehaviour
         SetAttacking(true);
     }
 
+    // 아직 소비되지 않은 공격 트리거를 지운다. 공격이 취소됐는데 트리거가 남아 있으면
+    // 나중에 피해 없는 공격 모션이 한 번 더 재생된다.
+    public void ResetAttackTrigger()
+    {
+        if (animator != null)
+            animator.ResetTrigger(attackHash);
+    }
+
     // 공격이 끊겼을 때(추격 시작 등) '공격 중 Bool'을 즉시 끈다.
     public void CancelAttacking()
     {

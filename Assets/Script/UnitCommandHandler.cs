@@ -233,6 +233,7 @@ public static class UnitCommandHandler
             return false;
 
         UnitCommandIndicatorTracker.TrackAttackTarget(attackTracks, target);
+        UnitSound.PlayVoiceForGroup(units, UnitSoundVoice.AttackOrder);
         return true;
     }
 
@@ -314,6 +315,7 @@ public static class UnitCommandHandler
             moveTracks,
             hitPoint,
             MoveDestinationIndicator.AttackMoveColor);
+        UnitSound.PlayVoiceForGroup(units, UnitSoundVoice.AttackOrder);
         return true;
     }
 

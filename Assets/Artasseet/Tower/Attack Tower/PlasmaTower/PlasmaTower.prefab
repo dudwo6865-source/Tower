@@ -86,6 +86,7 @@ MonoBehaviour:
   approachInset: 0.5
   engageHoldTimeout: 0.5
   useAttackAnimationEvent: 1
+  restartAttackOnRetarget: 1
   projectileSpeed: 50
   firePoint: {fileID: 7713194386661110414}
   pierceHitRadius: 0.6
@@ -154,9 +155,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   maxHealth: 150
-  deathAnimationDuration: 1
-  deathSinkDistance: 1.5
-  deathEffectColor: {r: 0.3, g: 0.3, b: 0.3, a: 1}
   deathEffectPrefab: {fileID: 304414178702807373, guid: 45d6ec100fd5e4242a690c9cb7b4bbe5, type: 3}
 --- !u!114 &1435759923663919092
 MonoBehaviour:
@@ -202,11 +200,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 918f8f2d20d0a3b459e03e4c1eb4f4a5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  attackClips:
-  - {fileID: 8300000, guid: 7ffc80e972d2c7141a60a751d3e6f030, type: 3}
-  attackHitClips: []
-  deathClips:
-  - {fileID: 8300000, guid: 6a01f91b3a0304547b8fe8eb3ae0820b, type: 3}
+  attackSounds:
+  - clip: {fileID: 8300000, guid: 7ffc80e972d2c7141a60a751d3e6f030, type: 3}
+    volume: 1
+    initialized: 1
+  attackHitSounds: []
+  deathSounds:
+  - clip: {fileID: 8300000, guid: 6a01f91b3a0304547b8fe8eb3ae0820b, type: 3}
+    volume: 1
+    initialized: 1
+  legacyAttackClips: []
+  legacyAttackHitClips: []
+  legacyDeathClips: []
   audioSource: {fileID: 0}
   volume: 0.656
   attenuation: 2

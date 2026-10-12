@@ -12,6 +12,7 @@ public class UnitAttackerEditor : Editor
     SerializedProperty attackCooldown;
 
     SerializedProperty useAttackAnimationEvent;
+    SerializedProperty restartAttackOnRetarget;
 
     SerializedProperty projectileSpeed;
     SerializedProperty firePoint;
@@ -62,6 +63,7 @@ public class UnitAttackerEditor : Editor
         attackCooldown = serializedObject.FindProperty("attackCooldown");
 
         useAttackAnimationEvent = serializedObject.FindProperty("useAttackAnimationEvent");
+        restartAttackOnRetarget = serializedObject.FindProperty("restartAttackOnRetarget");
 
         projectileSpeed = serializedObject.FindProperty("projectileSpeed");
         firePoint = serializedObject.FindProperty("firePoint");
@@ -128,6 +130,7 @@ public class UnitAttackerEditor : Editor
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("애니메이션", EditorStyles.boldLabel);
         EditorGUILayout.PropertyField(useAttackAnimationEvent);
+        EditorGUILayout.PropertyField(restartAttackOnRetarget);
 
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("발사 위치", EditorStyles.boldLabel);
