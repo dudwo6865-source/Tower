@@ -201,6 +201,14 @@ public class RelicPanelUI : MonoBehaviour
         }
     }
 
+    void Update()
+    {
+        if (GameResultManager.Instance == null || !GameResultManager.Instance.IsGameOver)
+            return;
+        SetPanelVisible(candidatePanelRoot, false);
+        SetPanelVisible(replacePanelRoot, false);
+    }
+
     void TryChooseCandidate(int index)
     {
         if (relicManager == null || currentCandidates == null ||

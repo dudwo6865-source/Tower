@@ -61,6 +61,13 @@ public class EnemySpawnerEditor : Editor
 
         EditorGUILayout.LabelField("적용된 보정", tuning != null ? tuning.ToShortSummary() : "-");
 
+        EnemyMutationManager mutations = EnemyMutationManager.Instance;
+        if (mutations != null)
+        {
+            EditorGUILayout.HelpBox(mutations.Summary, MessageType.Info);
+            EditorGUILayout.LabelField("추가 물량 대기", spawner.MutationExtraCount.ToString());
+        }
+
         EditorGUILayout.Space(4);
 
         DrawEffectiveRow(

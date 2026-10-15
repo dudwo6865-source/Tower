@@ -176,6 +176,9 @@ public static class EnemySpawnUtility
         if (agent != null)
             agent.speed *= speedMultiplier;
 
+        // 웨이브 능력치가 정해진 뒤 현재 누적 돌연변이를 한 번 적용한다.
+        EnemyMutationManager.Instance?.ApplyTo(enemyObject);
+
         if (enemyObject.GetComponent<FogOfWarVisibility>() == null)
             enemyObject.AddComponent<FogOfWarVisibility>();
     }

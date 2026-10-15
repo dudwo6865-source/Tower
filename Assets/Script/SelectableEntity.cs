@@ -176,6 +176,12 @@ public class SelectableEntity : MonoBehaviour
     }
 #endif
 
+    void Start()
+    {
+        // 수동 배치·비활성 배치 유닛도 초기화가 끝난 뒤 현재 돌연변이를 받는다.
+        EnemyMutationManager.Instance?.ApplyTo(gameObject);
+    }
+
     void OnEnable()
     {
         SelectableRegistry.Register(this);

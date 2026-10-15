@@ -87,6 +87,11 @@ public class MapConfig : ScriptableObject
     [Tooltip("밤 동안 추가로 곱할 보정입니다. 전부 1이면 낮과 같습니다.")]
     public WaveTuning nightBonus = new WaveTuning();
 
+    [Header("돌연변이")]
+    [Label("돌연변이 설정")]
+    [Tooltip("스포너 파괴 시 적에게 적용할 무작위 강화입니다. 판 밖 추가 보상은 별도 기획입니다.")]
+    public EnemyMutationSettings mutations = new EnemyMutationSettings();
+
     [Header("초기 적")]
     [Label("초기 적 덮어쓰기")]
     [Tooltip("켜면 이 스테이지 값으로 InitialEnemyPlacer를 덮어씁니다.")]

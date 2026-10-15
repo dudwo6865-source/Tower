@@ -7,7 +7,7 @@ using UnityEngine;
 // - 근접 스폰: 반경 안에 아군이 있는 동안 추가로 스폰한다.
 // - 피격 스폰: 공격받은 뒤 일정 시간 동안 추가로 스폰한다.
 // 그리고 스포너가 파괴되면 생존 상한을 무시하고 한 번에 방출한다.
-// 웨이브 표에 '적 구성'이 있으면 주기 스폰은 그 구성(종류·총량)만 내보내고 멈춘다.
+// 웨이브 표에 '적 구성'이 있으면 해당 기본 물량과 돌연변이 추가 물량을 내보내고 멈춘다.
 // 스폰된 적은 낮에는 어그로만 반응하고, 밤이 되면 플레이어 HQ로 진군한다.
 [DisallowMultipleComponent]
 public class EnemySpawner : MonoBehaviour
@@ -176,7 +176,20 @@ public class EnemySpawner : MonoBehaviour
         UsesWaveComposition ? Mathf.Max(0, waveSpawnOrder.Count - waveSpawnIndex) : 0;
 
     /// <summary>이번 웨이브 적 구성을 모두 내보내 주기 스폰이 멈춘 상태인지 여부입니다.</summary>
-    public bool IsWaveCompositionDone => UsesWaveComposition && WaveCompositionRemaining <= 0;
+    public bool IsWaveCompositionDone => UsesWaveComposition && WaveCompositionRemaining <= 0 && mutationExtras.Count == 0;
+
+    /// <summary>생존 상한 때문에 아직 생성 대기열에 넣지 못한 돌연변이 추가 적 수입니다.</summary>
+    public int MutationExtraCount => mutationExtras.Count;
+
+    readonly Queue<KeyValuePair<GameObject, WaveTuning>> mutationExtras =
+        new Queue<KeyValuePair<GameObject, WaveTuning>>();
+    double mutationSpawnRemainder;
+
+    public void ResetMutationSpawnBudget()
+    {
+        mutationExtras.Clear();
+        mutationSpawnRemainder = 0d;
+    }
 
     readonly List<EnemyCombatAI> spawnedAIs = new List<EnemyCombatAI>();
     EntityHealth health;
@@ -498,11 +511,17 @@ public class EnemySpawner : MonoBehaviour
 
         isDead = true;
 
+        // 마지막 파괴로 승리가 확정되는 경우 판 안의 새 효과와 선택 화면은 생략한다.
+        GameResultManager result = GameResultManager.Instance;
+        if (result != null && (result.IsGameOver || result.CanWinBySpawnerDestruction))
+            return;
+
+        EnemyMutationManager.EnsureInstance().NotifySpawnerDestroyed(this);
+
         // 유물 후보 제시는 스포너가 깨어났는지와 무관하게 파괴될 때마다 발생한다.
         RelicManager.Instance?.NotifySpawnerDestroyed(this);
 
-        // 아직 깨어나지 않은 스포너를 미리 부수면 방출도 없다. 웨이브가 오기 전에
-        // 선제 공격으로 정리하는 플레이가 손해 보지 않게 한다.
+        // 아직 깨어나지 않은 스포너는 파괴 방출이 없다. 돌연변이와 유물은 위에서 처리한다.
         if (!IsAwakeForCurrentWave)
             return;
 
@@ -533,7 +552,8 @@ public class EnemySpawner : MonoBehaviour
         // 예약 시점의 값을 붙잡아 둔다. 스포너가 먼저 파괴돼도(파괴 시 방출) 생성은 이어진다.
         Vector3 center = transform.position;
         WaveTuning spawnTuning = tuning;
-        int queued = 0;
+        // 생존 상한을 따르는 주기 스폰에만 추가 물량을 붙인다.
+        int queued = respectAliveCap ? QueueMutationExtras(center) : 0;
 
         for (int i = 0; i < count; i++)
         {
@@ -560,17 +580,45 @@ public class EnemySpawner : MonoBehaviour
             if (prefab == null)
                 continue;
 
-            PendingSpawnCount++;
+            QueueSpawn(prefab, center, spawnTuning);
             queued++;
 
-            EnemySpawnScheduler.Enqueue(() =>
+            if (respectAliveCap)
             {
-                PendingSpawnCount = Mathf.Max(0, PendingSpawnCount - 1);
-                SpawnOne(prefab, center, spawnTuning);
-            });
+                float bonus = EnemyMutationManager.Instance != null
+                    ? EnemyMutationManager.Instance.GetSpawnBonus(enemyOwnerId) : 0f;
+                int extras = EnemyMutationMath.AccumulateExtraSpawns(ref mutationSpawnRemainder, bonus);
+                for (int extra = 0; extra < extras; extra++)
+                    mutationExtras.Enqueue(new KeyValuePair<GameObject, WaveTuning>(prefab, spawnTuning));
+                queued += QueueMutationExtras(center);
+            }
         }
 
         return queued;
+    }
+
+    int QueueMutationExtras(Vector3 center)
+    {
+        int queued = 0;
+        while (mutationExtras.Count > 0 && !IsBlockedByAliveCap)
+        {
+            KeyValuePair<GameObject, WaveTuning> extra = mutationExtras.Dequeue();
+            if (extra.Key == null) continue;
+            QueueSpawn(extra.Key, center, extra.Value);
+            queued++;
+        }
+        return queued;
+    }
+
+    void QueueSpawn(GameObject prefab, Vector3 center, WaveTuning spawnTuning)
+    {
+        PendingSpawnCount++;
+        EnemySpawnScheduler.Enqueue(() =>
+        {
+            PendingSpawnCount = Mathf.Max(0, PendingSpawnCount - 1);
+            if (GameResultManager.Instance == null || !GameResultManager.Instance.IsGameOver)
+                SpawnOne(prefab, center, spawnTuning);
+        });
     }
 
     void SpawnOne(GameObject prefab, Vector3 center, WaveTuning spawnTuning)

@@ -236,6 +236,7 @@ public partial class StageEditorWindow : EditorWindow
 
         // 웨이브는 표·그래프가 들어가므로 전체 폭을 쓴다.
         DrawWaveSection();
+        DrawMutationSection();
 
         EditorGUIUtility.labelWidth = previousLabelWidth;
 
@@ -249,6 +250,25 @@ public partial class StageEditorWindow : EditorWindow
         // 웨이브 표의 추가/삭제/이동 같은 구조 변경은 그리는 도중에 하지 않고 여기서 몰아서 한다.
         RunPendingStageEdits();
 
+        EditorGUILayout.EndVertical();
+    }
+
+    void DrawMutationSection()
+    {
+        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+        EditorGUILayout.LabelField("스포너 파괴 돌연변이", EditorStyles.boldLabel);
+        SerializedProperty settings = serializedObject.FindProperty("mutations");
+        string[] fields = { "enabled", "enemyOwnerId", "spawnChance", "spawnIncrease",
+            "damageIncrease", "healthIncrease", "speedIncrease", "damageWeight", "healthWeight", "speedWeight" };
+        string[] labels = { "돌연변이 사용", "적 소속 ID", "스폰 수 계열 확률", "스폰 수 증가율",
+            "공격력 증가율", "체력 증가율", "이동 속도 증가율", "공격력 추첨 가중치", "체력 추첨 가중치", "이동 속도 추첨 가중치" };
+        for (int i = 0; i < fields.Length; i++)
+        {
+            SerializedProperty property = settings.FindPropertyRelative(fields[i]);
+            EditorGUILayout.PropertyField(property, new GUIContent(labels[i], property.tooltip));
+        }
+        EditorGUILayout.HelpBox("0.2는 +20%입니다. 능력치는 한 번에 하나를 추첨하며 기존 적도 강화합니다. " +
+            "스폰 수는 주기에만 적용하고, 중복 효과는 합산합니다. 방어력과 판 밖 보상은 아직 포함하지 않습니다.", MessageType.Info);
         EditorGUILayout.EndVertical();
     }
 
@@ -1263,10 +1283,14 @@ public partial class StageEditorWindow : EditorWindow
             selected.winWhenAllSpawnersDestroyed = result.winWhenAllSpawnersDestroyed;
         }
 
+        EnemyMutationManager mutations = UnityEngine.Object.FindFirstObjectByType<EnemyMutationManager>();
+        if (mutations != null)
+            selected.mutations = mutations.settings.Clone();
+
         EditorUtility.SetDirty(selected);
         serializedObject.Update();
 
-        if (watt == null && cycle == null && wave == null && result == null)
+        if (watt == null && cycle == null && wave == null && result == null && mutations == null)
             ShowNotification(new GUIContent("씬에서 매니저를 찾지 못했습니다. 씬을 열고 다시 시도하세요."));
         else
             ShowNotification(new GUIContent("씬의 현재 값을 가져왔습니다."));
@@ -1344,6 +1368,19 @@ public partial class StageEditorWindow : EditorWindow
                 appliedAny = true;
             }
         }
+
+        EnemyMutationManager mutationManager = UnityEngine.Object.FindFirstObjectByType<EnemyMutationManager>();
+        if (mutationManager == null)
+        {
+            GameObject mutationObject = new GameObject("적 돌연변이 관리자");
+            Undo.RegisterCreatedObjectUndo(mutationObject, "돌연변이 관리자 생성");
+            mutationManager = Undo.AddComponent<EnemyMutationManager>(mutationObject);
+        }
+        Undo.RecordObject(mutationManager, "돌연변이 설정 적용");
+        // 플레이 중 설정 동기화로 이미 뽑은 돌연변이를 초기화하지 않는다.
+        mutationManager.settings = selected.mutations != null ? selected.mutations.Clone() : new EnemyMutationSettings();
+        EditorUtility.SetDirty(mutationManager);
+        appliedAny = true;
 
         if (appliedAny)
         {

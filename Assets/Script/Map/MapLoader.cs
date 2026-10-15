@@ -122,6 +122,7 @@ public class MapLoader : MonoBehaviour
         ApplyWaveConfig(config);
         ApplyInitialEnemyConfig(config);
         ApplyWinConditionConfig(config);
+        EnemyMutationManager.EnsureInstance().Configure(config.mutations);
 
         // 재로드 대비: 이전에 만든 맵 인스턴스 제거
         if (CurrentMap != null)

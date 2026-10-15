@@ -134,6 +134,18 @@ public class EntityHealth : MonoBehaviour
         OnHealthChanged?.Invoke(CurrentHealth, MaxHealth);
     }
 
+    // 돌연변이로 최대 체력이 바뀌어도 남아 있는 체력 비율과 사망 상태를 유지한다.
+    public void ScaleMaxHealthPreservingRatio(float multiplier)
+    {
+        if (!IsAlive || multiplier <= 0f)
+            return;
+        float ratio = CurrentHealth / MaxHealth;
+        maxHealth *= multiplier;
+        upgradeMaxHealthBonus *= multiplier;
+        CurrentHealth = MaxHealth * ratio;
+        OnHealthChanged?.Invoke(CurrentHealth, MaxHealth);
+    }
+
     public void Heal(float amount)
     {
         if (!IsAlive)

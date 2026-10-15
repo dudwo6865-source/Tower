@@ -227,6 +227,12 @@ public class GameResultManager : MonoBehaviour
             EndGame(Result.Victory);
     }
 
+    // 파괴 콜백에서도 같은 조건을 사용하되 승리 확정은 통계 집계 후 Update에서 한다.
+    public bool CanWinBySpawnerDestruction => !IsGameOver && winWhenAllSpawnersDestroyed &&
+        PlayTime >= spawnerCheckStartDelay &&
+        maxSpawnersSeen > 0 &&
+        StageBuildingSpawnPoint.PendingSpawnerCount == 0 && CountAliveSpawners() == 0;
+
     void CheckAllSpawnersDestroyed()
     {
         if (!winWhenAllSpawnersDestroyed)
@@ -245,7 +251,7 @@ public class GameResultManager : MonoBehaviour
         if (StageBuildingSpawnPoint.PendingSpawnerCount > 0)
             return;
 
-        if (alive == 0)
+        if (CanWinBySpawnerDestruction)
             EndGame(Result.Victory);
     }
 

@@ -57,6 +57,7 @@ public class RelicManager : MonoBehaviour
 
     List<RelicDefinition> pendingCandidates;
     RelicDefinition pendingReplacement;
+    readonly Queue<string> pendingSpawnerRewards = new Queue<string>();
 
     public IReadOnlyList<RelicDefinition> OwnedRelics => owned;
     public IReadOnlyList<RelicDefinition> PendingCandidates => pendingCandidates;
@@ -95,6 +96,26 @@ public class RelicManager : MonoBehaviour
     // Available 유물 중 candidateCount개를 무작위로 뽑아 OnCandidatesOffered로 알립니다.
     public void NotifySpawnerDestroyed(EnemySpawner spawner)
     {
+        pendingSpawnerRewards.Enqueue(spawner != null ? spawner.name : "알 수 없음");
+        OfferNextSpawnerReward();
+    }
+
+    void Update()
+    {
+        // UI의 선택/교체 화면이 닫힌 다음 프레임에 다음 파괴 보상을 제시한다.
+        OfferNextSpawnerReward();
+    }
+
+    void OfferNextSpawnerReward()
+    {
+        if (GameResultManager.Instance != null && GameResultManager.Instance.IsGameOver)
+        {
+            pendingSpawnerRewards.Clear();
+            return;
+        }
+        if (pendingCandidates != null || pendingReplacement != null || pendingSpawnerRewards.Count == 0)
+            return;
+        string spawnerName = pendingSpawnerRewards.Dequeue();
         List<RelicDefinition> available = new List<RelicDefinition>();
 
         for (int i = 0; i < relicPool.Count; i++)
@@ -117,7 +138,6 @@ public class RelicManager : MonoBehaviour
 
         if (logRelicEvents)
         {
-            string spawnerName = spawner != null ? spawner.name : "(unknown)";
             Debug.Log($"RelicManager: 스포너 '{spawnerName}' 파괴 — 후보 {pendingCandidates.Count}종 제시: " +
                 string.Join(", ", pendingCandidates.ConvertAll(r => r.displayName)), this);
         }
@@ -129,7 +149,9 @@ public class RelicManager : MonoBehaviour
     // 빈 슬롯이 있으면 즉시 장착하고, 없으면 OnReplaceRequired를 발생시켜 버릴 유물을 물어봅니다.
     public bool ChooseRelic(RelicDefinition chosen)
     {
-        if (chosen == null || GetState(chosen) != RelicState.Available)
+        if ((GameResultManager.Instance != null && GameResultManager.Instance.IsGameOver) ||
+            chosen == null || pendingCandidates == null || !pendingCandidates.Contains(chosen) ||
+            GetState(chosen) != RelicState.Available)
             return false;
 
         pendingCandidates = null;
