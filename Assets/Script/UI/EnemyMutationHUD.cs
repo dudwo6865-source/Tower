@@ -25,7 +25,7 @@ public class EnemyMutationHUD : MonoBehaviour
     [Tooltip("{효과명}, {증가율}을 실제 값으로 바꿉니다. 증가율에는 %가 포함됩니다.")]
     [TextArea] public string notificationFormat = "돌연변이 발생: {효과명} +{증가율}";
     [Label("스폰 수 효과 이름")]
-    public string spawnName = "주기 스폰 수";
+    public string spawnName = "밤 공격대 수";
     [Label("공격력 효과 이름")]
     public string damageName = "적 공격력";
     [Label("체력 효과 이름")]
@@ -34,7 +34,7 @@ public class EnemyMutationHUD : MonoBehaviour
     public string speedName = "적 이동 속도";
     [Label("누적 효과 형식")]
     [Tooltip("{횟수}, {스폰}, {공격력}, {체력}, {이동속도}를 사용할 수 있습니다. 증가율에는 %가 포함됩니다.")]
-    [TextArea(3, 6)] public string summaryFormat = "돌연변이 {횟수}회\n주기 스폰 +{스폰} · 공격력 +{공격력}\n체력 +{체력} · 이동 속도 +{이동속도}";
+    [TextArea(3, 6)] public string summaryFormat = "돌연변이 {횟수}회\n밤 공격대 +{스폰} · 공격력 +{공격력}\n체력 +{체력} · 이동 속도 +{이동속도}";
 
     [Header("표시와 색상")]
     [Label("알림 표시 시간(초)")]

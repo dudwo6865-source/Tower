@@ -12,16 +12,13 @@ public class WaveTuning
 {
     [Header("스폰량")]
     [Label("스폰 수 배율")]
-    [Tooltip("한 번에 스폰할 적 수 배율입니다.")]
+    [Tooltip("밤 공격대 총량에 적용할 배율입니다.")]
     public float spawnCountMultiplier = 1f;
 
     [Label("스폰 수 추가")]
     [Tooltip("배율을 적용한 뒤 더할 적 수입니다.")]
     public int spawnCountBonus;
 
-    [Label("스폰 간격 배율")]
-    [Tooltip("스폰 간격 배율입니다. 1보다 작을수록 더 자주 스폰합니다.")]
-    public float spawnIntervalMultiplier = 1f;
 
     [Label("최대 생존 수")]
     [Tooltip("이 웨이브에 스포너 하나가 동시에 유지할 최대 생존 적 수(절댓값)입니다. " +
@@ -46,9 +43,9 @@ public class WaveTuning
     // 인스펙터 제목은 WaveEnemyCompositionDrawer가 한글로 그린다.
     // (이 필드에 [Label]을 붙이면 그 드로어가 쓰이지 않는다)
     [Tooltip("이 웨이브 동안 스포너 하나가 내보낼 적의 종류와 마리 수(총량)입니다.\n" +
-             "비워두면 스포너 인스펙터의 '적 프리팹 목록'과 '1회 스폰 수'로 계속 스폰합니다.\n" +
-             "채우면 목록 순서대로 스폰 간격마다 '1회 스폰 수'씩 나눠 내보내고, " +
-             "다 내보내면 그 웨이브의 주기 스폰을 멈춥니다.\n" +
+             "비워두면 스포너 인스펙터의 적 프리팹 목록과 밤 총 출격 수를 사용합니다.\n" +
+             "밤 시간을 3등분해 세 차례에 나눠 출격하며, " +
+             "다 내보내면 그 밤의 출격을 멈춥니다.\n" +
              "표에 없는 이후 웨이브는 마지막 웨이브의 구성을 그대로 씁니다.")]
     public WaveEnemyComposition enemyComposition = new WaveEnemyComposition();
 
@@ -71,7 +68,6 @@ public class WaveTuning
 
         spawnCountMultiplier = source.spawnCountMultiplier;
         spawnCountBonus = source.spawnCountBonus;
-        spawnIntervalMultiplier = source.spawnIntervalMultiplier;
         maxAliveEnemies = source.maxAliveEnemies;
         healthMultiplier = source.healthMultiplier;
         damageMultiplier = source.damageMultiplier;
@@ -88,8 +84,7 @@ public class WaveTuning
         {
             spawnCountMultiplier = Mathf.Max(0f, spawnCountMultiplier),
             spawnCountBonus = spawnCountBonus,
-            // 0 이하가 되면 스폰 간격이 사라져 한 프레임에 무한 스폰한다.
-            spawnIntervalMultiplier = Mathf.Max(0.01f, spawnIntervalMultiplier),
+
             maxAliveEnemies = Mathf.Max(0, maxAliveEnemies),
             healthMultiplier = Mathf.Max(0.01f, healthMultiplier),
             damageMultiplier = Mathf.Max(0f, damageMultiplier),
@@ -113,7 +108,6 @@ public class WaveTuning
 
         result.spawnCountMultiplier *= Mathf.Pow(growth.spawnCountMultiplier, times);
         result.spawnCountBonus += growth.spawnCountBonus * times;
-        result.spawnIntervalMultiplier *= Mathf.Pow(growth.spawnIntervalMultiplier, times);
         // 최대 생존 수는 절댓값이라 증가율을 웨이브마다 더한다.
         // 0(스포너 값 사용)이면 더할 기준이 없으므로 그대로 둔다.
         if (result.maxAliveEnemies > 0)
@@ -159,7 +153,6 @@ public class WaveTuning
         {
             spawnCountMultiplier = a.spawnCountMultiplier * b.spawnCountMultiplier,
             spawnCountBonus = a.spawnCountBonus + b.spawnCountBonus,
-            spawnIntervalMultiplier = a.spawnIntervalMultiplier * b.spawnIntervalMultiplier,
             // 최대 생존 수는 절댓값이라 곱하지 않고, b에 값이 있으면 b로 덮어쓴다.
             maxAliveEnemies = b.maxAliveEnemies > 0 ? b.maxAliveEnemies : a.maxAliveEnemies,
             healthMultiplier = a.healthMultiplier * b.healthMultiplier,
@@ -185,8 +178,7 @@ public class WaveTuning
             ? $" / 구성 {enemyComposition.ToSummary()}"
             : string.Empty;
 
-        return $"{count} / 간격 x{spawnIntervalMultiplier:0.##}{cap} / " +
-               $"체력 x{healthMultiplier:0.##} / 공격 x{damageMultiplier:0.##} / 속도 x{speedMultiplier:0.##}" +
+        return $"{count}{cap} / 체력 x{healthMultiplier:0.##} / 공격 x{damageMultiplier:0.##} / 속도 x{speedMultiplier:0.##}" +
                composition;
     }
 }

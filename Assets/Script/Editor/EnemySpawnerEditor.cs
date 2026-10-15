@@ -1,467 +1,60 @@
-using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-// EnemySpawner 전용 인스펙터입니다.
-// 인스펙터의 숫자들은 '기준값'이고, 실제로 쓰이는 값은 웨이브 보정을 곱한 뒤의
-// Effective~ 프로퍼티라 직렬화되지 않습니다. 그래서 플레이 중에 인스펙터만 보면
-// 웨이브 수치가 적용됐는지 알 수가 없습니다. 여기서 그 실효값을 그대로 보여주고,
-// 씬의 모든 스포너가 같은 웨이브 수치를 받았는지도 한 번에 확인합니다.
 [CustomEditor(typeof(EnemySpawner))]
 [CanEditMultipleObjects]
 public class EnemySpawnerEditor : Editor
 {
-    const int WavePreviewCount = 5;
-
-    static readonly Color SectionColor = new Color(0.85f, 0.35f, 0.35f, 1f);
-
-    // 플레이 중에는 남은 시간/생존 수가 계속 바뀌므로 매 프레임 다시 그린다.
-    public override bool RequiresConstantRepaint()
-    {
-        return Application.isPlaying;
-    }
-
+    public override bool RequiresConstantRepaint() => Application.isPlaying;
     public override void OnInspectorGUI()
     {
-        DrawDefaultInspector();
-
-        EditorGUILayout.Space(8);
-        DrawSectionHeader("웨이브 적용 현황");
-
+        serializedObject.Update();
+        SerializedProperty property = serializedObject.GetIterator();
+        bool enterChildren = true;
+        while (property.NextVisible(enterChildren))
+        {
+            enterChildren = false;
+            using (new EditorGUI.DisabledScope(property.name == "m_Script"))
+            {
+                if (property.name == "enemyPrefabs" || property.name == "guardPrefabs")
+                    EditorGUILayout.PropertyField(property, new GUIContent(
+                        property.name == "enemyPrefabs" ? "적 프리팹 목록" : "수비대 프리팹 목록", property.tooltip), true);
+                else
+                    EditorGUILayout.PropertyField(property, true);
+            }
+        }
+        serializedObject.ApplyModifiedProperties();
         EnemySpawner spawner = (EnemySpawner)target;
-
-        if (Application.isPlaying)
-            DrawRuntimeSection(spawner);
-        else
-            DrawEditModeSection(spawner);
-    }
-
-    // ── 플레이 중 ────────────────────────────────────────────────
-
-    void DrawRuntimeSection(EnemySpawner spawner)
-    {
-        WaveManager waveManager = WaveManager.Instance;
-
-        if (waveManager == null)
-        {
-            EditorGUILayout.HelpBox(
-                "씬에 WaveManager가 없습니다. 이 스포너는 인스펙터 기준값 그대로 동작합니다.",
-                MessageType.Warning);
-        }
-
-        WaveTuning tuning = spawner.AppliedTuning;
-
-        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-
-        EditorGUILayout.LabelField(
-            "적용된 웨이브",
-            waveManager != null
-                ? $"웨이브 {spawner.AppliedWaveNumber} ({(waveManager.IsNight ? "밤" : "낮")})"
-                : $"웨이브 {spawner.AppliedWaveNumber}");
-
-        EditorGUILayout.LabelField("적용된 보정", tuning != null ? tuning.ToShortSummary() : "-");
-
-        EnemyMutationManager mutations = EnemyMutationManager.Instance;
-        if (mutations != null)
-        {
-            EditorGUILayout.HelpBox(mutations.Summary, MessageType.Info);
-            EditorGUILayout.LabelField("추가 물량 대기", spawner.MutationExtraCount.ToString());
-        }
-
-        EditorGUILayout.Space(4);
-
-        DrawEffectiveRow(
-            "한 번에 스폰",
-            spawner.BaseEnemiesPerSpawn.ToString(),
-            spawner.EffectiveEnemiesPerSpawn.ToString());
-
-        DrawEffectiveRow(
-            "스폰 간격(초)",
-            $"{spawner.BaseSpawnInterval:0.##}",
-            $"{spawner.EffectiveSpawnInterval:0.##}");
-
-        DrawEffectiveRow(
-            "동시 생존 상한",
-            FormatMaxAlive(spawner.BaseMaxAliveEnemies),
-            FormatMaxAlive(spawner.EffectiveMaxAliveEnemies));
-
-        DrawEffectiveRow(
-            "파괴 시 방출",
-            spawner.enemiesOnDeath.ToString(),
-            spawner.EffectiveEnemiesOnDeath.ToString());
-
-        EditorGUILayout.Space(4);
-
-        string pendingText = spawner.PendingSpawnCount > 0
-            ? $" · 생성 대기 {spawner.PendingSpawnCount}"
-            : string.Empty;
-
-        EditorGUILayout.LabelField(
-            "현재 생존",
-            (spawner.EffectiveMaxAliveEnemies > 0
-                ? $"{spawner.AliveCount} / {spawner.EffectiveMaxAliveEnemies}"
-                : $"{spawner.AliveCount} (상한 없음)") + pendingText);
-
-        if (spawner.UsesWaveComposition)
-        {
-            EditorGUILayout.LabelField(
-                "웨이브 적 구성",
-                $"남은 {spawner.WaveCompositionRemaining} / {spawner.WaveCompositionTotal}마리 · " +
-                (tuning != null ? tuning.enemyComposition.ToSummary() : "-"));
-        }
-
-        EditorGUILayout.LabelField("다음 스폰까지", $"{Mathf.Max(0f, spawner.SpawnCountdown):0.0}초");
-        EditorGUILayout.LabelField("상태", DescribeState(spawner));
-
-        EditorGUILayout.EndVertical();
-
-        DrawExtraTriggers(spawner);
-
-        DrawRuntimeWarnings(spawner);
-
-        EditorGUILayout.Space(6);
-        DrawAllSpawnersTable(spawner);
-
-        if (waveManager == null)
-            return;
-
-        EditorGUILayout.Space(4);
-
-        if (GUILayout.Button($"다음 웨이브로 진행 (현재 {waveManager.CurrentWaveNumber} → {waveManager.CurrentWaveNumber + 1})"))
-            waveManager.SetWave(waveManager.CurrentWaveNumber + 1);
-    }
-
-    // 주기 스폰 말고 근접/피격 트리거가 실제로 도는지 보여준다.
-    // 이 둘은 주기 스폰과 별개로 자기 타이머로 돌기 때문에 따로 확인해야 한다.
-    static void DrawExtraTriggers(EnemySpawner spawner)
-    {
-        EditorGUILayout.Space(4);
-        EditorGUILayout.LabelField("추가 스폰 트리거", EditorStyles.boldLabel);
-        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-        EditorGUILayout.LabelField(
-            "근접·피격·파괴 시 스폰은 웨이브 배율과 생존 상한을 받지 않습니다.",
-            EditorStyles.miniLabel);
-
-        if (spawner.EffectiveProximityEnemiesPerSpawn > 0)
-        {
-            EditorGUILayout.LabelField(
-                "근접 스폰",
-                $"{spawner.EffectiveProximityEnemiesPerSpawn}마리 / " +
-                $"{spawner.EffectiveProximitySpawnInterval:0.#}초 · " +
-                $"아군 {(spawner.HasAllyInRange ? "감지됨 (스폰 중)" : "없음 (대기)")}");
-        }
-        else
-        {
-            EditorGUILayout.LabelField("근접 스폰", "꺼짐 (Proximity Enemies Per Spawn = 0)");
-        }
-
-        if (spawner.EffectiveAttackedEnemiesPerSpawn > 0)
-        {
-            EditorGUILayout.LabelField(
-                "피격 스폰",
-                $"{spawner.EffectiveAttackedEnemiesPerSpawn}마리 / " +
-                $"{spawner.EffectiveAttackedSpawnInterval:0.#}초 · " +
-                (spawner.AttackedSpawnRemaining > 0f
-                    ? $"{spawner.AttackedSpawnRemaining:0.0}초 남음 (스폰 중)"
-                    : "대기"));
-        }
-        else
-        {
-            EditorGUILayout.LabelField("피격 스폰", "꺼짐 (Attacked Enemies Per Spawn = 0)");
-        }
-
-        EditorGUILayout.EndVertical();
-    }
-
-    static string DescribeState(EnemySpawner spawner)
-    {
-        if (spawner.IsDead)
-            return "파괴됨 (스폰 정지)";
-
-        if (!spawner.IsAwakeForCurrentWave)
-            return $"대기 중 — 웨이브 {Mathf.Max(1, spawner.activateFromWave)}부터 활동";
-
-        if (spawner.IsWaveCompositionDone)
-            return "이번 웨이브 적 구성을 모두 내보냄 (다음 웨이브까지 주기 스폰 정지)";
-
-        if (spawner.IsBlockedByAliveCap)
-            return "생존 상한에 걸려 정지 (적이 죽어야 재개)";
-
-        if (!spawner.UsesWaveComposition &&
-            (spawner.enemyPrefabs == null || spawner.enemyPrefabs.Count == 0))
-            return "스폰할 적 프리팹이 없음";
-
-        return "스폰 중";
-    }
-
-    static void DrawRuntimeWarnings(EnemySpawner spawner)
-    {
-        if (spawner.enemyPrefabs == null || spawner.enemyPrefabs.Count == 0)
-        {
-            // 웨이브 '적 구성'은 주기 스폰에만 쓰인다. 근접·피격·파괴 시 스폰은 여전히 이 목록을 쓴다.
-            if (spawner.UsesWaveComposition)
-            {
-                EditorGUILayout.HelpBox(
-                    "적 프리팹 목록이 비어 있습니다. 주기 스폰은 웨이브 '적 구성'을 쓰지만, " +
-                    "근접·피격·파괴 시 스폰은 이 목록을 쓰므로 스폰하지 않습니다.",
-                    MessageType.Info);
-            }
-            else
-            {
-                EditorGUILayout.HelpBox(
-                    "Enemy Prefabs가 비어 있어 아무것도 스폰하지 않습니다.",
-                    MessageType.Error);
-            }
-        }
-
-        if (spawner.EffectiveEnemiesPerSpawn == 0)
-        {
-            EditorGUILayout.HelpBox(
-                "한 번에 스폰할 수가 0이라 스폰되지 않습니다. Spawn Count Multiplier / Bonus를 확인하세요.",
-                MessageType.Warning);
-        }
-
-        if (spawner.IsBlockedByAliveCap && spawner.EffectiveEnemiesPerSpawn > spawner.EffectiveMaxAliveEnemies)
-        {
-            EditorGUILayout.HelpBox(
-                $"한 번에 {spawner.EffectiveEnemiesPerSpawn}마리를 스폰하려 하지만 상한이 " +
-                $"{spawner.EffectiveMaxAliveEnemies}마리라 그만큼만 나옵니다.",
-                MessageType.Info);
-        }
-    }
-
-    // ── 씬의 모든 스포너 비교 ─────────────────────────────────────
-
-    void DrawAllSpawnersTable(EnemySpawner selected)
-    {
-        List<EnemySpawner> spawners = CollectSpawners();
-
-        EditorGUILayout.LabelField($"씬의 스포너 ({spawners.Count}개)", EditorStyles.boldLabel);
-
-        if (spawners.Count == 0)
-        {
-            EditorGUILayout.HelpBox("활성화된 스포너가 없습니다.", MessageType.Warning);
-            return;
-        }
-
-        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-
-        DrawTableRow("이름", "스폰", "간격", "상한", "생존", "웨이브", header: true);
-
-        bool allSame = true;
-
-        for (int i = 0; i < spawners.Count; i++)
-        {
-            EnemySpawner spawner = spawners[i];
-
-            if (spawner == null)
-                continue;
-
-            bool matches = Matches(selected, spawner);
-
-            if (!matches)
-                allSame = false;
-
-            bool isSelected = spawner == selected;
-
-            DrawTableRow(
-                isSelected ? $"▶ {spawner.name}" : spawner.name,
-                spawner.EffectiveEnemiesPerSpawn.ToString(),
-                $"{spawner.EffectiveSpawnInterval:0.#}",
-                FormatMaxAlive(spawner.EffectiveMaxAliveEnemies),
-                spawner.AliveCount.ToString(),
-                spawner.AppliedWaveNumber.ToString(),
-                header: isSelected,
-                warn: !matches);
-        }
-
-        EditorGUILayout.EndVertical();
-
-        EditorGUILayout.HelpBox(
-            allSame
-                ? $"스포너 {spawners.Count}개 모두 같은 웨이브 보정을 받았습니다.\n" +
-                  "(표의 숫자가 서로 다르면 스포너의 기준값이 다른 것입니다.)"
-                : "일부 스포너가 다른 웨이브 보정을 받았습니다. 위 표의 빨간 줄을 확인하세요.",
-            allSame ? MessageType.Info : MessageType.Warning);
-
-        if (GUILayout.Button("모든 스포너에 현재 웨이브 수치 다시 적용"))
-            WaveManager.Instance?.RefreshTuning(true);
-    }
-
-    // 스포너마다 기준값이 다를 수 있으므로 실효값이 아니라 '받은 보정'을 비교한다.
-    // 같은 웨이브 수치를 받았는지가 확인 대상이다.
-    static bool Matches(EnemySpawner a, EnemySpawner b)
-    {
-        if (a == null || b == null)
-            return true;
-
-        if (a.AppliedWaveNumber != b.AppliedWaveNumber)
-            return false;
-
-        WaveTuning x = a.AppliedTuning;
-        WaveTuning y = b.AppliedTuning;
-
-        if (x == null || y == null)
-            return x == y;
-
-        return Mathf.Approximately(x.spawnCountMultiplier, y.spawnCountMultiplier) &&
-               x.spawnCountBonus == y.spawnCountBonus &&
-               Mathf.Approximately(x.spawnIntervalMultiplier, y.spawnIntervalMultiplier) &&
-               x.maxAliveEnemies == y.maxAliveEnemies &&
-               Mathf.Approximately(x.healthMultiplier, y.healthMultiplier) &&
-               Mathf.Approximately(x.damageMultiplier, y.damageMultiplier) &&
-               Mathf.Approximately(x.speedMultiplier, y.speedMultiplier);
-    }
-
-    static List<EnemySpawner> CollectSpawners()
-    {
-        List<EnemySpawner> result = new List<EnemySpawner>();
-
+        EditorGUILayout.HelpBox("밤 시작·밤 길이의 1/3·2/3에 공격대를 세 번 나눠 출격합니다. 나머지는 앞 출격부터 배분합니다. " +
+            "수비대는 첫 배치 및 매일 아침에 부족분만 보충하며 밤에는 진군하지 않습니다.", MessageType.Info);
+        if (spawner.enemyPrefabs.Count == 0 && spawner.guardPrefabs.Count == 0)
+            EditorGUILayout.HelpBox("수비대 프리팹 또는 적 프리팹을 지정하세요. 웨이브 적 구성은 공격대에만 사용합니다.", MessageType.Warning);
         if (Application.isPlaying)
         {
-            IReadOnlyList<EnemySpawner> active = EnemySpawner.Active;
-
-            for (int i = 0; i < active.Count; i++)
+            EditorGUILayout.LabelField("밤 공격대 적용 현황", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("웨이브", spawner.AppliedWaveNumber.ToString());
+            EditorGUILayout.LabelField("밤 기본 총량", spawner.WaveCompositionTotal.ToString());
+            EditorGUILayout.LabelField("출격 차수", $"{spawner.CompletedBatches}/3");
+            EditorGUILayout.LabelField("다음 출격까지", $"{spawner.SpawnCountdown:0.0}초");
+            EditorGUILayout.LabelField("공격대 생존 / 생성 예약", $"{spawner.AliveCount} / {spawner.PendingSpawnCount}");
+            EditorGUILayout.LabelField("상한으로 대기하는 물량", spawner.WaitingAttackCount.ToString());
+            EditorGUILayout.LabelField("공격대 생존 상한", spawner.EffectiveMaxAliveEnemies == 0 ? "무제한" : spawner.EffectiveMaxAliveEnemies.ToString());
+            EditorGUILayout.LabelField("수비대 생존 / 정원", $"{spawner.GuardAliveCount} / {spawner.guardCapacity}");
+            EditorGUILayout.LabelField("수비대 보충 예약", spawner.PendingGuardCount.ToString());
+            if (EnemyMutationManager.Instance != null)
+                EditorGUILayout.HelpBox(EnemyMutationManager.Instance.Summary, MessageType.None);
+        }
+        else
+        {
+            EditorGUILayout.LabelField("밤 공격대 미리보기", EditorStyles.boldLabel);
+            WaveManager waveManager = Object.FindObjectOfType<WaveManager>();
+            for (int wave = 1; wave <= 5; wave++)
             {
-                if (active[i] != null)
-                    result.Add(active[i]);
+                WaveTuning tuning = waveManager != null ? waveManager.BuildTuningForWave(wave, true) : new WaveTuning();
+                int total = spawner.spawnPeriodically && wave >= spawner.activateFromWave ? EnemySpawner.GetNightTotal(spawner.enemiesPerSpawn, tuning) : 0;
+                EditorGUILayout.LabelField($"웨이브 {wave}", $"총 {total} = {EnemySpawner.GetBatchSize(total, 0)} / {EnemySpawner.GetBatchSize(total, 1)} / {EnemySpawner.GetBatchSize(total, 2)}마리");
             }
-
-            return result;
+            EditorGUILayout.HelpBox("씬 WaveManager 기준 미리보기입니다. MapLoader가 있는 경우 스테이지 에디터의 실제 스테이지 설정을 확인하세요. 돌연변이 추가 물량은 포함하지 않습니다.", MessageType.None);
         }
-
-        result.AddRange(
-            FindObjectsByType<EnemySpawner>(FindObjectsInactive.Exclude, FindObjectsSortMode.None));
-
-        return result;
-    }
-
-    // ── 에디터 모드(플레이 전) 미리보기 ───────────────────────────
-
-    void DrawEditModeSection(EnemySpawner spawner)
-    {
-        WaveManager waveManager = FindFirstObjectByType<WaveManager>();
-
-        if (waveManager == null)
-        {
-            EditorGUILayout.HelpBox(
-                "씬에 WaveManager가 없습니다. 이 스포너는 위 기준값 그대로 동작합니다.\n" +
-                "스테이지 에셋(MapConfig)의 웨이브 값을 쓰려면 씬에 MapLoader와 WaveManager가 모두 있어야 합니다.",
-                MessageType.Warning);
-            return;
-        }
-
-        EditorGUILayout.HelpBox(
-            "위 숫자는 '기준값'입니다. 실제 값은 웨이브 보정을 곱한 뒤 결정되며 인스펙터에는 표시되지 않습니다.\n" +
-            "플레이를 시작하면 여기에 실제 적용된 값이 나옵니다.",
-            MessageType.Info);
-
-        if (FindFirstObjectByType<MapLoader>() != null)
-        {
-            EditorGUILayout.HelpBox(
-                "씬에 MapLoader가 있어 플레이 시 스테이지 에셋(MapConfig)의 웨이브 값으로 덮어써질 수 있습니다.\n" +
-                "아래 미리보기는 씬 WaveManager에 들어 있는 값 기준입니다.",
-                MessageType.Info);
-        }
-
-        EditorGUILayout.LabelField(
-            $"예상값 미리보기 (웨이브 1~{WavePreviewCount}, 낮 기준)",
-            EditorStyles.boldLabel);
-
-        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-
-        DrawTableRow("웨이브", "스폰", "간격", "상한", "", "", header: true);
-
-        for (int wave = 1; wave <= WavePreviewCount; wave++)
-        {
-            WaveTuning tuning = waveManager.BuildTuningForWave(wave, false);
-
-            DrawTableRow(
-                $"웨이브 {wave}",
-                EnemySpawner.GetEffectiveSpawnCount(spawner.enemiesPerSpawn, tuning).ToString(),
-                $"{EnemySpawner.GetEffectiveSpawnInterval(spawner.spawnInterval, tuning):0.#}",
-                FormatMaxAlive(EnemySpawner.GetEffectiveMaxAlive(spawner.maxAliveEnemies, tuning)),
-                "",
-                "",
-                header: false);
-        }
-
-        EditorGUILayout.EndVertical();
-
-        if (spawner.activateFromWave > 1)
-        {
-            EditorGUILayout.HelpBox(
-                $"이 스포너는 웨이브 {spawner.activateFromWave}부터 활동합니다. 그 전까지는 스폰하지 않습니다.",
-                MessageType.Info);
-        }
-
-        EditorGUILayout.Space(4);
-        EditorGUILayout.LabelField(
-            $"씬의 스포너 수: {CollectSpawners().Count}개 (웨이브 수치는 전부에 똑같이 적용됩니다)",
-            EditorStyles.miniLabel);
-    }
-
-    // ── 그리기 유틸 ──────────────────────────────────────────────
-
-    static string FormatMaxAlive(int value)
-    {
-        return value <= 0 ? "무제한" : value.ToString();
-    }
-
-    static void DrawEffectiveRow(string label, string baseValue, string effectiveValue)
-    {
-        bool changed = baseValue != effectiveValue;
-
-        Color previous = GUI.contentColor;
-
-        if (changed)
-            GUI.contentColor = new Color(0.45f, 0.9f, 0.45f, 1f);
-
-        EditorGUILayout.LabelField(
-            label,
-            changed ? $"{baseValue}  →  {effectiveValue}" : $"{effectiveValue}  (보정 없음)");
-
-        GUI.contentColor = previous;
-    }
-
-    static void DrawTableRow(
-        string c0,
-        string c1,
-        string c2,
-        string c3,
-        string c4,
-        string c5,
-        bool header,
-        bool warn = false)
-    {
-        GUIStyle style = header ? EditorStyles.miniBoldLabel : EditorStyles.miniLabel;
-
-        Color previous = GUI.contentColor;
-
-        if (warn)
-            GUI.contentColor = new Color(0.95f, 0.5f, 0.4f, 1f);
-
-        EditorGUILayout.BeginHorizontal();
-        EditorGUILayout.LabelField(c0, style, GUILayout.MinWidth(90));
-        EditorGUILayout.LabelField(c1, style, GUILayout.Width(50));
-        EditorGUILayout.LabelField(c2, style, GUILayout.Width(50));
-        EditorGUILayout.LabelField(c3, style, GUILayout.Width(55));
-        EditorGUILayout.LabelField(c4, style, GUILayout.Width(45));
-        EditorGUILayout.LabelField(c5, style, GUILayout.Width(50));
-        EditorGUILayout.EndHorizontal();
-
-        GUI.contentColor = previous;
-    }
-
-    static void DrawSectionHeader(string title)
-    {
-        Rect rect = GUILayoutUtility.GetRect(0f, 20f, GUILayout.ExpandWidth(true));
-        EditorGUI.DrawRect(rect, SectionColor);
-
-        GUIStyle style = new GUIStyle(EditorStyles.boldLabel);
-        style.normal.textColor = Color.white;
-
-        Rect labelRect = new Rect(rect.x + 6f, rect.y + 2f, rect.width - 8f, rect.height);
-        EditorGUI.LabelField(labelRect, title, style);
     }
 }

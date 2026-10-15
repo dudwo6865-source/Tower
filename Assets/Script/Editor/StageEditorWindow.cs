@@ -42,7 +42,7 @@ public partial class StageEditorWindow : EditorWindow
     bool foldWinCondition = true;
     bool foldInitialEnemies = true;
 
-    // 분당 스폰 수 계산용. 스포너는 맵 프리팹 또는 열려 있는 씬에서 스캔해 캐시한다.
+    // 밤 공격대 총량 계산용. 스포너는 맵 프리팹 또는 열려 있는 씬에서 스캔해 캐시한다.
     bool foldSpawnRateDetail;
     int spawnRateWave = 1;
     List<SpawnerInfo> spawnerCache;
@@ -268,7 +268,7 @@ public partial class StageEditorWindow : EditorWindow
             EditorGUILayout.PropertyField(property, new GUIContent(labels[i], property.tooltip));
         }
         EditorGUILayout.HelpBox("0.2는 +20%입니다. 능력치는 한 번에 하나를 추첨하며 기존 적도 강화합니다. " +
-            "스폰 수는 주기에만 적용하고, 중복 효과는 합산합니다. 방어력과 판 밖 보상은 아직 포함하지 않습니다.", MessageType.Info);
+            "스폰 수는 밤 공격대에만 적용하고, 중복 효과는 합산합니다. 방어력과 판 밖 보상은 아직 포함하지 않습니다.", MessageType.Info);
         EditorGUILayout.EndVertical();
     }
 
@@ -659,22 +659,20 @@ public partial class StageEditorWindow : EditorWindow
 
         return Mathf.Approximately(growth.spawnCountMultiplier, 1f) &&
                growth.spawnCountBonus == 0 &&
-               Mathf.Approximately(growth.spawnIntervalMultiplier, 1f) &&
                growth.maxAliveEnemies == 0 &&
                Mathf.Approximately(growth.healthMultiplier, 1f) &&
                Mathf.Approximately(growth.damageMultiplier, 1f) &&
                Mathf.Approximately(growth.speedMultiplier, 1f);
     }
 
-    // ── 분당 스폰 몬스터 수 ───────────────────────────────────────
-    // 웨이브 수치(스폰량/간격)와 실제 스포너 수를 곱해서 "분당 몇 마리가 나오는지"를 보여준다.
+    // ── 밤 공격대 총량 ───────────────────────────────────────
+    // 웨이브별 밤 공격대 총량과 출격별 수를 합산한다.
     // 스포너 인스펙터 값만 봐서는 체감 난이도를 가늠할 수 없어서 여기서 합산한다.
 
     struct SpawnerInfo
     {
         public string name;
         public int enemiesPerSpawn;
-        public float spawnInterval;
         public int maxAliveEnemies;
         public int activateFromWave;
         public bool spawnPeriodically;
@@ -733,7 +731,6 @@ public partial class StageEditorWindow : EditorWindow
             {
                 name = pair.Value,
                 enemiesPerSpawn = spawner.enemiesPerSpawn,
-                spawnInterval = spawner.spawnInterval,
                 maxAliveEnemies = spawner.maxAliveEnemies,
                 activateFromWave = Mathf.Max(1, spawner.activateFromWave),
                 spawnPeriodically = spawner.spawnPeriodically,
@@ -779,125 +776,46 @@ public partial class StageEditorWindow : EditorWindow
             night);
     }
 
-    // 한 스포너가 1분 동안 스폰하는 몬스터 수입니다. 주기 스폰만 계산합니다.
-    static float SpawnsPerMinute(SpawnerInfo info, WaveTuning tuning, int waveNumber)
+    // 한 스포너의 밤 공격대 총량입니다. 수비대는 별도입니다.
+    static int NightSpawnTotal(SpawnerInfo info, WaveTuning tuning, int waveNumber)
     {
-        if (!info.spawnPeriodically || !info.hasPrefab || waveNumber < info.activateFromWave)
-            return 0f;
-
-        int count = EnemySpawner.GetEffectiveSpawnCount(info.enemiesPerSpawn, tuning);
-        float interval = EnemySpawner.GetEffectiveSpawnInterval(info.spawnInterval, tuning);
-
-        if (count <= 0 || interval <= 0f)
-            return 0f;
-
-        return count * 60f / interval;
+        if (!info.spawnPeriodically || (!info.hasPrefab && !tuning.HasEnemyComposition) || waveNumber < info.activateFromWave)
+            return 0;
+        return EnemySpawner.GetNightTotal(info.enemiesPerSpawn, tuning);
     }
 
     void DrawSpawnRateSection()
     {
         EditorGUILayout.Space(6);
-        EditorGUILayout.LabelField("분당 스폰 몬스터 수", EditorStyles.boldLabel);
-
+        EditorGUILayout.LabelField("밤 공격대 총량과 3회 출격", EditorStyles.boldLabel);
         List<SpawnerInfo> spawners = GetSpawners();
-
-        EditorGUILayout.BeginHorizontal();
-        EditorGUILayout.LabelField(
-            spawners.Count > 0
-                ? $"스포너 {spawners.Count}개 · 출처: {spawnerSource}"
-                : "스포너를 찾지 못했습니다.",
-            EditorStyles.miniLabel);
-
-        if (GUILayout.Button("다시 스캔", EditorStyles.miniButton, GUILayout.Width(70)))
-            InvalidateSpawnerCache();
-
-        EditorGUILayout.EndHorizontal();
-
-        if (spawners.Count == 0)
-        {
-            EditorGUILayout.HelpBox(
-                "맵 프리팹에도, 열려 있는 씬에도 EnemySpawner나 스포너를 짓는 건설 마커가 없습니다.\n" +
-                "스포너를 맵 프리팹에 배치하거나 그 씬을 연 뒤 '다시 스캔'을 누르세요.",
-                MessageType.Info);
-            return;
-        }
-
-        bool showNight = selected.applyNightBonus;
-
-        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-
-        EditorGUILayout.LabelField(
-            "웨이브",
-            showNight ? "분당 스폰 수 (낮 / 밤, 스포너 전체 합계)" : "분당 스폰 수 (스포너 전체 합계)",
-            EditorStyles.miniBoldLabel);
-
+        EditorGUILayout.LabelField($"스포너 {spawners.Count}개 · {spawnerSource}", EditorStyles.miniLabel);
+        if (GUILayout.Button("스포너 다시 스캔")) InvalidateSpawnerCache();
         for (int wave = 1; wave <= WavePreviewCount; wave++)
         {
-            WaveTuning dayTuning = BuildTuning(wave, false);
-            WaveTuning nightTuning = BuildTuning(wave, true);
-
-            // 적 구성이 있는 웨이브는 분당 수가 아니라 웨이브 총량으로 보여준다.
-            if (dayTuning.HasEnemyComposition)
-            {
-                int perSpawner = dayTuning.enemyComposition.TotalCount;
-                int compositionSpawners = 0;
-
-                foreach (SpawnerInfo info in spawners)
-                {
-                    if (info.spawnPeriodically && wave >= info.activateFromWave)
-                        compositionSpawners++;
-                }
-
-                EditorGUILayout.LabelField(
-                    $"웨이브 {wave}",
-                    compositionSpawners > 0
-                        ? $"웨이브 총 {perSpawner * compositionSpawners}마리  (스포너 {compositionSpawners}개 · 개당 {perSpawner}마리)"
-                        : "  (활동 중인 스포너 없음)",
-                    EditorStyles.miniLabel);
-                continue;
-            }
-
-            float dayTotal = 0f;
-            float nightTotal = 0f;
-            int activeSpawners = 0;
-
+            WaveTuning tuning = BuildTuning(wave, true);
+            int total = 0;
+            int first = 0;
+            int second = 0;
+            int third = 0;
             foreach (SpawnerInfo info in spawners)
             {
-                float perMinute = SpawnsPerMinute(info, dayTuning, wave);
-
-                dayTotal += perMinute;
-                nightTotal += SpawnsPerMinute(info, nightTuning, wave);
-
-                if (perMinute > 0f)
-                    activeSpawners++;
+                int amount = NightSpawnTotal(info, tuning, wave);
+                total += amount;
+                first += EnemySpawner.GetBatchSize(amount, 0);
+                second += EnemySpawner.GetBatchSize(amount, 1);
+                third += EnemySpawner.GetBatchSize(amount, 2);
             }
-
-            string amount = showNight
-                ? $"{dayTotal:0}마리 / {nightTotal:0}마리"
-                : $"{dayTotal:0}마리";
-
-            string detail = activeSpawners > 0
-                ? $"  (스포너 {activeSpawners}개 · 개당 {dayTotal / activeSpawners:0}마리)"
-                : "  (활동 중인 스포너 없음)";
-
-            EditorGUILayout.LabelField($"웨이브 {wave}", amount + detail, EditorStyles.miniLabel);
+            EditorGUILayout.LabelField($"웨이브 {wave}", $"밤 총 {total}마리 = {first} / {second} / {third}");
         }
-
-        EditorGUILayout.EndVertical();
-
+        EditorGUILayout.HelpBox($"밤 시작 / {selected.nightDuration / 3f:0.#}초 / {selected.nightDuration * 2f / 3f:0.#}초에 출격합니다. " +
+            "낮에는 공격대를 생성하지 않습니다. 수비대 보충·파괴 방출·돌연변이 증가분은 위 합계에서 제외합니다.", MessageType.Info);
         DrawAliveCapNote(spawners);
-
-        EditorGUILayout.HelpBox(
-            "주기 스폰(Spawn Periodically)만 계산한 값입니다. '적 구성'이 있는 웨이브는 웨이브 총량을 표시합니다.\n" +
-            "근처에 아군이 있거나 피격당했을 때의 추가 스폰, 스포너 파괴 시 방출은 포함하지 않습니다.",
-            MessageType.None);
-
         DrawSpawnRateDetail(spawners);
     }
-
     void DrawAliveCapNote(List<SpawnerInfo> spawners)
     {
-        WaveTuning tuning = BuildTuning(1, false);
+        WaveTuning tuning = BuildTuning(1, true);
 
         int capTotal = 0;
         bool hasUnlimited = false;
@@ -917,7 +835,7 @@ public partial class StageEditorWindow : EditorWindow
 
         EditorGUILayout.HelpBox(
             $"동시 생존 상한 합계는 {capTotal}마리입니다(웨이브 1 기준). " +
-            "적이 죽지 않으면 스폰이 여기서 멈추므로, 위 분당 수치는 최대치입니다.",
+            "공격대만 집계하며 수비대는 제외합니다. 막힌 물량은 밤 동안 대기하고, 아침에 남은 예약은 취소합니다.",
             MessageType.Info);
     }
 
@@ -930,7 +848,7 @@ public partial class StageEditorWindow : EditorWindow
 
         spawnRateWave = Mathf.Max(1, EditorGUILayout.IntField("기준 웨이브", spawnRateWave));
 
-        WaveTuning tuning = BuildTuning(spawnRateWave, false);
+        WaveTuning tuning = BuildTuning(spawnRateWave, true);
 
         EditorGUILayout.BeginVertical(EditorStyles.helpBox);
 
@@ -950,37 +868,12 @@ public partial class StageEditorWindow : EditorWindow
 
     static string DescribeSpawner(SpawnerInfo info, WaveTuning tuning, int waveNumber)
     {
-        if (tuning.HasEnemyComposition)
-        {
-            if (!info.spawnPeriodically)
-                return "주기 스폰 꺼짐 — 웨이브 '적 구성'을 쓰려면 스포너의 '주기 스폰'을 켜세요";
-
-            if (waveNumber < info.activateFromWave)
-                return $"웨이브 {info.activateFromWave}부터 활동";
-
-            int perSpawn = EnemySpawner.GetEffectiveSpawnCount(info.enemiesPerSpawn, tuning);
-            float spawnInterval = EnemySpawner.GetEffectiveSpawnInterval(info.spawnInterval, tuning);
-
-            return $"웨이브 구성 {tuning.enemyComposition.ToSummary()} " +
-                   $"(총 {tuning.enemyComposition.TotalCount}마리, {perSpawn}마리 / {spawnInterval:0.#}초씩)";
-        }
-
-        if (!info.hasPrefab)
-            return "적 프리팹이 비어 있음";
-
-        if (!info.spawnPeriodically)
-            return "주기 스폰 꺼짐 (아군 접근/피격 때만 스폰)";
-
-        if (waveNumber < info.activateFromWave)
-            return $"웨이브 {info.activateFromWave}부터 활동";
-
-        int count = EnemySpawner.GetEffectiveSpawnCount(info.enemiesPerSpawn, tuning);
-        float interval = EnemySpawner.GetEffectiveSpawnInterval(info.spawnInterval, tuning);
-        float perMinute = SpawnsPerMinute(info, tuning, waveNumber);
-
-        return $"{count}마리 / {interval:0.#}초 → 분당 {perMinute:0}마리";
+        if (!info.spawnPeriodically) return "밤 공격대 꺼짐";
+        if (waveNumber < info.activateFromWave) return $"웨이브 {info.activateFromWave}부터 활동";
+        if (!info.hasPrefab && !tuning.HasEnemyComposition) return "적 프리팹이 비어 있음";
+        int total = NightSpawnTotal(info, tuning, waveNumber);
+        return $"밤 총 {total}마리 = {EnemySpawner.GetBatchSize(total, 0)} / {EnemySpawner.GetBatchSize(total, 1)} / {EnemySpawner.GetBatchSize(total, 2)}";
     }
-
     void DrawInitialEnemySection()
     {
         foldInitialEnemies = DrawSectionFoldout(

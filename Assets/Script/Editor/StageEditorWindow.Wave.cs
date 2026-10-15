@@ -5,7 +5,7 @@ using UnityEngine;
 
 // 스테이지 에디터의 웨이브 섹션입니다. (StageEditorWindow.cs의 나머지 부분)
 // - 상단 요약 칩: 스테이지 핵심 수치와 점검 결과를 한 줄로 보여준다.
-// - 설정 점검: 적 구성이 빠진 웨이브, 주기 스폰이 꺼진 스포너 같은 실수를 모아 보여준다.
+// - 설정 점검: 적 구성이 빠진 웨이브, 밤 공격대이 꺼진 스포너 같은 실수를 모아 보여준다.
 // - 웨이브 구성 표: 줄 = 웨이브, 칸 = 적 종류. 숫자만 고치면 되고, 옆에 색 막대로 총량을 그린다.
 // - 웨이브별 상세: 배율·스탯 가중치를 '웨이브 N' 이름으로 펼쳐 편집하고, 복제/이동/삭제한다.
 // - 웨이브 N부터 플레이: 후반 웨이브를 바로 확인한다.
@@ -286,7 +286,7 @@ public partial class StageEditorWindow
         EditorGUILayout.HelpBox(
             "스포너(EnemySpawner)는 맵 프리팹에 미리 배치하고, 여기서는 웨이브마다 그 스포너들이 낼 적을 정합니다.\n" +
             "웨이브 구성 표에 숫자를 적으면 그 웨이브 동안 스포너 하나당 그 수만큼만 나옵니다. " +
-            "비워 둔 웨이브는 스포너 자체 프리팹 목록으로 계속 스폰합니다.",
+            "비워 둔 웨이브는 스포너 자체 프리팹 목록과 밤 총 출격 수를 사용합니다.",
             MessageType.Info);
 
         if (!selected.overrideWave)
@@ -301,7 +301,7 @@ public partial class StageEditorWindow
         DrawWaveDetailList();
         DrawWaveExtraSettings();
 
-        DrawSubHeader("미리보기", "웨이브별 배율과 분당/웨이브 총 스폰 수", WaveColor);
+        DrawSubHeader("미리보기", "웨이브별 배율과 밤 총량과 3회 출격", WaveColor);
         DrawSectionRow(DrawWavePreview, DrawSpawnRateSection);
 
         EditorGUILayout.Space(6);
@@ -425,7 +425,7 @@ public partial class StageEditorWindow
             issues.Add(new WaveIssue(
                 WaveIssueLevel.Warning,
                 $"{FormatWaveList(emptyWaves)}은(는) 적 구성이 비어 있어 스포너 자체 프리팹 목록으로 " +
-                "제한 없이 계속 스폰합니다. 정해진 수만 나오게 하려면 숫자를 채우세요."));
+                "스포너의 밤 총 출격 수를 사용합니다. 적 종류별 총량을 정하려면 숫자를 채우세요."));
         }
 
         if (zeroSpawnWaves.Count > 0)
@@ -467,8 +467,8 @@ public partial class StageEditorWindow
             {
                 issues.Add(new WaveIssue(
                     WaveIssueLevel.Error,
-                    $"스포너 {string.Join(", ", periodicOff)}의 '주기 스폰'이 꺼져 있어 적 구성이 나오지 않습니다. " +
-                    "스포너 인스펙터에서 '주기 스폰'을 켜세요."));
+                    $"스포너 {string.Join(", ", periodicOff)}의 '밤 공격대'이 꺼져 있어 적 구성이 나오지 않습니다. " +
+                    "스포너 인스펙터에서 '밤 공격대'을 켜세요."));
             }
 
             if (noPrefab.Count > 0)
@@ -581,7 +581,7 @@ public partial class StageEditorWindow
         return total;
     }
 
-    // 웨이브 표의 해당 웨이브에서 주기 스폰으로 적 구성을 내보낼 스포너 수.
+    // 웨이브 표의 해당 웨이브에서 밤 공격대으로 적 구성을 내보낼 스포너 수.
     int CountCompositionSpawners(int waveNumber)
     {
         int count = 0;
@@ -660,7 +660,7 @@ public partial class StageEditorWindow
             WaveTuning last = waves[waves.Count - 1];
             string lastComposition = last != null && last.HasEnemyComposition
                 ? $"마지막 웨이브 구성({last.enemyComposition.ToSummary()})을 그대로 씁니다."
-                : "마지막 웨이브처럼 스포너 자체 목록으로 계속 스폰합니다.";
+                : "스포너 자체 목록과 밤 총 출격 수를 사용합니다.";
 
             GUI.Label(afterRect, $"웨이브 {waves.Count + 1}~  ·  {lastComposition}", EditorStyles.miniLabel);
         }
@@ -797,13 +797,14 @@ public partial class StageEditorWindow
         x += GridTotalColumnWidth + GridCellGap;
 
         int spawnerCount = CountCompositionSpawners(index + 1);
+        int effectiveTotal = EnemySpawner.GetNightTotal(0, BuildTuning(index + 1, true));
         string mapText = total > 0
-            ? (spawnerCount > 0 ? $"{total * spawnerCount}" : "스포너 0")
+            ? (spawnerCount > 0 ? $"{effectiveTotal * spawnerCount}" : "스포너 0")
             : "-";
 
         GUI.Label(
             new Rect(x, cellBase.y, GridMapColumnWidth, cellBase.height),
-            new GUIContent(mapText, $"활동 스포너 {spawnerCount}개 기준"),
+            new GUIContent(mapText, $"활동 스포너 {spawnerCount}개 · 밤 배율 적용 후 공격대 총량 · 돌연변이 제외"),
             new GUIStyle(EditorStyles.label) { alignment = TextAnchor.MiddleCenter });
         x += GridMapColumnWidth + GridCellGap;
 
@@ -841,7 +842,7 @@ public partial class StageEditorWindow
 
             GUI.Label(
                 new Rect(rect.x + 4, rect.y - 2, rect.width - 4, rect.height + 4),
-                "비어 있음 · 스포너 자체 목록으로 계속 스폰",
+                "비어 있음 · 스포너의 밤 총 출격 수 사용",
                 emptyStyle);
             return;
         }

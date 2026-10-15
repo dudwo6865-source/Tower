@@ -136,13 +136,13 @@ public class EnemyMutationManager : MonoBehaviour
         target.Apply(1f + HealthBonus, 1f + DamageBonus, 1f + SpeedBonus);
     }
 
-    public string Summary => $"돌연변이 {MutationCount}회\n주기 스폰 +{SpawnBonus:P0} · 공격력 +{DamageBonus:P0}\n체력 +{HealthBonus:P0} · 이동 속도 +{SpeedBonus:P0}";
+    public string Summary => $"돌연변이 {MutationCount}회\n밤 공격대 +{SpawnBonus:P0} · 공격력 +{DamageBonus:P0}\n체력 +{HealthBonus:P0} · 이동 속도 +{SpeedBonus:P0}";
 
     static string GetName(EnemyMutationType type)
     {
         switch (type)
         {
-            case EnemyMutationType.Spawn: return "주기 스폰 수";
+            case EnemyMutationType.Spawn: return "밤 공격대 수";
             case EnemyMutationType.Damage: return "적 공격력";
             case EnemyMutationType.Health: return "적 체력";
             default: return "적 이동 속도";
