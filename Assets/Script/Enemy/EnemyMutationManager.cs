@@ -18,6 +18,7 @@ public class EnemyMutationManager : MonoBehaviour
     public float SpeedBonus { get; private set; }
     public int MutationCount { get; private set; }
     public event Action<string> OnMutationApplied;
+    public event Action<EnemyMutationType, float> OnMutationRolled;
     public event Action OnChanged;
     readonly HashSet<int> processedSpawners = new HashSet<int>();
 
@@ -120,6 +121,7 @@ public class EnemyMutationManager : MonoBehaviour
         EnemyMutationHUD.EnsureInstance();
         OnChanged?.Invoke();
         OnMutationApplied?.Invoke(message);
+        OnMutationRolled?.Invoke(type, increase);
     }
 
     public void ApplyTo(GameObject enemy)

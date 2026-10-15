@@ -1,37 +1,134 @@
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.UI;
 
-// 기존 UI 텍스트를 연결하거나, 연결이 없으면 첫 돌연변이 때 기본 표시를 만든다.
+// 알림 표현은 여기서 관리하고 실제 추첨과 능력치 계산은 EnemyMutationManager가 담당한다.
+[AddComponentMenu("게임/돌연변이 알림 매니저")]
 [DisallowMultipleComponent]
 public class EnemyMutationHUD : MonoBehaviour
 {
     static EnemyMutationHUD instance;
+
+    [Header("UI 연결")]
     [Label("누적 효과 텍스트")]
     public TMP_Text summaryText;
     [Label("결과 알림 텍스트")]
     public TMP_Text notificationText;
+    [Label("자동 UI 생성")]
+    [Tooltip("텍스트를 모두 비워두면 기본 UI를 생성합니다. 직접 만든 UI를 연결하면 자동 생성하지 않습니다.")]
+    public bool createDefaultUI = true;
+
+    [Header("알림 문구")]
+    [Label("알림 형식")]
+    [Tooltip("{효과명}, {증가율}을 실제 값으로 바꿉니다. 증가율에는 %가 포함됩니다.")]
+    [TextArea] public string notificationFormat = "돌연변이 발생: {효과명} +{증가율}";
+    [Label("스폰 수 효과 이름")]
+    public string spawnName = "주기 스폰 수";
+    [Label("공격력 효과 이름")]
+    public string damageName = "적 공격력";
+    [Label("체력 효과 이름")]
+    public string healthName = "적 체력";
+    [Label("이동 속도 효과 이름")]
+    public string speedName = "적 이동 속도";
+    [Label("누적 효과 형식")]
+    [Tooltip("{횟수}, {스폰}, {공격력}, {체력}, {이동속도}를 사용할 수 있습니다. 증가율에는 %가 포함됩니다.")]
+    [TextArea(3, 6)] public string summaryFormat = "돌연변이 {횟수}회\n주기 스폰 +{스폰} · 공격력 +{공격력}\n체력 +{체력} · 이동 속도 +{이동속도}";
+
+    [Header("표시와 색상")]
     [Label("알림 표시 시간(초)")]
+    [Tooltip("등장·퇴장 효과를 포함한 한 알림의 전체 시간입니다. 일시정지 중에도 흐릅니다.")]
     [Min(0.1f)] public float notificationDuration = 5f;
+    [Label("텍스트 스타일 덮어쓰기")]
+    [Tooltip("끄면 직접 연결한 텍스트의 폰트·크기·색상을 유지합니다. 자동 생성 UI에는 아래 설정을 사용합니다.")]
+    public bool overrideTextStyle = true;
+    [Label("글꼴")]
+    [Tooltip("자동 UI에서 비워두면 프로젝트의 한글 글꼴을 사용합니다.")]
+    public TMP_FontAsset font;
+    [Label("글자 크기")]
+    [Min(1f)] public float fontSize = 20f;
+    [Label("누적 효과 색상")]
+    public Color summaryColor = Color.white;
+    [Label("스폰 수 알림 색상")]
+    public Color spawnColor = new Color(1f, 0.75f, 0.4f);
+    [Label("공격력 알림 색상")]
+    public Color damageColor = new Color(1f, 0.4f, 0.35f);
+    [Label("체력 알림 색상")]
+    public Color healthColor = new Color(0.5f, 1f, 0.55f);
+    [Label("이동 속도 알림 색상")]
+    public Color speedColor = new Color(0.45f, 0.8f, 1f);
+
+    [Header("알림 연출")]
+    [Label("등장 시간(초)")]
+    [Min(0f)] public float fadeInDuration = 0.15f;
+    [Label("퇴장 시간(초)")]
+    [Min(0f)] public float fadeOutDuration = 0.4f;
+    [Label("크기 강조 대상")]
+    [Tooltip("비워두면 알림 텍스트 자체를 강조합니다. 다른 UI까지 움직이지 않도록 전용 오브젝트를 연결합니다.")]
+    public RectTransform emphasisTarget;
+    [Label("등장 크기 배율")]
+    [Min(0.01f)] public float startScale = 1.15f;
+    [Label("크기 복원 시간(초)")]
+    [Min(0f)] public float emphasisDuration = 0.25f;
+    [Label("알림 오디오 소스")]
+    [Tooltip("비워두면 필요한 경우 2D 오디오 소스를 생성합니다.")]
+    public AudioSource audioSource;
+    [Label("알림 효과음")]
+    public AudioClip notificationSound;
+    [Label("알림 음량")]
+    [Range(0f, 1f)] public float volume = 1f;
+    [Label("알림 시작 효과")]
+    [Tooltip("알림이 실제로 표시될 때 실행합니다. 파티클 Play 등 원하는 효과를 연결합니다. 미리보기에서도 실행됩니다.")]
+    public UnityEvent onNotificationStarted = new UnityEvent();
+    [Label("알림 종료 효과")]
+    [Tooltip("표시 종료·게임 종료·매니저 비활성화 시 실행합니다. 시작한 효과의 Stop 등을 연결합니다.")]
+    public UnityEvent onNotificationFinished = new UnityEvent();
+
+    [Header("자동 UI 배치")]
     [Label("자동 표시 위치")]
     public Vector2 panelPosition = new Vector2(-24f, -160f);
     [Label("자동 표시 크기")]
     public Vector2 panelSize = new Vector2(430f, 150f);
-    [Label("자동 표시 글자 크기")]
-    public float fontSize = 20f;
+    [Label("배경 색상")]
+    public Color backgroundColor = new Color(0.08f, 0.07f, 0.1f, 0.88f);
+    [Label("기준 해상도")]
+    public Vector2 referenceResolution = new Vector2(1920f, 1080f);
+    [Label("표시 순서")]
+    public int sortingOrder = 50;
+
+    [Header("플레이 중 미리보기")]
+    [Label("미리보기 효과")]
+    public EnemyMutationType previewType = EnemyMutationType.Health;
+    [Label("미리보기 증가율")]
+    [Min(0f)] public float previewIncrease = 0.15f;
+
+    struct Notice
+    {
+        public EnemyMutationType type;
+        public float increase;
+    }
 
     EnemyMutationManager manager;
-    readonly Queue<string> notifications = new Queue<string>();
-    float notificationUntil;
+    readonly Queue<Notice> notifications = new Queue<Notice>();
+    float notificationStartedAt;
+    bool showingNotification;
+    Notice currentNotice;
+    Color originalNotificationColor;
+    Color displayedColor;
+    Vector3 originalScale;
+    RectTransform animatedTarget;
     GameObject generatedPanel;
+    RectTransform generatedRect;
+    Image generatedBackground;
+    bool appearanceDirty;
 
     public static void EnsureInstance()
     {
         if (instance != null) return;
         instance = FindObjectOfType<EnemyMutationHUD>();
         if (instance == null)
-            instance = new GameObject("돌연변이 표시").AddComponent<EnemyMutationHUD>();
+            instance = new GameObject("돌연변이 알림 매니저").AddComponent<EnemyMutationHUD>();
     }
 
     void Awake()
@@ -44,16 +141,15 @@ public class EnemyMutationHUD : MonoBehaviour
         instance = this;
     }
 
-    void OnEnable()
-    {
-        Bind();
-    }
+    void OnEnable() => Bind();
+    void OnValidate() => appearanceDirty = true;
 
     void OnDisable()
     {
+        StopPresentation();
         if (manager == null) return;
-        manager.OnChanged -= Refresh;
-        manager.OnMutationApplied -= ShowNotification;
+        manager.OnChanged -= HandleStateChanged;
+        manager.OnMutationRolled -= EnqueueNotification;
         manager = null;
     }
 
@@ -66,86 +162,241 @@ public class EnemyMutationHUD : MonoBehaviour
     {
         if (manager != null || EnemyMutationManager.Instance == null) return;
         manager = EnemyMutationManager.Instance;
-        manager.OnChanged += Refresh;
-        manager.OnMutationApplied += ShowNotification;
+        manager.OnChanged += HandleStateChanged;
+        manager.OnMutationRolled += EnqueueNotification;
         Refresh();
     }
 
     void Update()
     {
         Bind();
-        bool gameOver = GameResultManager.Instance != null && GameResultManager.Instance.IsGameOver;
-        if (gameOver)
+        if (GameResultManager.Instance != null && GameResultManager.Instance.IsGameOver)
         {
-            notifications.Clear();
-            if (notificationText != null) notificationText.text = string.Empty;
-            if (generatedPanel != null) generatedPanel.SetActive(false);
+            StopPresentation();
             return;
         }
-        if (notificationText == null || Time.unscaledTime < notificationUntil) return;
-        notificationText.text = notifications.Count > 0 ? notifications.Dequeue() : string.Empty;
-        if (notificationText.text.Length > 0)
-            notificationUntil = Time.unscaledTime + notificationDuration;
+        if (appearanceDirty)
+        {
+            appearanceDirty = false;
+            Refresh();
+            if (showingNotification && notificationText != null)
+            {
+                notificationText.text = FormatNotification(currentNotice.type, currentNotice.increase);
+                displayedColor = ShouldStyle ? EffectColor(currentNotice.type) : originalNotificationColor;
+            }
+        }
+        if (showingNotification)
+        {
+            float elapsed = Time.unscaledTime - notificationStartedAt;
+            float duration = Mathf.Max(0.1f, notificationDuration);
+            if (elapsed >= duration)
+                FinishNotification();
+            else
+            {
+                float alphaIn = fadeInDuration > 0f ? Mathf.Clamp01(elapsed / fadeInDuration) : 1f;
+                float alphaOut = fadeOutDuration > 0f ? Mathf.Clamp01((duration - elapsed) / fadeOutDuration) : 1f;
+                if (notificationText != null)
+                {
+                    Color color = displayedColor;
+                    color.a *= Mathf.Min(alphaIn, alphaOut);
+                    notificationText.color = color;
+                }
+                if (animatedTarget != null)
+                {
+                    float progress = emphasisDuration > 0f ? Mathf.Clamp01(elapsed / emphasisDuration) : 1f;
+                    animatedTarget.localScale = originalScale * Mathf.Lerp(Mathf.Max(0.01f, startScale), 1f, progress);
+                }
+            }
+        }
+        if (!showingNotification && notifications.Count > 0)
+            BeginNotification(notifications.Dequeue());
+    }
+
+    bool ShouldStyle => overrideTextStyle || generatedPanel != null;
+
+    public string FormatNotification(EnemyMutationType type, float increase)
+    {
+        return (notificationFormat ?? string.Empty).Replace("{효과명}", EffectName(type))
+            .Replace("{증가율}", increase.ToString("P0"));
+    }
+
+    string EffectName(EnemyMutationType type)
+    {
+        switch (type)
+        {
+            case EnemyMutationType.Spawn: return spawnName ?? string.Empty;
+            case EnemyMutationType.Damage: return damageName ?? string.Empty;
+            case EnemyMutationType.Health: return healthName ?? string.Empty;
+            default: return speedName ?? string.Empty;
+        }
+    }
+
+    Color EffectColor(EnemyMutationType type)
+    {
+        switch (type)
+        {
+            case EnemyMutationType.Spawn: return spawnColor;
+            case EnemyMutationType.Damage: return damageColor;
+            case EnemyMutationType.Health: return healthColor;
+            default: return speedColor;
+        }
+    }
+
+    void HandleStateChanged()
+    {
+        if (manager != null && manager.MutationCount == 0) StopPresentation();
+        Refresh();
     }
 
     void Refresh()
     {
-        if (manager == null) return;
-        if (manager.MutationCount > 0 && summaryText == null && notificationText == null)
-            CreateDefaultPanel();
+        if (manager != null && manager.MutationCount > 0) EnsureUI();
+        ApplyAppearance();
         if (summaryText != null)
-            summaryText.text = manager.MutationCount > 0 ? manager.Summary : string.Empty;
-        if (manager.MutationCount == 0)
-        {
-            notifications.Clear();
-            notificationUntil = 0f;
-            if (notificationText != null) notificationText.text = string.Empty;
-        }
-        if (generatedPanel != null) generatedPanel.SetActive(manager.MutationCount > 0);
+            summaryText.text = manager != null && manager.MutationCount > 0
+                ? (summaryFormat ?? string.Empty).Replace("{횟수}", manager.MutationCount.ToString())
+                    .Replace("{스폰}", manager.SpawnBonus.ToString("P0"))
+                    .Replace("{공격력}", manager.DamageBonus.ToString("P0"))
+                    .Replace("{체력}", manager.HealthBonus.ToString("P0"))
+                    .Replace("{이동속도}", manager.SpeedBonus.ToString("P0"))
+                : string.Empty;
+        if (!showingNotification && notifications.Count == 0 && notificationText != null)
+            notificationText.text = string.Empty;
+        if (generatedPanel != null)
+            generatedPanel.SetActive(showingNotification || (manager != null && manager.MutationCount > 0));
     }
 
-    void ShowNotification(string message)
+    void EnqueueNotification(EnemyMutationType type, float increase)
     {
-        notifications.Enqueue(message);
+        notifications.Enqueue(new Notice { type = type, increase = increase });
+    }
+
+    public void PreviewNotification()
+    {
+        if (!Application.isPlaying || (GameResultManager.Instance != null && GameResultManager.Instance.IsGameOver)) return;
+        EnqueueNotification(previewType, previewIncrease);
+    }
+
+    void BeginNotification(Notice notice)
+    {
+        EnsureUI();
+        if (generatedPanel != null) generatedPanel.SetActive(true);
+        ApplyAppearance();
+        currentNotice = notice;
+        showingNotification = true;
+        notificationStartedAt = Time.unscaledTime;
+        if (notificationText != null)
+        {
+            originalNotificationColor = notificationText.color;
+            displayedColor = ShouldStyle ? EffectColor(notice.type) : originalNotificationColor;
+            notificationText.text = FormatNotification(notice.type, notice.increase);
+            Color color = displayedColor;
+            if (fadeInDuration > 0f) color.a = 0f;
+            notificationText.color = color;
+        }
+        animatedTarget = emphasisTarget != null ? emphasisTarget : (notificationText != null ? notificationText.rectTransform : null);
+        if (animatedTarget != null)
+        {
+            originalScale = animatedTarget.localScale;
+            animatedTarget.localScale = originalScale * (emphasisDuration > 0f ? Mathf.Max(0.01f, startScale) : 1f);
+        }
+        if (notificationSound != null)
+        {
+            if (audioSource == null)
+            {
+                audioSource = gameObject.AddComponent<AudioSource>();
+                audioSource.playOnAwake = false;
+                audioSource.spatialBlend = 0f;
+            }
+            audioSource.PlayOneShot(notificationSound, Mathf.Clamp01(volume));
+        }
+        onNotificationStarted?.Invoke();
+    }
+
+    void FinishNotification()
+    {
+        if (!showingNotification) return;
+        showingNotification = false;
+        if (animatedTarget != null) animatedTarget.localScale = originalScale;
+        animatedTarget = null;
+        if (notificationText != null)
+        {
+            notificationText.text = string.Empty;
+            notificationText.color = originalNotificationColor;
+        }
+        if (generatedPanel != null && (manager == null || manager.MutationCount == 0))
+            generatedPanel.SetActive(false);
+        onNotificationFinished?.Invoke();
+    }
+
+    void StopPresentation()
+    {
+        notifications.Clear();
+        FinishNotification();
+        if (summaryText != null) summaryText.text = string.Empty;
+        if (notificationText != null) notificationText.text = string.Empty;
+        if (generatedPanel != null) generatedPanel.SetActive(false);
+    }
+
+    void EnsureUI()
+    {
+        if (createDefaultUI && summaryText == null && notificationText == null)
+            CreateDefaultPanel();
+    }
+
+    void ApplyAppearance()
+    {
+        if (ShouldStyle)
+        {
+            ApplyTextStyle(summaryText);
+            ApplyTextStyle(notificationText);
+            if (summaryText != null) summaryText.color = summaryColor;
+        }
+        if (generatedPanel == null) return;
+        generatedPanel.GetComponent<Canvas>().sortingOrder = sortingOrder;
+        generatedPanel.GetComponent<CanvasScaler>().referenceResolution =
+            new Vector2(Mathf.Max(1f, referenceResolution.x), Mathf.Max(1f, referenceResolution.y));
+        generatedRect.anchoredPosition = panelPosition;
+        generatedRect.sizeDelta = new Vector2(Mathf.Max(1f, panelSize.x), Mathf.Max(1f, panelSize.y));
+        generatedBackground.color = backgroundColor;
+    }
+
+    void ApplyTextStyle(TMP_Text text)
+    {
+        if (text == null) return;
+        if (font != null) text.font = font;
+        text.fontSize = Mathf.Max(1f, fontSize);
     }
 
     void CreateDefaultPanel()
     {
         generatedPanel = new GameObject("돌연변이 알림 캔버스", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler));
         generatedPanel.transform.SetParent(transform, false);
-        Canvas canvas = generatedPanel.GetComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 50;
-        CanvasScaler scaler = generatedPanel.GetComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920f, 1080f);
-
+        generatedPanel.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
+        generatedPanel.GetComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         GameObject panel = new GameObject("돌연변이 패널", typeof(RectTransform), typeof(Image));
         panel.transform.SetParent(generatedPanel.transform, false);
-        RectTransform rect = panel.GetComponent<RectTransform>();
-        rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(1f, 1f);
-        rect.anchoredPosition = panelPosition;
-        rect.sizeDelta = panelSize;
-        Image background = panel.GetComponent<Image>();
-        background.color = new Color(0.08f, 0.07f, 0.1f, 0.88f);
-        background.raycastTarget = false;
-        summaryText = CreateText(panel.transform, "누적 효과", new Vector2(12f, -12f), new Vector2(panelSize.x - 24f, 85f));
-        notificationText = CreateText(panel.transform, "결과 알림", new Vector2(12f, -100f), new Vector2(panelSize.x - 24f, 45f));
-        notificationText.color = new Color(1f, 0.75f, 0.4f);
+        generatedRect = panel.GetComponent<RectTransform>();
+        generatedRect.anchorMin = generatedRect.anchorMax = generatedRect.pivot = new Vector2(1f, 1f);
+        generatedBackground = panel.GetComponent<Image>();
+        generatedBackground.raycastTarget = false;
+        summaryText = CreateText(panel.transform, "누적 효과", new Vector2(0f, 0.35f), Vector2.one);
+        notificationText = CreateText(panel.transform, "결과 알림", Vector2.zero, new Vector2(1f, 0.35f));
+        ApplyAppearance();
     }
 
-    TMP_Text CreateText(Transform parent, string objectName, Vector2 position, Vector2 size)
+    TMP_Text CreateText(Transform parent, string objectName, Vector2 anchorMin, Vector2 anchorMax)
     {
         GameObject go = new GameObject(objectName, typeof(RectTransform), typeof(TextMeshProUGUI));
         go.transform.SetParent(parent, false);
         TMP_Text text = go.GetComponent<TMP_Text>();
-        TMP_FontAsset font = Resources.Load<TMP_FontAsset>("Fonts & Materials/NotoSansKR-Black SDF");
-        if (font != null) text.font = font;
-        text.fontSize = fontSize;
+        TMP_FontAsset defaultFont = font != null ? font : Resources.Load<TMP_FontAsset>("Fonts & Materials/NotoSansKR-Black SDF");
+        if (defaultFont != null) text.font = defaultFont;
         text.raycastTarget = false;
-        text.rectTransform.anchorMin = text.rectTransform.anchorMax = text.rectTransform.pivot = new Vector2(0f, 1f);
-        text.rectTransform.anchoredPosition = position;
-        text.rectTransform.sizeDelta = size;
+        text.rectTransform.anchorMin = anchorMin;
+        text.rectTransform.anchorMax = anchorMax;
+        text.rectTransform.offsetMin = new Vector2(12f, 6f);
+        text.rectTransform.offsetMax = new Vector2(-12f, -6f);
         return text;
     }
 }
