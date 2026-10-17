@@ -67,6 +67,7 @@ public class UnitCommandController : MonoBehaviour
             ActiveMode != UnitCommandMode.None)
         {
             CancelMode();
+            UISoundManager.PlayCommandCancel();
         }
 
         UpdateCommandCursorIndicator();
@@ -190,6 +191,7 @@ public class UnitCommandController : MonoBehaviour
         // 명령이 실제로 전달됐을 때만 확정 피드백을 재생한다.
         // CancelMode보다 먼저 호출해야 원이 그 자리에서 한 번 튀고 사라진다.
         CommandCursorIndicator.PlayConfirmPulse(hit.point);
+        UISoundManager.PlayCommandConfirm(ActiveMode);
 
         suppressSelectionClick = true;
         CancelMode();
@@ -205,7 +207,10 @@ public class UnitCommandController : MonoBehaviour
         OnModeChanged?.Invoke(ActiveMode);
 
         if (HasPendingMode)
+        {
             CommandCursorIndicator.PlayActivationPulse();
+            UISoundManager.PlayCommandModeEnter();
+        }
         else
             CommandCursorIndicator.HideIndicator();
     }
@@ -229,18 +234,27 @@ public class UnitCommandController : MonoBehaviour
             return false;
 
         CancelMode();
+        UISoundManager.PlayCommandCancel();
         return true;
     }
 
     public void IssueStop()
     {
         CancelMode();
+
+        if (UnitCommandHandler.HasCommandableUnits())
+            UISoundManager.PlayCommandConfirm(UICommandSound.Stop);
+
         UnitCommandHandler.IssueStopToSelection();
     }
 
     public void IssueHold()
     {
         CancelMode();
+
+        if (UnitCommandHandler.HasCommandableUnits())
+            UISoundManager.PlayCommandConfirm(UICommandSound.Stop);
+
         UnitCommandHandler.IssueHoldToSelection();
     }
 
@@ -267,6 +281,10 @@ public class UnitCommandController : MonoBehaviour
     public void IssueBuildingStop()
     {
         CancelMode();
+
+        if (BuildingCommandHandler.HasCommandableBuildings())
+            UISoundManager.PlayCommandConfirm(UICommandSound.Stop);
+
         BuildingCommandHandler.IssueStopToSelection();
     }
 

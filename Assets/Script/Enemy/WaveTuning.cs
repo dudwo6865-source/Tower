@@ -40,6 +40,11 @@ public class WaveTuning
     [Tooltip("스폰되는 적의 이동 속도 배율입니다.")]
     public float speedMultiplier = 1f;
 
+    [Label("방어력 추가")]
+    [Tooltip("스폰되는 적의 방어력에 더할 값입니다(배율이 아니라 덧셈). 기본 방어력이 0인 적도 강해집니다. " +
+             "'이후 웨이브 증가율'에서는 웨이브마다 더할 값, 밤 보정에서는 밤에 더할 값입니다.")]
+    public float armorBonus;
+
     // 인스펙터 제목은 WaveEnemyCompositionDrawer가 한글로 그린다.
     // (이 필드에 [Label]을 붙이면 그 드로어가 쓰이지 않는다)
     [Tooltip("이 웨이브 동안 스포너 하나가 내보낼 적의 종류와 마리 수(총량)입니다.\n" +
@@ -72,6 +77,7 @@ public class WaveTuning
         healthMultiplier = source.healthMultiplier;
         damageMultiplier = source.damageMultiplier;
         speedMultiplier = source.speedMultiplier;
+        armorBonus = source.armorBonus;
         enemyComposition = source.enemyComposition != null
             ? source.enemyComposition.Clone()
             : new WaveEnemyComposition();
@@ -89,6 +95,7 @@ public class WaveTuning
             healthMultiplier = Mathf.Max(0.01f, healthMultiplier),
             damageMultiplier = Mathf.Max(0f, damageMultiplier),
             speedMultiplier = Mathf.Max(0.01f, speedMultiplier),
+            armorBonus = armorBonus,
             enemyComposition = enemyComposition != null
                 ? enemyComposition.Clone()
                 : new WaveEnemyComposition()
@@ -115,6 +122,7 @@ public class WaveTuning
         result.healthMultiplier *= Mathf.Pow(growth.healthMultiplier, times);
         result.damageMultiplier *= Mathf.Pow(growth.damageMultiplier, times);
         result.speedMultiplier *= Mathf.Pow(growth.speedMultiplier, times);
+        result.armorBonus += growth.armorBonus * times;
 
         return result;
     }
@@ -158,6 +166,8 @@ public class WaveTuning
             healthMultiplier = a.healthMultiplier * b.healthMultiplier,
             damageMultiplier = a.damageMultiplier * b.damageMultiplier,
             speedMultiplier = a.speedMultiplier * b.speedMultiplier,
+            // 방어력은 덧셈 값이라 합친다.
+            armorBonus = a.armorBonus + b.armorBonus,
             // 적 구성은 웨이브 표(a)에만 있다. 밤 보정(b)은 구성을 바꾸지 않는다.
             enemyComposition = a.enemyComposition != null
                 ? a.enemyComposition.Clone()
@@ -178,7 +188,11 @@ public class WaveTuning
             ? $" / 구성 {enemyComposition.ToSummary()}"
             : string.Empty;
 
-        return $"{count}{cap} / 체력 x{healthMultiplier:0.##} / 공격 x{damageMultiplier:0.##} / 속도 x{speedMultiplier:0.##}" +
+        string armor = Mathf.Approximately(armorBonus, 0f)
+            ? string.Empty
+            : $" / 방어 {(armorBonus > 0f ? "+" : "")}{armorBonus:0.#}";
+
+        return $"{count}{cap} / 체력 x{healthMultiplier:0.##} / 공격 x{damageMultiplier:0.##} / 속도 x{speedMultiplier:0.##}{armor}" +
                composition;
     }
 }

@@ -22,7 +22,7 @@ public class EnemyMutationHUD : MonoBehaviour
 
     [Header("알림 문구")]
     [Label("알림 형식")]
-    [Tooltip("{효과명}, {증가율}을 실제 값으로 바꿉니다. 증가율에는 %가 포함됩니다.")]
+    [Tooltip("{효과명}, {증가율}을 실제 값으로 바꿉니다. 증가율에는 %가 포함됩니다. 방어력 돌연변이는 %가 아니라 더한 수치(예: 1)로 바뀝니다.")]
     [TextArea] public string notificationFormat = "돌연변이 발생: {효과명} +{증가율}";
     [Label("스폰 수 효과 이름")]
     public string spawnName = "밤 공격대 수";
@@ -32,9 +32,11 @@ public class EnemyMutationHUD : MonoBehaviour
     public string healthName = "적 체력";
     [Label("이동 속도 효과 이름")]
     public string speedName = "적 이동 속도";
+    [Label("방어력 효과 이름")]
+    public string armorName = "적 방어력";
     [Label("누적 효과 형식")]
-    [Tooltip("{횟수}, {스폰}, {공격력}, {체력}, {이동속도}를 사용할 수 있습니다. 증가율에는 %가 포함됩니다.")]
-    [TextArea(3, 6)] public string summaryFormat = "돌연변이 {횟수}회\n밤 공격대 +{스폰} · 공격력 +{공격력}\n체력 +{체력} · 이동 속도 +{이동속도}";
+    [Tooltip("{횟수}, {스폰}, {공격력}, {체력}, {이동속도}, {방어력}을 사용할 수 있습니다. 증가율에는 %가 포함되고, {방어력}은 더한 수치입니다.")]
+    [TextArea(3, 6)] public string summaryFormat = "돌연변이 {횟수}회\n밤 공격대 +{스폰} · 공격력 +{공격력}\n체력 +{체력} · 이동 속도 +{이동속도} · 방어력 +{방어력}";
 
     [Header("표시와 색상")]
     [Label("알림 표시 시간(초)")]
@@ -58,6 +60,8 @@ public class EnemyMutationHUD : MonoBehaviour
     public Color healthColor = new Color(0.5f, 1f, 0.55f);
     [Label("이동 속도 알림 색상")]
     public Color speedColor = new Color(0.45f, 0.8f, 1f);
+    [Label("방어력 알림 색상")]
+    public Color armorColor = new Color(0.8f, 0.8f, 0.85f);
 
     [Header("알림 연출")]
     [Label("등장 시간(초)")]
@@ -216,8 +220,9 @@ public class EnemyMutationHUD : MonoBehaviour
 
     public string FormatNotification(EnemyMutationType type, float increase)
     {
+        string amount = type == EnemyMutationType.Armor ? increase.ToString("0.#") : increase.ToString("P0");
         return (notificationFormat ?? string.Empty).Replace("{효과명}", EffectName(type))
-            .Replace("{증가율}", increase.ToString("P0"));
+            .Replace("{증가율}", amount);
     }
 
     string EffectName(EnemyMutationType type)
@@ -227,6 +232,7 @@ public class EnemyMutationHUD : MonoBehaviour
             case EnemyMutationType.Spawn: return spawnName ?? string.Empty;
             case EnemyMutationType.Damage: return damageName ?? string.Empty;
             case EnemyMutationType.Health: return healthName ?? string.Empty;
+            case EnemyMutationType.Armor: return armorName ?? string.Empty;
             default: return speedName ?? string.Empty;
         }
     }
@@ -238,6 +244,7 @@ public class EnemyMutationHUD : MonoBehaviour
             case EnemyMutationType.Spawn: return spawnColor;
             case EnemyMutationType.Damage: return damageColor;
             case EnemyMutationType.Health: return healthColor;
+            case EnemyMutationType.Armor: return armorColor;
             default: return speedColor;
         }
     }
@@ -259,6 +266,7 @@ public class EnemyMutationHUD : MonoBehaviour
                     .Replace("{공격력}", manager.DamageBonus.ToString("P0"))
                     .Replace("{체력}", manager.HealthBonus.ToString("P0"))
                     .Replace("{이동속도}", manager.SpeedBonus.ToString("P0"))
+                    .Replace("{방어력}", manager.ArmorBonus.ToString("0.#"))
                 : string.Empty;
         if (!showingNotification && notifications.Count == 0 && notificationText != null)
             notificationText.text = string.Empty;

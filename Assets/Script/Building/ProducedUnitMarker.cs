@@ -26,10 +26,15 @@ public class ProducedUnitMarker : MonoBehaviour
     // 밤 복귀 이동 중인지 여부입니다. 복귀 중에는 플레이어 명령을 무시합니다.
     public bool IsRecalling => recalling;
 
-    public void Initialize(ProductionBuilding producer, int population)
+    // 이 유닛을 만든 생산 레시피입니다. 선택 정보 패널이 레시피의 표시 이름을 쓰는 데 씁니다.
+    // 생산 건물의 레시피가 나중에 바뀌어도 이 유닛은 자기가 만들어진 레시피를 기억한다.
+    public ProductionRecipe Recipe { get; private set; }
+
+    public void Initialize(ProductionBuilding producer, int population, ProductionRecipe recipe = null)
     {
         source = producer;
         Population = Mathf.Max(0, population);
+        Recipe = recipe;
     }
 
     // 밤 전환 시 호출: 생산 건물로 이동한 뒤 도착하면 스스로 사라진다.

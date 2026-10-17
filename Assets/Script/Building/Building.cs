@@ -108,6 +108,7 @@ public class Building : MonoBehaviour
             return;
 
         target.maxHealth = source.maxHealth;
+        target.armor = source.armor;
     }
 
     void ApplyDeathEffects(UnitData source)

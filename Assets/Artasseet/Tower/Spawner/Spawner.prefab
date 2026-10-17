@@ -18,6 +18,7 @@ GameObject:
   - component: {fileID: 5769150369759250473}
   - component: {fileID: 1744315023930186802}
   - component: {fileID: 7207891143941755624}
+  - component: {fileID: 4289037088600437670}
   m_Layer: 0
   m_Name: Spawner
   m_TagString: Untagged
@@ -58,6 +59,7 @@ MonoBehaviour:
   entityTypeId: Spawner
   autoAssignEntityTypeId: 1
   selectionCollider: {fileID: 0}
+  showAttackRangeForUnit: 0
   portrait: {fileID: 21300000, guid: 55dc48ce13ca1fe46a50c62ea096a92a, type: 3}
   autoSetupHealth: 1
 --- !u!114 &398660555919657905
@@ -92,9 +94,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   maxHealth: 100
-  deathAnimationDuration: 1
-  deathSinkDistance: 1.5
-  deathEffectColor: {r: 0.3, g: 0.3, b: 0.3, a: 1}
   deathEffectPrefab: {fileID: 0}
 --- !u!114 &8075175956833557299
 MonoBehaviour:
@@ -108,7 +107,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cb8a6c9de3fe8b1458e4548a1aea8319, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  heightOffset: 0.05
+  heightOffset: -3.8
   viewDownOffset: 3
   barHeight: 0.5
   worldScale: 0.07
@@ -117,6 +116,8 @@ MonoBehaviour:
   alwaysShowEnemyBar: 0
   showWhenSelected: 1
   showAfterDamageDuration: 3
+  hideBehindModels: 1
+  modelStencilBit: 128
   allyFillColor: {r: 0.2, g: 0.9, b: 0.3, a: 1}
   enemyFillColor: {r: 0.95, g: 0.2, b: 0.2, a: 1}
   lowHealthColor: {r: 0.95, g: 0.55, b: 0.1, a: 1}
@@ -140,6 +141,9 @@ MonoBehaviour:
   blockCells: 1
   carveNavMesh: 0
   snapTransformOnRegister: 1
+  useCustomShape: 0
+  cellMask: 01
+  cellMaskSize: {x: 1, y: 1}
 --- !u!208 &6883588364656645474
 NavMeshObstacle:
   m_ObjectHideFlags: 0
@@ -168,9 +172,29 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 918f8f2d20d0a3b459e03e4c1eb4f4a5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  attackClips: []
-  attackHitClips: []
-  deathClips: []
+  attackSounds: []
+  attackHitSounds: []
+  deathSounds: []
+  attackLoopSound:
+    clip: {fileID: 0}
+    volume: 1
+    initialized: 1
+  attackLoopHoldTime: 0.15
+  attackLoopFadeIn: 0.05
+  attackLoopFadeOut: 0.25
+  attackLoopWithOneShots: 0
+  selectSounds: []
+  productionCompleteSounds: []
+  commandSounds: []
+  playSelectSoundOnAggro: 1
+  detectedSoundCooldown: 2
+  detectedRearmTime: 5
+  detectedRequiresVisibility: 1
+  voiceIgnoreAttenuation: 1
+  voiceCooldown: 1
+  legacyAttackClips: []
+  legacyAttackHitClips: []
+  legacyDeathClips: []
   audioSource: {fileID: 0}
   volume: 1
   attenuation: 2
@@ -182,6 +206,8 @@ MonoBehaviour:
   referenceMinOrthoSize: 12
   referenceMaxOrthoSize: 45
   pitchRange: {x: 0.95, y: 1.05}
+  attackSoundMaxOverlap: 3
+  attackSoundPriority: 64
   attackHitSoundCooldown: 0.12
 --- !u!114 &1744315023930186802
 MonoBehaviour:
@@ -215,21 +241,32 @@ MonoBehaviour:
   spawnRadius: 6
   spawnPositionAttempts: 16
   spawnPeriodically: 1
-  spawnInterval: 20
   enemiesPerSpawn: 3
   maxAliveEnemies: 500
-  allyDetectRadius: 30
-  detectUnitsOnly: 1
-  proximityEnemiesPerSpawn: 10
-  proximitySpawnInterval: 0
-  allyCheckInterval: 0.25
-  attackedSpawnDuration: 5
-  attackedEnemiesPerSpawn: 10
-  attackedSpawnInterval: 0
-  enemiesOnDeath: 10
   advanceToEnemyBuildings: 1
+  guardCapacity: 20
+  guardPrefabs: []
+  guardRadius: 18
+  enemiesOnDeath: 10
   activateFromWave: 1
   logSpawnEvents: 0
+--- !u!114 &4289037088600437670
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1578748568211256678}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a9d9a5fbab614fbf8ec2811887cbe308, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  flashColor: {r: 1.4980394, g: 0.17254904, b: 0, a: 1}
+  duration: 0.5
+  emissionPropertyNames:
+  - _EmissionColor
+  - _Emissive_Color
 --- !u!1001 &8859745303724175636
 PrefabInstance:
   m_ObjectHideFlags: 0

@@ -12,6 +12,10 @@ public enum UpgradeStat
     BuildingAttackDamage,
     BuildingMaxHealth,
     BuildingSpawnCount,
+
+    // 방어력. 기존 에셋의 enum 값이 밀리지 않도록 맨 뒤에 둔다.
+    UnitArmor,
+    BuildingArmor,
 }
 
 public static class UpgradeStatExtensions
@@ -21,6 +25,7 @@ public static class UpgradeStatExtensions
     {
         return stat == UpgradeStat.BuildingAttackDamage ||
                stat == UpgradeStat.BuildingMaxHealth ||
-               stat == UpgradeStat.BuildingSpawnCount;
+               stat == UpgradeStat.BuildingSpawnCount ||
+               stat == UpgradeStat.BuildingArmor;
     }
 }

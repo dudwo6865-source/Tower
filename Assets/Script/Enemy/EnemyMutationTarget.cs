@@ -8,8 +8,9 @@ public class EnemyMutationTarget : MonoBehaviour
     float healthMultiplier = 1f;
     float damageMultiplier = 1f;
     float speedMultiplier = 1f;
+    float appliedArmor;
 
-    public void Apply(float health, float damage, float speed)
+    public void Apply(float health, float damage, float speed, float armor = 0f)
     {
         EntityHealth targetHealth = GetComponent<EntityHealth>();
         if (targetHealth != null && !targetHealth.IsAlive)
@@ -23,9 +24,13 @@ public class EnemyMutationTarget : MonoBehaviour
         NavMeshAgent agent = GetComponent<NavMeshAgent>();
         if (agent != null)
             agent.speed *= speed / speedMultiplier;
+        // 방어력은 덧셈 보너스라 지난번에 더한 값과의 차이만 반영한다.
+        if (targetHealth != null && !Mathf.Approximately(appliedArmor, armor))
+            targetHealth.armor = Mathf.Max(0f, targetHealth.armor + armor - appliedArmor);
 
         healthMultiplier = health;
         damageMultiplier = damage;
         speedMultiplier = speed;
+        appliedArmor = armor;
     }
 }

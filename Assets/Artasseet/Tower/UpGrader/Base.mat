@@ -433,7 +433,7 @@ Material:
     - _Offset_Z: 0
     - _OutlineOverridden: 0
     - _OutlineVisible: 1
-    - _OutlineWidth: 0.1
+    - _OutlineWidth: 0.05
     - _Outline_Width: 0
     - _PPDLodThreshold: 5
     - _PPDMaxSamples: 15
@@ -531,6 +531,7 @@ Material:
     - _UVBase: 0
     - _UVDetail: 0
     - _UVEmissive: 0
+    - _UnitStencilRef: 128
     - _Unlit_Intensity: 0
     - _UseEmissiveIntensity: 0
     - _UseMaskOcclusion: 0
@@ -582,7 +583,7 @@ Material:
     - _MatCapColor: {r: 1, g: 1, b: 1, a: 1}
     - _OutlineColor: {r: 0, g: 0, b: 0, a: 1}
     - _OutlineMaskColor: {r: 0, g: 0, b: 0, a: 1}
-    - _OutlineViewOffset: {r: -5, g: -5, b: -5, a: 0}
+    - _OutlineViewOffset: {r: -1, g: -1, b: -1, a: 0}
     - _Outline_Color: {r: 0.5, g: 0.5, b: 0.5, a: 1}
     - _RimLightColor: {r: 1, g: 1, b: 1, a: 1}
     - _RimLightMaskColor: {r: 1, g: 0, b: 1, a: 1}

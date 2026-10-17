@@ -102,7 +102,8 @@ public static class EnemySpawnUtility
         float healthMultiplier = 1f,
         float damageMultiplier = 1f,
         float speedMultiplier = 1f,
-        Action<EntityHealth> onHealthConfigured = null)
+        Action<EntityHealth> onHealthConfigured = null,
+        float armorBonus = 0f)
     {
         if (prefab == null)
             return null;
@@ -136,7 +137,8 @@ public static class EnemySpawnUtility
                 healthMultiplier,
                 damageMultiplier,
                 speedMultiplier,
-                onHealthConfigured);
+                onHealthConfigured,
+                armorBonus);
         }
 
         return enemyObject;
@@ -148,7 +150,8 @@ public static class EnemySpawnUtility
         float healthMultiplier,
         float damageMultiplier,
         float speedMultiplier,
-        Action<EntityHealth> onHealthConfigured = null)
+        Action<EntityHealth> onHealthConfigured = null,
+        float armorBonus = 0f)
     {
         if (enemyObject == null)
             return;
@@ -163,6 +166,7 @@ public static class EnemySpawnUtility
         if (health != null)
         {
             health.SetMaxHealth(health.MaxHealth * healthMultiplier);
+            health.armor = Mathf.Max(0f, health.armor + armorBonus);
             onHealthConfigured?.Invoke(health);
         }
 

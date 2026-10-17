@@ -307,6 +307,12 @@ public class UpgradeManager : MonoBehaviour
             float withRelic = ApplyRelicMaxHealthBonus(entity, isBuilding, withUpgrade);
 
             health.SetUpgradeMaxHealthBonus(withRelic - baseMax);
+
+            UpgradeStat armorStat = isBuilding
+                ? UpgradeStat.BuildingArmor
+                : UpgradeStat.UnitArmor;
+
+            health.SetUpgradeArmorBonus(ApplyBonus(armorStat, health.armor) - health.armor);
         }
 
         if (!isBuilding)

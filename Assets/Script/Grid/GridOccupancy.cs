@@ -87,11 +87,13 @@ public class GridOccupancy : MonoBehaviour
     /// skipTerrainChecks는 방금 같은 크기의 건물이 서 있던 칸을 그대로 다시 쓸 때만 켭니다.
     /// 철거 직후에는 NavMesh carve 구멍이 아직 남아 있어 지형 검사가 실패하기 때문입니다.
     /// </summary>
+    /// <param name="cellMask">칸 모양(GridFootprint.ActiveMask). null이면 직사각형 전체입니다.</param>
     public bool CanOccupy(
         Vector2Int originCell,
         Vector2Int footprintCells,
         float preferredY,
-        bool skipTerrainChecks)
+        bool skipTerrainChecks,
+        bool[] cellMask = null)
     {
         if (MapGrid.Instance == null)
             return true;
@@ -101,13 +103,13 @@ public class GridOccupancy : MonoBehaviour
             if (!MapGrid.Instance.IsFootprintInRect(originCell, footprintCells))
                 return false;
         }
-        else if (!MapGrid.Instance.IsFootprintInBounds(originCell, footprintCells, preferredY) ||
-                 MapGrid.Instance.IsFootprintOnHill(originCell, footprintCells))
+        else if (!MapGrid.Instance.IsFootprintInBounds(originCell, footprintCells, preferredY, cellMask) ||
+                 MapGrid.Instance.IsFootprintOnHill(originCell, footprintCells, cellMask))
         {
             return false;
         }
 
-        foreach (Vector2Int cell in IterateFootprint(originCell, footprintCells))
+        foreach (Vector2Int cell in FootprintShape.IterateCells(originCell, footprintCells, cellMask))
         {
             if (occupiedCells.ContainsKey(cell))
                 return false;
@@ -140,11 +142,14 @@ public class GridOccupancy : MonoBehaviour
         float preferredY,
         bool skipTerrainChecks)
     {
+        // 칸 모양은 점유하는 건물(owner)이 가지고 있다.
+        bool[] cellMask = owner != null ? owner.ActiveMask : null;
+
         if (owner == null ||
-            !CanOccupy(originCell, footprintCells, preferredY, skipTerrainChecks))
+            !CanOccupy(originCell, footprintCells, preferredY, skipTerrainChecks, cellMask))
             return false;
 
-        foreach (Vector2Int cell in IterateFootprint(originCell, footprintCells))
+        foreach (Vector2Int cell in FootprintShape.IterateCells(originCell, footprintCells, cellMask))
             occupiedCells[cell] = owner;
 
         return true;
@@ -180,7 +185,8 @@ public class GridOccupancy : MonoBehaviour
         Vector2Int originCell,
         Vector2Int footprintCells,
         float preferredY,
-        bool skipTerrainChecks)
+        bool skipTerrainChecks,
+        bool[] cellMask = null)
     {
         MapGrid grid = MapGrid.Instance;
 
@@ -195,14 +201,14 @@ public class GridOccupancy : MonoBehaviour
 
         if (!skipTerrainChecks)
         {
-            if (!grid.IsFootprintInBounds(originCell, footprintCells, preferredY))
+            if (!grid.IsFootprintInBounds(originCell, footprintCells, preferredY, cellMask))
                 return $"footprint 전체가 같은 층 NavMesh 위에 있지 않습니다 (preferredY={preferredY})";
 
-            if (grid.IsFootprintOnHill(originCell, footprintCells))
+            if (grid.IsFootprintOnHill(originCell, footprintCells, cellMask))
                 return "언덕(Cliff) 칸이 포함되어 있습니다";
         }
 
-        foreach (Vector2Int cell in IterateFootprint(originCell, footprintCells))
+        foreach (Vector2Int cell in FootprintShape.IterateCells(originCell, footprintCells, cellMask))
         {
             if (!occupiedCells.TryGetValue(cell, out GridFootprint owner))
                 continue;
@@ -223,16 +229,5 @@ public class GridOccupancy : MonoBehaviour
 
         foreach (Vector2Int cell in occupiedCells.Keys)
             results.Add(cell);
-    }
-
-    static IEnumerable<Vector2Int> IterateFootprint(
-        Vector2Int originCell,
-        Vector2Int footprintCells)
-    {
-        for (int x = 0; x < footprintCells.x; x++)
-        {
-            for (int z = 0; z < footprintCells.y; z++)
-                yield return new Vector2Int(originCell.x + x, originCell.y + z);
-        }
     }
 }

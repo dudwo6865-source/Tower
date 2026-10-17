@@ -68,6 +68,8 @@ public class GridVisualizer : MonoBehaviour
     private bool hasCurrentPreview;
     private Vector2Int currentOriginCell;
     private Vector2Int currentFootprintCells = Vector2Int.one;
+    private bool[] currentFootprintMask;
+    private bool[] lastFootprintMask;
     private bool currentIsValid;
 
     // ------------------------------- Build Zone -------------------------------
@@ -196,7 +198,7 @@ public class GridVisualizer : MonoBehaviour
         // 구역(zone)은 매 프레임 LateUpdate에서 갱신되므로 캐시 무효화만으로 충분하다.
         if (hasCurrentPreview && footprintMeshRenderer != null && footprintMeshRenderer.gameObject.activeSelf)
         {
-            RebuildFootprintMesh(currentOriginCell, currentFootprintCells, currentIsValid);
+            RebuildFootprintMesh(currentOriginCell, currentFootprintCells, currentFootprintMask, currentIsValid);
 
             lastFootprintOrigin = currentOriginCell;
             lastFootprintSize = currentFootprintCells;
@@ -236,10 +238,12 @@ public class GridVisualizer : MonoBehaviour
         hasCurrentPreview = true;
         currentOriginCell = originCell;
         currentFootprintCells = state.footprintCells;
+        currentFootprintMask = state.cellMask;
         currentIsValid = state.isValid;
 
         bool layoutChanged = originCell != lastFootprintOrigin ||
-            state.footprintCells != lastFootprintSize;
+            state.footprintCells != lastFootprintSize ||
+            state.cellMask != lastFootprintMask;
         bool heightChanged = !Mathf.Approximately(preferredSampleY, lastPreferredY);
 
         if (layoutChanged || heightChanged)
@@ -247,10 +251,12 @@ public class GridVisualizer : MonoBehaviour
             RebuildFootprintMesh(
                 originCell,
                 state.footprintCells,
+                state.cellMask,
                 state.isValid);
 
             lastFootprintOrigin = originCell;
             lastFootprintSize = state.footprintCells;
+            lastFootprintMask = state.cellMask;
             lastFootprintValid = state.isValid;
             lastPreferredY = preferredSampleY;
         }
@@ -259,6 +265,7 @@ public class GridVisualizer : MonoBehaviour
             RebuildFootprintMesh(
                 originCell,
                 state.footprintCells,
+                state.cellMask,
                 state.isValid);
             lastFootprintValid = state.isValid;
         }
@@ -291,6 +298,7 @@ public class GridVisualizer : MonoBehaviour
     void RebuildFootprintMesh(
         Vector2Int originCell,
         Vector2Int footprintCells,
+        bool[] cellMask,
         bool isValid)
     {
         MapGrid grid = MapGrid.Instance;
@@ -304,7 +312,7 @@ public class GridVisualizer : MonoBehaviour
 
         bool footprintFullyOnNavMesh =
             !grid.UsesNavMesh ||
-            grid.IsFootprintOnNavMesh(originCell, footprintCells, preferredSampleY);
+            grid.IsFootprintOnNavMesh(originCell, footprintCells, preferredSampleY, cellMask);
 
         if (footprintFullyOnNavMesh)
         {
@@ -314,6 +322,9 @@ public class GridVisualizer : MonoBehaviour
             {
                 for (int z = 0; z < footprintCells.y; z++)
                 {
+                    if (!FootprintShape.Contains(cellMask, footprintCells, x, z))
+                        continue;
+
                     Vector2Int cell = new Vector2Int(originCell.x + x, originCell.y + z);
                     AddCellTile(vertices, triangles, grid, cell, worldHeight);
                 }

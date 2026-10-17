@@ -12,18 +12,23 @@ public readonly struct PlacementPreviewState
     public readonly Vector3 centerWorld;
     public readonly bool isValid;
 
+    // 칸 모양(GridFootprint.ActiveMask). null이면 직사각형 전체.
+    public readonly bool[] cellMask;
+
     public PlacementPreviewState(
         bool hasPreview,
         Vector2Int originCell,
         Vector2Int footprintCells,
         Vector3 centerWorld,
-        bool isValid)
+        bool isValid,
+        bool[] cellMask = null)
     {
         this.hasPreview = hasPreview;
         this.originCell = originCell;
         this.footprintCells = footprintCells;
         this.centerWorld = centerWorld;
         this.isValid = isValid;
+        this.cellMask = cellMask;
     }
 }
 
@@ -110,6 +115,7 @@ public class TowerPlacementController : MonoBehaviour
     public Vector2Int PreviewOriginCell => pendingOriginCell;
 
     public Vector2Int PendingFootprintCells => pendingFootprintCells;
+    public bool[] PendingFootprintMask => pendingFootprintMask;
 
     public bool PreviewPlacementValid =>
         pendingBuildData != null &&
@@ -132,6 +138,7 @@ public class TowerPlacementController : MonoBehaviour
 
     private IBuildablePlacementData pendingBuildData;
     private Vector2Int pendingFootprintCells = Vector2Int.one;
+    private bool[] pendingFootprintMask;
     private Vector2Int pendingOriginCell;
     private Vector2Int lastNotifiedOriginCell = new Vector2Int(int.MinValue, int.MinValue);
     private Vector3 lastNotifiedCenterWorld = new Vector3(float.NaN, float.NaN, float.NaN);
@@ -228,11 +235,13 @@ public class TowerPlacementController : MonoBehaviour
 
         pendingBuildData = data;
         pendingFootprintCells = data.GetFootprintCells();
+        pendingFootprintMask = GridFootprint.ResolveFootprintMask(data.Prefab);
 
         if (!CreateGhost(data.Prefab))
         {
             pendingBuildData = null;
             pendingFootprintCells = Vector2Int.one;
+            pendingFootprintMask = null;
             return false;
         }
 
@@ -247,6 +256,7 @@ public class TowerPlacementController : MonoBehaviour
         NotifyPreviewEnded();
         pendingBuildData = null;
         pendingFootprintCells = Vector2Int.one;
+        pendingFootprintMask = null;
         DestroyGhost();
     }
 
@@ -255,6 +265,7 @@ public class TowerPlacementController : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             CancelPlacement();
+            UISoundManager.PlayCommandCancel();
             return;
         }
 
@@ -265,6 +276,7 @@ public class TowerPlacementController : MonoBehaviour
         if (Input.GetMouseButtonDown(1))
         {
             CancelPlacement();
+            UISoundManager.PlayCommandCancel();
             return;
         }
 
@@ -505,7 +517,8 @@ public class TowerPlacementController : MonoBehaviour
                 pendingOriginCell,
                 pendingFootprintCells,
                 centerWorld,
-                isValid));
+                isValid,
+                pendingFootprintMask));
     }
 
     bool TryGetSnappedPlacement(
@@ -529,7 +542,8 @@ public class TowerPlacementController : MonoBehaviour
             rawPoint,
             pendingFootprintCells,
             out originCell,
-            out centerWorld);
+            out centerWorld,
+            pendingFootprintMask);
     }
 
     bool TryGetRawPlacementPoint(out Vector3 placementPoint)
@@ -674,12 +688,15 @@ public class TowerPlacementController : MonoBehaviour
         Vector2Int footprint = data == pendingBuildData
             ? pendingFootprintCells
             : data.GetFootprintCells();
+        bool[] footprintMask = data == pendingBuildData
+            ? pendingFootprintMask
+            : GridFootprint.ResolveFootprintMask(data.Prefab);
 
         int ownerId = data.OwnerId > 0 ? data.OwnerId : localPlayerOwnerId;
 
         if (GridOccupancy.Instance != null &&
             MapGrid.Instance != null &&
-            !GridOccupancy.Instance.CanOccupy(originCell, footprint, preferredY))
+            !GridOccupancy.Instance.CanOccupy(originCell, footprint, preferredY, false, footprintMask))
         {
             return false;
         }

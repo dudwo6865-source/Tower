@@ -17,7 +17,7 @@ public class UnitSoundEditor : Editor
         { "deathSounds", "사망 사운드" },
         { "selectSounds", "선택 사운드" },
         { "productionCompleteSounds", "생산 완료 사운드" },
-        { "attackOrderSounds", "공격 명령 사운드" },
+        { "commandSounds", "명령 사운드" },
     };
 
     public override void OnInspectorGUI()

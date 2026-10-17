@@ -119,6 +119,9 @@ public class ProductionBuilding : MonoBehaviour
     Coroutine productionRoutine;
     float cycleElapsed;
     float cycleDuration;
+
+    // 설치 직후 첫 생산 대기(레시피의 initialSpawnDelay) 중인지. 이 동안은 생산 진행도를 0으로 보여준다.
+    bool inInitialDelay;
     readonly List<ProducedUnitMarker> producedUnits = new List<ProducedUnitMarker>();
 
     public int MaxPopulation => EffectiveMaxPopulation();
@@ -188,12 +191,16 @@ public class ProductionBuilding : MonoBehaviour
 
     public int OwnerId => selectableEntity != null ? selectableEntity.ownerId : 1;
 
+    /// <summary>설치 직후 첫 생산 대기 중이면 true입니다. 남은 시간은 ProductionRemainingTime입니다.</summary>
+    public bool IsInInitialDelay => inInitialDelay && productionRoutine != null;
+
     // 일시정지·한도 도달 중에도 쌓아 둔 진행도를 그대로 보여준다.
+    // 첫 생산 대기는 유닛을 만드는 과정이 아니라서 슬라이더를 채우지 않는다.
     public float ProductionProgress
     {
         get
         {
-            if (productionRoutine == null || cycleDuration <= 0f)
+            if (productionRoutine == null || cycleDuration <= 0f || inInitialDelay)
                 return 0f;
 
             return Mathf.Clamp01(cycleElapsed / cycleDuration);
@@ -453,6 +460,7 @@ public class ProductionBuilding : MonoBehaviour
         waitingForWatt = false;
         recipeChangePending = false;
         pendingStartProgress = 0f;
+        inInitialDelay = false;
     }
 
     // WattManager는 로컬 플레이어의 자원이므로, 로컬 플레이어 소속 건물만 Watt를 소모한다.
@@ -486,7 +494,9 @@ public class ProductionBuilding : MonoBehaviour
         if (recipe != null && recipe.initialSpawnDelay > 0f)
         {
             // 첫 생산 대기는 건물 단위라 도중에 레시피를 바꿔도 끊지 않는다.
+            inInitialDelay = true;
             yield return RunProductionCycle(recipe.initialSpawnDelay, 0f, false);
+            inInitialDelay = false;
 
             if (buildingHealth != null && !buildingHealth.IsAlive)
                 yield break;
@@ -698,7 +708,7 @@ public class ProductionBuilding : MonoBehaviour
         if (marker == null)
             marker = unitObject.AddComponent<ProducedUnitMarker>();
 
-        marker.Initialize(this, CurrentRecipePopulation);
+        marker.Initialize(this, CurrentRecipePopulation, recipe);
         producedUnits.Add(marker);
         AliveCount++;
         UsedPopulation += marker.Population;

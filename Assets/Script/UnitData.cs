@@ -30,6 +30,11 @@ public class UnitData : ScriptableObject
     [Tooltip("최대 체력입니다.")]
     public float maxHealth = 100f;
 
+    [Label("방어력")]
+    [Tooltip("받는 피해를 한 번 맞을 때마다 이만큼 줄입니다(고정 감소). 최소 피해는 EntityHealth 설정을 따릅니다.")]
+    [Min(0f)]
+    public float armor;
+
     [Header("공격 (Attacker)")]
     [Label("공격 가능")]
     [Tooltip("공격 컴포넌트를 사용합니다. 건물 등 공격하지 않는 엔티티는 꺼두세요.")]

@@ -202,7 +202,12 @@ public class StageBuildingSpawnPoint : MonoBehaviour
             position = snapped;
 
             if (GridOccupancy.Instance != null)
-                terrainValid = GridOccupancy.Instance.CanOccupy(originCell, cells, position.y);
+                terrainValid = GridOccupancy.Instance.CanOccupy(
+                    originCell,
+                    cells,
+                    position.y,
+                    false,
+                    GridFootprint.ResolveFootprintMask(buildingPrefab));
         }
 
         GameObject building = Instantiate(buildingPrefab, position, rotation);
@@ -226,10 +231,22 @@ public class StageBuildingSpawnPoint : MonoBehaviour
             if (footprint != null && MapGrid.Instance != null &&
                 !footprint.RegisterAtOriginCell(originCell, terrainValid))
             {
+                string reason = GridOccupancy.Instance != null
+                    ? GridOccupancy.Instance.DescribeBlockReason(
+                        originCell,
+                        footprint.footprintCells,
+                        position.y,
+                        terrainValid,
+                        footprint.ActiveMask)
+                    : "GridOccupancy.Instance가 없습니다";
+
                 Debug.LogWarning(
-                    $"StageBuildingSpawnPoint: '{buildingPrefab.name}'의 칸 등록에 실패했습니다. " +
-                    "마커 위치가 NavMesh 위인지, 다른 건물과 겹치지 않는지 확인하세요.",
+                    $"StageBuildingSpawnPoint: '{buildingPrefab.name}'의 칸 등록에 실패했습니다. 이유: {reason} " +
+                    $"(시작 칸 {originCell}, 크기 {footprint.footprintCells}, 생성 전 지형 검사 {(terrainValid ? "통과" : "실패")})",
                     this);
+
+                // 칸 등록은 실패했어도 건물은 서 있으므로 NavMesh 구멍은 뚫는다.
+                footprint.RestoreNavMeshObstacle();
             }
         }
 

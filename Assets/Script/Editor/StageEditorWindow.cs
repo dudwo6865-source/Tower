@@ -259,16 +259,19 @@ public partial class StageEditorWindow : EditorWindow
         EditorGUILayout.LabelField("스포너 파괴 돌연변이", EditorStyles.boldLabel);
         SerializedProperty settings = serializedObject.FindProperty("mutations");
         string[] fields = { "enabled", "enemyOwnerId", "spawnChance", "spawnIncrease",
-            "damageIncrease", "healthIncrease", "speedIncrease", "damageWeight", "healthWeight", "speedWeight" };
+            "damageIncrease", "healthIncrease", "speedIncrease", "armorIncrease",
+            "damageWeight", "healthWeight", "speedWeight", "armorWeight" };
         string[] labels = { "돌연변이 사용", "적 소속 ID", "스폰 수 계열 확률", "스폰 수 증가율",
-            "공격력 증가율", "체력 증가율", "이동 속도 증가율", "공격력 추첨 가중치", "체력 추첨 가중치", "이동 속도 추첨 가중치" };
+            "공격력 증가율", "체력 증가율", "이동 속도 증가율", "방어력 증가량",
+            "공격력 추첨 가중치", "체력 추첨 가중치", "이동 속도 추첨 가중치", "방어력 추첨 가중치" };
         for (int i = 0; i < fields.Length; i++)
         {
             SerializedProperty property = settings.FindPropertyRelative(fields[i]);
             EditorGUILayout.PropertyField(property, new GUIContent(labels[i], property.tooltip));
         }
-        EditorGUILayout.HelpBox("0.2는 +20%입니다. 능력치는 한 번에 하나를 추첨하며 기존 적도 강화합니다. " +
-            "스폰 수는 밤 공격대에만 적용하고, 중복 효과는 합산합니다. 방어력과 판 밖 보상은 아직 포함하지 않습니다.", MessageType.Info);
+        EditorGUILayout.HelpBox("0.2는 +20%입니다. 방어력 증가량만 비율이 아니라 더하는 수치입니다(1 = 방어력 +1). " +
+            "능력치는 한 번에 하나를 추첨하며 기존 적도 강화합니다. 스폰 수는 밤 공격대에만 적용하고, 중복 효과는 합산합니다. " +
+            "방어력 추첨 가중치가 0이면 방어력 돌연변이는 나오지 않습니다. 판 밖 보상은 아직 포함하지 않습니다.", MessageType.Info);
         EditorGUILayout.EndVertical();
     }
 
@@ -604,6 +607,9 @@ public partial class StageEditorWindow : EditorWindow
 
     const int WavePreviewCount = 8;
 
+    // 웨이브 = 하루(낮+밤)이고 공격대는 그날 밤에 출격하므로, 표기는 '웨이브 N' 대신 'N일차'로 쓴다.
+    static string DayLabel(int wave) => $"{wave}일차";
+
     void DrawWavePreview()
     {
         WavePlan plan = selected.wavePlan;
@@ -618,7 +624,7 @@ public partial class StageEditorWindow : EditorWindow
 
         EditorGUILayout.Space(4);
         EditorGUILayout.LabelField(
-            $"미리보기 (웨이브 1~{WavePreviewCount})",
+            $"미리보기 (1~{WavePreviewCount}일차)",
             EditorStyles.boldLabel);
 
         for (int wave = 1; wave <= WavePreviewCount; wave++)
@@ -627,7 +633,7 @@ public partial class StageEditorWindow : EditorWindow
             bool extrapolated = wave > plan.AuthoredWaveCount;
 
             EditorGUILayout.LabelField(
-                $"웨이브 {wave}{(extrapolated ? " (증가율)" : "")}",
+                $"{DayLabel(wave)}{(extrapolated ? " (증가율)" : "")}",
                 tuning.ToShortSummary(),
                 EditorStyles.miniLabel);
         }
@@ -639,7 +645,7 @@ public partial class StageEditorWindow : EditorWindow
                 selected.nightBonus).Sanitized();
 
             EditorGUILayout.LabelField(
-                "웨이브 1 (밤)",
+                $"{DayLabel(1)} (밤 보정)",
                 night.ToShortSummary(),
                 EditorStyles.miniLabel);
         }
@@ -647,7 +653,7 @@ public partial class StageEditorWindow : EditorWindow
         if (IsGrowthFlat(plan.growthPerWaveAfterLast))
         {
             EditorGUILayout.HelpBox(
-                $"증가율이 모두 1이라 웨이브 {plan.AuthoredWaveCount} 이후에는 난이도가 더 오르지 않습니다.",
+                $"증가율이 모두 1이라 {plan.AuthoredWaveCount}일차 이후에는 난이도가 더 오르지 않습니다.",
                 MessageType.Info);
         }
     }
@@ -662,7 +668,8 @@ public partial class StageEditorWindow : EditorWindow
                growth.maxAliveEnemies == 0 &&
                Mathf.Approximately(growth.healthMultiplier, 1f) &&
                Mathf.Approximately(growth.damageMultiplier, 1f) &&
-               Mathf.Approximately(growth.speedMultiplier, 1f);
+               Mathf.Approximately(growth.speedMultiplier, 1f) &&
+               Mathf.Approximately(growth.armorBonus, 0f);
     }
 
     // ── 밤 공격대 총량 ───────────────────────────────────────
@@ -806,7 +813,7 @@ public partial class StageEditorWindow : EditorWindow
                 second += EnemySpawner.GetBatchSize(amount, 1);
                 third += EnemySpawner.GetBatchSize(amount, 2);
             }
-            EditorGUILayout.LabelField($"웨이브 {wave}", $"밤 총 {total}마리 = {first} / {second} / {third}");
+            EditorGUILayout.LabelField($"{DayLabel(wave)} 밤", $"밤 총 {total}마리 = {first} / {second} / {third}");
         }
         EditorGUILayout.HelpBox($"밤 시작 / {selected.nightDuration / 3f:0.#}초 / {selected.nightDuration * 2f / 3f:0.#}초에 출격합니다. " +
             "낮에는 공격대를 생성하지 않습니다. 수비대 보충·파괴 방출·돌연변이 증가분은 위 합계에서 제외합니다.", MessageType.Info);

@@ -189,6 +189,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   maxHealth: 100
+  armor: 0
+  minDamageRatio: 0.1
+  minDamage: 0.5
   deathEffectPrefab: {fileID: 304414178702807373, guid: 6312007dcbcc49e4a884da4a4c23ceab, type: 3}
 --- !u!114 &6042145033231463602
 MonoBehaviour:
@@ -236,6 +239,9 @@ MonoBehaviour:
   blockCells: 1
   carveNavMesh: 1
   snapTransformOnRegister: 0
+  useCustomShape: 0
+  cellMask: 01010101
+  cellMaskSize: {x: 2, y: 2}
 --- !u!208 &8328089673782832323
 NavMeshObstacle:
   m_ObjectHideFlags: 0
@@ -267,6 +273,23 @@ MonoBehaviour:
   attackSounds: []
   attackHitSounds: []
   deathSounds: []
+  attackLoopSound:
+    clip: {fileID: 0}
+    volume: 1
+    initialized: 1
+  attackLoopHoldTime: 0.15
+  attackLoopFadeIn: 0.05
+  attackLoopFadeOut: 0.25
+  attackLoopWithOneShots: 0
+  selectSounds: []
+  productionCompleteSounds: []
+  commandSounds: []
+  playSelectSoundOnAggro: 1
+  detectedSoundCooldown: 2
+  detectedRearmTime: 5
+  detectedRequiresVisibility: 1
+  voiceIgnoreAttenuation: 1
+  voiceCooldown: 1
   legacyAttackClips: []
   legacyAttackHitClips: []
   legacyDeathClips: []
@@ -281,6 +304,8 @@ MonoBehaviour:
   referenceMinOrthoSize: 12
   referenceMaxOrthoSize: 45
   pitchRange: {x: 0.95, y: 1.05}
+  attackSoundMaxOverlap: 3
+  attackSoundPriority: 64
   attackHitSoundCooldown: 0.12
 --- !u!65 &5139896413233204508
 BoxCollider:
@@ -376,7 +401,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cb8a6c9de3fe8b1458e4548a1aea8319, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  heightOffset: 0.2
+  heightOffset: -3.8
   viewDownOffset: 3
   barHeight: 0.5
   worldScale: 0.07

@@ -116,22 +116,33 @@ public partial class UnitCombatAI : MobileCombatAI
         }
 
         if (manualFocusTarget || damageFocusTarget)
-        {
-            if (!HasValidTarget())
-            {
-                manualFocusTarget = false;
-                ClearDamageFocusTarget();
-            }
-        }
+            MaintainFocusTarget();
         else
-        {
             TickRetarget();
-        }
 
         if (!HasValidTarget())
             return;
 
         UpdateCombat();
+    }
+
+    // 지정 공격·피격 반격 표적을 유지한다. 표적이 죽으면 지정을 풀고,
+    // 대포 최소 사거리 안으로 파고들어 쏠 수 없게 되면 지정을 풀고 곧바로 다른 표적을 찾는다.
+    void MaintainFocusTarget()
+    {
+        if (!HasValidTarget())
+        {
+            manualFocusTarget = false;
+            ClearDamageFocusTarget();
+            return;
+        }
+
+        if (!IsCurrentTargetUnengageable())
+            return;
+
+        UnitCommandDebugLog.Log(this, $"지정 표적이 최소 사거리 안으로 들어와 재탐색 ({DescribeTarget(currentTarget)})");
+        manualFocusTarget = false;
+        TickRetarget();
     }
 
     bool UpdateManualMove()
@@ -373,13 +384,10 @@ public partial class UnitCombatAI : MobileCombatAI
 
     void UpdatePatrol()
     {
-        if (!manualFocusTarget && !damageFocusTarget)
+        if (manualFocusTarget || damageFocusTarget)
+            MaintainFocusTarget();
+        else
             TickRetarget();
-        else if (!HasValidTarget())
-        {
-            manualFocusTarget = false;
-            ClearDamageFocusTarget();
-        }
 
         if (HasValidTarget())
         {
@@ -416,6 +424,22 @@ public partial class UnitCombatAI : MobileCombatAI
 
         lastDestination = goal;
         hasDestination = GridMovement.TrySetAgentDestination(agent, goal, immediate: true);
+    }
+
+    // 플레이어 유닛이 어그로 범위에서 적을 발견하면 선택 사운드로 알린다.
+    // 쿨타임은 선택·명령 사운드와 함께 쓰므로 여러 유닛이 동시에 발견해도 한 번만 난다.
+    protected override void OnAggroAcquired(SelectableEntity target)
+    {
+        if (selfEntity == null || UnitSelectionManager.Instance == null)
+            return;
+
+        if (selfEntity.ownerId != UnitSelectionManager.Instance.localPlayerOwnerId)
+            return;
+
+        UnitSound sound = GetComponent<UnitSound>();
+
+        if (sound != null && sound.playSelectSoundOnAggro)
+            sound.PlayVoice(UnitSoundVoice.Select);
     }
 
     protected override bool CanJoinSharedAggro()
@@ -504,7 +528,7 @@ public partial class UnitCombatAI : MobileCombatAI
 
     public void AttackTarget(SelectableEntity target)
     {
-        if (target == null)
+        if (target == null || target == selfEntity)
             return;
 
         CancelYieldMovement();

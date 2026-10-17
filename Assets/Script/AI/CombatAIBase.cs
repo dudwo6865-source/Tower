@@ -114,7 +114,7 @@ public abstract class CombatAIBase : MonoBehaviour
 
     public virtual void CommandAttackTarget(SelectableEntity target)
     {
-        if (target == null)
+        if (target == null || target == selfEntity)
             return;
 
         EntityHealth health = target.GetComponent<EntityHealth>();
@@ -169,7 +169,7 @@ public abstract class CombatAIBase : MonoBehaviour
             targetDestroyed ||
             (currentTarget != null &&
              (currentTargetHealth == null || !currentTargetHealth.IsAlive ||
-              (attacker != null && !attacker.CanEngage(currentTarget))));
+              IsCurrentTargetUnengageable()));
 
         if (damageFocusTarget)
         {
@@ -195,7 +195,15 @@ public abstract class CombatAIBase : MonoBehaviour
         if (newTarget != null)
         {
             if (newTarget != currentTarget)
+            {
+                // 교전 중 표적이 죽어 다음 표적으로 넘어가는 경우는 제외하고,
+                // 아무 표적도 없던 상태에서 어그로 범위에 적이 들어온 순간만 알린다.
+                bool wasIdle = currentTarget == null && !targetLost;
                 SetTarget(newTarget);
+
+                if (wasIdle)
+                    OnAggroAcquired(newTarget);
+            }
         }
         else if (targetLost)
         {
@@ -251,6 +259,17 @@ public abstract class CombatAIBase : MonoBehaviour
     }
 
     protected virtual void OnTargetChanged() { }
+
+    /// <summary>표적이 없던 상태에서 어그로 범위 탐색으로 적을 처음 잡았을 때 호출됩니다.</summary>
+    protected virtual void OnAggroAcquired(SelectableEntity target) { }
+
+    // 현재 표적이 살아 있어도 공격할 수 없는 상태인지(예: 대포 최소 사거리 안으로 파고듦).
+    protected bool IsCurrentTargetUnengageable()
+    {
+        return currentTarget != null &&
+               attacker != null &&
+               !attacker.CanEngage(currentTarget);
+    }
 
     protected bool HasValidTarget()
     {

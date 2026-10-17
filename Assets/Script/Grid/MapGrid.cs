@@ -390,16 +390,18 @@ public class MapGrid : MonoBehaviour
         return IsFootprintInBounds(originCell, footprintCells, float.NaN);
     }
 
+    /// <param name="cellMask">칸 모양(GridFootprint.ActiveMask). null이면 직사각형 전체입니다.</param>
     public bool IsFootprintInBounds(
         Vector2Int originCell,
         Vector2Int footprintCells,
-        float preferredY)
+        float preferredY,
+        bool[] cellMask = null)
     {
         if (!IsFootprintInRect(originCell, footprintCells))
             return false;
 
         if (UsesNavMesh && requireNavMeshForCells)
-            return IsFootprintOnNavMesh(originCell, footprintCells, preferredY);
+            return IsFootprintOnNavMesh(originCell, footprintCells, preferredY, cellMask);
 
         return true;
     }
@@ -415,12 +417,18 @@ public class MapGrid : MonoBehaviour
         return painter.HasHill(painter.WorldToCell(GetCellCenterWorld(cell)));
     }
 
-    public bool IsFootprintOnHill(Vector2Int originCell, Vector2Int footprintCells)
+    public bool IsFootprintOnHill(
+        Vector2Int originCell,
+        Vector2Int footprintCells,
+        bool[] cellMask = null)
     {
         for (int x = 0; x < footprintCells.x; x++)
         {
             for (int z = 0; z < footprintCells.y; z++)
             {
+                if (!FootprintShape.Contains(cellMask, footprintCells, x, z))
+                    continue;
+
                 if (IsCellOnHill(new Vector2Int(originCell.x + x, originCell.y + z)))
                     return true;
             }
@@ -666,20 +674,23 @@ public class MapGrid : MonoBehaviour
     public bool IsFootprintOnNavMesh(
         Vector2Int originCell,
         Vector2Int footprintCells,
-        float preferredY)
+        float preferredY,
+        bool[] cellMask = null)
     {
         return TryGetSharedFootprintFloorHeight(
             originCell,
             footprintCells,
             out _,
-            preferredY);
+            preferredY,
+            cellMask);
     }
 
     public bool TryGetSharedFootprintFloorHeight(
         Vector2Int originCell,
         Vector2Int footprintCells,
         out float floorHeight,
-        float preferredY = float.NaN)
+        float preferredY = float.NaN,
+        bool[] cellMask = null)
     {
         floorHeight = 0f;
 
@@ -694,8 +705,11 @@ public class MapGrid : MonoBehaviour
 
         // 후보 높이는 원점 칸 기준으로만 뽑고(기존과 동일한 기준), 각 칸이 그
         // 높이에서 실제로 덮여 있는지는 칸별 캐시에서 찾는다 - NavMesh를 다시
-        // 샘플링하지 않는다.
-        float[] candidates = GetNavFloorCache().Get(originCell).Raw;
+        // 샘플링하지 않는다. 모양을 지정한 건물은 원점 칸을 안 쓸 수 있어 첫 번째로 쓰는 칸을 기준으로 한다.
+        if (!FootprintShape.TryGetFirstCell(cellMask, footprintCells, out Vector2Int firstCell))
+            return false;
+
+        float[] candidates = GetNavFloorCache().Get(originCell + firstCell).Raw;
 
         if (candidates.Length == 0)
             return false;
@@ -723,6 +737,9 @@ public class MapGrid : MonoBehaviour
             {
                 for (int z = 0; z < footprintCells.y; z++)
                 {
+                    if (!FootprintShape.Contains(cellMask, footprintCells, x, z))
+                        continue;
+
                     Vector2Int cell = new Vector2Int(
                         originCell.x + x,
                         originCell.y + z);
@@ -782,7 +799,8 @@ public class MapGrid : MonoBehaviour
         Vector3 worldHint,
         Vector2Int footprintCells,
         out Vector2Int originCell,
-        out Vector3 centerWorld)
+        out Vector3 centerWorld,
+        bool[] cellMask = null)
     {
         originCell = default;
         centerWorld = worldHint;
@@ -795,14 +813,15 @@ public class MapGrid : MonoBehaviour
 
         originCell = GetFootprintOriginFromCenterWorld(worldHint, footprintCells);
 
-        if ((!IsFootprintInBounds(originCell, footprintCells, worldHint.y) ||
-             IsFootprintOnHill(originCell, footprintCells)) &&
+        if ((!IsFootprintInBounds(originCell, footprintCells, worldHint.y, cellMask) ||
+             IsFootprintOnHill(originCell, footprintCells, cellMask)) &&
             UsesNavMesh &&
             requireNavMeshForCells &&
             TryFindNearestValidFootprint(
                 originCell,
                 footprintCells,
                 worldHint.y,
+                cellMask,
                 out Vector2Int fallbackOrigin))
         {
             originCell = fallbackOrigin;
@@ -818,7 +837,8 @@ public class MapGrid : MonoBehaviour
                 originCell,
                 footprintCells,
                 out float floorHeight,
-                worldHint.y))
+                worldHint.y,
+                cellMask))
         {
             centerWorld.y = floorHeight;
         }
@@ -972,6 +992,7 @@ public class MapGrid : MonoBehaviour
         Vector2Int originCell,
         Vector2Int footprintCells,
         float preferredY,
+        bool[] cellMask,
         out Vector2Int validOrigin)
     {
         validOrigin = originCell;
@@ -991,8 +1012,8 @@ public class MapGrid : MonoBehaviour
                         originCell.x + x,
                         originCell.y + z);
 
-                    if (!IsFootprintInBounds(candidate, footprintCells, preferredY) ||
-                        IsFootprintOnHill(candidate, footprintCells))
+                    if (!IsFootprintInBounds(candidate, footprintCells, preferredY, cellMask) ||
+                        IsFootprintOnHill(candidate, footprintCells, cellMask))
                         continue;
 
                     validOrigin = candidate;

@@ -224,7 +224,8 @@ public class EnemySpawner : MonoBehaviour
             if (!guard && !deathBurst && (cycle == null || !cycle.IsNight || cycle.CycleCount != scheduledCycle)) return;
             Vector3 position = EnemySpawnUtility.GetRandomPositionInRadius(center, radius, false, attempts);
             GameObject enemy = EnemySpawnUtility.SpawnEnemy(prefab, position, prefab.transform.rotation, owner,
-                spawnTuning.healthMultiplier, spawnTuning.damageMultiplier, spawnTuning.speedMultiplier);
+                spawnTuning.healthMultiplier, spawnTuning.damageMultiplier, spawnTuning.speedMultiplier,
+                armorBonus: spawnTuning.armorBonus);
             if (enemy == null) return;
             EntityHealth unitHealth = enemy.GetComponent<EntityHealth>();
             if (!deathBurst && unitHealth != null) (guard ? guards : attackers).Add(unitHealth);

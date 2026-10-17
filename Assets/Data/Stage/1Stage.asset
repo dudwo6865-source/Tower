@@ -18,7 +18,7 @@ MonoBehaviour:
   mapRootPrefab: {fileID: 9130407086999981450, guid: 3958da6a75ee5ab438ef5e7f69adbe66, type: 3}
   overrideEconomy: 1
   maxWatt: 500
-  startingWatt: 150
+  startingWatt: 100
   incomePerSecond: 5
   overrideDayNight: 1
   startPhase: 0
@@ -33,39 +33,20 @@ MonoBehaviour:
   wavePlan:
     waves:
     - spawnCountMultiplier: 1
-      spawnCountBonus: 10
-      spawnIntervalMultiplier: 1
-      maxAliveEnemies: 0
-      healthMultiplier: 1
-      damageMultiplier: 1
-      speedMultiplier: 1
-      enemyComposition:
-        entries:
-        - prefab: {fileID: 2361311785900166410, guid: fc3ef11110c821c4e94b35b9f97708dd, type: 3}
-          count: 1
-        - prefab: {fileID: 4389994320296523517, guid: 8924176a55da7874abdcdb12dbb1e645, type: 3}
-          count: 3
-        - prefab: {fileID: 4389994320296523517, guid: 8b37dda2a95a2fc4b8ea8d0bb2600499, type: 3}
-          count: 10
-    - spawnCountMultiplier: 1
-      spawnCountBonus: 10
-      spawnIntervalMultiplier: 2
-      maxAliveEnemies: 0
-      healthMultiplier: 1
-      damageMultiplier: 1
-      speedMultiplier: 1
-      enemyComposition:
-        entries:
-        - prefab: {fileID: 2361311785900166410, guid: fc3ef11110c821c4e94b35b9f97708dd, type: 3}
-          count: 1
-        - prefab: {fileID: 4389994320296523517, guid: 8924176a55da7874abdcdb12dbb1e645, type: 3}
-          count: 3
-        - prefab: {fileID: 4389994320296523517, guid: 8b37dda2a95a2fc4b8ea8d0bb2600499, type: 3}
-          count: 10
-    growthPerWaveAfterLast:
-      spawnCountMultiplier: 0
       spawnCountBonus: 0
-      spawnIntervalMultiplier: 1
+      maxAliveEnemies: 0
+      healthMultiplier: 1
+      damageMultiplier: 1
+      speedMultiplier: 1
+      enemyComposition:
+        entries:
+        - prefab: {fileID: 4389994320296523517, guid: 8924176a55da7874abdcdb12dbb1e645, type: 3}
+          count: 1
+        - prefab: {fileID: 4389994320296523517, guid: 8b37dda2a95a2fc4b8ea8d0bb2600499, type: 3}
+          count: 5
+    growthPerWaveAfterLast:
+      spawnCountMultiplier: 1
+      spawnCountBonus: 3
       maxAliveEnemies: 0
       healthMultiplier: 1.1
       damageMultiplier: 1
@@ -76,13 +57,23 @@ MonoBehaviour:
   nightBonus:
     spawnCountMultiplier: 1
     spawnCountBonus: 2
-    spawnIntervalMultiplier: 1
     maxAliveEnemies: 0
     healthMultiplier: 1
     damageMultiplier: 1.2
     speedMultiplier: 1.2
     enemyComposition:
       entries: []
+  mutations:
+    enabled: 1
+    enemyOwnerId: 2
+    spawnChance: 0.5
+    spawnIncrease: 0.2
+    damageIncrease: 0.2
+    healthIncrease: 0.2
+    speedIncrease: 0.1
+    damageWeight: 1
+    healthWeight: 1
+    speedWeight: 1
   overrideInitialEnemies: 1
   initialEnemies:
   - prefab: {fileID: 4389994320296523517, guid: 8b37dda2a95a2fc4b8ea8d0bb2600499, type: 3}

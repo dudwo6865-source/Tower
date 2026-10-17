@@ -69,7 +69,7 @@ Transform:
   m_GameObject: {fileID: 6555694844794212385}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 0.05, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -148,7 +148,7 @@ MonoBehaviour:
   projectileColor: {r: 1, g: 0.85, b: 0.3, a: 1}
   hitColor: {r: 1, g: 0.5, b: 0.2, a: 1}
   muzzleFlashPrefab: {fileID: 304414178702807373, guid: b9a62cef32ff6da49b88cd5572caba55, type: 3}
-  hitEffectPrefab: {fileID: 1598268965855006841, guid: 1817cfabe570b924c88af259660671a3, type: 3}
+  hitEffectPrefab: {fileID: 6820024759759233777, guid: 5f05e93242cefe8439e99722791f218b, type: 3}
   projectilePrefab: {fileID: 6820024759759233777, guid: e2b219697a92e454ebed88326a60c70b, type: 3}
   trailEffectPrefab: {fileID: 0}
 --- !u!114 &4777400844016902829
@@ -185,6 +185,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   maxHealth: 150
+  armor: 0
+  minDamageRatio: 0.1
+  minDamage: 0.5
   deathEffectPrefab: {fileID: 304414178702807373, guid: 45d6ec100fd5e4242a690c9cb7b4bbe5, type: 3}
 --- !u!114 &7041062809129366976
 MonoBehaviour:
@@ -218,6 +221,9 @@ MonoBehaviour:
   blockCells: 1
   carveNavMesh: 1
   snapTransformOnRegister: 1
+  useCustomShape: 0
+  cellMask: 01
+  cellMaskSize: {x: 1, y: 1}
 --- !u!114 &3430085949907029113
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -231,14 +237,37 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   attackSounds:
-  - clip: {fileID: 8300000, guid: da1f74d0e10db174b8b360f280b07683, type: 3}
-    volume: 1
+  - clip: {fileID: 8300000, guid: a4244599b83fe04489303cb6aeb63678, type: 3}
+    volume: 0.7
     initialized: 1
-  attackHitSounds: []
+  - clip: {fileID: 8300000, guid: c8e8828f5f7533743bba75672bad0556, type: 3}
+    volume: 0.8
+    initialized: 1
+  attackHitSounds:
+  - clip: {fileID: 8300000, guid: bdd1c65a05cdfb345b7d18b39ee58629, type: 3}
+    volume: 0.68
+    initialized: 1
   deathSounds:
   - clip: {fileID: 8300000, guid: 6a01f91b3a0304547b8fe8eb3ae0820b, type: 3}
     volume: 1
     initialized: 1
+  attackLoopSound:
+    clip: {fileID: 8300000, guid: f56639c951630b94e9c150c9beb6ce6f, type: 3}
+    volume: 0.6
+    initialized: 1
+  attackLoopHoldTime: 0.15
+  attackLoopFadeIn: 0.05
+  attackLoopFadeOut: 0.25
+  attackLoopWithOneShots: 0
+  selectSounds: []
+  productionCompleteSounds: []
+  commandSounds: []
+  playSelectSoundOnAggro: 1
+  detectedSoundCooldown: 2
+  detectedRearmTime: 5
+  detectedRequiresVisibility: 1
+  voiceIgnoreAttenuation: 1
+  voiceCooldown: 1
   legacyAttackClips: []
   legacyAttackHitClips: []
   legacyDeathClips: []
@@ -253,6 +282,8 @@ MonoBehaviour:
   referenceMinOrthoSize: 12
   referenceMaxOrthoSize: 45
   pitchRange: {x: 0.95, y: 1.05}
+  attackSoundMaxOverlap: 3
+  attackSoundPriority: 64
   attackHitSoundCooldown: 0.12
 --- !u!114 &905646026119262764
 MonoBehaviour:

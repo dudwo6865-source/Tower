@@ -115,6 +115,18 @@ MonoBehaviour:
   - clip: {fileID: 8300000, guid: 5614d395ee01797478b371e9fbb96b21, type: 3}
     volume: 2
     initialized: 1
+  selectSounds:
+  - clip: {fileID: 8300000, guid: b0ebb272c3fcbfe49a500f3bc9bdba1e, type: 3}
+    volume: 1
+    initialized: 1
+  productionCompleteSounds: []
+  commandSounds: []
+  playSelectSoundOnAggro: 1
+  detectedSoundCooldown: 2
+  detectedRearmTime: 5
+  detectedRequiresVisibility: 1
+  voiceIgnoreAttenuation: 1
+  voiceCooldown: 1
   legacyAttackClips: []
   legacyAttackHitClips: []
   legacyDeathClips: []
@@ -241,8 +253,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   aggroRange: 30
   targetPriority: 3
-  retargetInterval: 0.5
-  damageFocusSwitchMargin: 10
+  retargetInterval: 0.3
+  damageFocusSwitchMargin: 2
   debugCommandLog: 0
   dynamicAvoidancePriority: 1
   directMovePriority: 20

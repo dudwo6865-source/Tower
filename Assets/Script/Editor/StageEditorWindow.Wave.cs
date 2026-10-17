@@ -31,21 +31,20 @@ public partial class StageEditorWindow
     static readonly Color EmptyWaveTextColor = new Color(0.95f, 0.65f, 0.25f);
 
     const float GridRowHeight = 20f;
-    const float GridHeaderHeight = 36f;
-    const float GridWaveColumnWidth = 64f;
-    const float GridTypeColumnWidth = 76f;
-    const float GridTotalColumnWidth = 56f;
-    const float GridMapColumnWidth = 70f;
+    const float GridBlockHeaderHeight = 22f;
+    const float GridIndent = 14f;
+    const float GridTypeNameWidth = 150f;
+    const float GridCountFieldWidth = 56f;
+    const float GridShareLabelWidth = 100f;
     const float GridActionColumnWidth = 92f;
-    const float GridBarMinWidth = 140f;
-    const float GridCellGap = 4f;
+    const float GridChipHeight = 20f;
+    const float GridChipGap = 6f;
 
     // 표에서 누른 버튼(웨이브 추가·삭제·이동 등)은 GUI를 그리는 도중에 바로 고치지 않고
     // 여기에 모아 두었다가 ApplyModifiedProperties 뒤에 한 번에 적용한다.
     // SerializedObject가 들고 있는 값과 엇갈려 수정이 덮어써지는 일을 막는다.
     readonly List<Action> pendingStageEdits = new List<Action>();
 
-    Vector2 waveGridScroll;
     bool foldWaveDetail = true;
     bool foldWaveExtra;
     int playStartWave = 1;
@@ -301,7 +300,7 @@ public partial class StageEditorWindow
         DrawWaveDetailList();
         DrawWaveExtraSettings();
 
-        DrawSubHeader("미리보기", "웨이브별 배율과 밤 총량과 3회 출격", WaveColor);
+        DrawSubHeader("미리보기", "웨이브 = 하루(낮+밤) · N일차 밤에 공격대가 출격합니다", WaveColor);
         DrawSectionRow(DrawWavePreview, DrawSpawnRateSection);
 
         EditorGUILayout.Space(6);
@@ -487,7 +486,28 @@ public partial class StageEditorWindow
             issues.Add(new WaveIssue(
                 WaveIssueLevel.Info,
                 $"승리까지 {selected.survivalNightsToWin}번째 밤인데 웨이브 표는 {waves.Count}개입니다. " +
-                $"웨이브 {waves.Count + 1}부터는 마지막 웨이브 값에 '이후 웨이브 증가율'을 붙여 이어갑니다."));
+                $"{waves.Count + 1}일차부터는 마지막 웨이브 값에 '이후 웨이브 증가율'을 붙여 이어갑니다."));
+        }
+
+        // 증가율은 표 이후 매 일차마다 곱해지므로, 배율 0은 '유지'가 아니라 '0으로 만듦'이다.
+        WaveTuning growth = selected.wavePlan != null ? selected.wavePlan.growthPerWaveAfterLast : null;
+
+        if (growth != null && waves.Count > 0)
+        {
+            List<string> zeroNames = new List<string>();
+
+            if (growth.spawnCountMultiplier <= 0f) zeroNames.Add("스폰 수 배율");
+            if (growth.healthMultiplier <= 0f) zeroNames.Add("체력 배율");
+            if (growth.damageMultiplier <= 0f) zeroNames.Add("공격력 배율");
+            if (growth.speedMultiplier <= 0f) zeroNames.Add("이동 속도 배율");
+
+            if (zeroNames.Count > 0)
+            {
+                issues.Add(new WaveIssue(
+                    WaveIssueLevel.Warning,
+                    $"'이후 웨이브 증가율'의 {string.Join(", ", zeroNames)}이 0입니다. 증가율은 매 일차 곱해지므로 " +
+                    $"{waves.Count + 1}일차부터 그 값이 0이 됩니다(스폰 수는 '스폰 수 추가'만 남음). 그대로 유지하려면 1로 두세요."));
+            }
         }
 
         return issues;
@@ -502,7 +522,7 @@ public partial class StageEditorWindow
         for (int i = 0; i < waveNumbers.Count && i < maxShown; i++)
             parts.Add(waveNumbers[i].ToString());
 
-        string text = "웨이브 " + string.Join(", ", parts);
+        string text = string.Join(", ", parts) + "일차";
 
         if (waveNumbers.Count > maxShown)
             text += $" 외 {waveNumbers.Count - maxShown}개";
@@ -595,225 +615,175 @@ public partial class StageEditorWindow
         return count;
     }
 
+    // 웨이브 구성 표. 일차마다 머리줄(일차·합계·맵 전체·편집) 아래에 적 종류별로 한 줄씩 그린다.
+    // 줄마다 자기 막대를 따로 그려, 한 막대에 색을 이어 붙였을 때보다 종류별 양을 읽기 쉽게 한다.
     void DrawWaveCompositionGrid()
     {
-        DrawSubHeader("웨이브 구성 표", "칸 = 그 웨이브에 스포너 하나가 낼 마리 수 (웨이브 총량)", WaveColor);
+        DrawSubHeader("웨이브 구성 표", "일차마다 적 종류별로 한 줄씩 · 숫자 = 스포너 하나가 그날 밤 낼 마리 수", WaveColor);
 
         List<WaveTuning> waves = Waves;
         List<GameObject> types = CollectEnemyTypes();
+        float width = FullDetailWidth - 6f;
 
-        // 막대 길이 기준이 되는 최대 총량
-        int maxTotal = 1;
+        DrawEnemyTypeLegend(types, width);
+
+        // 막대 길이 기준: 모든 일차·종류를 통틀어 가장 많은 마리 수. 일차끼리도 길이를 비교할 수 있다.
+        int maxCount = 1;
+
         foreach (WaveTuning wave in waves)
         {
-            if (wave != null && wave.enemyComposition != null)
-                maxTotal = Mathf.Max(maxTotal, wave.enemyComposition.TotalCount);
+            for (int t = 0; t < types.Count; t++)
+                maxCount = Mathf.Max(maxCount, CountOf(wave, types[t], out _));
         }
-
-        float fixedWidth =
-            GridWaveColumnWidth +
-            types.Count * (GridTypeColumnWidth + GridCellGap) +
-            GridTotalColumnWidth + GridMapColumnWidth + GridActionColumnWidth +
-            GridCellGap * 4f;
-
-        float available = FullDetailWidth - 6f;
-        float barWidth = Mathf.Max(GridBarMinWidth, available - fixedWidth);
-        float contentWidth = fixedWidth + barWidth;
-        bool needsScroll = contentWidth > available + 1f;
-
-        float contentHeight = GridHeaderHeight + Mathf.Max(1, waves.Count) * GridRowHeight + GridRowHeight;
-
-        if (needsScroll)
-        {
-            waveGridScroll = EditorGUILayout.BeginScrollView(
-                waveGridScroll,
-                true,
-                false,
-                GUILayout.Height(contentHeight + 18f));
-        }
-
-        Rect area = GUILayoutUtility.GetRect(contentWidth, contentHeight, GUILayout.Width(contentWidth));
-
-        DrawGridHeader(new Rect(area.x, area.y, contentWidth, GridHeaderHeight), types, barWidth);
-
-        float y = area.y + GridHeaderHeight;
 
         if (waves.Count == 0)
         {
-            GUI.Label(
-                new Rect(area.x + 8, y, contentWidth - 8, GridRowHeight),
-                "웨이브가 없습니다. 아래 '+ 웨이브 추가'를 누르세요.",
-                EditorStyles.miniLabel);
-            y += GridRowHeight;
+            Rect emptyRect = GUILayoutUtility.GetRect(width, GridRowHeight, GUILayout.Width(width));
+            GUI.Label(emptyRect, "웨이브가 없습니다. 아래 '+ 웨이브 추가'를 누르세요.", EditorStyles.miniLabel);
         }
 
         for (int i = 0; i < waves.Count; i++)
-        {
-            DrawGridRow(new Rect(area.x, y, contentWidth, GridRowHeight), i, waves[i], types, maxTotal, barWidth);
-            y += GridRowHeight;
-        }
+            DrawWaveBlock(i, waves[i], types, maxCount, width);
 
         // 표 이후 웨이브 안내 줄
         if (waves.Count > 0)
         {
-            Rect afterRect = new Rect(area.x + 6, y + 2, contentWidth - 6, GridRowHeight - 2);
+            EditorGUILayout.Space(4);
             WaveTuning last = waves[waves.Count - 1];
             string lastComposition = last != null && last.HasEnemyComposition
                 ? $"마지막 웨이브 구성({last.enemyComposition.ToSummary()})을 그대로 씁니다."
                 : "스포너 자체 목록과 밤 총 출격 수를 사용합니다.";
 
-            GUI.Label(afterRect, $"웨이브 {waves.Count + 1}~  ·  {lastComposition}", EditorStyles.miniLabel);
+            Rect afterRect = GUILayoutUtility.GetRect(width, GridRowHeight, GUILayout.Width(width));
+            GUI.Label(afterRect, $"{DayLabel(waves.Count + 1)}~  ·  {lastComposition}", EditorStyles.miniLabel);
         }
-
-        if (needsScroll)
-            EditorGUILayout.EndScrollView();
 
         DrawGridFooter(types);
     }
 
-    void DrawGridHeader(Rect rect, List<GameObject> types, float barWidth)
+    // 표에 쓰인 적 종류 목록. 색 칩마다 이름(누르면 프리팹 찾기)과 표에서 빼기 버튼이 있다.
+    void DrawEnemyTypeLegend(List<GameObject> types, float width)
     {
-        EditorGUI.DrawRect(rect, HeaderBackgroundColor);
-        EditorGUI.DrawRect(new Rect(rect.x, rect.yMax - 2, rect.width, 2), WaveColor);
-
-        GUIStyle headerStyle = new GUIStyle(EditorStyles.miniBoldLabel)
+        if (types.Count == 0)
         {
-            alignment = TextAnchor.MiddleCenter,
-            clipping = TextClipping.Clip
-        };
+            EditorGUILayout.HelpBox(
+                "표에 적 종류가 없습니다. 아래 '적 종류 추가'에 적 프리팹을 끌어다 놓으세요.",
+                MessageType.Info);
+            return;
+        }
 
-        float x = rect.x;
-        float labelY = rect.y + 2;
-        float labelHeight = rect.height - 4;
+        GUIStyle nameStyle = new GUIStyle(EditorStyles.miniBoldLabel) { clipping = TextClipping.Clip };
+        const float swatchSpace = 16f;
+        const float removeWidth = 18f;
 
-        GUI.Label(new Rect(x, labelY, GridWaveColumnWidth, labelHeight), "웨이브", headerStyle);
-        x += GridWaveColumnWidth + GridCellGap;
+        // 칩 너비를 먼저 재서 줄바꿈 위치를 정한다.
+        float[] chipWidths = new float[types.Count];
+        int lineCount = 1;
+        float lineX = 0f;
+
+        for (int t = 0; t < types.Count; t++)
+        {
+            float nameWidth = Mathf.Min(160f, nameStyle.CalcSize(new GUIContent(types[t].name)).x);
+            chipWidths[t] = swatchSpace + nameWidth + removeWidth + 8f;
+
+            if (lineX > 0f && lineX + chipWidths[t] > width)
+            {
+                lineCount++;
+                lineX = 0f;
+            }
+
+            lineX += chipWidths[t] + GridChipGap;
+        }
+
+        float height = lineCount * (GridChipHeight + 4f);
+        Rect area = GUILayoutUtility.GetRect(width, height, GUILayout.Width(width));
+
+        float x = area.x;
+        float y = area.y;
 
         for (int t = 0; t < types.Count; t++)
         {
             GameObject type = types[t];
-            Rect column = new Rect(x, labelY, GridTypeColumnWidth, labelHeight);
-            Color color = EnemyTypeColor(t);
+            float chipWidth = chipWidths[t];
 
-            // 윗줄: 색 점 + 이름 (누르면 Project 창에서 프리팹을 찾아준다)
-            Rect nameRect = new Rect(column.x, column.y, column.width, 16);
-            EditorGUI.DrawRect(new Rect(nameRect.x + 2, nameRect.y + 4, 8, 8), color);
-
-            if (GUI.Button(
-                    new Rect(nameRect.x + 12, nameRect.y, nameRect.width - 12, nameRect.height),
-                    new GUIContent(type.name, $"{type.name}\n누르면 Project 창에서 프리팹을 보여줍니다."),
-                    new GUIStyle(EditorStyles.miniBoldLabel) { clipping = TextClipping.Clip }))
+            if (x > area.x && x + chipWidth > area.xMax)
             {
-                EditorGUIUtility.PingObject(type);
+                x = area.x;
+                y += GridChipHeight + 4f;
             }
 
-            // 아랫줄: 열 삭제
-            Rect removeRect = new Rect(column.x + column.width * 0.5f - 22, column.y + 17, 44, 14);
+            Rect chip = new Rect(x, y, chipWidth, GridChipHeight);
+            Color color = EnemyTypeColor(t);
 
-            if (GUI.Button(removeRect, new GUIContent("✕ 열", $"모든 웨이브에서 '{type.name}'을(를) 뺍니다."), EditorStyles.miniButton))
+            EditorGUI.DrawRect(chip, new Color(color.r, color.g, color.b, 0.18f));
+            EditorGUI.DrawRect(new Rect(chip.x, chip.y, 3f, chip.height), color);
+            EditorGUI.DrawRect(new Rect(chip.x + 6f, chip.y + 5f, 10f, 10f), color);
+
+            Rect nameRect = new Rect(chip.x + 6f + swatchSpace, chip.y + 1f, chipWidth - swatchSpace - removeWidth - 8f, chip.height - 2f);
+
+            if (GUI.Button(nameRect, new GUIContent(type.name, $"{type.name}\n누르면 Project 창에서 프리팹을 보여줍니다."), nameStyle))
+                EditorGUIUtility.PingObject(type);
+
+            Rect removeRect = new Rect(chip.xMax - removeWidth - 1f, chip.y + 2f, removeWidth, chip.height - 4f);
+
+            if (GUI.Button(removeRect, new GUIContent("✕", $"모든 웨이브에서 '{type.name}'을(를) 뺍니다."), EditorStyles.miniButton))
             {
                 GameObject captured = type;
                 QueueStageEdit(() => RemoveEnemyType(captured));
             }
 
-            // 열 색을 헤더 아래 선으로도 이어준다.
-            EditorGUI.DrawRect(new Rect(column.x, rect.yMax - 2, column.width, 2), color);
-
-            x += GridTypeColumnWidth + GridCellGap;
+            x += chipWidth + GridChipGap;
         }
 
-        GUI.Label(new Rect(x, labelY, GridTotalColumnWidth, labelHeight), new GUIContent("합계", "스포너 하나가 이 웨이브에 내보낼 총 마리 수"), headerStyle);
-        x += GridTotalColumnWidth + GridCellGap;
-
-        GUI.Label(new Rect(x, labelY, GridMapColumnWidth, labelHeight), new GUIContent("맵 전체", "합계 × 이 웨이브에 활동하는 스포너 수"), headerStyle);
-        x += GridMapColumnWidth + GridCellGap;
-
-        GUI.Label(new Rect(x, labelY, barWidth, labelHeight), new GUIContent("구성 막대", "색 = 적 종류, 길이 = 합계"), headerStyle);
-        x += barWidth + GridCellGap;
-
-        GUI.Label(new Rect(x, labelY, GridActionColumnWidth, labelHeight), "편집", headerStyle);
+        EditorGUILayout.Space(2);
     }
 
-    void DrawGridRow(Rect rect, int index, WaveTuning wave, List<GameObject> types, int maxTotal, float barWidth)
+    void DrawWaveBlock(int index, WaveTuning wave, List<GameObject> types, int maxCount, float width)
     {
-        EditorGUI.DrawRect(rect, StripeColor(index));
-
-        float x = rect.x;
-        Rect cellBase = new Rect(rect.x, rect.y + 1, 0, rect.height - 2);
-
-        GUIStyle waveStyle = new GUIStyle(EditorStyles.boldLabel) { alignment = TextAnchor.MiddleCenter };
-        GUI.Label(new Rect(x, cellBase.y, GridWaveColumnWidth, cellBase.height), $"웨이브 {index + 1}", waveStyle);
-        x += GridWaveColumnWidth + GridCellGap;
-
-        GUIStyle cellStyle = new GUIStyle(EditorStyles.numberField) { alignment = TextAnchor.MiddleCenter };
-        int[] counts = new int[types.Count];
-
-        for (int t = 0; t < types.Count; t++)
-        {
-            Rect cell = new Rect(x, cellBase.y, GridTypeColumnWidth, cellBase.height);
-            int count = CountOf(wave, types[t], out int rowCount);
-            counts[t] = count;
-
-            if (rowCount > 1)
-            {
-                // 같은 적을 여러 줄로 나눠 순서를 정한 웨이브는 표에서 합계만 보여준다.
-                GUI.Label(
-                    cell,
-                    new GUIContent($"Σ {count}", "여러 줄로 나눠 순서를 정한 적입니다. 아래 '웨이브별 상세'에서 편집하세요."),
-                    new GUIStyle(EditorStyles.miniBoldLabel) { alignment = TextAnchor.MiddleCenter });
-            }
-            else
-            {
-                Color previous = GUI.color;
-                if (count == 0)
-                    GUI.color = new Color(previous.r, previous.g, previous.b, 0.45f);
-
-                EditorGUI.BeginChangeCheck();
-                int newCount = EditorGUI.IntField(cell, count, cellStyle);
-
-                if (EditorGUI.EndChangeCheck())
-                {
-                    int waveIndex = index;
-                    GameObject type = types[t];
-                    int value = Mathf.Max(0, newCount);
-                    QueueStageEdit(() => SetEnemyCount(waveIndex, type, value));
-                }
-
-                GUI.color = previous;
-            }
-
-            // 칸 아래에 열 색을 얇게 깔아 어느 적인지 바로 보이게 한다.
-            Color stripe = EnemyTypeColor(t);
-            stripe.a = count > 0 ? 0.9f : 0.25f;
-            EditorGUI.DrawRect(new Rect(cell.x + 2, cell.yMax - 2, cell.width - 4, 2), stripe);
-
-            x += GridTypeColumnWidth + GridCellGap;
-        }
+        EditorGUILayout.Space(4);
 
         int total = wave != null && wave.enemyComposition != null ? wave.enemyComposition.TotalCount : 0;
 
-        GUIStyle totalStyle = new GUIStyle(EditorStyles.boldLabel) { alignment = TextAnchor.MiddleCenter };
-        GUI.Label(new Rect(x, cellBase.y, GridTotalColumnWidth, cellBase.height), total > 0 ? total.ToString() : "-", totalStyle);
-        x += GridTotalColumnWidth + GridCellGap;
+        DrawWaveBlockHeader(index, total, width);
 
-        int spawnerCount = CountCompositionSpawners(index + 1);
-        int effectiveTotal = EnemySpawner.GetNightTotal(0, BuildTuning(index + 1, true));
-        string mapText = total > 0
-            ? (spawnerCount > 0 ? $"{effectiveTotal * spawnerCount}" : "스포너 0")
-            : "-";
+        for (int t = 0; t < types.Count; t++)
+            DrawWaveTypeRow(index, wave, types[t], t, total, maxCount, width);
+    }
 
-        GUI.Label(
-            new Rect(x, cellBase.y, GridMapColumnWidth, cellBase.height),
-            new GUIContent(mapText, $"활동 스포너 {spawnerCount}개 · 밤 배율 적용 후 공격대 총량 · 돌연변이 제외"),
-            new GUIStyle(EditorStyles.label) { alignment = TextAnchor.MiddleCenter });
-        x += GridMapColumnWidth + GridCellGap;
+    void DrawWaveBlockHeader(int index, int total, float width)
+    {
+        Rect header = GUILayoutUtility.GetRect(width, GridBlockHeaderHeight, GUILayout.Width(width));
+        EditorGUI.DrawRect(header, HeaderBackgroundColor);
+        EditorGUI.DrawRect(new Rect(header.x, header.y, 3f, header.height), WaveColor);
 
-        Rect barRect = new Rect(x, cellBase.y + 3, barWidth, cellBase.height - 6);
-        DrawCompositionBar(barRect, counts, total, maxTotal);
-        x += barWidth + GridCellGap;
+        Rect dayRect = new Rect(header.x + 10f, header.y, 70f, header.height);
+        GUI.Label(dayRect, DayLabel(index + 1), EditorStyles.boldLabel);
 
-        Rect copyRect = new Rect(x, cellBase.y, GridActionColumnWidth * 0.5f - 2, cellBase.height);
-        Rect deleteRect = new Rect(copyRect.xMax + 4, cellBase.y, GridActionColumnWidth * 0.5f - 2, cellBase.height);
+        Rect summaryRect = new Rect(dayRect.xMax, header.y, header.width - dayRect.width - GridActionColumnWidth - 24f, header.height);
+
+        if (total > 0)
+        {
+            int spawnerCount = CountCompositionSpawners(index + 1);
+            int effectiveTotal = EnemySpawner.GetNightTotal(0, BuildTuning(index + 1, true));
+            string mapText = spawnerCount > 0
+                ? $"맵 전체 {effectiveTotal * spawnerCount}마리 (스포너 {spawnerCount}개)"
+                : "활동 스포너 없음";
+
+            GUI.Label(
+                summaryRect,
+                new GUIContent(
+                    $"스포너당 {total}마리   ·   {mapText}",
+                    "스포너당 = 표에 적은 합계\n맵 전체 = 웨이브·밤 배율을 적용한 공격대 총량 × 활동 스포너 수 (돌연변이 제외)"),
+                EditorStyles.label);
+        }
+        else
+        {
+            GUIStyle emptyStyle = new GUIStyle(EditorStyles.label) { normal = { textColor = EmptyWaveTextColor } };
+            GUI.Label(summaryRect, "비어 있음 · 스포너의 밤 총 출격 수 사용", emptyStyle);
+        }
+
+        Rect copyRect = new Rect(header.xMax - GridActionColumnWidth - 4f, header.y + 2f, GridActionColumnWidth * 0.5f - 2f, header.height - 4f);
+        Rect deleteRect = new Rect(copyRect.xMax + 4f, copyRect.y, copyRect.width, copyRect.height);
 
         if (GUI.Button(copyRect, new GUIContent("복제", "이 웨이브를 바로 아래에 복사합니다."), EditorStyles.miniButtonLeft))
         {
@@ -828,45 +798,77 @@ public partial class StageEditorWindow
         }
     }
 
-    void DrawCompositionBar(Rect rect, int[] counts, int total, int maxTotal)
+    // 적 종류 한 줄: [색] 이름 | 마리 수 입력 | 막대 | 마리 수·비율
+    void DrawWaveTypeRow(int waveIndex, WaveTuning wave, GameObject type, int typeIndex, int total, int maxCount, float width)
     {
-        EditorGUI.DrawRect(rect, BarTrackColor);
+        Rect row = GUILayoutUtility.GetRect(width, GridRowHeight, GUILayout.Width(width));
+        EditorGUI.DrawRect(row, StripeColor(typeIndex));
 
-        if (total <= 0)
-        {
-            GUIStyle emptyStyle = new GUIStyle(EditorStyles.miniLabel)
-            {
-                normal = { textColor = EmptyWaveTextColor },
-                alignment = TextAnchor.MiddleLeft
-            };
+        Color color = EnemyTypeColor(typeIndex);
+        int count = CountOf(wave, type, out int rowCount);
+        bool empty = count <= 0;
 
-            GUI.Label(
-                new Rect(rect.x + 4, rect.y - 2, rect.width - 4, rect.height + 4),
-                "비어 있음 · 스포너의 밤 총 출격 수 사용",
-                emptyStyle);
-            return;
-        }
+        Color previous = GUI.color;
+        if (empty)
+            GUI.color = new Color(previous.r, previous.g, previous.b, 0.45f);
 
-        // 숫자 표시 칸을 남겨두고 나머지 길이를 최대 총량 기준으로 나눈다.
-        const float labelSpace = 34f;
-        float usable = Mathf.Max(10f, rect.width - labelSpace);
-        float filled = usable * total / Mathf.Max(1, maxTotal);
-        float x = rect.x;
+        float x = row.x + GridIndent;
 
-        for (int t = 0; t < counts.Length; t++)
-        {
-            if (counts[t] <= 0)
-                continue;
-
-            float width = filled * counts[t] / total;
-            EditorGUI.DrawRect(new Rect(x, rect.y, Mathf.Max(1f, width - 1f), rect.height), EnemyTypeColor(t));
-            x += width;
-        }
+        EditorGUI.DrawRect(new Rect(x, row.y + 3f, 4f, row.height - 6f), color);
+        x += 10f;
 
         GUI.Label(
-            new Rect(rect.x + filled + 4, rect.y - 2, labelSpace, rect.height + 4),
-            total.ToString(),
+            new Rect(x, row.y, GridTypeNameWidth, row.height),
+            new GUIContent(type.name, type.name),
+            new GUIStyle(EditorStyles.label) { clipping = TextClipping.Clip });
+        x += GridTypeNameWidth + 6f;
+
+        Rect fieldRect = new Rect(x, row.y + 1f, GridCountFieldWidth, row.height - 2f);
+
+        if (rowCount > 1)
+        {
+            // 같은 적을 여러 줄로 나눠 순서를 정한 웨이브는 표에서 합계만 보여준다.
+            GUI.Label(
+                fieldRect,
+                new GUIContent($"Σ {count}", "여러 줄로 나눠 순서를 정한 적입니다. 아래 '웨이브별 상세'에서 편집하세요."),
+                new GUIStyle(EditorStyles.miniBoldLabel) { alignment = TextAnchor.MiddleCenter });
+        }
+        else
+        {
+            EditorGUI.BeginChangeCheck();
+            int newCount = EditorGUI.IntField(
+                fieldRect,
+                count,
+                new GUIStyle(EditorStyles.numberField) { alignment = TextAnchor.MiddleCenter });
+
+            if (EditorGUI.EndChangeCheck())
+            {
+                int capturedWave = waveIndex;
+                GameObject capturedType = type;
+                int value = Mathf.Max(0, newCount);
+                QueueStageEdit(() => SetEnemyCount(capturedWave, capturedType, value));
+            }
+        }
+
+        x += GridCountFieldWidth + 10f;
+
+        float barWidth = Mathf.Max(40f, row.xMax - GridShareLabelWidth - 8f - x);
+        Rect track = new Rect(x, row.y + 5f, barWidth, row.height - 10f);
+        EditorGUI.DrawRect(track, BarTrackColor);
+
+        if (!empty)
+            EditorGUI.DrawRect(new Rect(track.x, track.y, Mathf.Max(2f, track.width * count / maxCount), track.height), color);
+
+        string share = empty
+            ? "-"
+            : $"{count}마리 · {Mathf.RoundToInt(100f * count / Mathf.Max(1, total))}%";
+
+        GUI.Label(
+            new Rect(track.xMax + 8f, row.y, GridShareLabelWidth, row.height),
+            share,
             EditorStyles.miniBoldLabel);
+
+        GUI.color = previous;
     }
 
     void DrawGridFooter(List<GameObject> types)
@@ -936,7 +938,7 @@ public partial class StageEditorWindow
             float buttonsWidth = buttonWidth * 4f + 6f;
 
             Rect foldRect = new Rect(header.x + 16, header.y + 2, 90, header.height - 4);
-            element.isExpanded = EditorGUI.Foldout(foldRect, element.isExpanded, $"웨이브 {i + 1}", true, EditorStyles.foldout);
+            element.isExpanded = EditorGUI.Foldout(foldRect, element.isExpanded, DayLabel(i + 1), true, EditorStyles.foldout);
 
             Rect summaryRect = new Rect(foldRect.xMax + 4, header.y + 3, header.width - foldRect.width - buttonsWidth - 30, header.height - 4);
             GUI.Label(

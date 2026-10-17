@@ -108,6 +108,7 @@ public class Unit : MonoBehaviour
             return;
 
         target.maxHealth = source.maxHealth;
+        target.armor = source.armor;
     }
 
     void ApplyAttacker(UnitData source)

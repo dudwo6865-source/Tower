@@ -102,7 +102,15 @@ PrefabInstance:
     - target: {fileID: -7511558181221131132, guid: b0301882a6293d44ba0df70791890ad6, type: 3}
       propertyPath: m_Materials.Array.data[0]
       value: 
+      objectReference: {fileID: 9015506224266396679, guid: 0fb2f6a9ff53a8044a190a958869527f, type: 3}
+    - target: {fileID: -7511558181221131132, guid: b0301882a6293d44ba0df70791890ad6, type: 3}
+      propertyPath: m_Materials.Array.data[1]
+      value: 
       objectReference: {fileID: 2100000, guid: 8f29332e5421e3949bb7a433f310e49f, type: 2}
+    - target: {fileID: -5754084199372789682, guid: b0301882a6293d44ba0df70791890ad6, type: 3}
+      propertyPath: m_Mesh
+      value: 
+      objectReference: {fileID: 5800919380326945891, guid: 0fb2f6a9ff53a8044a190a958869527f, type: 3}
     - target: {fileID: 919132149155446097, guid: b0301882a6293d44ba0df70791890ad6, type: 3}
       propertyPath: m_Name
       value: Barracks 1
@@ -170,7 +178,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   entityType: 1
   ownerId: 1
-  entityTypeId: Barracks 1
+  entityTypeId: Barracks
   autoAssignEntityTypeId: 1
   selectionCollider: {fileID: 0}
   showAttackRangeForUnit: 0
@@ -189,9 +197,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   maxHealth: 100
-  deathAnimationDuration: 1
-  deathSinkDistance: 1.5
-  deathEffectColor: {r: 0.3, g: 0.3, b: 0.3, a: 1}
+  armor: 0
+  minDamageRatio: 0.1
+  minDamage: 0.5
   deathEffectPrefab: {fileID: 304414178702807373, guid: 6312007dcbcc49e4a884da4a4c23ceab, type: 3}
 --- !u!114 &6042145033231463602
 MonoBehaviour:
@@ -239,6 +247,9 @@ MonoBehaviour:
   blockCells: 1
   carveNavMesh: 1
   snapTransformOnRegister: 0
+  useCustomShape: 0
+  cellMask: 01010101
+  cellMaskSize: {x: 2, y: 2}
 --- !u!208 &8328089673782832323
 NavMeshObstacle:
   m_ObjectHideFlags: 0
@@ -267,9 +278,29 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 918f8f2d20d0a3b459e03e4c1eb4f4a5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  attackClips: []
-  attackHitClips: []
-  deathClips: []
+  attackSounds: []
+  attackHitSounds: []
+  deathSounds: []
+  attackLoopSound:
+    clip: {fileID: 0}
+    volume: 1
+    initialized: 1
+  attackLoopHoldTime: 0.15
+  attackLoopFadeIn: 0.05
+  attackLoopFadeOut: 0.25
+  attackLoopWithOneShots: 0
+  selectSounds: []
+  productionCompleteSounds: []
+  commandSounds: []
+  playSelectSoundOnAggro: 1
+  detectedSoundCooldown: 2
+  detectedRearmTime: 5
+  detectedRequiresVisibility: 1
+  voiceIgnoreAttenuation: 1
+  voiceCooldown: 1
+  legacyAttackClips: []
+  legacyAttackHitClips: []
+  legacyDeathClips: []
   audioSource: {fileID: 0}
   volume: 1
   attenuation: 2
@@ -281,6 +312,8 @@ MonoBehaviour:
   referenceMinOrthoSize: 12
   referenceMaxOrthoSize: 45
   pitchRange: {x: 0.95, y: 1.05}
+  attackSoundMaxOverlap: 3
+  attackSoundPriority: 64
   attackHitSoundCooldown: 0.12
 --- !u!65 &5139896413233204508
 BoxCollider:
@@ -376,7 +409,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cb8a6c9de3fe8b1458e4548a1aea8319, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  heightOffset: 0.2
+  heightOffset: -3.8
   viewDownOffset: 3
   barHeight: 0.5
   worldScale: 0.07

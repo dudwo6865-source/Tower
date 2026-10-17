@@ -271,6 +271,7 @@ public class InitialEnemyPlacer : MonoBehaviour
         float health = tuning != null ? tuning.healthMultiplier : 1f;
         float damage = tuning != null ? tuning.damageMultiplier : 1f;
         float speed = tuning != null ? tuning.speedMultiplier : 1f;
+        float armorBonus = tuning != null ? tuning.armorBonus : 0f;
 
         int count = Mathf.Max(0, group.countPerCluster);
         float radius = Mathf.Max(0f, group.clusterRadius);
@@ -292,7 +293,8 @@ public class InitialEnemyPlacer : MonoBehaviour
                 enemyOwnerId,
                 health,
                 damage,
-                speed);
+                speed,
+                armorBonus: armorBonus);
 
             if (enemy == null)
                 continue;

@@ -378,6 +378,10 @@ public static class BuildingCommandHandler
 
         foreach (SelectableEntity building in buildings)
         {
+            // 자기 자신은 공격하지 않는다.
+            if (building == target)
+                continue;
+
             TowerAI towerAI = building.GetComponent<TowerAI>();
             UnitAttacker attacker = building.GetComponent<UnitAttacker>();
 

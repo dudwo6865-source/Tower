@@ -230,6 +230,9 @@ public class UnitAttacker : MonoBehaviour
     // 업그레이드 보너스가 반영된 현재 공격력입니다. (UI 표시용)
     public float EffectiveAttackDamage => GetEffectiveDamage();
 
+    // 업그레이드·유물이 반영된 현재 공격 쿨다운입니다. (공격 루프 사운드가 끊김 판정에 씀)
+    public float EffectiveAttackCooldown => GetEffectiveCooldown();
+
     void Awake()
     {
         unitAnimator = GetComponent<UnitAnimator>();
@@ -254,6 +257,12 @@ public class UnitAttacker : MonoBehaviour
     {
         if (unitAnimator != null)
             unitAnimator.CancelAttacking();
+
+        if (unitSound == null)
+            unitSound = GetComponent<UnitSound>();
+
+        if (unitSound != null)
+            unitSound.StopAttackLoop();
     }
 
     public bool IsInRange(SelectableEntity target)

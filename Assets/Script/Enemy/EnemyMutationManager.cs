@@ -16,6 +16,8 @@ public class EnemyMutationManager : MonoBehaviour
     public float DamageBonus { get; private set; }
     public float HealthBonus { get; private set; }
     public float SpeedBonus { get; private set; }
+    // 방어력 돌연변이로 더해진 방어력(덧셈 값)입니다.
+    public float ArmorBonus { get; private set; }
     public int MutationCount { get; private set; }
     public event Action<string> OnMutationApplied;
     public event Action<EnemyMutationType, float> OnMutationRolled;
@@ -52,14 +54,14 @@ public class EnemyMutationManager : MonoBehaviour
     public void Configure(EnemyMutationSettings value)
     {
         settings = value != null ? value.Clone() : new EnemyMutationSettings();
-        SpawnBonus = DamageBonus = HealthBonus = SpeedBonus = 0f;
+        SpawnBonus = DamageBonus = HealthBonus = SpeedBonus = ArmorBonus = 0f;
         MutationCount = 0;
         processedSpawners.Clear();
         foreach (EnemySpawner spawner in EnemySpawner.Active)
             if (spawner != null) spawner.ResetMutationSpawnBudget();
         // 같은 씬에서 맵을 다시 불러올 때 기존 개체의 보정도 원복한다.
         foreach (EnemyMutationTarget target in FindObjectsOfType<EnemyMutationTarget>(true))
-            target.Apply(1f, 1f, 1f);
+            target.Apply(1f, 1f, 1f, 0f);
         OnChanged?.Invoke();
     }
 
@@ -75,7 +77,8 @@ public class EnemyMutationManager : MonoBehaviour
         float damageWeight = settings.damageIncrease > 0f ? Mathf.Max(0f, settings.damageWeight) : 0f;
         float healthWeight = settings.healthIncrease > 0f ? Mathf.Max(0f, settings.healthWeight) : 0f;
         float speedWeight = settings.speedIncrease > 0f ? Mathf.Max(0f, settings.speedWeight) : 0f;
-        float total = damageWeight + healthWeight + speedWeight;
+        float armorWeight = settings.armorIncrease > 0f ? Mathf.Max(0f, settings.armorWeight) : 0f;
+        float total = damageWeight + healthWeight + speedWeight + armorWeight;
         bool canSpawn = settings.spawnIncrease > 0f;
         if (!canSpawn && total <= 0f) return;
 
@@ -89,24 +92,31 @@ public class EnemyMutationManager : MonoBehaviour
         }
         else
         {
+            // 가중치 구간을 차례로 확인한다. 부동소수점 오차로 끝까지 남으면 마지막으로 가중치가 있는 항목을 고른다.
             float roll = UnityEngine.Random.value * total;
-            if (damageWeight > 0f && (roll < damageWeight || healthWeight + speedWeight <= 0f))
+            if (damageWeight > 0f && (roll < damageWeight || healthWeight + speedWeight + armorWeight <= 0f))
             {
                 type = EnemyMutationType.Damage;
                 increase = settings.damageIncrease;
                 DamageBonus += increase;
             }
-            else if (healthWeight > 0f && (roll < damageWeight + healthWeight || speedWeight <= 0f))
+            else if (healthWeight > 0f && (roll < damageWeight + healthWeight || speedWeight + armorWeight <= 0f))
             {
                 type = EnemyMutationType.Health;
                 increase = settings.healthIncrease;
                 HealthBonus += increase;
             }
-            else
+            else if (speedWeight > 0f && (roll < damageWeight + healthWeight + speedWeight || armorWeight <= 0f))
             {
                 type = EnemyMutationType.Speed;
                 increase = settings.speedIncrease;
                 SpeedBonus += increase;
+            }
+            else
+            {
+                type = EnemyMutationType.Armor;
+                increase = settings.armorIncrease;
+                ArmorBonus += increase;
             }
         }
 
@@ -116,7 +126,8 @@ public class EnemyMutationManager : MonoBehaviour
             foreach (SelectableEntity entity in FindObjectsOfType<SelectableEntity>(true))
                 ApplyTo(entity.gameObject);
 
-        string message = $"돌연변이 발생: {GetName(type)} +{increase:P0}";
+        string amount = type == EnemyMutationType.Armor ? increase.ToString("0.#") : increase.ToString("P0");
+        string message = $"돌연변이 발생: {GetName(type)} +{amount}";
         if (logResults) Debug.Log(message, this);
         EnemyMutationHUD.EnsureInstance();
         OnChanged?.Invoke();
@@ -126,17 +137,18 @@ public class EnemyMutationManager : MonoBehaviour
 
     public void ApplyTo(GameObject enemy)
     {
-        if (!settings.enabled || enemy == null || (HealthBonus == 0f && DamageBonus == 0f && SpeedBonus == 0f)) return;
+        if (!settings.enabled || enemy == null ||
+            (HealthBonus == 0f && DamageBonus == 0f && SpeedBonus == 0f && ArmorBonus == 0f)) return;
         SelectableEntity entity = enemy.GetComponent<SelectableEntity>();
         EntityHealth health = enemy.GetComponent<EntityHealth>();
         if (entity == null || entity.ownerId != settings.enemyOwnerId ||
             entity.entityType != SelectableEntityType.Unit || health == null || !health.IsAlive) return;
         EnemyMutationTarget target = enemy.GetComponent<EnemyMutationTarget>();
         if (target == null) target = enemy.AddComponent<EnemyMutationTarget>();
-        target.Apply(1f + HealthBonus, 1f + DamageBonus, 1f + SpeedBonus);
+        target.Apply(1f + HealthBonus, 1f + DamageBonus, 1f + SpeedBonus, ArmorBonus);
     }
 
-    public string Summary => $"돌연변이 {MutationCount}회\n밤 공격대 +{SpawnBonus:P0} · 공격력 +{DamageBonus:P0}\n체력 +{HealthBonus:P0} · 이동 속도 +{SpeedBonus:P0}";
+    public string Summary => $"돌연변이 {MutationCount}회\n밤 공격대 +{SpawnBonus:P0} · 공격력 +{DamageBonus:P0}\n체력 +{HealthBonus:P0} · 이동 속도 +{SpeedBonus:P0} · 방어력 +{ArmorBonus:0.#}";
 
     static string GetName(EnemyMutationType type)
     {
@@ -145,6 +157,7 @@ public class EnemyMutationManager : MonoBehaviour
             case EnemyMutationType.Spawn: return "밤 공격대 수";
             case EnemyMutationType.Damage: return "적 공격력";
             case EnemyMutationType.Health: return "적 체력";
+            case EnemyMutationType.Armor: return "적 방어력";
             default: return "적 이동 속도";
         }
     }

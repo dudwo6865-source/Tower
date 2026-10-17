@@ -42,6 +42,9 @@ public class SelectionInfoPanelUI : MonoBehaviour
     [Label("공격력 텍스트")]
     [Tooltip("공격력을 표시할 텍스트입니다.")]
     public TextMeshProUGUI attackText;
+    [Label("방어력 텍스트")]
+    [Tooltip("방어력을 표시할 텍스트입니다. 업그레이드·웨이브·돌연변이 보너스가 반영된 값입니다. 방어력이 0이면 비웁니다.")]
+    public TextMeshProUGUI armorText;
     [Label("사거리 텍스트")]
     [Tooltip("사거리를 표시할 텍스트입니다.")]
     public TextMeshProUGUI rangeText;
@@ -137,6 +140,9 @@ public class SelectionInfoPanelUI : MonoBehaviour
     [Label("공격력 형식")]
     [Tooltip("공격력 텍스트 형식입니다. {0}=공격력")]
     public string attackFormat = "공격 {0:0}";
+    [Label("방어력 형식")]
+    [Tooltip("방어력 텍스트 형식입니다. {0}=방어력")]
+    public string armorFormat = "방어 {0:0.#}";
     [Label("사거리 형식")]
     [Tooltip("사거리 텍스트 형식입니다. {0}=사거리")]
     public string rangeFormat = "사거리 {0:0.0}";
@@ -161,6 +167,9 @@ public class SelectionInfoPanelUI : MonoBehaviour
     [Label("생산 중 문구")]
     [Tooltip("유닛을 생산 중일 때 표시할 문구입니다. {0}=남은 초")]
     public string productionProgressFormat = "생산 중  {0:0.0}s";
+    [Label("첫 생산 준비 문구")]
+    [Tooltip("생산 건물을 설치한 직후 첫 생산 대기 시간 동안 표시할 문구입니다. 이 동안 생산 슬라이더는 차오르지 않습니다. {0}=남은 초")]
+    public string productionInitialDelayFormat = "생산 준비 중  {0:0.0}s";
     [Label("생산 대기 문구")]
     [Tooltip("생산 대기 중일 때 표시할 문구입니다.")]
     public string productionIdleFormat = "대기 중";
@@ -521,7 +530,7 @@ public class SelectionInfoPanelUI : MonoBehaviour
     void RefreshCombat(SelectableEntity entity, UnitData data)
     {
         bool showCombat = combatSection != null &&
-            (attackText != null || rangeText != null || moveSpeedText != null || visionText != null);
+            (attackText != null || armorText != null || rangeText != null || moveSpeedText != null || visionText != null);
 
         if (!showCombat)
             return;
@@ -541,6 +550,13 @@ public class SelectionInfoPanelUI : MonoBehaviour
 
         SetText(attackText, attackDamage > 0f
             ? string.Format(attackFormat, attackDamage)
+            : string.Empty);
+
+        EntityHealth health = entity.GetComponent<EntityHealth>();
+        float armor = health != null ? health.Armor : (data != null ? data.armor : 0f);
+
+        SetText(armorText, armor > 0f
+            ? string.Format(armorFormat, armor)
             : string.Empty);
 
         SetText(rangeText, attackRange > 0f
@@ -587,7 +603,9 @@ public class SelectionInfoPanelUI : MonoBehaviour
 
         SetText(
             productionTitleText,
-            SelectionInfoUtility.GetDisplayName(recipe.unitPrefab, unitData));
+            !string.IsNullOrWhiteSpace(recipe.displayName)
+                ? recipe.displayName
+                : SelectionInfoUtility.GetDisplayName(recipe.unitPrefab, unitData));
 
         int maxPopulation = production.MaxPopulation;
         string countText = maxPopulation > 0
@@ -622,6 +640,13 @@ public class SelectionInfoPanelUI : MonoBehaviour
         {
             statusText = productionNoWattFormat;
             sliderValue = production.ProductionProgress;
+        }
+        else if (production.IsInInitialDelay && production.IsProducing)
+        {
+            statusText = string.Format(
+                productionInitialDelayFormat,
+                production.ProductionRemainingTime);
+            sliderValue = 0f;
         }
         else if (production.IsProducing)
         {
@@ -818,6 +843,19 @@ public static class SelectionInfoUtility
     {
         if (data != null && !string.IsNullOrWhiteSpace(data.displayName))
             return data.displayName;
+
+        // 생산된 유닛은 Unit(UnitData)이 없으므로, 자기를 만든 생산 레시피의 표시 이름을 쓴다.
+        if (source != null)
+        {
+            ProducedUnitMarker marker = source.GetComponent<ProducedUnitMarker>();
+
+            if (marker != null &&
+                marker.Recipe != null &&
+                !string.IsNullOrWhiteSpace(marker.Recipe.displayName))
+            {
+                return marker.Recipe.displayName;
+            }
+        }
 
         if (data != null && !string.IsNullOrWhiteSpace(data.entityTypeId))
             return data.entityTypeId;

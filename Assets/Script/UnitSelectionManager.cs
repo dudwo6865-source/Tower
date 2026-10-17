@@ -36,6 +36,10 @@ public class UnitSelectionManager : MonoBehaviour
     [Tooltip("단일 클릭·더블클릭 선택에만 적용됩니다. 드래그 박스 선택은 종류와 관계없이 범위 안 전체를 고릅니다.")]
     public SelectionTypeFilter typeFilter = SelectionTypeFilter.All;
 
+    [Label("전체 유닛 선택 키")]
+    [Tooltip("누르면 맵에 있는 내 유닛을 모두 선택합니다(건물 제외). Shift를 누른 채 누르면 지금 선택에 더합니다. None이면 쓰지 않습니다.")]
+    public KeyCode selectAllUnitsKey = KeyCode.F2;
+
     [Label("적 단일 선택 허용")]
     [Tooltip("켜면 적(다른 오너) 유닛·건물도 단일 클릭으로 선택해 정보를 볼 수 있습니다. 드래그 박스·다중 선택에는 포함되지 않습니다.")]
     public bool allowEnemySingleSelect = true;
@@ -97,6 +101,9 @@ public class UnitSelectionManager : MonoBehaviour
         if (TowerPlacementController.Instance != null &&
             TowerPlacementController.Instance.IsPlacing)
             return;
+
+        if (selectAllUnitsKey != KeyCode.None && Input.GetKeyDown(selectAllUnitsKey) && !isDragging)
+            SelectAllOwnedUnits();
 
         if (isDragging)
         {
@@ -318,6 +325,35 @@ public class UnitSelectionManager : MonoBehaviour
             owned,
             UnitSoundVoice.Select,
             owned.Contains(preferred) ? preferred : null);
+    }
+
+    /// <summary>맵 전체의 내 유닛(건물 제외)을 선택합니다. 화면 밖·안개 속 유닛도 포함합니다.</summary>
+    public void SelectAllOwnedUnits()
+    {
+        if (!Input.GetKey(KeyCode.LeftShift))
+            DeselectAll();
+
+        List<SelectableEntity> units = new List<SelectableEntity>();
+
+        foreach (SelectableEntity entity in SelectableRegistry.Entities)
+        {
+            if (entity == null ||
+                entity.entityType != SelectableEntityType.Unit ||
+                entity.ownerId != localPlayerOwnerId ||
+                !CanSelectEntityByOwner(entity))
+                continue;
+
+            EntityHealth health = entity.GetComponent<EntityHealth>();
+
+            if (health != null && !health.IsAlive)
+                continue;
+
+            SelectEntity(entity);
+            units.Add(entity);
+        }
+
+        RefreshCommandIndicators();
+        PlaySelectSound(units, null);
     }
 
     void SelectAllSameTypeOnScreen(SelectableEntity referenceEntity)

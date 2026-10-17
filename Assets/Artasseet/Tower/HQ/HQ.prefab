@@ -18,7 +18,6 @@ GameObject:
   - component: {fileID: 8844226611335577990}
   - component: {fileID: 9223372036854775807}
   - component: {fileID: 493344982007910691}
-  - component: {fileID: 1085186090901106335}
   - component: {fileID: -5852210448441303800}
   - component: {fileID: 5609028864792554256}
   m_Layer: 0
@@ -36,13 +35,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1362446224610192768}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0.2588191, z: 0, w: 0.9659258}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 30, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!33 &6335574080412849695
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -176,10 +175,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 06111e8d5f14f3b46a3c9a5a006c460d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  footprintCells: {x: 6, y: 6}
+  footprintCells: {x: 4, y: 4}
   blockCells: 1
   carveNavMesh: 1
   snapTransformOnRegister: 0
+  useCustomShape: 1
+  cellMask: 01010000010100000101010101010101
+  cellMaskSize: {x: 4, y: 4}
 --- !u!114 &9223372036854775807
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -226,22 +228,6 @@ MonoBehaviour:
   healthPerSegment: 10
   segmentSpacing: 3
   maxSegmentsPerRow: 15
---- !u!208 &1085186090901106335
-NavMeshObstacle:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1362446224610192768}
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Shape: 1
-  m_Extents: {x: 5.1000004, y: 4.658, z: 5.1000004}
-  m_MoveThreshold: 0.1
-  m_Carve: 1
-  m_CarveOnlyStationary: 1
-  m_Center: {x: 0, y: 4.658, z: 0}
-  m_TimeToStationary: 0.5
 --- !u!114 &-5852210448441303800
 MonoBehaviour:
   m_ObjectHideFlags: 0

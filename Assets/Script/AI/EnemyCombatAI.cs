@@ -81,6 +81,13 @@ public class EnemyCombatAI : MobileCombatAI
     int squadFollowFrame = -1;
     bool squadFollowCached;
 
+    // 발각 판정: 어그로 범위 안에 플레이어 쪽 표적이 '없다가 생긴' 순간을 발각으로 본다.
+    // 본부 진군 중에는 멀리 있는 본부를 표적으로 계속 들고 있으므로 표적 유무만으로는 안 된다.
+    // 마지막으로 교전 중이던 시각에서 일정 시간이 지나야 다시 발각으로 친다.
+    float lastEngagedTime = float.NegativeInfinity;
+    bool wasEngaged;
+    UnitSound unitSound;
+
     protected override void Awake()
     {
         base.Awake();
@@ -95,8 +102,46 @@ public class EnemyCombatAI : MobileCombatAI
         busyCheckTime = Time.time + normalized * BusyCheckInterval;
     }
 
+    void UpdateDetectedSound()
+    {
+        bool engaged = IsEngagingOpponentInAggro();
+
+        if (engaged && !wasEngaged)
+        {
+            if (unitSound == null)
+                unitSound = GetComponent<UnitSound>();
+
+            if (unitSound != null &&
+                Time.time >= lastEngagedTime + unitSound.detectedRearmTime)
+            {
+                unitSound.PlayDetectedVoice();
+            }
+        }
+
+        if (engaged)
+            lastEngagedTime = Time.time;
+
+        wasEngaged = engaged;
+    }
+
+    // 다른 편(같은 편을 강제 공격하는 경우 제외) 표적이 어그로 범위 안에 있는지.
+    bool IsEngagingOpponentInAggro()
+    {
+        if (currentTarget == null || selfEntity == null)
+            return false;
+
+        if (currentTarget.ownerId == selfEntity.ownerId)
+            return false;
+
+        Vector3 delta = currentTarget.transform.position - transform.position;
+        delta.y = 0f;
+        return delta.sqrMagnitude <= aggroRange * aggroRange;
+    }
+
     void Update()
     {
+        UpdateDetectedSound();
+
         // 전투 중(어그로 범위 안에 적 건물이 있음)이면 스쿼드 추종/재탐색을 쉰다.
         // 표적이 아예 없을 때는 여기서 UpdateCombat만 도는 게 아니라 재탐색이 필요하므로
         // HasValidTarget()도 같이 확인한다.
@@ -114,6 +159,8 @@ public class EnemyCombatAI : MobileCombatAI
         {
             if (!HasValidTarget())
                 ClearDamageFocusTarget();
+            else if (IsCurrentTargetUnengageable())
+                TickRetarget(); // 대포 최소 사거리 안으로 파고든 표적은 버리고 다른 표적을 찾는다.
         }
         else if (follower)
         {

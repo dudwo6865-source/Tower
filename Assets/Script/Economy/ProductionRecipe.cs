@@ -13,7 +13,7 @@ public class ProductionRecipe : ScriptableObject
 
     [Header("표시")]
     [Label("표시 이름")]
-    [Tooltip("생산 패널에 표시할 이름입니다. 비워두면 유닛 프리팹의 이름을 사용합니다.")]
+    [Tooltip("생산 패널과, 이 레시피로 생산된 유닛을 선택했을 때 선택 정보 패널에 표시할 이름입니다. 비워두면 유닛 프리팹의 이름을 사용합니다.")]
     public string displayName;
 
     [Label("아이콘")]

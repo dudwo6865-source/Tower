@@ -246,6 +246,21 @@ public static class BuildingUpgradeService
             return false;
         }
 
+        // 같은 자리에 그대로 교체하므로 칸 모양(십자·ㄱ자 등)도 같아야 한다.
+        if (!FootprintShape.SameShape(
+                tier.GetFootprintCells(),
+                GridFootprint.ResolveFootprintMask(tier.Prefab),
+                footprint.footprintCells,
+                footprint.ActiveMask))
+        {
+            WarnOnce(
+                tier,
+                context,
+                $"'{tier.BuildAssetName}'의 칸 모양이 현재 건물과 다릅니다. 업그레이드 분기는 같은 칸 모양이어야 합니다.");
+
+            return false;
+        }
+
         return true;
     }
 

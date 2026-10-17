@@ -66,6 +66,11 @@ public class RelicPanelUI : MonoBehaviour
     [Tooltip("비워두면 씬에서 자동으로 찾습니다.")]
     public RelicManager relicManager;
 
+    [Label("선택 중 게임 정지")]
+    [Tooltip("켜면 후보 선택·교체 화면이 떠 있는 동안 게임 시간을 멈춥니다(Time.timeScale = 0). BGM과 UI 효과음은 계속 재생됩니다. " +
+        "패널에 Animator 연출이 있으면 Animator의 Update Mode를 Unscaled Time으로 바꿔야 정지 중에도 움직입니다.")]
+    public bool pauseWhileChoosing = true;
+
     [Header("후보 선택 화면")]
     [Label("후보 화면 루트")]
     [Tooltip("보이고/숨길 패널 루트입니다. 비워두면 이 화면을 켜고 끄지 않습니다.")]
@@ -108,6 +113,12 @@ public class RelicPanelUI : MonoBehaviour
 
     List<RelicDefinition> currentCandidates;
 
+    // 화면 루트를 비워둔 경우에도 정지를 판단할 수 있도록 열림 상태를 따로 기록한다.
+    bool candidateOpen;
+    bool replaceOpen;
+    bool pausedByPanel;
+    float timeScaleBeforePause = 1f;
+
     void Start()
     {
         if (relicManager == null)
@@ -132,13 +143,16 @@ public class RelicPanelUI : MonoBehaviour
             relicManager.OnRelicsChanged += HandleRelicsChanged;
         }
 
-        SetPanelVisible(candidatePanelRoot, false);
-        SetPanelVisible(replacePanelRoot, false);
+        SetCandidateOpen(false);
+        SetReplaceOpen(false);
         RefreshSlots();
     }
 
     void OnDestroy()
     {
+        // 화면이 열린 채 씬을 떠나도 다음 씬이 멈춘 채로 시작하지 않게 되돌린다.
+        ResumeIfPaused();
+
         if (relicManager == null)
             return;
 
@@ -164,7 +178,7 @@ public class RelicPanelUI : MonoBehaviour
     {
         currentCandidates = new List<RelicDefinition>(candidates);
         RefreshCandidateEntries();
-        SetPanelVisible(candidatePanelRoot, true);
+        SetCandidateOpen(true);
     }
 
     void RefreshCandidateEntries()
@@ -205,8 +219,8 @@ public class RelicPanelUI : MonoBehaviour
     {
         if (GameResultManager.Instance == null || !GameResultManager.Instance.IsGameOver)
             return;
-        SetPanelVisible(candidatePanelRoot, false);
-        SetPanelVisible(replacePanelRoot, false);
+        SetCandidateOpen(false);
+        SetReplaceOpen(false);
     }
 
     void TryChooseCandidate(int index)
@@ -219,7 +233,7 @@ public class RelicPanelUI : MonoBehaviour
 
         // 교체가 필요하면 RelicManager가 OnReplaceRequired를 곧바로 발생시키므로,
         // 후보 화면은 선택 즉시 닫아 교체 화면과 겹치지 않게 한다.
-        SetPanelVisible(candidatePanelRoot, false);
+        SetCandidateOpen(false);
     }
 
     // ---- 교체 화면 ----
@@ -250,7 +264,7 @@ public class RelicPanelUI : MonoBehaviour
         }
 
         RefreshDiscardEntries();
-        SetPanelVisible(replacePanelRoot, true);
+        SetReplaceOpen(true);
     }
 
     void RefreshDiscardEntries()
@@ -294,7 +308,7 @@ public class RelicPanelUI : MonoBehaviour
             return;
 
         relicManager.ConfirmReplace(owned[index]);
-        SetPanelVisible(replacePanelRoot, false);
+        SetReplaceOpen(false);
     }
 
     void HandleCancelReplace()
@@ -302,7 +316,7 @@ public class RelicPanelUI : MonoBehaviour
         if (relicManager != null)
             relicManager.CancelReplace();
 
-        SetPanelVisible(replacePanelRoot, false);
+        SetReplaceOpen(false);
     }
 
     // ---- 장착 슬롯 ----
@@ -348,6 +362,48 @@ public class RelicPanelUI : MonoBehaviour
     }
 
     // ---- 공통 ----
+
+    void SetCandidateOpen(bool open)
+    {
+        candidateOpen = open;
+        SetPanelVisible(candidatePanelRoot, open);
+        RefreshPause();
+    }
+
+    void SetReplaceOpen(bool open)
+    {
+        replaceOpen = open;
+        SetPanelVisible(replacePanelRoot, open);
+        RefreshPause();
+    }
+
+    // 후보·교체 화면 중 하나라도 열려 있으면 게임 시간을 멈추고, 모두 닫히면 원래 속도로 되돌린다.
+    // 후보를 고르는 순간 교체 화면이 먼저 열린 뒤 후보 화면이 닫히므로, 그 사이에 정지가 풀리지 않는다.
+    void RefreshPause()
+    {
+        bool shouldPause = pauseWhileChoosing && (candidateOpen || replaceOpen);
+
+        if (shouldPause && !pausedByPanel)
+        {
+            timeScaleBeforePause = Time.timeScale > 0f ? Time.timeScale : 1f;
+            Time.timeScale = 0f;
+            pausedByPanel = true;
+        }
+        else if (!shouldPause)
+        {
+            ResumeIfPaused();
+        }
+    }
+
+    // 게임이 끝나 화면을 닫는 경우에도 되돌린다. 결과 창은 표시 지연 뒤에 직접 다시 멈춘다.
+    void ResumeIfPaused()
+    {
+        if (!pausedByPanel)
+            return;
+
+        pausedByPanel = false;
+        Time.timeScale = timeScaleBeforePause;
+    }
 
     static void SetPanelVisible(GameObject panelRoot, bool visible)
     {

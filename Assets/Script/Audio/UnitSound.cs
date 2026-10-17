@@ -44,7 +44,7 @@ public enum UnitSoundVoice
 {
     Select,
     ProductionComplete,
-    AttackOrder
+    Command
 }
 
 [DisallowMultipleComponent]
@@ -61,29 +61,72 @@ public class UnitSound : MonoBehaviour, ISerializationCallbackReceiver
     [Tooltip("사망·파괴 시 재생할 사운드입니다. 클립마다 볼륨을 따로 정할 수 있습니다.")]
     public UnitSoundClip[] deathSounds;
 
+    [Header("공격 루프 (화염방사기 등)")]
+    [Label("공격 루프 사운드")]
+    [Tooltip("공격이 이어지는 동안 반복 재생할 사운드입니다(화염방사기 화염 소리 등). 클립의 Loop 설정과 상관없이 반복합니다. " +
+             "클립을 넣으면 위 '공격 사운드'는 재생하지 않습니다(아래 '일반 공격 사운드도 재생'으로 함께 낼 수 있음). 비워두면 쓰지 않습니다.")]
+    public UnitSoundClip attackLoopSound = new UnitSoundClip();
+
+    [Label("공격 끊김 판정 여유(초)")]
+    [Tooltip("마지막 공격 뒤 '공격 쿨다운 + 이 시간' 안에 다음 공격이 없으면 공격이 끝난 것으로 보고 루프를 멈춥니다. " +
+             "공격 사이에 소리가 잠깐씩 끊기면 늘리세요. 추격하느라 공격이 끊기면 이 시간과 상관없이 바로 멈춥니다.")]
+    [Min(0f)]
+    public float attackLoopHoldTime = 0.15f;
+
+    [Label("루프 페이드인(초)")]
+    [Tooltip("루프가 시작될 때 볼륨이 0에서 원래 크기까지 커지는 시간입니다.")]
+    [Min(0f)]
+    public float attackLoopFadeIn = 0.05f;
+
+    [Label("루프 페이드아웃(초)")]
+    [Tooltip("공격이 끝났을 때 루프 볼륨이 0까지 줄어드는 시간입니다. 화염이 자연스럽게 잦아들게 합니다.")]
+    [Min(0f)]
+    public float attackLoopFadeOut = 0.25f;
+
+    [Label("일반 공격 사운드도 재생")]
+    [Tooltip("켜면 루프와 함께 공격할 때마다 위 '공격 사운드'도 재생합니다. 발사음·점화음을 루프 위에 얹을 때 씁니다.")]
+    public bool attackLoopWithOneShots;
+
     [Header("음성·알림")]
     [Tooltip("플레이어가 이 유닛을 선택했을 때 재생할 사운드입니다. 여러 유닛을 함께 선택하면 그중 한 유닛의 소리만 납니다.")]
     public UnitSoundClip[] selectSounds;
 
-    [Tooltip("이 유닛이 생산을 마치고 나왔을 때 재생할 사운드입니다.")]
+    [Tooltip("이 유닛이 생산을 마치고 나왔을 때 재생할 사운드입니다. 쿨타임과 상관없이 생산될 때마다 항상 재생합니다.")]
     public UnitSoundClip[] productionCompleteSounds;
 
-    [Tooltip("이 유닛에게 공격 명령(대상 공격·공격 이동)을 내렸을 때 재생할 사운드입니다. 여러 유닛에게 함께 내리면 그중 한 유닛의 소리만 납니다.")]
-    public UnitSoundClip[] attackOrderSounds;
+    [Tooltip("명령 버튼이나 단축키로 이 유닛에게 명령(이동·공격·공격 이동·정찰·정지·홀드)을 내렸을 때 재생할 사운드입니다. 우클릭으로 내리는 기본 이동·공격에서는 나지 않습니다. 여러 유닛에게 함께 내리면 그중 한 유닛의 소리만 납니다.")]
+    [FormerlySerializedAs("attackOrderSounds")]
+    public UnitSoundClip[] commandSounds;
+
+    [Label("적 발견 시 선택 사운드")]
+    [Tooltip("켜면 플레이어 유닛이 어그로 범위에서 적을 발견해 교전을 시작할 때 선택 사운드를 재생합니다. 이미 싸우던 중 다음 표적으로 넘어갈 때는 나지 않으며, 선택·명령 사운드 쿨타임을 함께 씁니다.\n" +
+        "적 유닛에서 켜면, 그 적이 플레이어 쪽을 발견했을 때(발각) 선택 사운드를 재생합니다. 아래 '발각 사운드' 설정을 따릅니다.")]
+    public bool playSelectSoundOnAggro = true;
+
+    [Header("발각 사운드 (적 유닛)")]
+    [Label("발각 사운드 쿨타임(초)")]
+    [Tooltip("적 유닛의 발각 사운드가 한 번 나면, 이 시간(초) 동안은 다른 적의 발각 사운드도 나지 않습니다. 모든 적이 함께 쓰며, 플레이어의 선택·명령 사운드 쿨타임과는 따로입니다.")]
+    [Min(0f)]
+    public float detectedSoundCooldown = 2f;
+
+    [Label("다시 발각으로 볼 시간(초)")]
+    [Tooltip("이 적이 어그로 범위 안에 플레이어 쪽 표적 없이 이 시간(초) 이상 지낸 뒤 다시 잡아야 발각으로 칩니다. 싸우는 도중 표적이 바뀔 때마다 소리가 나지 않게 합니다.")]
+    [Min(0f)]
+    public float detectedRearmTime = 5f;
+
+    [Label("시야 안에서만 재생")]
+    [Tooltip("켜면 안개 시야 안에 보이는 적만 발각 사운드를 냅니다. 끄면 보이지 않는 곳의 적도 소리를 냅니다(거리 감쇠는 적용).")]
+    public bool detectedRequiresVisibility = true;
 
     [Label("거리 감쇠 무시")]
     [Tooltip("켜면 음성·알림 사운드는 카메라와의 거리·줌과 상관없이 '볼륨' 그대로 재생합니다. 플레이어에게 바로 들려야 하는 소리라 켜 두기를 권장합니다.")]
     public bool voiceIgnoreAttenuation = true;
 
-    [Label("최소 간격(초)")]
-    [Tooltip("음성·알림 사운드끼리의 최소 간격(초)입니다. 모든 유닛이 함께 씁니다. 선택·명령을 빠르게 반복할 때 소리가 겹쳐 쌓이는 것을 막습니다.")]
+    [Label("선택·명령 사운드 쿨타임(초)")]
+    [Tooltip("선택 사운드나 명령 사운드가 한 번 나면, 이 시간(초) 동안은 선택·명령 사운드가 둘 다 나지 않습니다. 모든 유닛이 함께 씁니다. 생산 완료 사운드는 이 쿨타임과 상관없이 항상 납니다.")]
     [Min(0f)]
-    public float voiceMinInterval = 0.15f;
-
-    [Label("선택 사운드 쿨타임(초)")]
-    [Tooltip("선택 사운드를 한 번 낸 뒤 이 시간(초) 동안은 다시 선택해도 선택 사운드를 내지 않습니다. 모든 유닛이 함께 씁니다. 0이면 '최소 간격'만 적용됩니다.")]
-    [Min(0f)]
-    public float selectSoundCooldown = 1f;
+    [FormerlySerializedAs("selectSoundCooldown")]
+    public float voiceCooldown = 1f;
 
     // 예전 형식(클립만 있던 배열). 불러올 때 위 배열로 옮기고 비운다.
     [SerializeField, HideInInspector, FormerlySerializedAs("attackClips")]
@@ -143,12 +186,34 @@ public class UnitSound : MonoBehaviour, ISerializationCallbackReceiver
     [Tooltip("재생 시 피치 무작위 범위입니다.")]
     public Vector2 pitchRange = new Vector2(0.95f, 1.05f);
 
+    [Label("공격 사운드 최대 겹침 수")]
+    [Tooltip("공격 사운드를 동시에 몇 개까지 겹쳐 재생할지입니다. 겹친 소리는 서로 끊지 않고 각자 끝까지 재생되므로, " +
+             "화염방사기처럼 긴 소리를 연달아 틀면 이어지게 들립니다. 모두 재생 중일 때 들어온 공격은 소리를 생략합니다. " +
+             "끊김 없이 이어지려면 '클립 길이 ÷ 공격 간격'보다 크게 잡으세요. 0이면 예전처럼 제한 없이 겹칩니다(동시 재생 한도를 넘으면 앞 소리가 끊길 수 있음).")]
+    [Min(0)]
+    public int attackSoundMaxOverlap = 3;
+
+    [Label("공격 사운드 우선순위")]
+    [Tooltip("동시 재생 한도(Project Settings > Audio > Max Real Voices)를 넘었을 때 어떤 소리를 먼저 끊을지 정합니다. " +
+             "0이 가장 중요하고 256이 가장 덜 중요합니다. 낮출수록 공격 사운드가 다른 소리보다 늦게 끊깁니다. '최대 겹침 수'가 1 이상일 때만 적용됩니다.")]
+    [Range(0, 256)]
+    public int attackSoundPriority = 64;
+
     [Label("명중 사운드 간격(초)")]
     [Tooltip("명중 사운드 최소 간격(초)입니다. 한 번의 공격이 여러 대상을 맞히거나 " +
              "연사가 빠를 때 소리가 겹치는 것을 줄입니다.")]
     public float attackHitSoundCooldown = 0.12f;
 
     EntityHealth health;
+    readonly List<AudioSource> attackAudioSources = new List<AudioSource>();
+
+    // 공격 루프 상태. attackLoopFade는 페이드 진행도(0~1)로, 실제 볼륨에 곱한다.
+    AudioSource attackLoopSource;
+    UnitAttacker cachedAttacker;
+    float attackLoopLastTime = float.NegativeInfinity;
+    float attackLoopFade;
+    bool attackLoopActive;
+    bool attackLoopPaused;
     float lastAttackHitTime;
     bool isDead;
 
@@ -160,7 +225,9 @@ public class UnitSound : MonoBehaviour, ISerializationCallbackReceiver
 
     // 음성·알림 사운드는 유닛이 달라도 서로 겹치지 않게 마지막 재생 시각을 함께 쓴다.
     static float lastVoiceTime = float.NegativeInfinity;
-    static float lastSelectVoiceTime = float.NegativeInfinity;
+
+    // 적 발각 사운드는 플레이어 음성과 쿨타임을 따로 쓴다.
+    static float lastDetectedTime = float.NegativeInfinity;
 
     void Awake()
     {
@@ -196,7 +263,7 @@ public class UnitSound : MonoBehaviour, ISerializationCallbackReceiver
         InitializeNewEntries(deathSounds);
         InitializeNewEntries(selectSounds);
         InitializeNewEntries(productionCompleteSounds);
-        InitializeNewEntries(attackOrderSounds);
+        InitializeNewEntries(commandSounds);
     }
 
     static void InitializeNewEntries(UnitSoundClip[] sounds)
@@ -277,6 +344,8 @@ public class UnitSound : MonoBehaviour, ISerializationCallbackReceiver
 
     void OnDisable()
     {
+        ResetAttackLoop();
+
         if (health == null)
             return;
 
@@ -296,21 +365,52 @@ public class UnitSound : MonoBehaviour, ISerializationCallbackReceiver
 
     void ApplyAudioSourceSettings()
     {
-        if (audioSource == null)
-            return;
+        ApplyAudioSourceSettings(audioSource);
+        ApplyAudioSourceSettings(attackLoopSource);
 
-        audioSource.playOnAwake = false;
-        audioSource.rolloffMode = AudioRolloffMode.Logarithmic;
-        audioSource.minDistance = minDistance;
-        audioSource.maxDistance = maxDistance;
-
-        if (attenuation == UnitSoundAttenuation.Unity3D)
+        foreach (AudioSource source in attackAudioSources)
         {
-            audioSource.spatialBlend = 1f;
+            ApplyAudioSourceSettings(source);
+
+            if (source != null)
+                source.priority = attackSoundPriority;
+        }
+    }
+
+    void ApplyAudioSourceSettings(AudioSource source)
+    {
+        if (source == null)
             return;
+
+        source.playOnAwake = false;
+        source.rolloffMode = AudioRolloffMode.Logarithmic;
+        source.minDistance = minDistance;
+        source.maxDistance = maxDistance;
+        source.spatialBlend = attenuation == UnitSoundAttenuation.Unity3D ? 1f : 0f;
+    }
+
+    // 쉬고 있는 공격 사운드 전용 소스를 찾는다. 없으면 최대 겹침 수까지 새로 만들고,
+    // 모두 재생 중이면 null을 돌려준다(재생 중인 소리를 끊지 않는다).
+    // 출력 설정은 기본 오디오 소스를 따른다.
+    AudioSource GetIdleAttackAudioSource()
+    {
+        foreach (AudioSource existing in attackAudioSources)
+        {
+            if (existing != null && !existing.isPlaying)
+                return existing;
         }
 
-        audioSource.spatialBlend = 0f;
+        if (audioSource == null || attackAudioSources.Count >= attackSoundMaxOverlap)
+            return null;
+
+        AudioSource source = gameObject.AddComponent<AudioSource>();
+        source.outputAudioMixerGroup = audioSource.outputAudioMixerGroup;
+        source.dopplerLevel = audioSource.dopplerLevel;
+        source.spread = audioSource.spread;
+        source.priority = attackSoundPriority;
+        ApplyAudioSourceSettings(source);
+        attackAudioSources.Add(source);
+        return source;
     }
 
     public void PlayAttack()
@@ -318,7 +418,160 @@ public class UnitSound : MonoBehaviour, ISerializationCallbackReceiver
         if (isDead)
             return;
 
-        PlayRandom(attackSounds);
+        if (HasAttackLoop)
+        {
+            KeepAttackLoop();
+
+            if (!attackLoopWithOneShots)
+                return;
+        }
+
+        if (attackSoundMaxOverlap <= 0)
+        {
+            PlayRandom(attackSounds);
+            return;
+        }
+
+        PlayAttackOverlapped();
+    }
+
+    // 쉬는 전용 소스에서 재생해, 앞서 틀던 공격 사운드와 겹치되 서로 끊지 않게 한다.
+    void PlayAttackOverlapped()
+    {
+        AudioSource source = GetIdleAttackAudioSource();
+
+        if (source == null)
+            return;
+
+        if (!TryPickSound(attackSounds, out UnitSoundClip sound, out float playVolume))
+            return;
+
+        source.clip = sound.clip;
+        source.volume = playVolume;
+        source.pitch = Random.Range(pitchRange.x, pitchRange.y);
+        source.Play();
+    }
+
+    // ───────── 공격 루프 ─────────
+
+    bool HasAttackLoop => attackLoopSound != null && attackLoopSound.clip != null;
+
+    /// <summary>
+    /// 공격이 끊겼을 때(추격 시작 등) 루프를 페이드아웃시킵니다. 루프를 쓰지 않으면 아무 일도 하지 않습니다.
+    /// </summary>
+    public void StopAttackLoop()
+    {
+        attackLoopActive = false;
+    }
+
+    // 공격할 때마다 불러 루프를 시작하거나 이어간다.
+    void KeepAttackLoop()
+    {
+        AudioSource source = EnsureAttackLoopSource();
+
+        if (source == null || !audioSource.enabled || !gameObject.activeInHierarchy)
+            return;
+
+        attackLoopLastTime = Time.time;
+        attackLoopActive = true;
+
+        if (source.isPlaying && source.clip == attackLoopSound.clip)
+            return;
+
+        // 페이드아웃 중에 다시 공격하면 그 볼륨에서 이어서 커지도록 진행도는 유지한다.
+        source.clip = attackLoopSound.clip;
+        source.pitch = Random.Range(pitchRange.x, pitchRange.y);
+        source.volume = 0f;
+        source.Play();
+        attackLoopPaused = false;
+    }
+
+    AudioSource EnsureAttackLoopSource()
+    {
+        if (attackLoopSource != null)
+            return attackLoopSource;
+
+        if (audioSource == null)
+            return null;
+
+        attackLoopSource = gameObject.AddComponent<AudioSource>();
+        attackLoopSource.loop = true;
+        attackLoopSource.outputAudioMixerGroup = audioSource.outputAudioMixerGroup;
+        attackLoopSource.dopplerLevel = audioSource.dopplerLevel;
+        attackLoopSource.spread = audioSource.spread;
+        attackLoopSource.priority = attackSoundPriority;
+        ApplyAudioSourceSettings(attackLoopSource);
+        return attackLoopSource;
+    }
+
+    void Update()
+    {
+        if (attackLoopSource != null)
+            UpdateAttackLoop();
+    }
+
+    void UpdateAttackLoop()
+    {
+        // 결과 창 등 일시정지(timeScale 0) 중에는 루프도 멈췄다가 재개하면 이어서 튼다.
+        if (Time.timeScale <= 0f)
+        {
+            if (attackLoopSource.isPlaying)
+            {
+                attackLoopSource.Pause();
+                attackLoopPaused = true;
+            }
+
+            return;
+        }
+
+        if (attackLoopPaused)
+        {
+            attackLoopSource.UnPause();
+            attackLoopPaused = false;
+        }
+
+        if (!attackLoopSource.isPlaying)
+            return;
+
+        if (attackLoopActive && Time.time > attackLoopLastTime + GetAttackLoopHoldTime())
+            attackLoopActive = false;
+
+        float targetFade = attackLoopActive ? 1f : 0f;
+        float fadeDuration = attackLoopActive ? attackLoopFadeIn : attackLoopFadeOut;
+
+        attackLoopFade = fadeDuration <= 0f
+            ? targetFade
+            : Mathf.MoveTowards(attackLoopFade, targetFade, Time.deltaTime / fadeDuration);
+
+        if (!attackLoopActive && attackLoopFade <= 0f)
+        {
+            attackLoopSource.Stop();
+            return;
+        }
+
+        // 카메라가 움직이면 거리·줌 감쇠가 바뀌므로 매 프레임 볼륨을 다시 계산한다.
+        float loopVolume = HasAttackLoop ? attackLoopSound.volume : 0f;
+        attackLoopSource.volume = GetEffectiveVolume() * loopVolume * attackLoopFade;
+    }
+
+    // 공격 쿨다운보다 짧으면 공격 사이마다 루프가 끊기므로 쿨다운을 기준으로 여유를 더한다.
+    float GetAttackLoopHoldTime()
+    {
+        if (cachedAttacker == null)
+            cachedAttacker = GetComponent<UnitAttacker>();
+
+        float cooldown = cachedAttacker != null ? cachedAttacker.EffectiveAttackCooldown : 0f;
+        return cooldown + attackLoopHoldTime;
+    }
+
+    void ResetAttackLoop()
+    {
+        attackLoopActive = false;
+        attackLoopPaused = false;
+        attackLoopFade = 0f;
+
+        if (attackLoopSource != null)
+            attackLoopSource.Stop();
     }
 
     /// <summary>
@@ -378,11 +631,10 @@ public class UnitSound : MonoBehaviour, ISerializationCallbackReceiver
         if (sounds == null || sounds.Length == 0)
             return false;
 
-        if (Time.unscaledTime < lastVoiceTime + voiceMinInterval)
-            return false;
+        // 생산 완료는 알림이라 항상 낸다. 선택·명령만 쿨타임을 함께 쓴다.
+        bool usesCooldown = voice != UnitSoundVoice.ProductionComplete;
 
-        if (voice == UnitSoundVoice.Select &&
-            Time.unscaledTime < lastSelectVoiceTime + selectSoundCooldown)
+        if (usesCooldown && Time.unscaledTime < lastVoiceTime + voiceCooldown)
             return false;
 
         UnitSoundClip sound = sounds[Random.Range(0, sounds.Length)];
@@ -398,11 +650,49 @@ public class UnitSound : MonoBehaviour, ISerializationCallbackReceiver
         if (playVolume <= 0.001f)
             return false;
 
-        lastVoiceTime = Time.unscaledTime;
+        if (usesCooldown)
+            lastVoiceTime = Time.unscaledTime;
 
-        if (voice == UnitSoundVoice.Select)
-            lastSelectVoiceTime = Time.unscaledTime;
+        audioSource.PlayOneShot(sound.clip, playVolume);
+        return true;
+    }
 
+    /// <summary>
+    /// 적 유닛이 플레이어 쪽을 발견했을 때 선택 사운드를 재생합니다("발각").
+    /// 플레이어에게 들려주는 알림이 아니라 그 자리에서 나는 소리라 거리 감쇠를 항상 적용합니다.
+    /// </summary>
+    public bool PlayDetectedVoice()
+    {
+        if (!playSelectSoundOnAggro || isDead || audioSource == null)
+            return false;
+
+        if (selectSounds == null || selectSounds.Length == 0)
+            return false;
+
+        if (Time.unscaledTime < lastDetectedTime + detectedSoundCooldown)
+            return false;
+
+        if (detectedRequiresVisibility &&
+            FogOfWarManager.Instance != null &&
+            !FogOfWarManager.Instance.IsVisible(transform.position))
+        {
+            return false;
+        }
+
+        UnitSoundClip sound = selectSounds[Random.Range(0, selectSounds.Length)];
+
+        if (sound == null || sound.clip == null || sound.volume <= 0f)
+            return false;
+
+        if (!audioSource.enabled || !gameObject.activeInHierarchy)
+            return false;
+
+        float playVolume = GetEffectiveVolume() * sound.volume;
+
+        if (playVolume <= 0.001f)
+            return false;
+
+        lastDetectedTime = Time.unscaledTime;
         audioSource.PlayOneShot(sound.clip, playVolume);
         return true;
     }
@@ -421,8 +711,8 @@ public class UnitSound : MonoBehaviour, ISerializationCallbackReceiver
                 return selectSounds;
             case UnitSoundVoice.ProductionComplete:
                 return productionCompleteSounds;
-            case UnitSoundVoice.AttackOrder:
-                return attackOrderSounds;
+            case UnitSoundVoice.Command:
+                return commandSounds;
             default:
                 return null;
         }
@@ -461,22 +751,30 @@ public class UnitSound : MonoBehaviour, ISerializationCallbackReceiver
         PlayDeath();
     }
 
-    void PlayRandom(UnitSoundClip[] sounds, bool detached = false)
+    // 배열에서 무작위로 하나를 고르고 감쇠를 반영한 재생 볼륨을 구한다. 재생할 수 없으면 false.
+    bool TryPickSound(UnitSoundClip[] sounds, out UnitSoundClip sound, out float playVolume)
     {
-        if (sounds == null || sounds.Length == 0 || audioSource == null)
-            return;
+        sound = null;
+        playVolume = 0f;
 
-        UnitSoundClip sound = sounds[Random.Range(0, sounds.Length)];
+        if (sounds == null || sounds.Length == 0 || audioSource == null)
+            return false;
+
+        sound = sounds[Random.Range(0, sounds.Length)];
 
         if (sound == null || sound.clip == null || volume <= 0f || sound.volume <= 0f)
-            return;
+            return false;
 
         if (!audioSource.enabled || !gameObject.activeInHierarchy)
-            return;
+            return false;
 
-        float playVolume = GetEffectiveVolume() * sound.volume;
+        playVolume = GetEffectiveVolume() * sound.volume;
+        return playVolume > 0.001f;
+    }
 
-        if (playVolume <= 0.001f)
+    void PlayRandom(UnitSoundClip[] sounds, bool detached = false)
+    {
+        if (!TryPickSound(sounds, out UnitSoundClip sound, out float playVolume))
             return;
 
         float pitch = Random.Range(pitchRange.x, pitchRange.y);

@@ -86,12 +86,15 @@ public static class UnitCommandHandler
         return TryGetAttackTarget(entity, out target);
     }
 
+    // 아래 *ToSelection 명령들은 명령 버튼·단축키(명령 모드 포함)로 직접 내린 명령이라
+    // 명령 사운드를 낸다. 우클릭 기본 명령(TryIssueCommandToSelection)은 소리를 내지 않는다.
     public static void IssueStopToSelection()
     {
         if (!TryGetCommandingUnits(out List<SelectableEntity> units))
             return;
 
         IssueStop(units);
+        PlayCommandSound(units);
     }
 
     public static void IssueHoldToSelection()
@@ -100,6 +103,7 @@ public static class UnitCommandHandler
             return;
 
         IssueHold(units);
+        PlayCommandSound(units);
     }
 
     public static bool IssueMoveToSelection(Vector3 hitPoint)
@@ -107,7 +111,7 @@ public static class UnitCommandHandler
         if (!TryGetCommandingUnits(out List<SelectableEntity> units))
             return false;
 
-        return IssueMove(units, hitPoint);
+        return PlayCommandSoundIf(IssueMove(units, hitPoint), units);
     }
 
     public static bool IssueAttackToSelection(SelectableEntity target)
@@ -115,7 +119,7 @@ public static class UnitCommandHandler
         if (!TryGetCommandingUnits(out List<SelectableEntity> units))
             return false;
 
-        return IssueAttack(units, target);
+        return PlayCommandSoundIf(IssueAttack(units, target), units);
     }
 
     public static bool IssueAttackMoveToSelection(Vector3 hitPoint)
@@ -123,7 +127,7 @@ public static class UnitCommandHandler
         if (!TryGetCommandingUnits(out List<SelectableEntity> units))
             return false;
 
-        return IssueAttackMove(units, hitPoint);
+        return PlayCommandSoundIf(IssueAttackMove(units, hitPoint), units);
     }
 
     public static bool IssuePatrolToSelection(Vector3 hitPoint)
@@ -131,7 +135,20 @@ public static class UnitCommandHandler
         if (!TryGetCommandingUnits(out List<SelectableEntity> units))
             return false;
 
-        return IssuePatrol(units, hitPoint);
+        return PlayCommandSoundIf(IssuePatrol(units, hitPoint), units);
+    }
+
+    static void PlayCommandSound(List<SelectableEntity> units)
+    {
+        UnitSound.PlayVoiceForGroup(units, UnitSoundVoice.Command);
+    }
+
+    static bool PlayCommandSoundIf(bool issued, List<SelectableEntity> units)
+    {
+        if (issued)
+            PlayCommandSound(units);
+
+        return issued;
     }
 
     static bool TryGetCommandingUnits(out List<SelectableEntity> units)
@@ -215,6 +232,10 @@ public static class UnitCommandHandler
 
         foreach (SelectableEntity unit in units)
         {
+            // 아군 강제 공격은 허용하지만 자기 자신은 공격하지 않는다.
+            if (unit == target)
+                continue;
+
             UnitCombatAI combatAI = unit.GetComponent<UnitCombatAI>();
             UnitAttacker attacker = unit.GetComponent<UnitAttacker>();
 
@@ -233,7 +254,6 @@ public static class UnitCommandHandler
             return false;
 
         UnitCommandIndicatorTracker.TrackAttackTarget(attackTracks, target);
-        UnitSound.PlayVoiceForGroup(units, UnitSoundVoice.AttackOrder);
         return true;
     }
 
@@ -315,7 +335,6 @@ public static class UnitCommandHandler
             moveTracks,
             hitPoint,
             MoveDestinationIndicator.AttackMoveColor);
-        UnitSound.PlayVoiceForGroup(units, UnitSoundVoice.AttackOrder);
         return true;
     }
 

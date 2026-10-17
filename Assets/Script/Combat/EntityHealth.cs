@@ -11,6 +11,23 @@ public class EntityHealth : MonoBehaviour
     [Tooltip("이 엔티티의 최대 체력입니다.")]
     public float maxHealth = 100f;
 
+    [Header("방어")]
+    [Label("방어력")]
+    [Tooltip("받는 피해를 한 번 맞을 때마다 이만큼 줄입니다(고정 감소). 공격력 10에 방어력 3이면 7을 받습니다. " +
+        "업그레이드·웨이브·돌연변이 보너스는 이 값 위에 더해집니다.")]
+    [Min(0f)]
+    public float armor;
+
+    [Label("최소 피해 비율")]
+    [Tooltip("방어력이 아무리 높아도 원래 피해의 이 비율만큼은 받습니다. 0.1이면 10%입니다.")]
+    [Range(0f, 1f)]
+    public float minDamageRatio = 0.1f;
+
+    [Label("최소 피해량")]
+    [Tooltip("방어력이 아무리 높아도 한 번 맞을 때 이만큼은 받습니다. '최소 피해 비율'과 둘 중 큰 값을 씁니다. 원래 피해보다 커지지는 않습니다.")]
+    [Min(0f)]
+    public float minDamage = 0.5f;
+
     [Header("사망")]
     [Label("사망 이펙트 프리팹")]
     [Tooltip("사망·파괴 시 재생할 이펙트·파티클 프리팹입니다. 비어 있으면 이펙트 없이 바로 사라집니다.")]
@@ -31,9 +48,13 @@ public class EntityHealth : MonoBehaviour
 
     public bool IsAlive => CurrentHealth > 0f;
 
+    // 실제 방어력 = 기본값 + 업그레이드 보너스입니다. (웨이브·돌연변이 보너스는 기본값에 더해 둔다)
+    public float Armor => Mathf.Max(0f, armor + upgradeArmorBonus);
+
     private SelectableEntity selectableEntity;
     private bool isDying;
     private float upgradeMaxHealthBonus;
+    private float upgradeArmorBonus;
 
     void Awake()
     {
@@ -56,10 +77,25 @@ public class EntityHealth : MonoBehaviour
             BuildingRegistry.NotifyRemoved(selectableEntity);
     }
 
+    /// <summary>
+    /// 방어력을 적용한 실제 피해량입니다. 피해 - 방어력이되, 최소 피해(비율·고정값 중 큰 값, 원래 피해 이하)는 보장합니다.
+    /// </summary>
+    public float CalculateDamageTaken(float damage)
+    {
+        if (damage <= 0f)
+            return 0f;
+
+        float minimum = Mathf.Min(damage, Mathf.Max(damage * minDamageRatio, minDamage));
+        return Mathf.Max(minimum, damage - Armor);
+    }
+
     public void TakeDamage(float damage, SelectableEntity attacker = null)
     {
         if (!IsAlive)
             return;
+
+        // 모든 공격(근접·투사체·범위·화염)이 여기로 들어오므로 방어력은 이 한 곳에서만 적용한다.
+        damage = CalculateDamageTaken(damage);
 
         CurrentHealth = Mathf.Max(0f, CurrentHealth - damage);
         OnHealthChanged?.Invoke(CurrentHealth, MaxHealth);
@@ -88,6 +124,12 @@ public class EntityHealth : MonoBehaviour
 
         CurrentHealth = Mathf.Min(CurrentHealth, MaxHealth);
         OnHealthChanged?.Invoke(CurrentHealth, MaxHealth);
+    }
+
+    // 업그레이드로 인한 추가 방어력을 설정합니다.
+    public void SetUpgradeArmorBonus(float bonus)
+    {
+        upgradeArmorBonus = Mathf.Max(0f, bonus);
     }
 
     void NotifyAttacked(SelectableEntity attacker)
@@ -202,8 +244,8 @@ public class EntityHealth : MonoBehaviour
         if (movement != null)
             movement.enabled = false;
 
-        NavMeshObstacle obstacle = GetComponent<NavMeshObstacle>();
-        if (obstacle != null)
+        // 칸 모양을 지정한 건물은 자식에 장애물이 여러 개 있으므로 모두 끈다.
+        foreach (NavMeshObstacle obstacle in GetComponentsInChildren<NavMeshObstacle>())
             obstacle.enabled = false;
     }
 }

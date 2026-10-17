@@ -23,6 +23,7 @@ public static class BuildingSpawnUtility
             return null;
 
         Vector2Int footprintCells = data.GetFootprintCells();
+        bool[] footprintMask = GridFootprint.ResolveFootprintMask(data.Prefab);
 
         // 지형 검사는 반드시 Instantiate '전에' 끝낸다.
         // Instantiate 순간 EntityHealth.Awake가 BuildingRegistry에 등록되면서
@@ -33,7 +34,7 @@ public static class BuildingSpawnUtility
         bool terrainAlreadyValid =
             skipTerrainChecks ||
             GridOccupancy.Instance == null ||
-            GridOccupancy.Instance.CanOccupy(originCell, footprintCells, position.y);
+            GridOccupancy.Instance.CanOccupy(originCell, footprintCells, position.y, false, footprintMask);
 
         GameObject buildingObject = Object.Instantiate(
             data.Prefab,
@@ -72,13 +73,17 @@ public static class BuildingSpawnUtility
                     originCell,
                     footprintCells,
                     position.y,
-                    terrainAlreadyValid)
+                    terrainAlreadyValid,
+                    footprint.ActiveMask)
                 : "GridOccupancy.Instance가 없습니다";
 
             Debug.LogWarning(
                 $"BuildingSpawnUtility: '{data.BuildAssetName}' footprint registration failed " +
                 $"at {originCell}. 이유: {reason}",
                 buildingObject);
+
+            // 칸 등록은 실패했어도 건물은 서 있으므로 NavMesh 구멍은 뚫는다.
+            footprint.RestoreNavMeshObstacle();
         }
 
         ConfigureProductionBuilding(buildingObject, data);

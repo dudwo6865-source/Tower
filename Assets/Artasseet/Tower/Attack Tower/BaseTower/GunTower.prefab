@@ -38,7 +38,7 @@ Transform:
   m_GameObject: {fileID: 6989466109074766155}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 0.05, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -154,6 +154,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   maxHealth: 150
+  armor: 0
+  minDamageRatio: 0.1
+  minDamage: 0.5
   deathEffectPrefab: {fileID: 304414178702807373, guid: 45d6ec100fd5e4242a690c9cb7b4bbe5, type: 3}
 --- !u!114 &96901974076648166
 MonoBehaviour:
@@ -187,6 +190,9 @@ MonoBehaviour:
   blockCells: 1
   carveNavMesh: 1
   snapTransformOnRegister: 1
+  useCustomShape: 0
+  cellMask: 01
+  cellMaskSize: {x: 1, y: 1}
 --- !u!114 &3416975678898589207
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -208,6 +214,23 @@ MonoBehaviour:
   - clip: {fileID: 8300000, guid: 6a01f91b3a0304547b8fe8eb3ae0820b, type: 3}
     volume: 1
     initialized: 1
+  attackLoopSound:
+    clip: {fileID: 0}
+    volume: 1
+    initialized: 1
+  attackLoopHoldTime: 0.15
+  attackLoopFadeIn: 0.05
+  attackLoopFadeOut: 0.25
+  attackLoopWithOneShots: 0
+  selectSounds: []
+  productionCompleteSounds: []
+  commandSounds: []
+  playSelectSoundOnAggro: 1
+  detectedSoundCooldown: 2
+  detectedRearmTime: 5
+  detectedRequiresVisibility: 1
+  voiceIgnoreAttenuation: 1
+  voiceCooldown: 1
   legacyAttackClips: []
   legacyAttackHitClips: []
   legacyDeathClips: []
@@ -222,6 +245,8 @@ MonoBehaviour:
   referenceMinOrthoSize: 12
   referenceMaxOrthoSize: 45
   pitchRange: {x: 0.95, y: 1.05}
+  attackSoundMaxOverlap: 3
+  attackSoundPriority: 64
   attackHitSoundCooldown: 0.12
 --- !u!114 &1609905897747143312
 MonoBehaviour:
@@ -411,7 +436,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: ca54da3c9ab056745843abfa61e30a40, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0
+      value: 0.05
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: ca54da3c9ab056745843abfa61e30a40, type: 3}
       propertyPath: m_LocalPosition.z

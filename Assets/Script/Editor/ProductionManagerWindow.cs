@@ -404,6 +404,17 @@ public class ProductionManagerWindow : EditorWindow
                     $"'{option.tier.name}'의 칸 수 {option.tier.GetFootprintCells()}가 이 건물 {cells}과 달라 업그레이드할 수 없습니다.",
                     MessageType.Warning);
             }
+            else if (data.IsUsableOption(option) &&
+                     !FootprintShape.SameShape(
+                         cells,
+                         GridFootprint.ResolveFootprintMask(data.Prefab),
+                         option.tier.GetFootprintCells(),
+                         GridFootprint.ResolveFootprintMask(option.tier.Prefab)))
+            {
+                EditorGUILayout.HelpBox(
+                    $"'{option.tier.name}'의 칸 모양이 이 건물과 달라 업그레이드할 수 없습니다.",
+                    MessageType.Warning);
+            }
         }
     }
 
@@ -615,6 +626,7 @@ public class ProductionManagerWindow : EditorWindow
 
         public float TotalWatt => recipe.TotalWattCost;
         public float Health => ReadFloat(healthObject, "maxHealth");
+        public float Armor => ReadFloat(healthObject, "armor");
         public float Damage => ReadFloat(attackObject, "attackDamage");
         public float Cooldown => ReadFloat(attackObject, "attackCooldown");
         public float Dps => Cooldown > 0f ? Damage / Cooldown : 0f;
@@ -682,6 +694,7 @@ public class ProductionManagerWindow : EditorWindow
         WattPerUnit,
         Population,
         Health,
+        Armor,
         Damage,
         Cooldown,
         Dps,
@@ -778,6 +791,7 @@ public class ProductionManagerWindow : EditorWindow
             if (showUnitStats)
             {
                 HeaderButton("체력", "유닛 데이터의 최대 체력입니다.", SortKey.Health, NumWidth);
+                HeaderButton("방어력", "유닛 데이터의 방어력입니다. 한 번 맞을 때마다 피해를 이만큼 줄입니다.", SortKey.Armor, NumWidth);
                 HeaderButton("공격력", "유닛 데이터의 공격력입니다.", SortKey.Damage, NumWidth);
                 HeaderButton("공격 간격", "유닛 데이터의 공격 간격(초)입니다.", SortKey.Cooldown, NumWidth);
                 HeaderButton("DPS", "공격력 ÷ 공격 간격입니다.", SortKey.Dps, NumWidth);
@@ -869,6 +883,7 @@ public class ProductionManagerWindow : EditorWindow
         if (showUnitStats)
         {
             StatField(row.healthObject, "maxHealth", "체력 정보 없음", "유닛 프리팹에 EntityHealth도 유닛 데이터도 없습니다.");
+            StatField(row.healthObject, "armor", "체력 정보 없음", "유닛 프리팹에 EntityHealth도 유닛 데이터도 없습니다.");
             StatField(row.attackObject, "attackDamage", "공격 없음", "유닛 프리팹에 UnitAttacker도 유닛 데이터도 없습니다.");
             StatField(row.attackObject, "attackCooldown", "공격 없음", "유닛 프리팹에 UnitAttacker도 유닛 데이터도 없습니다.");
 
@@ -1045,6 +1060,7 @@ public class ProductionManagerWindow : EditorWindow
             case SortKey.WattPerUnit: return row.TotalWatt;
             case SortKey.Population: return recipe.population;
             case SortKey.Health: return row.Health;
+            case SortKey.Armor: return row.Armor;
             case SortKey.Damage: return row.Damage;
             case SortKey.Cooldown: return row.Cooldown;
             case SortKey.Dps: return row.Dps;
