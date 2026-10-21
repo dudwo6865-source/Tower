@@ -95,6 +95,10 @@ public class FogOfWarManager : MonoBehaviour
     [Tooltip("'절벽 경계 여유 거리'를 적용할 칸의 최소 높이 차(미터)입니다. 이보다 낮은 칸은 절벽 바로 밑이어도 평지로 보고 그대로 보여줍니다.")]
     public float highGroundEdgeMinRise = 0.3f;
 
+    [Label("아래에서 언덕 지형 안내")]
+    [Tooltip("보이는 낮은 입구에서 이어지는 언덕·램프를 시야 반경 안에서 어둡게 드러냅니다. 고지대 평지와 적·건물의 발견 판정은 바뀌지 않습니다. 지형 정보는 시작할 때 굽습니다.")]
+    public bool revealHillTerrain = true;
+
     [Label("시야 주인 지면 탐색 거리")]
     [Tooltip("유닛·건물이 서 있는 지면 높이를 찾을 때, 실제 위치에서 가장 가까운 NavMesh를 이 거리(미터) 안에서 찾습니다. 못 찾으면 그 자리의 가장 높은 표면을 씁니다. 너무 크게 잡을 필요는 없습니다.")]
     public float sourceGroundSnapDistance = 2f;
@@ -198,6 +202,10 @@ public class FogOfWarManager : MonoBehaviour
     private Texture2D fogTexture;
     private Color32[] fogPixels;
 
+    // 지형 안내는 화면에만 합성해 적·건물의 탐색 판정과 분리한다.
+    private bool[] hillTerrainByCell;
+    private byte[] hillTerrainExplored;
+
     // 화면 표시용 버퍼. fogPixels(게임플레이 판정용 원본)를 흐려서 담고, 부드러운 전환을
     // 위해 직전 표시 결과를 fogPrevTexture에 남겨둔다.
     private Texture2D fogPrevTexture;
@@ -269,6 +277,7 @@ public class FogOfWarManager : MonoBehaviour
 
         BuildElevationHeightGrid();
         BuildElevationEdgeHeightGrid();
+        BuildHillTerrainGrid();
 
         FogOfWarVisionSource[] existingSources =
             FindObjectsOfType<FogOfWarVisionSource>();
@@ -1037,6 +1046,33 @@ public class FogOfWarManager : MonoBehaviour
         minimapFogOverlay.color = Color.white;
     }
 
+    void BuildHillTerrainGrid()
+    {
+        hillTerrainByCell = new bool[gridWidth * gridHeight];
+        hillTerrainExplored = new byte[hillTerrainByCell.Length];
+        CliffPainter[] painters = FindObjectsOfType<CliffPainter>();
+        foreach (CliffPainter painter in painters)
+        {
+            painter.EnsureLookup();
+            var tileCache = new Dictionary<CliffPainter.CellCoord, bool>();
+            for (int z = 0; z < gridHeight; z++)
+            {
+                for (int x = 0; x < gridWidth; x++)
+                {
+                    Vector2 world = GetCellWorldXZ(x, z);
+                    var cell = painter.WorldToCell(new Vector3(world.x, 0f, world.y));
+                    if (!tileCache.TryGetValue(cell, out bool isHill))
+                    {
+                        isHill = painter.IsVisionHillCell(cell);
+                        tileCache.Add(cell, isHill);
+                    }
+                    if (isHill)
+                        hillTerrainByCell[z * gridWidth + x] = true;
+                }
+            }
+        }
+    }
+
     void UpdateFogTexture()
     {
         for (int i = 0; i < fogPixels.Length; i++)
@@ -1085,6 +1121,13 @@ public class FogOfWarManager : MonoBehaviour
         }
 
         System.Array.Copy(fogPixels, displayPixels, fogPixels.Length);
+
+        if (revealHillTerrain && hillTerrainExplored != null)
+        {
+            for (int i = 0; i < displayPixels.Length; i++)
+                if (hillTerrainExplored[i] > displayPixels[i].r)
+                    displayPixels[i].r = hillTerrainExplored[i];
+        }
 
         for (int i = 0; i < displayBlurIterations; i++)
             BlurDisplayPixels();
@@ -1173,7 +1216,8 @@ public class FogOfWarManager : MonoBehaviour
 
         // 소스가 서 있는 칸은 항상 밝힌다.
         float centerSlope = float.NegativeInfinity;
-        StampVisionCell(centerX, centerZ, worldPosition, eyeHeight, radius, edgeSoftness, ref centerSlope);
+        bool centerHill = false;
+        StampVisionCell(centerX, centerZ, worldPosition, eyeHeight, radius, edgeSoftness, ref centerSlope, ref centerHill);
 
         // 경계 상자의 테두리 칸으로만 광선을 쏜다. 박스 전체를 채우는 것과 점근적으로
         // 같은 비용이면서, 광선을 따라 고도각(지평선)을 추적할 수 있다.
@@ -1217,10 +1261,11 @@ public class FogOfWarManager : MonoBehaviour
         // 칸 중 이 각도를 못 넘는 칸만 가려진 것으로 보고 밝히지 않는다(광선 자체는 계속
         // 진행). 눈높이보다 낮거나 같은 칸은 이 규칙과 무관하게 항상 보인다.
         float maxSlope = float.NegativeInfinity;
+        bool connectedHill = false;
 
         while (true)
         {
-            if (!StampVisionCell(x, z, sourceWorldPos, eyeHeight, radius, edgeSoftness, ref maxSlope))
+            if (!StampVisionCell(x, z, sourceWorldPos, eyeHeight, radius, edgeSoftness, ref maxSlope, ref connectedHill))
                 return;
 
             if (x == x1 && z == z1)
@@ -1262,7 +1307,8 @@ public class FogOfWarManager : MonoBehaviour
         float eyeHeight,
         float radius,
         float edgeSoftness,
-        ref float maxSlope)
+        ref float maxSlope,
+        ref bool connectedHill)
     {
         if (x < 0 || x >= gridWidth || z < 0 || z >= gridHeight)
             return false;
@@ -1279,6 +1325,23 @@ public class FogOfWarManager : MonoBehaviour
         float distance = Mathf.Sqrt(distSqr);
         float eyeY = sourceWorldPos.y + eyeHeight;
         bool elevationVisible = true;
+
+        // 낮은 입구부터 같은 광선을 따라 이어지는 오르막만 안내한다.
+        // 눈높이 아래도 지평선 검사를 생략하지 않아 다른 절벽 뒤로 새지 않게 한다.
+        int cellIndex = z * gridWidth + x;
+        float terrainHeight = SampleTerrainHeightAtCell(x, z);
+        bool terrainLineVisible = distance < MinElevationSampleDistance ||
+            (terrainHeight - eyeY) / distance >= maxSlope - ElevationSlopeEpsilon;
+        connectedHill = revealHillTerrain && enableElevationVision &&
+            hillTerrainByCell != null && hillTerrainByCell[cellIndex] &&
+            terrainLineVisible &&
+            (connectedHill || terrainHeight - sourceWorldPos.y < highGroundBlockHeight);
+        if (connectedHill)
+        {
+            byte strength = (byte)(CalculateVisionStrength(distance, radius, edgeSoftness) * 255f);
+            if (strength > hillTerrainExplored[cellIndex])
+                hillTerrainExplored[cellIndex] = strength;
+        }
 
         // 아주 가까운 칸(소스 자신의 칸 등)은 거리가 0에 가까워 고도각이 불안정해지므로
         // 최소 거리 밑에서는 고도각 판정을 건너뛰고 항상 보이는 것으로 취급한다.

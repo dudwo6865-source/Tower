@@ -203,6 +203,39 @@ public class CliffPainter : MonoBehaviour
         hillLayerMap.TryGetValue(cell, out int hillLayer) ? hillLayer : 0;
     public bool HasGround(CellCoord cell) => groundSet.Contains(cell);
 
+    // 실제 오르막 모듈만 반환한다. 벽이 섞인 연결 타일과 위층 평지는 제외한다.
+    public bool IsVisionHillCell(CellCoord cell)
+    {
+        if (hillTileSet != null)
+        {
+            if (HasHill(cell) && IsEdgeSlot(cell, GetHillLayer(cell)))
+                return true;
+
+            for (int dir = 0; dir < 4; dir++)
+            {
+                CellCoord adjacent = Neighbor(cell, dir);
+                if (!HasHill(adjacent))
+                    continue;
+                int layer = GetHillLayer(adjacent);
+                if (IsEdgeSlot(cell, layer) && (layer > 0 || HasGround(cell)) &&
+                    CountOrthoHillNeighbors(cell, layer) >= 2)
+                    return true;
+            }
+        }
+
+        if (tileSet == null || tileSet.ramp == null || ramps == null || HasTop(cell))
+            return false;
+
+        for (int i = 0; i < ramps.Count; i++)
+        {
+            RampEntry ramp = ramps[i];
+            if (HasTop(ramp.cell) && (HasGround(cell) || HasHill(cell)) &&
+                Neighbor(ramp.cell, NormalizeDir(ramp.direction)).Equals(cell))
+                return true;
+        }
+        return false;
+    }
+
     public int TopCount => tops != null ? tops.Count : 0;
 
     public void InvalidateLookup() => lookupDirty = true;
