@@ -120,6 +120,8 @@ MonoBehaviour:
   projectileSpeed: 12
   firePoint: {fileID: 7518304296636600780}
   pierceHitRadius: 1
+  flameAimPitch: 1
+  flameMaxPitchAngle: 45
   beamWidth: 1
   minAttackRange: 0
   arcHeight: 4
@@ -395,8 +397,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   flashColor: {r: 1.1577258, g: 0.13335063, b: 0, a: 1}
   duration: 0.5
-  emissionPropertyNames:
-  - _EmissionColor
+  flashPropertyNames:
+  - _HitFlashColor
   - _Emissive_Color
 --- !u!208 &-7195806573515328784
 NavMeshObstacle:

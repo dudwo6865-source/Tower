@@ -29,6 +29,8 @@ public partial class UnitCombatAI
 
     protected override bool HasDirectMoveOrder => manualMoveActive && !attackMoveActive;
     protected override bool IsHoldingPosition => orderState == UnitOrderState.Hold;
+    // 사거리 안에서 멈춰 공격 중이면 '공격 자리'가 먼저 걸리므로, 여기선 표적 유무만 본다.
+    protected override bool IsApproachingAttackRange => attackMoveActive && HasValidTarget();
 
     bool CanYield => allowIdleYield && !yielding && Time.time >= nextYieldAllowed &&
         orderState == UnitOrderState.Free && !manualMoveActive && !manualFocusTarget &&

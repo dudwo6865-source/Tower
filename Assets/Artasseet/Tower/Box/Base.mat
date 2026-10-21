@@ -324,7 +324,7 @@ Material:
     - _DisplacementLockTilingScale: 1
     - _DisplacementMode: 3
     - _DissolveCapEnabled: 1
-    - _DissolveEdge: 0.72
+    - _DissolveEdge: 1.56
     - _DissolveEnabled: 1
     - _DissolveHeight: 11
     - _DissolveNoiseScale: 50
@@ -578,6 +578,7 @@ Material:
     - _FirstShadeMaskColor: {r: 0, g: 1, b: 1, a: 1}
     - _HighColor: {r: 0.05660379, g: 0.05660379, b: 0.05660379, a: 1}
     - _HighlightMaskColor: {r: 1, g: 1, b: 0, a: 1}
+    - _HitFlashColor: {r: 0, g: 0, b: 0, a: 0}
     - _InvPrimScale: {r: 1, g: 1, b: 0, a: 0}
     - _IridescenceThicknessRemap: {r: 0, g: 1, b: 0, a: 0}
     - _MatCapColor: {r: 1, g: 1, b: 1, a: 1}

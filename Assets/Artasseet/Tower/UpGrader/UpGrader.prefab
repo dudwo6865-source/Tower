@@ -291,8 +291,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   flashColor: {r: 1.1577258, g: 0.13335063, b: 0, a: 1}
   duration: 0.5
-  emissionPropertyNames:
-  - _EmissionColor
+  flashPropertyNames:
+  - _HitFlashColor
   - _Emissive_Color
 --- !u!1001 &4625197307505398800
 PrefabInstance:

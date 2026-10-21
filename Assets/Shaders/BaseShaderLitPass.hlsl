@@ -20,6 +20,7 @@
 #include "BaseShaderPackedMask.hlsl"
 #include "BaseShaderAlbedoRecolor.hlsl"
 #include "BaseShaderDissolve.hlsl"
+#include "BaseShaderHitFlash.hlsl"
 
 void LitPassFragment(
     Varyings input
@@ -61,6 +62,8 @@ void LitPassFragment(
         BaseShader_ApplyDissolve(positionOS, input.uv, input.normalWS, dissolveViewDirWS, surfaceData);
     }
 #endif
+
+    BaseShader_ApplyHitFlash(surfaceData);
 
 #ifdef LOD_FADE_CROSSFADE
     LODFadeCrossFade(input.positionCS);

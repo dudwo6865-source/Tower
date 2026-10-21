@@ -110,12 +110,10 @@ public class BuildingPlacementDissolveFX : MonoBehaviour
             yield return null;
         }
 
-        // 원래 머티리얼 값으로 완전히 되돌려, 이후엔 프로퍼티 블록 오버라이드를 남기지 않습니다.
-        foreach (RendererSweep sweep in sweeps)
-        {
-            if (sweep.renderer != null)
-                sweep.renderer.SetPropertyBlock(null);
-        }
+        Apply(1f);
+
+        // Apply(1)로 머티리얼 값과 같아졌다. 블록을 비우면 같은 렌더러에
+        // 다른 효과(피격 플래시·생산 표시)가 넣어 둔 값까지 지워지므로 그대로 둔다.
 
         playRoutine = null;
     }

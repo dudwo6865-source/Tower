@@ -49,6 +49,8 @@ Shader "Base Shader"
         [HideInInspector][Toggle(_EMISSION)] _EmissionToggle("Use Emission", Float) = 0
         [HideInInspector][HDR] _EmissionColor("Color", Color) = (0,0,0)
         [HideInInspector] _EmissionMap("Emission", 2D) = "white" {}
+        // 피격 플래시 전용 발광색. HitFlash 스크립트가 MaterialPropertyBlock으로 넣는다.
+        [HideInInspector][HDR] _HitFlashColor("Hit Flash Color", Color) = (0, 0, 0, 0)
 
         [HideInInspector] _OcclusionStrength("Strength", Range(0.0, 1.0)) = 1.0
         [HideInInspector] _OcclusionMap("Occlusion", 2D) = "white" {}

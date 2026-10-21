@@ -77,6 +77,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   maxHealth: 250
+  armor: 1
+  minDamageRatio: 0.1
+  minDamage: 0.5
   deathEffectPrefab: {fileID: 6383404505588093910, guid: 26d73a69c38dfea46897ac51ae7ef3a2, type: 3}
 --- !u!114 &8635968743611265675
 MonoBehaviour:
@@ -115,6 +118,14 @@ MonoBehaviour:
   - clip: {fileID: 8300000, guid: 5614d395ee01797478b371e9fbb96b21, type: 3}
     volume: 1
     initialized: 1
+  attackLoopSound:
+    clip: {fileID: 0}
+    volume: 1
+    initialized: 1
+  attackLoopHoldTime: 0.15
+  attackLoopFadeIn: 0.05
+  attackLoopFadeOut: 0.25
+  attackLoopWithOneShots: 0
   selectSounds: []
   productionCompleteSounds: []
   commandSounds: []
@@ -138,6 +149,8 @@ MonoBehaviour:
   referenceMinOrthoSize: 12
   referenceMaxOrthoSize: 45
   pitchRange: {x: 0.95, y: 1.05}
+  attackSoundMaxOverlap: 3
+  attackSoundPriority: 64
   attackHitSoundCooldown: 0.12
 --- !u!114 &3161947739215969037
 MonoBehaviour:
@@ -256,6 +269,7 @@ MonoBehaviour:
   dynamicAvoidancePriority: 1
   directMovePriority: 20
   attackPositionPriority: 35
+  attackMoveApproachPriority: 30
   chasePriority: 50
   travelPriority: 65
   idlePriority: 85
@@ -324,8 +338,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   flashColor: {r: 1.1577258, g: 0.13335063, b: 0, a: 0.5254902}
   duration: 0.5
-  emissionPropertyNames:
-  - _EmissionColor
+  flashPropertyNames:
+  - _HitFlashColor
   - _Emissive_Color
 --- !u!136 &8492136289069511814
 CapsuleCollider:

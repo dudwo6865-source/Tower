@@ -43,7 +43,7 @@ public class SelectionInfoPanelUI : MonoBehaviour
     [Tooltip("공격력을 표시할 텍스트입니다.")]
     public TextMeshProUGUI attackText;
     [Label("방어력 텍스트")]
-    [Tooltip("방어력을 표시할 텍스트입니다. 업그레이드·웨이브·돌연변이 보너스가 반영된 값입니다. 방어력이 0이면 비웁니다.")]
+    [Tooltip("방어력을 표시할 텍스트입니다. 업그레이드·웨이브·돌연변이 보너스가 반영된 값입니다. 방어력이 0이어도 표시합니다.")]
     public TextMeshProUGUI armorText;
     [Label("사거리 텍스트")]
     [Tooltip("사거리를 표시할 텍스트입니다.")]
@@ -555,7 +555,8 @@ public class SelectionInfoPanelUI : MonoBehaviour
         EntityHealth health = entity.GetComponent<EntityHealth>();
         float armor = health != null ? health.Armor : (data != null ? data.armor : 0f);
 
-        SetText(armorText, armor > 0f
+        // 방어력은 0이어도 표시한다(체력이 있는 대상이면 항상 의미가 있는 값이다).
+        SetText(armorText, health != null || data != null
             ? string.Format(armorFormat, armor)
             : string.Empty);
 

@@ -12,6 +12,9 @@ public abstract partial class MobileCombatAI
     [Range(0, 99)] public int directMovePriority = 20;
     [Label("공격 자리 우선순위")]
     [Range(0, 99)] public int attackPositionPriority = 35;
+    [Label("공격 이동 사거리 접근 우선순위")]
+    [Tooltip("공격 이동 중 표적이 사거리 밖이라 공격 가능 거리까지 다가갈 때의 우선순위입니다. 공격 자리 우선순위보다 작으면 이미 멈춰 공격 중인 아군을 밀고 들어갑니다.")]
+    [Range(0, 99)] public int attackMoveApproachPriority = 30;
     [Label("추격 우선순위")]
     [Range(0, 99)] public int chasePriority = 50;
     [Label("일반 이동 우선순위")]
@@ -53,6 +56,8 @@ public abstract partial class MobileCombatAI
 
     protected virtual bool HasDirectMoveOrder => false;
     protected virtual bool IsHoldingPosition => false;
+    // 공격 이동 중 표적을 잡았지만 아직 사거리 밖이라 다가가는 중인지.
+    protected virtual bool IsApproachingAttackRange => false;
 
     protected virtual void OnDisable()
     {
@@ -100,6 +105,7 @@ public abstract partial class MobileCombatAI
 
         int desired = HasDirectMoveOrder ? directMovePriority :
             IsHoldingPosition || Time.frameCount - lastAttackPositionFrame <= 1 ? attackPositionPriority :
+            IsApproachingAttackRange ? attackMoveApproachPriority :
             HasValidTarget() ? chasePriority :
             agent.hasPath || HasCachedPath ? travelPriority : idlePriority;
         if (desired != pendingPriority)

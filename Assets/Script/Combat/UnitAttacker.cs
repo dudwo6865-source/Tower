@@ -71,6 +71,15 @@ public class UnitAttacker : MonoBehaviour
     [Tooltip("화염방사기 투사체의 명중 판정 반지름입니다. 이 범위(콜라이더)에 닿은 모든 적이 피해를 입습니다. 투사체 프리팹에 콜라이더가 있으면 그 크기를 그대로 쓰고, 없을 때만 이 값으로 새로 만듭니다. 화염방사기 공격일 때만 사용됩니다.")]
     public float pierceHitRadius = 0.6f;
 
+    [Label("상하 조준")]
+    [Tooltip("켜면 화염이 언덕 위·아래에 있는 적의 높이를 향해 기울어져 날아갑니다. 끄면 예전처럼 발사 높이 그대로 수평으로 날아갑니다.")]
+    public bool flameAimPitch = true;
+
+    [Label("최대 상하 각도")]
+    [Tooltip("상하 조준 시 수평에서 위·아래로 기울일 수 있는 최대 각도(도)입니다. 이보다 높거나 낮은 적은 이 각도까지만 기울여 쏩니다.")]
+    [Range(0f, 80f)]
+    public float flameMaxPitchAngle = 45f;
+
     [Header("관통 빔")]
     [Label("빔 너비")]
     [Tooltip("관통 빔의 폭(두께)입니다. 발사 지점에서 사거리 끝까지 그은 선을 기준으로, 이 폭 안에 있는 모든 적이 즉시 관통 피해를 입습니다. 빔의 시각 효과(빛줄기)는 아래 Hitscan 항목의 트레일 설정을 그대로 사용합니다. 관통 빔 공격일 때만 사용됩니다.")]

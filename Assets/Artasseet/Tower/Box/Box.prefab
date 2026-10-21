@@ -171,13 +171,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 06111e8d5f14f3b46a3c9a5a006c460d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  footprintCells: {x: 1, y: 1}
+  footprintCells: {x: 2, y: 2}
   blockCells: 1
   carveNavMesh: 1
   snapTransformOnRegister: 0
   useCustomShape: 0
-  cellMask: 01
-  cellMaskSize: {x: 1, y: 1}
+  cellMask: 01010101
+  cellMaskSize: {x: 2, y: 2}
 --- !u!208 &8270126316073148770
 NavMeshObstacle:
   m_ObjectHideFlags: 0
@@ -188,7 +188,7 @@ NavMeshObstacle:
   m_Enabled: 1
   serializedVersion: 3
   m_Shape: 1
-  m_Extents: {x: 0.85, y: 0.5, z: 0.85}
+  m_Extents: {x: 1.7, y: 0.5, z: 1.7}
   m_MoveThreshold: 0.1
   m_Carve: 1
   m_CarveOnlyStationary: 1
@@ -278,8 +278,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   flashColor: {r: 1.1577258, g: 0.13335063, b: 0, a: 1}
   duration: 0.5
-  emissionPropertyNames:
-  - _EmissionColor
+  flashPropertyNames:
+  - _HitFlashColor
   - _Emissive_Color
 --- !u!1001 &8889216808253835222
 PrefabInstance:

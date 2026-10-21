@@ -46,6 +46,10 @@ public class Projectile : MonoBehaviour
     private bool pierceLocked;
     private float pierceHitRadius;
     private float fireHeight;
+    // 화염방사기 상하 조준. 발사 지점에서 대상 높이를 향해 최대 각도까지 기울여 날아간다.
+    private Vector3 fireOrigin;
+    private bool pierceAimPitch;
+    private float pierceMaxPitchTan;
     private Collider pierceCollider;
     private Rigidbody pierceRigidbody;
     private readonly HashSet<SelectableEntity> pierceHitEntities = new HashSet<SelectableEntity>();
@@ -238,6 +242,12 @@ public class Projectile : MonoBehaviour
         pierceLocked = false;
         lifeTimer = 0f;
         fireHeight = transform.position.y;
+        fireOrigin = transform.position;
+        UnitAttacker ownerAttacker = piercing && attacker != null ? attacker.GetComponent<UnitAttacker>() : null;
+        pierceAimPitch = ownerAttacker != null && ownerAttacker.flameAimPitch;
+        pierceMaxPitchTan = ownerAttacker != null
+            ? Mathf.Tan(Mathf.Clamp(ownerAttacker.flameMaxPitchAngle, 0f, 80f) * Mathf.Deg2Rad)
+            : 0f;
         pierceHitEntities.Clear();
         ConfigurePierceCollision(piercing);
 
@@ -593,6 +603,7 @@ public class Projectile : MonoBehaviour
         maxTravelDistance = 0f;
         traveledDistance = 0f;
         pierceLocked = false;
+        pierceAimPitch = false;
         pierceHitEntities.Clear();
         ConfigurePierceCollision(false);
         arcing = false;
@@ -649,11 +660,23 @@ public class Projectile : MonoBehaviour
         if (target != null && (targetHealth == null || targetHealth.IsAlive))
             lastKnownPosition = target.SelectionBounds.center;
 
-        // 화염방사기는 발사 높이를 그대로 유지합니다. 땅으로 파고들거나 위로 솟지 않습니다.
+        // 화염방사기는 기본적으로 발사 높이를 유지하고, 상하 조준이 켜져 있으면
+        // 대상 높이를 향해 최대 각도까지만 기울인다(언덕 위·아래의 적도 맞히기 위해).
         if (piercing)
-            lastKnownPosition.y = fireHeight;
+            lastKnownPosition.y = GetPierceAimHeight(lastKnownPosition);
 
         return lastKnownPosition;
+    }
+
+    float GetPierceAimHeight(Vector3 point)
+    {
+        if (!pierceAimPitch)
+            return fireHeight;
+
+        Vector3 flat = point - fireOrigin;
+        flat.y = 0f;
+        float maxDelta = flat.magnitude * pierceMaxPitchTan;
+        return Mathf.Clamp(point.y, fireHeight - maxDelta, fireHeight + maxDelta);
     }
 
     void CacheVisuals()

@@ -3,6 +3,7 @@
 
 #include "BaseShaderPackedMask.hlsl"
 #include "BaseShaderAlbedoRecolor.hlsl"
+#include "BaseShaderHitFlash.hlsl"
 
 void BaseShader_InitializeSurfaceURP(float2 uv, out SurfaceData outSurfaceData)
 {
@@ -14,6 +15,7 @@ void BaseShader_InitializeSurface(float2 uv, out SurfaceData outSurfaceData)
     BaseShader_InitializeSurfaceURP(uv, outSurfaceData);
     BaseShader_ApplyPackedMask(uv, outSurfaceData);
     BaseShader_ApplyAlbedoRecolor(outSurfaceData);
+    BaseShader_ApplyHitFlash(outSurfaceData);
 }
 
 #define InitializeStandardLitSurfaceData(uv, surfaceData) BaseShader_InitializeSurface(uv, surfaceData)

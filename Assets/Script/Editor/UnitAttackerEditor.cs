@@ -18,6 +18,8 @@ public class UnitAttackerEditor : Editor
     SerializedProperty firePoint;
 
     SerializedProperty pierceHitRadius;
+    SerializedProperty flameAimPitch;
+    SerializedProperty flameMaxPitchAngle;
 
     SerializedProperty beamWidth;
 
@@ -69,6 +71,8 @@ public class UnitAttackerEditor : Editor
         firePoint = serializedObject.FindProperty("firePoint");
 
         pierceHitRadius = serializedObject.FindProperty("pierceHitRadius");
+        flameAimPitch = serializedObject.FindProperty("flameAimPitch");
+        flameMaxPitchAngle = serializedObject.FindProperty("flameMaxPitchAngle");
 
         beamWidth = serializedObject.FindProperty("beamWidth");
 
@@ -148,6 +152,10 @@ public class UnitAttackerEditor : Editor
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("화염방사", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(pierceHitRadius);
+            EditorGUILayout.PropertyField(flameAimPitch);
+
+            if (flameAimPitch.hasMultipleDifferentValues || flameAimPitch.boolValue)
+                EditorGUILayout.PropertyField(flameMaxPitchAngle);
         }
 
         if (showBeam)

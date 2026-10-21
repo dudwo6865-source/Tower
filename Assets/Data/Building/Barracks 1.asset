@@ -15,7 +15,7 @@ MonoBehaviour:
   displayName: Barracks
   icon: {fileID: 0}
   description: 
-  prefab: {fileID: 4641212407630778950, guid: cce8d657fac9c6044bfa579e31598b36, type: 3}
+  prefab: {fileID: 2042204834508165104, guid: 3ec9b7b3be39bf3449e50685f87488e8, type: 3}
   wattCost: 150
   ownerId: 1
   entityTypeId: Barracks
