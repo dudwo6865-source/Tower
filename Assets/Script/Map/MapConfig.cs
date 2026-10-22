@@ -8,6 +8,26 @@ using UnityEngine;
 [CreateAssetMenu(menuName = "Tank/스테이지 (Map Config)", fileName = "MapConfig")]
 public class MapConfig : ScriptableObject
 {
+    [SerializeField, HideInInspector] string stageId;
+    public string StageId => stageId;
+
+    [Header("크레딧 / 클리어 등급")]
+    [Label("클리어 보상")]
+    public StageClearRewards clearRewards = new StageClearRewards();
+
+#if UNITY_EDITOR
+    void OnValidate()
+    {
+        // 에셋 이름을 바꿔도 기록을 유지하며 복제한 에셋은 별도 스테이지로 취급한다.
+        string path = UnityEditor.AssetDatabase.GetAssetPath(this);
+        if (string.IsNullOrEmpty(path)) return;
+        string guid = UnityEditor.AssetDatabase.AssetPathToGUID(path);
+        if (stageId == guid) return;
+        stageId = guid;
+        UnityEditor.EditorUtility.SetDirty(this);
+    }
+#endif
+
     [Header("기본 정보")]
     [Label("표시 이름")]
     [Tooltip("맵 선택 UI 등에 표시할 이름입니다.")]

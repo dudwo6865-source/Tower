@@ -117,6 +117,23 @@ public class GameResultUI : MonoBehaviour
     public string playTimeFormat = "{0:00}:{1:00}";
 
     [Header("보상")]
+    [Label("클리어 등급 텍스트")]
+    [Tooltip("선택 사항입니다. 비워두면 제목에 별 등급을 함께 표시합니다.")]
+    public TextMeshProUGUI starsText;
+
+    [Label("크레딧 상세 텍스트")]
+    [Tooltip("선택 사항입니다. 최초 보너스와 반복 보상을 표시합니다. 비워두면 첫 보상 칸에 표시합니다.")]
+    public TextMeshProUGUI creditRewardText;
+
+    [Label("크레딧 아이콘")]
+    public Sprite creditIcon;
+
+    [Label("자동 보상 텍스트 최대 크기"), Min(1f)]
+    public float creditFontSize = 28f;
+
+    [Label("자동 보상 텍스트 최소 크기"), Min(1f)]
+    public float creditMinFontSize = 14f;
+
     [Label("보상 칸 목록")]
     [Tooltip("화면에 있는 보상 칸 목록입니다.")]
     public List<RewardSlot> rewardSlots = new List<RewardSlot>();
@@ -181,6 +198,7 @@ public class GameResultUI : MonoBehaviour
         ApplyTitle(victory);
         ApplyStats();
         ApplyRewards(victory);
+        ApplyCreditReward(victory);
 
         if (panelRoot != null)
             panelRoot.SetActive(true);
@@ -198,6 +216,61 @@ public class GameResultUI : MonoBehaviour
 
         if (titleBackgroundImage != null && background != null)
             titleBackgroundImage.sprite = background;
+    }
+
+    void ApplyCreditReward(bool victory)
+    {
+        EnsureCreditRewardText();
+        string stars = victory && resultManager != null
+            ? new string('★', resultManager.ClearStars) + new string('☆', 3 - resultManager.ClearStars) : "";
+        if (starsText != null) starsText.text = stars;
+        else if (victory && titleText != null) titleText.text += "\n<size=55%>" + stars + "</size>";
+
+        string text = "";
+        if (victory && resultManager != null)
+        {
+            var reward = resultManager.CreditReward;
+            text = reward != null
+                ? $"크레딧 +{reward.Total:N0}\n최초 달성 +{reward.FirstBonus:N0} / 클리어 +{reward.RepeatReward:N0}"
+                : resultManager.RewardError;
+        }
+        if (creditRewardText != null) creditRewardText.text = text;
+        else if (rewardSlots.Count > 0 && rewardSlots[0] != null && rewardSlots[0].amountText != null)
+        {
+            RewardSlot slot = rewardSlots[0];
+            if (slot.slotRoot != null) slot.slotRoot.SetActive(victory || !hideEmptyRewardSlots);
+            slot.amountText.text = text;
+            if (slot.iconImage != null)
+            {
+                slot.iconImage.sprite = creditIcon;
+                slot.iconImage.enabled = victory && creditIcon != null;
+            }
+        }
+        else if (victory && titleText != null) titleText.text += "\n" + text;
+    }
+
+    void EnsureCreditRewardText()
+    {
+        if (creditRewardText != null || rewardSlots.Count == 0 || rewardSlots[0] == null
+            || rewardSlots[0].slotRoot == null || rewardSlots[0].amountText != null) return;
+        Transform parent = rewardSlots[0].slotRoot.transform.parent;
+        if (parent == null) return;
+        // 기존 씬에 값 텍스트가 없는 경우 보상 영역을 채우는 텍스트를 만든다.
+        var root = new GameObject("크레딧 보상", typeof(RectTransform), typeof(LayoutElement));
+        root.transform.SetParent(parent, false);
+        root.GetComponent<LayoutElement>().ignoreLayout = true;
+        creditRewardText = root.AddComponent<TextMeshProUGUI>();
+        if (titleText != null) creditRewardText.font = titleText.font;
+        creditRewardText.raycastTarget = false;
+        creditRewardText.alignment = TextAlignmentOptions.Center;
+        creditRewardText.enableAutoSizing = true;
+        creditRewardText.fontSizeMin = Mathf.Min(creditMinFontSize, creditFontSize);
+        creditRewardText.fontSizeMax = creditFontSize;
+        RectTransform rect = creditRewardText.rectTransform;
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
     }
 
     void ApplyStats()
@@ -265,12 +338,18 @@ public class GameResultUI : MonoBehaviour
     void HandleRestartClicked()
     {
         if (resultManager != null)
+        {
             resultManager.RestartMission();
+            Show(resultManager.CurrentResult);
+        }
     }
 
     void HandleLobbyClicked()
     {
         if (resultManager != null)
+        {
             resultManager.GoToLobby();
+            Show(resultManager.CurrentResult);
+        }
     }
 }

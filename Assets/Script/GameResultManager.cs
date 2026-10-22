@@ -79,6 +79,12 @@ public class GameResultManager : MonoBehaviour
     public int KilledEnemyUnitCount { get; private set; }
     public float SpentWatt { get; private set; }
 
+    public int ClearStars { get; private set; }
+    public CreditWallet.ClearReward CreditReward { get; private set; }
+    public string RewardError { get; private set; }
+    MapConfig rewardConfig;
+    string rewardRunId;
+
     // 지금까지 동시에 살아 있던 적 스포너의 최대 수입니다. 승리 조건 표시(VictoryConditionHUD)에서 전체 수로 씁니다.
     public int MaxSpawnersSeen => maxSpawnersSeen;
 
@@ -133,6 +139,11 @@ public class GameResultManager : MonoBehaviour
 
     void Start()
     {
+        if (!IsGameOver)
+        {
+            rewardConfig = MapLoader.Instance != null ? MapLoader.Instance.LoadedConfig : null;
+            rewardRunId = Guid.NewGuid().ToString("N");
+        }
         TrySubscribeHq();
 
         wattManager = WattManager.Instance;
@@ -298,6 +309,17 @@ public class GameResultManager : MonoBehaviour
             return;
 
         CurrentResult = result;
+        if (result == Result.Victory)
+        {
+            if (rewardConfig == null && MapLoader.Instance != null)
+                rewardConfig = MapLoader.Instance.LoadedConfig;
+            if (string.IsNullOrEmpty(rewardRunId)) rewardRunId = Guid.NewGuid().ToString("N");
+            float healthRatio = hqHealth != null && hqHealth.IsAlive
+                ? hqHealth.CurrentHealth / hqHealth.MaxHealth : -1f;
+            ClearStars = rewardConfig != null && rewardConfig.clearRewards != null
+                ? rewardConfig.clearRewards.EvaluateStars(healthRatio) : 1;
+            TrySaveClearReward();
+        }
         UnsubscribeHq();
 
         Debug.Log($"GameResultManager: 게임 종료 - {result}");
@@ -323,9 +345,31 @@ public class GameResultManager : MonoBehaviour
         OnResultScreenShown?.Invoke(CurrentResult);
     }
 
+    // 실패했던 보상 저장을 다시 시도한다. 저장되기 전에는 씬을 떠나지 않는다.
+    public bool TrySaveClearReward()
+    {
+        if (CurrentResult != Result.Victory || CreditReward != null) return true;
+        if (rewardConfig == null)
+        {
+            // 스테이지 설정 없이 실행한 테스트 씬에는 영구 보상을 지급하지 않는다.
+            RewardError = "스테이지 설정이 없어 크레딧 보상을 지급하지 않습니다.";
+            return true;
+        }
+        if (!CreditWallet.TryAwardClear(rewardConfig.StageId, rewardRunId, ClearStars,
+            rewardConfig.clearRewards, out var reward))
+        {
+            RewardError = CreditWallet.LastError;
+            return false;
+        }
+        CreditReward = reward;
+        RewardError = null;
+        return true;
+    }
+
     // 현재 미션(씬)을 처음부터 다시 시작합니다.
     public void RestartMission()
     {
+        if (!TrySaveClearReward()) return;
         Time.timeScale = 1f;
         Scene current = SceneManager.GetActiveScene();
 
@@ -348,6 +392,7 @@ public class GameResultManager : MonoBehaviour
     // 로비(함선) 씬으로 이동합니다.
     public void GoToLobby()
     {
+        if (!TrySaveClearReward()) return;
         if (string.IsNullOrEmpty(lobbySceneName))
         {
             Debug.LogWarning("GameResultManager: '로비 씬 이름'이 비어 있습니다. 인스펙터에서 입력하세요.");

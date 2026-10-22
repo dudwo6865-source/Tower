@@ -237,6 +237,11 @@ public partial class StageEditorWindow : EditorWindow
         // 웨이브는 표·그래프가 들어가므로 전체 폭을 쓴다.
         DrawWaveSection();
         DrawMutationSection();
+        EditorGUILayout.Space();
+        EditorGUILayout.LabelField("크레딧 / 클리어 등급", EditorStyles.boldLabel);
+        EditorGUILayout.HelpBox("승리하면 별 1개를 획득하고, 클리어 순간 본부 체력으로 별 2~3개를 판정합니다. " +
+            "최초 보너스는 새로 획득한 별마다 한 번씩 누적 지급하며, 반복 보상은 첫 클리어에도 지급합니다.", MessageType.Info);
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("clearRewards"), new GUIContent("클리어 보상"), true);
 
         EditorGUIUtility.labelWidth = previousLabelWidth;
 
