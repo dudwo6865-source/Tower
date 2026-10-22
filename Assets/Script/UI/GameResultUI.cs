@@ -121,6 +121,10 @@ public class GameResultUI : MonoBehaviour
     [Tooltip("선택 사항입니다. 비워두면 제목에 별 등급을 함께 표시합니다.")]
     public TextMeshProUGUI starsText;
 
+    [Label("별 목표 상세 텍스트")]
+    [Tooltip("각 별의 달성 여부와 목표 대비 실적을 표시합니다. 비워두면 크레딧 상세 텍스트에 함께 표시합니다.")]
+    public TextMeshProUGUI objectivesText;
+
     [Label("크레딧 상세 텍스트")]
     [Tooltip("선택 사항입니다. 최초 보너스와 반복 보상을 표시합니다. 비워두면 첫 보상 칸에 표시합니다.")]
     public TextMeshProUGUI creditRewardText;
@@ -222,7 +226,9 @@ public class GameResultUI : MonoBehaviour
     {
         EnsureCreditRewardText();
         string stars = victory && resultManager != null
-            ? new string('★', resultManager.ClearStars) + new string('☆', 3 - resultManager.ClearStars) : "";
+            ? (resultManager.ManaStoneStarEarned ? "★" : "☆")
+                + (resultManager.SpawnerStarEarned ? "★" : "☆")
+                + (resultManager.WaveStarEarned ? "★" : "☆") : "";
         if (starsText != null) starsText.text = stars;
         else if (victory && titleText != null) titleText.text += "\n<size=55%>" + stars + "</size>";
 
@@ -234,6 +240,9 @@ public class GameResultUI : MonoBehaviour
                 ? $"크레딧 +{reward.Total:N0}\n최초 달성 +{reward.FirstBonus:N0} / 클리어 +{reward.RepeatReward:N0}"
                 : resultManager.RewardError;
         }
+        string objectives = victory && resultManager != null ? resultManager.ClearObjectivesText : "";
+        if (objectivesText != null) objectivesText.text = objectives;
+        else if (!string.IsNullOrEmpty(objectives)) text += "\n" + objectives;
         if (creditRewardText != null) creditRewardText.text = text;
         else if (rewardSlots.Count > 0 && rewardSlots[0] != null && rewardSlots[0].amountText != null)
         {

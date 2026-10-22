@@ -75,7 +75,7 @@ public static class CreditWallet
             var ids = new HashSet<string>();
             foreach (StageRecord stage in loaded.stages)
                 if (stage == null || string.IsNullOrWhiteSpace(stage.stageId) || !ids.Add(stage.stageId)
-                    || stage.bestStars < 1 || stage.bestStars > 3)
+                    || stage.bestStars < 0 || stage.bestStars > 3)
                     throw new InvalidDataException("스테이지 기록이 올바르지 않습니다.");
             data = loaded;
             LastError = null;
@@ -97,7 +97,7 @@ public static class CreditWallet
             return false;
         }
         if (!EnsureLoaded()) return false;
-        stars = Mathf.Clamp(stars, 1, 3);
+        stars = Mathf.Clamp(stars, 0, 3);
         try
         {
             // 저장 성공 전에는 메모리의 잔액과 기록도 변경하지 않는다.

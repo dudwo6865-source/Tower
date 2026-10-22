@@ -11,6 +11,7 @@ $compiler = Join-Path $MonoRoot 'lib/mono/4.5/csc.exe'
 & $mono $compiler /nologo /r:System.Runtime.Serialization.dll "/out:$executable" `
     (Join-Path $PSScriptRoot 'CreditRewardsHarness.cs') `
     (Join-Path $projectRoot 'Assets/Script/Map/StageClearRewards.cs') `
+    (Join-Path $projectRoot 'Assets/Script/Economy/ManaStoneManager.cs') `
     (Join-Path $projectRoot 'Assets/Script/CreditWallet.cs')
 if ($LASTEXITCODE -ne 0) { throw '검증 프로그램 컴파일에 실패했습니다.' }
 & $mono $executable (Join-Path $testOutput 'save')

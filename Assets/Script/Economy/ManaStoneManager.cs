@@ -24,6 +24,8 @@ public class ManaStoneManager : MonoBehaviour
     public float startingManaStone = 0f;
 
     public float CurrentManaStone { get; private set; }
+    // 시작 마석과 소비량을 제외하고 실제로 들어온 마석만 누적한다.
+    public float TotalEarnedManaStone { get; private set; }
 
     public float MaxManaStone => Mathf.Max(0f, maxManaStone);
 
@@ -79,6 +81,7 @@ public class ManaStoneManager : MonoBehaviour
 
         float before = CurrentManaStone;
         CurrentManaStone = ClampAmount(CurrentManaStone + amount);
+        TotalEarnedManaStone += Mathf.Max(0f, CurrentManaStone - before);
 
         if (Mathf.Approximately(before, CurrentManaStone))
             return;

@@ -80,6 +80,12 @@ public class GameResultManager : MonoBehaviour
     public float SpentWatt { get; private set; }
 
     public int ClearStars { get; private set; }
+    public float EarnedManaStone { get; private set; }
+    public int SurvivedWaves { get; private set; }
+    public bool ManaStoneStarEarned { get; private set; }
+    public bool SpawnerStarEarned { get; private set; }
+    public bool WaveStarEarned { get; private set; }
+    public string ClearObjectivesText { get; private set; }
     public CreditWallet.ClearReward CreditReward { get; private set; }
     public string RewardError { get; private set; }
     MapConfig rewardConfig;
@@ -314,10 +320,20 @@ public class GameResultManager : MonoBehaviour
             if (rewardConfig == null && MapLoader.Instance != null)
                 rewardConfig = MapLoader.Instance.LoadedConfig;
             if (string.IsNullOrEmpty(rewardRunId)) rewardRunId = Guid.NewGuid().ToString("N");
-            float healthRatio = hqHealth != null && hqHealth.IsAlive
-                ? hqHealth.CurrentHealth / hqHealth.MaxHealth : -1f;
-            ClearStars = rewardConfig != null && rewardConfig.clearRewards != null
-                ? rewardConfig.clearRewards.EvaluateStars(healthRatio) : 1;
+            var mana = ManaStoneManager.Instance;
+            EarnedManaStone = mana != null && mana.ownerId == playerOwnerId ? mana.TotalEarnedManaStone : 0f;
+            SurvivedWaves = dayNightCycle != null ? dayNightCycle.CycleCount : 0;
+            var goals = rewardConfig != null ? rewardConfig.clearRewards : null;
+            if (goals != null)
+            {
+                ManaStoneStarEarned = goals.IsManaStoneGoalMet(EarnedManaStone);
+                SpawnerStarEarned = goals.IsSpawnerGoalMet(DestroyedSpawnerCount);
+                WaveStarEarned = goals.IsWaveGoalMet(SurvivedWaves);
+                ClearStars = goals.EvaluateStars(EarnedManaStone, DestroyedSpawnerCount, SurvivedWaves);
+                ClearObjectivesText = $"{(ManaStoneStarEarned ? "★" : "☆")} 마석 획득 {EarnedManaStone:0.##} / {Mathf.Max(0, goals.manaStoneTarget)}\n"
+                    + $"{(SpawnerStarEarned ? "★" : "☆")} 스포너 파괴 {DestroyedSpawnerCount} / {Mathf.Max(0, goals.destroyedSpawnerTarget)}\n"
+                    + $"{(WaveStarEarned ? "★" : "☆")} 생존 웨이브 {SurvivedWaves} / {Mathf.Max(0, goals.survivedWaveTarget)}";
+            }
             TrySaveClearReward();
         }
         UnsubscribeHq();
