@@ -17,6 +17,9 @@ public class GameResultUI : MonoBehaviour
         [InspectorName("파괴한 적 스포너")] DestroyedSpawners,
         [InspectorName("처치한 적 유닛")] KilledEnemyUnits,
         [InspectorName("소모한 와트")] SpentWatt,
+        [InspectorName("획득한 마석")] EarnedManaStone,
+        [InspectorName("버틴 웨이브")] SurvivedWaves,
+        [InspectorName("본부 누적 피해")] HeadquartersDamageTaken,
     }
 
     [Serializable]
@@ -121,8 +124,8 @@ public class GameResultUI : MonoBehaviour
     [Tooltip("선택 사항입니다. 비워두면 제목에 별 등급을 함께 표시합니다.")]
     public TextMeshProUGUI starsText;
 
-    [Label("별 목표 상세 텍스트")]
-    [Tooltip("각 별의 달성 여부와 목표 대비 실적을 표시합니다. 비워두면 크레딧 상세 텍스트에 함께 표시합니다.")]
+    [Label("클리어 평가 상세 텍스트")]
+    [Tooltip("적용한 평가 경로와 성적, 2·3성 기준을 표시합니다. 비워두면 크레딧 상세 텍스트에 함께 표시합니다.")]
     public TextMeshProUGUI objectivesText;
 
     [Label("크레딧 상세 텍스트")]
@@ -226,9 +229,7 @@ public class GameResultUI : MonoBehaviour
     {
         EnsureCreditRewardText();
         string stars = victory && resultManager != null
-            ? (resultManager.ManaStoneStarEarned ? "★" : "☆")
-                + (resultManager.SpawnerStarEarned ? "★" : "☆")
-                + (resultManager.WaveStarEarned ? "★" : "☆") : "";
+            ? new string('★', resultManager.ClearStars) + new string('☆', 3 - resultManager.ClearStars) : "";
         if (starsText != null) starsText.text = stars;
         else if (victory && titleText != null) titleText.text += "\n<size=55%>" + stars + "</size>";
 
@@ -241,6 +242,8 @@ public class GameResultUI : MonoBehaviour
                 : resultManager.RewardError;
         }
         string objectives = victory && resultManager != null ? resultManager.ClearObjectivesText : "";
+        if (victory && resultManager != null)
+            objectives = resultManager.ClearGradeTitle + "\n" + objectives;
         if (objectivesText != null) objectivesText.text = objectives;
         else if (!string.IsNullOrEmpty(objectives)) text += "\n" + objectives;
         if (creditRewardText != null) creditRewardText.text = text;
@@ -310,6 +313,12 @@ public class GameResultUI : MonoBehaviour
                 return resultManager.KilledEnemyUnitCount.ToString();
             case StatType.SpentWatt:
                 return Mathf.RoundToInt(resultManager.SpentWatt).ToString();
+            case StatType.EarnedManaStone:
+                return resultManager.EarnedManaStone.ToString("0.##");
+            case StatType.SurvivedWaves:
+                return resultManager.SurvivedWaves.ToString();
+            case StatType.HeadquartersDamageTaken:
+                return resultManager.HeadquartersDamageTaken.ToString("0.##");
             default:
                 return "-";
         }

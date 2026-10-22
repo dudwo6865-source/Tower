@@ -10,6 +10,8 @@ $mono = Join-Path $MonoRoot 'bin/mono.exe'
 $compiler = Join-Path $MonoRoot 'lib/mono/4.5/csc.exe'
 & $mono $compiler /nologo /r:System.Runtime.Serialization.dll "/out:$executable" `
     (Join-Path $PSScriptRoot 'CreditRewardsHarness.cs') `
+    (Join-Path $PSScriptRoot 'HealthHarnessStubs.cs') `
+    (Join-Path $projectRoot 'Assets/Script/Combat/EntityHealth.cs') `
     (Join-Path $projectRoot 'Assets/Script/Map/StageClearRewards.cs') `
     (Join-Path $projectRoot 'Assets/Script/Economy/ManaStoneManager.cs') `
     (Join-Path $projectRoot 'Assets/Script/CreditWallet.cs')

@@ -4,17 +4,30 @@ using UnityEngine;
 [Serializable]
 public class StageClearRewards
 {
-    [Label("마석 획득 목표"), Min(0)]
-    [Tooltip("이번 판에서 실제 획득한 마석의 누적량이 이 값 이상이면 별 하나를 획득합니다. 시작 마석은 제외하며 소비해도 누적량은 줄지 않습니다.")]
-    public int manaStoneTarget = 100;
+    public enum ClearRoute { Mission, Conquest, Survival }
 
-    [Label("적 스포너 파괴 목표"), Min(0)]
-    [Tooltip("이번 판에서 파괴한 적 스포너 수가 이 값 이상이면 별 하나를 획득합니다.")]
-    public int destroyedSpawnerTarget = 3;
+    public struct Evaluation
+    {
+        public int Stars { get; private set; }
+        public ClearRoute Route { get; private set; }
+        public Evaluation(int stars, ClearRoute route) { Stars = stars; Route = route; }
+    }
 
-    [Label("생존 웨이브 목표"), Min(0)]
-    [Tooltip("밤을 끝까지 버틴 횟수가 이 값 이상이면 별 하나를 획득합니다. 진행 중인 웨이브는 제외합니다.")]
-    public int survivedWaveTarget = 5;
+    [Header("토벌 평가")]
+    [Label("토벌 2성 제한 시간(초)"), Min(0f)]
+    [Tooltip("스포너 전멸 승리를 이 시간 이내에 달성하면 별 2개를 획득합니다.")]
+    public float conquestTwoStarSeconds = 600f;
+    [Label("토벌 3성 제한 시간(초)"), Min(0f)]
+    [Tooltip("스포너 전멸 승리를 이 시간 이내에 달성하면 별 3개를 획득합니다. 2성보다 긴 값은 2성 제한 시간으로 보정합니다.")]
+    public float conquestThreeStarSeconds = 300f;
+
+    [Header("방어 평가")]
+    [Label("방어 2성 허용 누적 피해"), Min(0f)]
+    [Tooltip("생존 승리 시 본부가 받은 실제 누적 피해가 이 값 이하이면 별 2개를 획득합니다. 수리해도 누적 피해는 줄지 않습니다.")]
+    public float survivalTwoStarDamage = 500f;
+    [Label("방어 3성 허용 누적 피해"), Min(0f)]
+    [Tooltip("생존 승리 시 본부 누적 피해가 이 값 이하이면 별 3개를 획득합니다. 0이면 무피해 방어입니다. 2성보다 큰 값은 2성 기준으로 보정합니다.")]
+    public float survivalThreeStarDamage = 100f;
 
     [Label("별 1개 최초 달성 보너스"), Min(0)]
     public int firstStarCredits = 100;
@@ -23,8 +36,6 @@ public class StageClearRewards
     [Label("별 3개 최초 달성 보너스"), Min(0)]
     public int thirdStarCredits = 50;
 
-    [Label("별 0개 클리어 보상"), Min(0)]
-    public int zeroStarRepeatCredits = 0;
     [Label("별 1개 반복 보상"), Min(0)]
     public int oneStarRepeatCredits = 20;
     [Label("별 2개 반복 보상"), Min(0)]
@@ -32,15 +43,27 @@ public class StageClearRewards
     [Label("별 3개 반복 보상"), Min(0)]
     public int threeStarRepeatCredits = 40;
 
-    public bool IsManaStoneGoalMet(float earned) => earned >= Mathf.Max(0, manaStoneTarget);
-    public bool IsSpawnerGoalMet(int destroyed) => destroyed >= Mathf.Max(0, destroyedSpawnerTarget);
-    public bool IsWaveGoalMet(int survived) => survived >= Mathf.Max(0, survivedWaveTarget);
+    public float ConquestTwoStarLimit => Mathf.Max(0f, conquestTwoStarSeconds);
+    public float ConquestThreeStarLimit => Mathf.Min(ConquestTwoStarLimit, Mathf.Max(0f, conquestThreeStarSeconds));
+    public float SurvivalTwoStarLimit => Mathf.Max(0f, survivalTwoStarDamage);
+    public float SurvivalThreeStarLimit => Mathf.Min(SurvivalTwoStarLimit, Mathf.Max(0f, survivalThreeStarDamage));
 
-    public int EvaluateStars(float earnedManaStone, int destroyedSpawners, int survivedWaves)
+    // 승리한 판에만 호출한다. 달성한 승리 경로 중 가장 좋은 성적을 선택한다.
+    public Evaluation Evaluate(bool conquestCompleted, bool survivalCompleted, float playTime, float damageTaken)
     {
-        return (IsManaStoneGoalMet(earnedManaStone) ? 1 : 0)
-            + (IsSpawnerGoalMet(destroyedSpawners) ? 1 : 0)
-            + (IsWaveGoalMet(survivedWaves) ? 1 : 0);
+        var best = new Evaluation(1, ClearRoute.Mission);
+        if (conquestCompleted)
+        {
+            int stars = playTime <= ConquestThreeStarLimit ? 3 : playTime <= ConquestTwoStarLimit ? 2 : 1;
+            best = new Evaluation(stars, ClearRoute.Conquest);
+        }
+        if (survivalCompleted)
+        {
+            int stars = damageTaken <= SurvivalThreeStarLimit ? 3 : damageTaken <= SurvivalTwoStarLimit ? 2 : 1;
+            if (!conquestCompleted || stars > best.Stars)
+                best = new Evaluation(stars, ClearRoute.Survival);
+        }
+        return best;
     }
 
     public long GetFirstClearBonus(int previousStars, int stars)
@@ -55,6 +78,6 @@ public class StageClearRewards
     public int GetRepeatReward(int stars)
     {
         return Mathf.Max(0, stars >= 3 ? threeStarRepeatCredits
-            : stars == 2 ? twoStarRepeatCredits : stars == 1 ? oneStarRepeatCredits : zeroStarRepeatCredits);
+            : stars == 2 ? twoStarRepeatCredits : stars == 1 ? oneStarRepeatCredits : 0);
     }
 }

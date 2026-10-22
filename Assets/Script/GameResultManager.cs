@@ -82,9 +82,9 @@ public class GameResultManager : MonoBehaviour
     public int ClearStars { get; private set; }
     public float EarnedManaStone { get; private set; }
     public int SurvivedWaves { get; private set; }
-    public bool ManaStoneStarEarned { get; private set; }
-    public bool SpawnerStarEarned { get; private set; }
-    public bool WaveStarEarned { get; private set; }
+    public float HeadquartersDamageTaken { get; private set; }
+    public StageClearRewards.ClearRoute EvaluatedRoute { get; private set; }
+    public string ClearGradeTitle { get; private set; }
     public string ClearObjectivesText { get; private set; }
     public CreditWallet.ClearReward CreditReward { get; private set; }
     public string RewardError { get; private set; }
@@ -314,25 +314,43 @@ public class GameResultManager : MonoBehaviour
         if (IsGameOver || result == Result.None)
             return;
 
+        // 종료 플래그를 세우기 전에 달성한 승리 경로를 확정한다.
+        bool conquestCompleted = CanWinBySpawnerDestruction;
+        bool survivalCompleted = winBySurvivingNights && dayNightCycle != null
+            && dayNightCycle.CycleCount >= survivalNightsToWin && hqHealth != null && hqHealth.IsAlive;
+        var mana = ManaStoneManager.Instance;
+        EarnedManaStone = mana != null && mana.ownerId == playerOwnerId ? mana.TotalEarnedManaStone : 0f;
+        SurvivedWaves = dayNightCycle != null ? dayNightCycle.CycleCount : 0;
+        HeadquartersDamageTaken = hqHealth != null ? hqHealth.TotalDamageTaken : 0f;
         CurrentResult = result;
         if (result == Result.Victory)
         {
             if (rewardConfig == null && MapLoader.Instance != null)
                 rewardConfig = MapLoader.Instance.LoadedConfig;
             if (string.IsNullOrEmpty(rewardRunId)) rewardRunId = Guid.NewGuid().ToString("N");
-            var mana = ManaStoneManager.Instance;
-            EarnedManaStone = mana != null && mana.ownerId == playerOwnerId ? mana.TotalEarnedManaStone : 0f;
-            SurvivedWaves = dayNightCycle != null ? dayNightCycle.CycleCount : 0;
             var goals = rewardConfig != null ? rewardConfig.clearRewards : null;
+            ClearStars = 1;
+            ClearGradeTitle = "작전 성공";
+            ClearObjectivesText = "스테이지 클리어";
             if (goals != null)
             {
-                ManaStoneStarEarned = goals.IsManaStoneGoalMet(EarnedManaStone);
-                SpawnerStarEarned = goals.IsSpawnerGoalMet(DestroyedSpawnerCount);
-                WaveStarEarned = goals.IsWaveGoalMet(SurvivedWaves);
-                ClearStars = goals.EvaluateStars(EarnedManaStone, DestroyedSpawnerCount, SurvivedWaves);
-                ClearObjectivesText = $"{(ManaStoneStarEarned ? "★" : "☆")} 마석 획득 {EarnedManaStone:0.##} / {Mathf.Max(0, goals.manaStoneTarget)}\n"
-                    + $"{(SpawnerStarEarned ? "★" : "☆")} 스포너 파괴 {DestroyedSpawnerCount} / {Mathf.Max(0, goals.destroyedSpawnerTarget)}\n"
-                    + $"{(WaveStarEarned ? "★" : "☆")} 생존 웨이브 {SurvivedWaves} / {Mathf.Max(0, goals.survivedWaveTarget)}";
+                var evaluation = goals.Evaluate(conquestCompleted, survivalCompleted, PlayTime, HeadquartersDamageTaken);
+                ClearStars = evaluation.Stars;
+                EvaluatedRoute = evaluation.Route;
+                if (EvaluatedRoute == StageClearRewards.ClearRoute.Conquest)
+                {
+                    ClearGradeTitle = ClearStars == 3 ? "신속한 토벌" : ClearStars == 2 ? "효율적인 토벌" : "토벌 성공";
+                    ClearObjectivesText = $"토벌 시간 {PlayTime:0.##}초\n"
+                        + $"2성 {goals.ConquestTwoStarLimit:0.##}초 / 3성 {goals.ConquestThreeStarLimit:0.##}초 이내";
+                }
+                else if (EvaluatedRoute == StageClearRewards.ClearRoute.Survival)
+                {
+                    ClearGradeTitle = ClearStars == 3 ? "견고한 방어" : ClearStars == 2 ? "안정적인 방어" : "방어 성공";
+                    ClearObjectivesText = $"본부 누적 피해 {HeadquartersDamageTaken:0.##}\n"
+                        + $"2성 {goals.SurvivalTwoStarLimit:0.##} / 3성 {goals.SurvivalThreeStarLimit:0.##} 이하";
+                }
+                if (conquestCompleted && survivalCompleted)
+                    ClearObjectivesText += "\n토벌·생존 동시 달성: 높은 등급 적용";
             }
             TrySaveClearReward();
         }

@@ -43,6 +43,8 @@ public class EntityHealth : MonoBehaviour
     public SelectableEntity Entity => selectableEntity;
 
     public float CurrentHealth { get; private set; }
+    // 방어 적용 후 실제 잃은 체력만 누적하며 회복이나 최대 체력 변경으로 줄이지 않는다.
+    public float TotalDamageTaken { get; private set; }
     // 최대 체력 = 기본값 + 업그레이드 보너스입니다.
     public float MaxHealth => Mathf.Max(1f, maxHealth + upgradeMaxHealthBonus);
 
@@ -97,7 +99,9 @@ public class EntityHealth : MonoBehaviour
         // 모든 공격(근접·투사체·범위·화염)이 여기로 들어오므로 방어력은 이 한 곳에서만 적용한다.
         damage = CalculateDamageTaken(damage);
 
+        float healthBeforeDamage = CurrentHealth;
         CurrentHealth = Mathf.Max(0f, CurrentHealth - damage);
+        TotalDamageTaken += Mathf.Max(0f, healthBeforeDamage - CurrentHealth);
         OnHealthChanged?.Invoke(CurrentHealth, MaxHealth);
         OnDamaged?.Invoke(damage, attacker);
 

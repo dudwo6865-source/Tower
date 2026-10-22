@@ -239,8 +239,8 @@ public partial class StageEditorWindow : EditorWindow
         DrawMutationSection();
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("크레딧 / 클리어 등급", EditorStyles.boldLabel);
-        EditorGUILayout.HelpBox("클리어 시 마석 누적 획득량, 적 스포너 파괴 수, 끝까지 버틴 웨이브를 각각 판정해 조건당 별 하나를 획득합니다. " +
-            "목표 이상이면 달성하며, 목표가 0이면 자동 달성합니다. 모두 미달이면 별 0개입니다. " +
+        EditorGUILayout.HelpBox("클리어하면 별 1개를 획득합니다. 스포너 전멸은 클리어 시간, 생존 승리는 본부 누적 피해로 2·3성을 평가합니다. " +
+            "두 승리 조건을 함께 달성하면 높은 등급을 적용하며, 동점이면 토벌 평가를 표시합니다. 수리는 누적 피해를 줄이지 않습니다. " +
             "최초 보너스는 새로 획득한 별마다 한 번씩 누적 지급하며, 반복 보상은 첫 클리어에도 지급합니다.", MessageType.Info);
         EditorGUILayout.PropertyField(serializedObject.FindProperty("clearRewards"), new GUIContent("클리어 보상"), true);
 

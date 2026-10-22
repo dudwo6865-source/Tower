@@ -11,6 +11,10 @@ namespace UnityEngine
     public class MonoBehaviour
     {
         public object gameObject;
+        public Transform transform = new Transform();
+        protected T GetComponent<T>() where T : class
+            => typeof(T) == typeof(SelectableEntity) ? new SelectableEntity() as T : null;
+        protected T[] GetComponentsInChildren<T>() => new T[0];
         protected static void Destroy(object target) {}
     }
     public class HeaderAttribute : Attribute { public HeaderAttribute(string text) {} }
@@ -31,6 +35,7 @@ namespace UnityEngine
     {
         public static int Max(int a, int b) => Math.Max(a, b);
         public static float Max(float a, float b) => Math.Max(a, b);
+        public static float Min(float a, float b) => Math.Min(a, b);
         public static int Clamp(int value, int min, int max) => Math.Max(min, Math.Min(max, value));
         public static float Clamp(float value, float min, float max) => Math.Max(min, Math.Min(max, value));
         public static bool Approximately(float a, float b) => Math.Abs(a - b) < 0.00001f;
@@ -76,16 +81,41 @@ public static class CreditRewardsHarness
     {
         UnityEngine.Application.persistentDataPath = args[0];
         var settings = new StageClearRewards();
-        Check(settings.EvaluateStars(99.9f, 2, 4) == 0, "모든 목표 미달");
-        Check(settings.EvaluateStars(100, 0, 0) == 1, "마석 목표만 달성");
-        Check(settings.EvaluateStars(0, 3, 0) == 1, "스포너 목표만 달성");
-        Check(settings.EvaluateStars(0, 0, 5) == 1, "웨이브 목표만 달성");
-        Check(settings.EvaluateStars(100, 3, 0) == 2, "마석과 스포너 목표 달성");
-        Check(settings.EvaluateStars(100, 0, 5) == 2, "마석과 웨이브 목표 달성");
-        Check(settings.EvaluateStars(0, 3, 5) == 2, "스포너와 웨이브 목표 달성");
-        Check(settings.EvaluateStars(100, 3, 5) == 3, "모든 목표 경계 달성");
-        var zeroTargets = new StageClearRewards { manaStoneTarget = 0, destroyedSpawnerTarget = 0, survivedWaveTarget = 0 };
-        Check(zeroTargets.EvaluateStars(0, 0, 0) == 3, "목표 0 자동 달성");
+        Check(settings.Evaluate(false, false, 0, 0).Stars == 1, "일반 승리 최소 1성");
+        Check(settings.Evaluate(true, false, 601, 0).Stars == 1, "늦은 토벌도 1성");
+        Check(settings.Evaluate(true, false, 600, 9999).Stars == 2, "토벌 2성 시간 경계와 피해 무관");
+        Check(settings.Evaluate(true, false, 300, 9999).Stars == 3, "토벌 3성 시간 경계와 피해 무관");
+        Check(settings.Evaluate(true, false, 301, 0).Stars == 2, "3성 시간 초과");
+        Check(settings.Evaluate(false, true, 0, 501).Stars == 1, "피해가 큰 방어도 1성");
+        Check(settings.Evaluate(false, true, 9999, 500).Stars == 2, "방어 2성 피해 경계와 시간 무관");
+        Check(settings.Evaluate(false, true, 9999, 100).Stars == 3, "방어 3성 피해 경계와 시간 무관");
+        Check(settings.Evaluate(false, true, 0, 101).Stars == 2, "3성 피해 초과");
+        var defenseBest = settings.Evaluate(true, true, 601, 0);
+        Check(defenseBest.Stars == 3 && defenseBest.Route == StageClearRewards.ClearRoute.Survival, "동시 달성 시 우수한 방어 선택");
+        var conquestBest = settings.Evaluate(true, true, 100, 501);
+        Check(conquestBest.Stars == 3 && conquestBest.Route == StageClearRewards.ClearRoute.Conquest, "동시 달성 시 우수한 토벌 선택");
+        Check(settings.Evaluate(true, true, 100, 0).Route == StageClearRewards.ClearRoute.Conquest, "동점은 토벌 표시");
+        var reversed = new StageClearRewards { conquestTwoStarSeconds = 100, conquestThreeStarSeconds = 500,
+            survivalTwoStarDamage = 50, survivalThreeStarDamage = 100 };
+        Check(reversed.Evaluate(true, false, 101, 0).Stars == 1, "역전된 시간 기준 보정");
+        Check(reversed.Evaluate(false, true, 0, 51).Stars == 1, "역전된 피해 기준 보정");
+        var noDamage = new StageClearRewards { survivalThreeStarDamage = 0 };
+        Check(noDamage.Evaluate(false, true, 1000, 0).Stars == 3, "무피해 3성");
+        Check(noDamage.Evaluate(false, true, 1000, 0.1f).Stars == 2, "무피해 기준의 작은 피해");
+        var health = new EntityHealth { armor = 10 };
+        typeof(EntityHealth).GetMethod("Awake", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(health, null);
+        health.TakeDamage(30);
+        Check(health.TotalDamageTaken == 20, "방어력 적용 후 실제 피해 누적");
+        health.Heal(100);
+        Check(health.CurrentHealth == 100 && health.TotalDamageTaken == 20, "수리 후에도 피해 기록 유지");
+        health.SetUpgradeMaxHealthBonus(100);
+        Check(health.CurrentHealth == 200 && health.TotalDamageTaken == 20, "체력 업그레이드로 피해 기록 유지");
+        health.TakeDamage(150);
+        health.Heal(1000);
+        Check(health.TotalDamageTaken == 160 && settings.Evaluate(false, true, 0, health.TotalDamageTaken).Stars == 2,
+            "누적 피해로 평가하고 수리로 등급 복구 불가");
+        health.TakeDamage(1000);
+        Check(health.TotalDamageTaken == 360, "남은 체력보다 큰 피해는 실제 잃은 체력만 집계");
         var mana = new ManaStoneManager { startingManaStone = 50 };
         typeof(ManaStoneManager).GetMethod("Awake", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(mana, null);
         Check(mana.CurrentManaStone == 50 && mana.TotalEarnedManaStone == 0, "시작 마석 제외");
