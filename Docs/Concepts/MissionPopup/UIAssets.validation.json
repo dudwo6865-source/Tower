@@ -1,0 +1,142 @@
+[
+  {
+    "name": "Holographic/Panel",
+    "width": 1536,
+    "height": 1024,
+    "spriteX": 32,
+    "spriteY": 84,
+    "spriteWidth": 1472,
+    "spriteHeight": 882,
+    "transparentPixels": 299037
+  },
+  {
+    "name": "Console/Panel",
+    "width": 1122,
+    "height": 1402,
+    "spriteX": 27,
+    "spriteY": 60,
+    "spriteWidth": 1068,
+    "spriteHeight": 1304,
+    "transparentPixels": 240714
+  },
+  {
+    "name": "Holographic/RowNormal",
+    "width": 2172,
+    "height": 724,
+    "spriteX": 29,
+    "spriteY": 240,
+    "spriteWidth": 2114,
+    "spriteHeight": 244,
+    "transparentPixels": 1059550
+  },
+  {
+    "name": "Holographic/RowSelected",
+    "width": 2172,
+    "height": 724,
+    "spriteX": 33,
+    "spriteY": 251,
+    "spriteWidth": 2110,
+    "spriteHeight": 245,
+    "transparentPixels": 1059490
+  },
+  {
+    "name": "Console/RowNormal",
+    "width": 2172,
+    "height": 724,
+    "spriteX": 36,
+    "spriteY": 174,
+    "spriteWidth": 2098,
+    "spriteHeight": 380,
+    "transparentPixels": 775209
+  },
+  {
+    "name": "Console/RowSelected",
+    "width": 2172,
+    "height": 724,
+    "spriteX": 30,
+    "spriteY": 175,
+    "spriteWidth": 2112,
+    "spriteHeight": 380,
+    "transparentPixels": 781500
+  },
+  {
+    "name": "Holographic/ButtonPrimary",
+    "width": 2068,
+    "height": 760,
+    "spriteX": 63,
+    "spriteY": 160,
+    "spriteWidth": 1945,
+    "spriteHeight": 479,
+    "transparentPixels": 663174
+  },
+  {
+    "name": "Holographic/ButtonSecondary",
+    "width": 2087,
+    "height": 753,
+    "spriteX": 75,
+    "spriteY": 187,
+    "spriteWidth": 1937,
+    "spriteHeight": 415,
+    "transparentPixels": 775026
+  },
+  {
+    "name": "Console/ButtonPrimary",
+    "width": 2062,
+    "height": 763,
+    "spriteX": 17,
+    "spriteY": 78,
+    "spriteWidth": 2028,
+    "spriteHeight": 606,
+    "transparentPixels": 432921
+  },
+  {
+    "name": "Console/ButtonSecondary",
+    "width": 2172,
+    "height": 724,
+    "spriteX": 64,
+    "spriteY": 62,
+    "spriteWidth": 2045,
+    "spriteHeight": 565,
+    "transparentPixels": 512139
+  },
+  {
+    "name": "Shared/Close",
+    "width": 1254,
+    "height": 1254,
+    "spriteX": 348,
+    "spriteY": 375,
+    "spriteWidth": 557,
+    "spriteHeight": 527,
+    "transparentPixels": 1290333
+  },
+  {
+    "name": "Shared/StarEarned",
+    "width": 1254,
+    "height": 1254,
+    "spriteX": 30,
+    "spriteY": 81,
+    "spriteWidth": 1192,
+    "spriteHeight": 1128,
+    "transparentPixels": 980645
+  },
+  {
+    "name": "Shared/StarEmpty",
+    "width": 1254,
+    "height": 1254,
+    "spriteX": 52,
+    "spriteY": 87,
+    "spriteWidth": 1150,
+    "spriteHeight": 1117,
+    "transparentPixels": 992521
+  },
+  {
+    "name": "Shared/NumberBadge",
+    "width": 1254,
+    "height": 1254,
+    "spriteX": 75,
+    "spriteY": 103,
+    "spriteWidth": 1104,
+    "spriteHeight": 1072,
+    "transparentPixels": 587160
+  }
+]

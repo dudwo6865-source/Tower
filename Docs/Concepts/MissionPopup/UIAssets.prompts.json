@@ -1,0 +1,79 @@
+{
+  "mode": "built-in image_gen",
+  "references": [
+    "02-holographic.png",
+    "03-console.png"
+  ],
+  "assets": [
+    {
+      "name": "Holographic/Panel",
+      "sourceFile": "exec-4fd72185-acaa-4c6f-8b77-e924f6d8a82b.png",
+      "prompt": "Use case: background-extraction. Create ONE standalone production Unity UI sprite derived from the reference mockup. Reference is style and exact component design. Orthographic straight-on 2D, no perspective. Actual transparent RGBA background outside the component, NOT a checkerboard baked into pixels, no lobby, no backdrop, no drop shadow, no sheet, no captions. Component centered, tight canvas with tiny transparent margin, full silhouette uncut. Preserve navy/cobalt/silver/cyan stylized sci-fi materials from reference. No lettering. Only the large outer popup window shell, landscape aspect 3:2, thin silver rim, cyan lines, cobalt corner clips, blank dark navy glass body. Remove ALL inner contents including title, rows, dividers, icons and buttons. Preserve top and bottom cyan rim lights."
+    },
+    {
+      "name": "Console/Panel",
+      "sourceFile": "exec-083fc6f1-2fdd-400f-9d22-5b4f9fd97a7e.png",
+      "prompt": "Use case: background-extraction. Create ONE standalone production Unity UI sprite derived from the reference mockup. Reference is style and exact component design. Orthographic straight-on 2D, no perspective. Actual transparent RGBA background outside the component, NOT a checkerboard baked into pixels, no lobby, no backdrop, no drop shadow, no sheet, no captions. Component centered, tight canvas with tiny transparent margin, full silhouette uncut. Preserve navy/cobalt/silver/cyan stylized sci-fi materials from reference. No lettering. Only the tall outer popup window shell, portrait aspect 4:5, graphite steel and silver corner armor, cyan rim lamps. Include the empty cobalt header plate across top 20%, blank charcoal navy body below. Remove ALL text, rows, icons and buttons."
+    },
+    {
+      "name": "Holographic/RowNormal",
+      "sourceFile": "exec-5349d11f-be61-4838-82ca-4f5caa66b610.png",
+      "prompt": "Create exactly one minimalist sci-fi UI list row sprite: very wide horizontal dark navy strip 8:1 silhouette, clipped corners, single hairline CYAN outline, uniform thin border, empty center. No silver armor, no metal corner pieces, no corner lamps, no text, no icons, no badge. Straight-on flat 2D, subtly shaded navy fill. The ONLY visible object is the single row. Actual transparent RGBA background outside it. Fit width tightly, no backdrop, no glow cloud."
+    },
+    {
+      "name": "Holographic/RowSelected",
+      "sourceFile": "exec-4d30d4cd-54bf-45f9-b44b-ecfe5a377226.png",
+      "prompt": "Use case: background-extraction. Create ONE standalone production Unity UI sprite derived from the reference mockup. Reference is style and exact component design. Orthographic straight-on 2D, no perspective. Actual transparent RGBA background outside the component, NOT a checkerboard baked into pixels, no lobby, no backdrop, no drop shadow, no sheet, no captions. Component centered, tight canvas with tiny transparent margin, full silhouette uncut. Preserve navy/cobalt/silver/cyan stylized sci-fi materials from reference. No lettering. Only ONE selected stage row background, wide horizontal strip aspect 8:1, blue navy fill and vivid thin cyan clipped corner outline, cyan vertical selection bar on left. NO metallic armored frame, use clean fine holographic outline like third row. Absolutely no numbers, badges, stars, arrows or text."
+    },
+    {
+      "name": "Console/RowNormal",
+      "sourceFile": "exec-26e6b602-780d-4993-9097-8e0abadcdcb5.png",
+      "prompt": "Use case: background-extraction. Create ONE standalone production Unity UI sprite derived from the reference mockup. Reference is style and exact component design. Orthographic straight-on 2D, no perspective. Actual transparent RGBA background outside the component, NOT a checkerboard baked into pixels, no lobby, no backdrop, no drop shadow, no sheet, no captions. Component centered, tight canvas with tiny transparent margin, full silhouette uncut. Preserve navy/cobalt/silver/cyan stylized sci-fi materials from reference. No lettering. Only ONE normal unselected stage row background, wide horizontal strip aspect 6:1, dark charcoal navy inset, slim silver armored clipped corners, thin cyan inner line. Blank interior, no badges, numbers, stars or lettering."
+    },
+    {
+      "name": "Console/RowSelected",
+      "sourceFile": "exec-092afc38-640a-429f-9b1e-6c10ef1b2065.png",
+      "prompt": "Use case: background-extraction. Create ONE standalone production Unity UI sprite derived from the reference mockup. Reference is style and exact component design. Orthographic straight-on 2D, no perspective. Actual transparent RGBA background outside the component, NOT a checkerboard baked into pixels, no lobby, no backdrop, no drop shadow, no sheet, no captions. Component centered, tight canvas with tiny transparent margin, full silhouette uncut. Preserve navy/cobalt/silver/cyan stylized sci-fi materials from reference. No lettering. Only ONE selected stage row background, wide horizontal strip aspect 6:1, dark charcoal navy inset, amber gold illuminated beveled clipped-corner edge as third selected row. Blank interior, no pointer, badges, numbers, stars or lettering."
+    },
+    {
+      "name": "Holographic/ButtonPrimary",
+      "sourceFile": "exec-76848fbc-bc61-4cdf-a5fe-7eb17c95123d.png",
+      "prompt": "Use case: background-extraction. Create ONE standalone production Unity UI sprite derived from the reference mockup. Reference is style and exact component design. Orthographic straight-on 2D, no perspective. Actual transparent RGBA background outside the component, NOT a checkerboard baked into pixels, no lobby, no backdrop, no drop shadow, no sheet, no captions. Component centered, tight canvas with tiny transparent margin, full silhouette uncut. Preserve navy/cobalt/silver/cyan stylized sci-fi materials from reference. No lettering. Only ONE blank primary action button as bottom right blue button, horizontal aspect 3.7:1, electric cobalt fill, silver beveled clipped corners, cyan luminous rim. Blank interior, no lettering, no icons."
+    },
+    {
+      "name": "Holographic/ButtonSecondary",
+      "sourceFile": "exec-98ce9136-778c-423f-b1bd-6044bb9d1c13.png",
+      "prompt": "Create exactly one minimalist sci-fi UI secondary button sprite: wide horizontal dark navy button 3.7:1 silhouette, clipped corners, very slim SILVER double-line border and tiny cyan edge highlights, empty center. No chunky armor, no corner lamps, no text, no icons. Straight-on flat 2D, subtly shaded navy fill. The ONLY visible object is the single button. Actual transparent RGBA background outside it. Fit canvas tightly, no backdrop, no glow cloud."
+    },
+    {
+      "name": "Console/ButtonPrimary",
+      "sourceFile": "exec-d5aa4406-26e6-40ac-9948-7aafc5e4a09c.png",
+      "prompt": "Use case: background-extraction. Create ONE standalone production Unity UI sprite derived from the reference mockup. Reference is style and exact component design. Orthographic straight-on 2D, no perspective. Actual transparent RGBA background outside the component, NOT a checkerboard baked into pixels, no lobby, no backdrop, no drop shadow, no sheet, no captions. Component centered, tight canvas with tiny transparent margin, full silhouette uncut. Preserve navy/cobalt/silver/cyan stylized sci-fi materials from reference. No lettering. Only ONE blank primary button as bottom orange launch button, horizontal aspect 3.7:1, warm orange amber bronze fill, silver bevel armored clipped corners, amber luminous rim. No lettering, no icons."
+    },
+    {
+      "name": "Console/ButtonSecondary",
+      "sourceFile": "exec-714d39dc-cdad-4d56-8c2b-fc3dc509a0c1.png",
+      "prompt": "Use case: background-extraction. Create ONE standalone production Unity UI sprite derived from the reference mockup. Reference is style and exact component design. Orthographic straight-on 2D, no perspective. Actual transparent RGBA background outside the component, NOT a checkerboard baked into pixels, no lobby, no backdrop, no drop shadow, no sheet, no captions. Component centered, tight canvas with tiny transparent margin, full silhouette uncut. Preserve navy/cobalt/silver/cyan stylized sci-fi materials from reference. No lettering. Only ONE blank secondary button as lower right close button, horizontal aspect 3:1, dark cobalt navy fill, silver bevel armored clipped corners, cyan edge lamps. No lettering, no icons."
+    },
+    {
+      "name": "Shared/Close",
+      "sourceFile": "exec-9fed754c-97e4-4285-b688-c60cfedd9e2c.png",
+      "prompt": "Create just ONE small UI close icon button on a genuinely transparent RGBA background. A square dark navy button with clipped corners, slim silver bevel and cyan outline, a centered bold luminous cyan X occupying most of the button. Tight square image. Only the close icon button, NO window, NO panel, NO other interface, NO backdrop. Stylized sci-fi game UI cobalt/navy/silver. Crisp edges, no outside glow cloud."
+    },
+    {
+      "name": "Shared/StarEarned",
+      "sourceFile": "exec-51ea064c-4e53-4427-b223-665cbec1794b.png",
+      "prompt": "Create ONE standalone golden five-point completion star icon for a stylized sci-fi game UI. Solid gold with restrained beveled facets, warm yellow face and darker orange edge, straight-on, symmetrical, clear silhouette, tight square framing. Real transparent RGBA outside the star. No panel, no text, no background, no extra star, no particle effects, no glow cloud."
+    },
+    {
+      "name": "Shared/StarEmpty",
+      "sourceFile": "exec-ee43e8bd-cea7-4fa7-998d-a746b37672e5.png",
+      "prompt": "Create ONE standalone unearned five-point completion star icon for a stylized sci-fi game UI. Solid muted graphite silver with restrained beveled facets, slate gray face and darker edge, straight-on, symmetrical, clear silhouette, tight square framing. Real transparent RGBA outside the star. No panel, no text, no background, no extra star, no particle effects, no glow cloud."
+    },
+    {
+      "name": "Shared/NumberBadge",
+      "sourceFile": "exec-2525471b-3f40-4e04-bc8c-0ee74aae8a88.png",
+      "prompt": "Create ONE standalone blank octagonal stage number badge for stylized sci-fi game UI. Thin luminous cyan octagonal outline, dark navy interior, slight bevel, straight-on. Empty center for adding numbers in Unity. Actual transparent RGBA background, tightly framed square. No number, no text, no window, no large panel, no backdrop, no surrounding glow cloud."
+    }
+  ]
+}
