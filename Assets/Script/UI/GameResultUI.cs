@@ -111,13 +111,19 @@ public class GameResultUI : MonoBehaviour
     {
         new StatRow { type = StatType.PlayTime },
         new StatRow { type = StatType.DestroyedSpawners },
-        new StatRow { type = StatType.KilledEnemyUnits },
-        new StatRow { type = StatType.SpentWatt },
+        new StatRow { type = StatType.EarnedManaStone },
     };
 
     [Label("게임 시간 형식")]
     [Tooltip("게임 시간 표시 형식입니다. {0}=분, {1}=초")]
     public string playTimeFormat = "{0:00}:{1:00}";
+
+    [Header("종합점수")]
+    [Label("점수 연출 UI")]
+    [Tooltip("종합점수, 슬라이더와 단계별 별 이미지를 표시하는 컴포넌트입니다.")]
+    public ResultScoreUI scoreUI;
+
+    bool hasShownResult;
 
     [Header("보상")]
     [Label("클리어 등급 텍스트")]
@@ -209,6 +215,10 @@ public class GameResultUI : MonoBehaviour
 
         if (panelRoot != null)
             panelRoot.SetActive(true);
+        if (!hasShownResult && scoreUI != null && resultManager != null)
+            scoreUI.Show(resultManager.ClearScore, resultManager.ScoreRules, victory,
+                titleText != null ? titleText.font : null, starsText);
+        hasShownResult = true;
     }
 
     void ApplyTitle(bool victory)
@@ -228,10 +238,9 @@ public class GameResultUI : MonoBehaviour
     void ApplyCreditReward(bool victory)
     {
         EnsureCreditRewardText();
-        string stars = victory && resultManager != null
-            ? new string('★', resultManager.ClearStars) + new string('☆', 3 - resultManager.ClearStars) : "";
-        if (starsText != null) starsText.text = stars;
-        else if (victory && titleText != null) titleText.text += "\n<size=55%>" + stars + "</size>";
+        if (scoreUI == null && starsText != null)
+            starsText.text = victory && resultManager != null
+                ? new string('★', resultManager.ClearStars) + new string('☆', 3 - resultManager.ClearStars) : "";
 
         string text = "";
         if (victory && resultManager != null)
@@ -242,8 +251,9 @@ public class GameResultUI : MonoBehaviour
                 : resultManager.RewardError;
         }
         string objectives = victory && resultManager != null ? resultManager.ClearObjectivesText : "";
-        if (victory && resultManager != null)
+        if (victory && resultManager != null && scoreUI == null)
             objectives = resultManager.ClearGradeTitle + "\n" + objectives;
+        if (scoreUI != null) objectives = "";
         if (objectivesText != null) objectivesText.text = objectives;
         else if (!string.IsNullOrEmpty(objectives)) text += "\n" + objectives;
         if (creditRewardText != null) creditRewardText.text = text;
@@ -301,6 +311,21 @@ public class GameResultUI : MonoBehaviour
     {
         if (resultManager == null)
             return "-";
+
+        var rules = resultManager.ScoreRules;
+        var score = resultManager.ScoreEvaluation;
+        if (rules != null)
+        {
+            switch (type)
+            {
+                case StatType.PlayTime:
+                    return $"{resultManager.PlayTime:0.##}초 × {Mathf.Max(0, rules.pointsPerSecond)} = {score.TimeScore:N0}점";
+                case StatType.DestroyedSpawners:
+                    return $"{resultManager.DestroyedSpawnerCount}개 × {Mathf.Max(0, rules.pointsPerSpawner)} = {score.SpawnerScore:N0}점";
+                case StatType.EarnedManaStone:
+                    return $"{resultManager.EarnedManaStone:0.##}개 × {Mathf.Max(0, rules.pointsPerManaStone)} = {score.ManaStoneScore:N0}점";
+            }
+        }
 
         switch (type)
         {

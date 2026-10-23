@@ -13,6 +13,7 @@ $compiler = Join-Path $MonoRoot 'lib/mono/4.5/csc.exe'
     (Join-Path $PSScriptRoot 'HealthHarnessStubs.cs') `
     (Join-Path $projectRoot 'Assets/Script/Combat/EntityHealth.cs') `
     (Join-Path $projectRoot 'Assets/Script/Map/StageClearRewards.cs') `
+    (Join-Path $projectRoot 'Assets/Script/UI/ScoreRevealProgress.cs') `
     (Join-Path $projectRoot 'Assets/Script/Economy/ManaStoneManager.cs') `
     (Join-Path $projectRoot 'Assets/Script/CreditWallet.cs')
 if ($LASTEXITCODE -ne 0) { throw '검증 프로그램 컴파일에 실패했습니다.' }

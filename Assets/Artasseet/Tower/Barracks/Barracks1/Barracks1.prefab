@@ -223,7 +223,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   maxHealth: 100
-  armor: 0
+  armor: 1
   minDamageRatio: 0.1
   minDamage: 0.5
   deathEffectPrefab: {fileID: 0}
@@ -328,12 +328,14 @@ MonoBehaviour:
   emissionPropertyName: _EmissionColor
   producingColor: {r: 0, g: 1.6948378, b: 2.1185472, a: 1}
   showDuringInitialDelay: 1
+  showBlocked: 1
+  blockedColor: {r: 2.5, g: 0.3, b: 0.1, a: 1}
   fadeDuration: 0.3
   usePulse: 1
-  pulsePeriod: 1.2
+  pulsePeriod: 0.8
   pulseMinBrightness: 0.4
-  pulseRandomness: 0.8
-  twinkleAmount: 0.3
+  pulseRandomness: 0.87
+  twinkleAmount: 0.637
   twinkleSpeedMultiplier: 4
 --- !u!65 &3391627718619013338
 BoxCollider:

@@ -44,7 +44,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: da9e02fa87194edb828377bec4268821, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  buildingPrefab: {fileID: 1362446224610192768, guid: 806ee4e48dc492a48afb496ef2e68aea, type: 3}
+  buildingPrefab: {fileID: 1362446224610192768, guid: 69be64f548373a14ca84f2b28882450c, type: 3}
   useMarkerRotation: 0
   overrideOwner: 0
   ownerId: 1

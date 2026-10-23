@@ -223,6 +223,15 @@ public class ProductionBuilding : MonoBehaviour
     // Watt가 부족해 생산 진행이 멈춰 있는지 여부입니다.
     public bool IsWaitingForWatt => IsProducing && waitingForWatt;
 
+    // 생산하려 하지만 보유 유닛 한도에 막혔거나 Watt가 부족해 진행하지 못하는지 여부입니다.
+    // 일시정지·건설 잠금·해금 조건 미충족은 포함하지 않습니다.
+    public bool IsProductionBlocked =>
+        productionRoutine != null &&
+        !isPaused &&
+        !IsRecipeLocked &&
+        !BuildingConstructionGate.IsFeatureLockedOn(this) &&
+        (IsAtCapacity || waitingForWatt);
+
     // 생산 중일 때 초당 소모하는 Watt입니다. 소모 대상이 아니면 0입니다.
     public float WattCostPerSecond =>
         recipe != null && ConsumesWatt() ? Mathf.Max(0f, recipe.wattCostPerSecond) : 0f;

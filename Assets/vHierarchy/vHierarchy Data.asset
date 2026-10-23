@@ -19,6 +19,7 @@ MonoBehaviour:
     - eab5c6cf15a351347b1b21df5be46640
     - 1a55d33ac2eb9e9489884da5a013eeb9
     - 74a4649df01f338419cf3fef7e3d8a3a
+    - 2d7e824495c068d4399dfce510d68b4a
     values:
     - goDatas_byGlobalId:
         keys:
@@ -2107,6 +2108,84 @@ MonoBehaviour:
           isIconRecursive: 0
           isColorRecursive: 0
         - colorIndex: 2
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+    - goDatas_byGlobalId:
+        keys:
+        - globalObjectIdString: GlobalObjectId_V1-2-2d7e824495c068d4399dfce510d68b4a-2028838787-0
+        - globalObjectIdString: GlobalObjectId_V1-2-2d7e824495c068d4399dfce510d68b4a-211660916-0
+        - globalObjectIdString: GlobalObjectId_V1-2-2d7e824495c068d4399dfce510d68b4a-782875091-0
+        - globalObjectIdString: GlobalObjectId_V1-2-2d7e824495c068d4399dfce510d68b4a-360382709-0
+        - globalObjectIdString: GlobalObjectId_V1-2-2d7e824495c068d4399dfce510d68b4a-1327392219-0
+        - globalObjectIdString: GlobalObjectId_V1-2-2d7e824495c068d4399dfce510d68b4a-1964024279-0
+        - globalObjectIdString: GlobalObjectId_V1-2-2d7e824495c068d4399dfce510d68b4a-1996919064-0
+        - globalObjectIdString: GlobalObjectId_V1-2-2d7e824495c068d4399dfce510d68b4a-2061468183-0
+        - globalObjectIdString: GlobalObjectId_V1-2-2d7e824495c068d4399dfce510d68b4a-1372143347-0
+        - globalObjectIdString: GlobalObjectId_V1-2-2d7e824495c068d4399dfce510d68b4a-544540100-0
+        - globalObjectIdString: GlobalObjectId_V1-2-2d7e824495c068d4399dfce510d68b4a-466600293-0
+        - globalObjectIdString: GlobalObjectId_V1-2-2d7e824495c068d4399dfce510d68b4a-1136039986-0
+        - globalObjectIdString: GlobalObjectId_V1-2-2d7e824495c068d4399dfce510d68b4a-1574642539-0
+        - globalObjectIdString: GlobalObjectId_V1-2-2d7e824495c068d4399dfce510d68b4a-2034032357-0
+        - globalObjectIdString: GlobalObjectId_V1-2-2d7e824495c068d4399dfce510d68b4a-1394514697-0
+        values:
+        - colorIndex: 3
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 5
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 5
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 5
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 2
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 1
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 1
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 1
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 1
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 1
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 1
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 2
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 1
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 2
+          iconNameOrGuid: 
+          isIconRecursive: 0
+          isColorRecursive: 0
+        - colorIndex: 1
           iconNameOrGuid: 
           isIconRecursive: 0
           isColorRecursive: 0

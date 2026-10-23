@@ -28,6 +28,10 @@ public class UnitCommandController : MonoBehaviour
     [Tooltip("집결지(Rally Point) 명령의 커서 링 색입니다.")]
     public Color rallyCursorColor = new Color(1f, 0.85f, 0.25f, 0.95f);
 
+    [Label("우클릭 명령에도 확정 원 표시")]
+    [Tooltip("우클릭으로 내린 이동·공격·집결지 명령에도 명령 확정 때처럼 원이 한 번 튀고 사라지게 합니다.")]
+    public bool showConfirmPulseOnRightClick = true;
+
     [Label("지면 표시 유지 시간(초)")]
     [Tooltip("움직일 수 없는 건물만 선택한 채로 바닥에 명령을 찍었을 때, 지면 표시가 남아 있는 시간(초)입니다.")]
     public float groundCommandMarkerSeconds = 1.2f;
@@ -42,9 +46,11 @@ public class UnitCommandController : MonoBehaviour
 
     void Awake()
     {
+        // 중복이면 이 컴포넌트만 지운다. 오브젝트째 지우면 같은 오브젝트의 명령 패널 UI까지 사라진다.
         if (Instance != null && Instance != this)
         {
-            Destroy(gameObject);
+            Debug.LogWarning($"UnitCommandController: 씬에 이미 있어 '{name}'의 중복 컴포넌트를 제거합니다. 하나만 남겨 주세요.", this);
+            Destroy(this);
             return;
         }
 
@@ -151,6 +157,20 @@ public class UnitCommandController : MonoBehaviour
         }
 
         return radius;
+    }
+
+    /// <summary>
+    /// 우클릭 기본 명령이 실제로 전달됐을 때 확정 원을 재생합니다. 색과 크기는 같은 명령 모드의 커서 링을 따릅니다.
+    /// </summary>
+    public static void PlayRightClickConfirmPulse(Vector3 worldPoint, UnitCommandMode mode)
+    {
+        if (Instance == null || !Instance.showConfirmPulseOnRightClick)
+            return;
+
+        CommandCursorIndicator.PlayConfirmPulse(
+            worldPoint,
+            Instance.GetCursorRadius(mode),
+            Instance.GetCursorColor(mode));
     }
 
     public bool ShouldBlockSelectionInput()

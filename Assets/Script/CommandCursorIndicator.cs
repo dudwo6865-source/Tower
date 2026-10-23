@@ -6,7 +6,7 @@ using UnityEngine;
 //
 // 원은 두 가지로 움직여 입력 상태를 알려줍니다.
 // - 대기 맥동: 명령 모드가 켜져 있는 동안 계속 조금씩 커졌다 작아집니다.
-// - 펄스: 명령 모드에 들어갈 때와 명령을 확정할 때 한 번 빠르게 커졌다 돌아옵니다.
+// - 펄스: 명령 모드에 들어갈 때와 명령을 확정할 때(우클릭 기본 명령 포함) 한 번 빠르게 커졌다 돌아옵니다.
 //   확정 펄스는 사라지면서 흐려지고, 연출이 끝난 뒤에 원을 감춥니다.
 public class CommandCursorIndicator : MonoBehaviour
 {
@@ -136,6 +136,22 @@ public class CommandCursorIndicator : MonoBehaviour
             Instance.confirmPulseDuration,
             Instance.confirmPulseScale,
             hideWhenDone: true);
+    }
+
+    /// <summary>
+    /// 반지름과 색을 직접 정해 확정 피드백을 재생합니다.
+    /// 명령 모드 없이 내린 명령(우클릭 기본 명령)처럼 커서 링이 떠 있지 않을 때 씁니다.
+    /// </summary>
+    public static void PlayConfirmPulse(Vector3 worldPoint, float radius, Color color)
+    {
+        EnsureInstance();
+
+        if (Instance == null)
+            return;
+
+        Instance.baseRadius = radius;
+        Instance.baseColor = color;
+        PlayConfirmPulse(worldPoint);
     }
 
     static void EnsureInstance()

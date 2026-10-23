@@ -81,6 +81,25 @@ public static class CreditRewardsHarness
     {
         UnityEngine.Application.persistentDataPath = args[0];
         var settings = new StageClearRewards();
+        Check(ScoreRevealProgress.Sample(1000, 0, 2) == 0, "점수 연출 0에서 시작");
+        Check(ScoreRevealProgress.Sample(1000, 2, 2) == 1000, "점수 연출 정확한 최종값");
+        Check(ScoreRevealProgress.Sample(1500, 5, 2) == 1500, "기준 초과 점수 유지");
+        Check(ScoreRevealProgress.Sample(1000, 0, 0) == 1000, "연출 시간 0이면 즉시 완료");
+        Check(ScoreRevealProgress.Sample(0, 1, 2) == 0, "0점 연출");
+        double previousScore = 0;
+        int previousStars = 0;
+        for (int frame = 0; frame <= 120; frame++)
+        {
+            double shown = ScoreRevealProgress.Sample(1000, frame / 60.0, 2);
+            int stars = settings.GetStarsForScore(shown);
+            if (shown < previousScore || stars < previousStars || shown > 1000)
+                throw new Exception("점수와 별 단계가 뒤로 가거나 최종값을 넘었습니다.");
+            previousScore = shown;
+            previousStars = stars;
+        }
+        Check(previousStars == 3, "연출 중 점수와 별 단계 동기화");
+        Check(settings.GetStarsForScore(499) == 0 && settings.GetStarsForScore(500) == 1
+            && settings.GetStarsForScore(750) == 2 && settings.GetStarsForScore(1000) == 3, "게이지 별 기준 일치");
         Check(settings.Evaluate(0, 0, 0).Stars == 0, "점수 없는 클리어는 0성");
         Check(settings.Evaluate(499, 0, 0).Stars == 0, "50퍼센트 미달");
         Check(settings.Evaluate(500, 0, 0).Stars == 1, "50퍼센트 경계");

@@ -102,7 +102,11 @@ public static class BuildingCommandHandler
                 out _))
             return false;
 
-        return IssueRallyPointToSelection(hit.point);
+        if (!IssueRallyPointToSelection(hit.point))
+            return false;
+
+        UnitCommandController.PlayRightClickConfirmPulse(hit.point, UnitCommandMode.RallyPoint);
+        return true;
     }
 
     public static bool HasProductionBuildingsSelected()

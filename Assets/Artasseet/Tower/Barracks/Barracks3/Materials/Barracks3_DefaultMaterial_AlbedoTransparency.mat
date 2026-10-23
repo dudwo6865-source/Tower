@@ -12,12 +12,14 @@ Material:
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
+  - _DISSOLVE_CAP
+  - _DISSOLVE_ON
   - _EMISSION
   - _METALLICSPECGLOSSMAP
   - _NORMALMAP
   m_InvalidKeywords: []
-  m_LightmapFlags: 2
-  m_EnableInstancingVariants: 0
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
   m_CustomRenderQueue: -1
   stringTagMap: {}
@@ -51,7 +53,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
-        m_Texture: {fileID: 2800000, guid: e1f5a7df51540744990ae622117fe0c5, type: 3}
+        m_Texture: {fileID: 2800000, guid: ef38e510642f85d4ba971ea8ef29f314, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MetallicGlossMap:
@@ -63,7 +65,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _ParallaxMap:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 2800000, guid: 8d50e9d29630528449d61b2f8f441c9c, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _SpecGlossMap:
@@ -94,14 +96,14 @@ Material:
     - _BumpScale: 2
     - _ClearCoatMask: 0
     - _ClearCoatSmoothness: 0
-    - _Cull: 2
+    - _Cull: 0
     - _Cutoff: 0.5
     - _DetailAlbedoMapScale: 1
     - _DetailNormalMapScale: 1
-    - _DissolveCapEnabled: 0
-    - _DissolveEdge: 0.1
-    - _DissolveEnabled: 0
-    - _DissolveHeight: 0
+    - _DissolveCapEnabled: 1
+    - _DissolveEdge: 0.72
+    - _DissolveEnabled: 1
+    - _DissolveHeight: 11
     - _DissolveNoiseScale: 50
     - _DissolveNoiseStrength: 1
     - _DstBlend: 0
@@ -112,14 +114,14 @@ Material:
     - _Glossiness: 0
     - _GlossyReflections: 0
     - _MaskPackMode: 0
-    - _Metallic: 0
+    - _Metallic: 1
     - _NormalMapToggle: 1
     - _OcclusionStrength: 1
-    - _OutlineWidth: 0.02
+    - _OutlineWidth: 0.05
     - _Parallax: 0.005
     - _QueueOffset: 0
     - _ReceiveShadows: 1
-    - _Smoothness: 0.5
+    - _Smoothness: 0.213
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1
@@ -127,20 +129,20 @@ Material:
     - _Surface: 0
     - _UnitStencilRef: 128
     - _UseMaskOcclusion: 0
-    - _WorkflowMode: 1
+    - _WorkflowMode: 0
     - _ZWrite: 1
     m_Colors:
     - _AlbedoKeyColor: {r: 0.09999997, g: 0.34999996, b: 1, a: 1}
     - _AlbedoRecolorColor: {r: 1, g: 0, b: 0, a: 1}
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
-    - _DissolveCapColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
+    - _DissolveCapColor: {r: 0, g: 0.34774005, b: 0.3584906, a: 1}
     - _DissolveCapEmission: {r: 0, g: 0, b: 0, a: 1}
-    - _DissolveEdgeColor: {r: 8, g: 5, b: 0, a: 1}
-    - _DissolveFresnelColor: {r: 0, g: 8, b: 8, a: 1}
+    - _DissolveEdgeColor: {r: 0, g: 2.1132076, b: 1.9700394, a: 1}
+    - _DissolveFresnelColor: {r: 0, g: 0, b: 0, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _HitFlashColor: {r: 0, g: 0, b: 0, a: 0}
     - _OutlineColor: {r: 0, g: 0, b: 0, a: 1}
-    - _OutlineViewOffset: {r: 0, g: 0, b: 0, a: 0}
+    - _OutlineViewOffset: {r: -1, g: -1, b: -1, a: 0}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
   m_BuildTextureStacks: []

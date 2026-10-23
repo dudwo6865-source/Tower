@@ -59,8 +59,13 @@ public class StageClearRewards
         double spawners = ToScore(destroyedSpawners, pointsPerSpawner);
         double mana = ToScore(earnedManaStone, pointsPerManaStone);
         double total = time + spawners + mana;
-        int stars = total >= TargetScore ? 3 : total >= TwoStarScore ? 2 : total >= OneStarScore ? 1 : 0;
+        int stars = GetStarsForScore(total);
         return new Evaluation(time, spawners, mana, stars);
+    }
+
+    public int GetStarsForScore(double score)
+    {
+        return score >= TargetScore ? 3 : score >= TwoStarScore ? 2 : score >= OneStarScore ? 1 : 0;
     }
 
     static double ToScore(double amount, int weight)

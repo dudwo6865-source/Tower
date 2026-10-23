@@ -36,18 +36,18 @@ public static class UnitCommandHandler
         {
             // 타워도 유닛처럼 우클릭한 적을 공격 대상으로 삼는다.
             // 대상 표시가 유닛 쪽을 따라가도록 타워를 먼저 처리한다.
-            if (hasTowers)
-                BuildingCommandHandler.IssueAttackToSelection(enemy);
+            bool towerIssued = hasTowers && BuildingCommandHandler.IssueAttackToSelection(enemy);
+            bool unitIssued = hasUnits && IssueAttack(units, enemy);
 
-            if (hasUnits)
-                IssueAttack(units, enemy);
+            if (towerIssued || unitIssued)
+                UnitCommandController.PlayRightClickConfirmPulse(hit.point, UnitCommandMode.Attack);
 
             return;
         }
 
         // 타워는 움직일 수 없으므로 지면 우클릭은 유닛에게만 이동 명령으로 전달한다.
-        if (hasUnits)
-            IssueMove(units, hit.point);
+        if (hasUnits && IssueMove(units, hit.point))
+            UnitCommandController.PlayRightClickConfirmPulse(hit.point, UnitCommandMode.Move);
     }
 
     public static bool HasCommandableUnits()

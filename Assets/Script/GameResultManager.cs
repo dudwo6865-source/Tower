@@ -84,6 +84,8 @@ public class GameResultManager : MonoBehaviour
     public int SurvivedWaves { get; private set; }
     public float HeadquartersDamageTaken { get; private set; }
     public double ClearScore { get; private set; }
+    public StageClearRewards ScoreRules { get; private set; }
+    public StageClearRewards.Evaluation ScoreEvaluation { get; private set; }
     public string ClearGradeTitle { get; private set; }
     public string ClearObjectivesText { get; private set; }
     public CreditWallet.ClearReward CreditReward { get; private set; }
@@ -318,19 +320,28 @@ public class GameResultManager : MonoBehaviour
         EarnedManaStone = mana != null && mana.ownerId == playerOwnerId ? mana.TotalEarnedManaStone : 0f;
         SurvivedWaves = dayNightCycle != null ? dayNightCycle.CycleCount : 0;
         HeadquartersDamageTaken = hqHealth != null ? hqHealth.TotalDamageTaken : 0f;
+        if (rewardConfig == null && MapLoader.Instance != null)
+            rewardConfig = MapLoader.Instance.LoadedConfig;
+        // 결과 연출 중 인스펙터를 바꾸더라도 확정된 배율과 점수를 유지한다.
+        if (rewardConfig != null && rewardConfig.clearRewards != null)
+        {
+            ScoreRules = JsonUtility.FromJson<StageClearRewards>(JsonUtility.ToJson(rewardConfig.clearRewards));
+            ScoreEvaluation = ScoreRules.Evaluate(PlayTime, DestroyedSpawnerCount, EarnedManaStone);
+            ClearScore = ScoreEvaluation.TotalScore;
+        }
         CurrentResult = result;
         if (result == Result.Victory)
         {
             if (rewardConfig == null && MapLoader.Instance != null)
                 rewardConfig = MapLoader.Instance.LoadedConfig;
             if (string.IsNullOrEmpty(rewardRunId)) rewardRunId = Guid.NewGuid().ToString("N");
-            var goals = rewardConfig != null ? rewardConfig.clearRewards : null;
+            var goals = ScoreRules;
             ClearStars = 0;
             ClearGradeTitle = "작전 성공";
             ClearObjectivesText = "스테이지 점수 설정이 없습니다.";
             if (goals != null)
             {
-                var evaluation = goals.Evaluate(PlayTime, DestroyedSpawnerCount, EarnedManaStone);
+                var evaluation = ScoreEvaluation;
                 ClearStars = evaluation.Stars;
                 ClearScore = evaluation.TotalScore;
                 ClearGradeTitle = ClearStars == 3 ? "최고 등급 달성" : ClearStars == 2 ? "우수 등급 달성"
@@ -377,7 +388,7 @@ public class GameResultManager : MonoBehaviour
             return true;
         }
         if (!CreditWallet.TryAwardClear(rewardConfig.StageId, rewardRunId, ClearStars,
-            rewardConfig.clearRewards, out var reward))
+            ScoreRules, out var reward))
         {
             RewardError = CreditWallet.LastError;
             return false;
