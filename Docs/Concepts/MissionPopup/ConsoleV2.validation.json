@@ -1,0 +1,112 @@
+[
+  {
+    "name": "Panel",
+    "width": 1221,
+    "height": 1288,
+    "spriteX": 78,
+    "spriteY": 43,
+    "spriteWidth": 1066,
+    "spriteHeight": 1208,
+    "transparentPixels": 332880
+  },
+  {
+    "name": "RowNormal",
+    "width": 2103,
+    "height": 748,
+    "spriteX": 61,
+    "spriteY": 235,
+    "spriteWidth": 1982,
+    "spriteHeight": 297,
+    "transparentPixels": 1000895
+  },
+  {
+    "name": "RowSelected",
+    "width": 2103,
+    "height": 748,
+    "spriteX": 48,
+    "spriteY": 228,
+    "spriteWidth": 2008,
+    "spriteHeight": 308,
+    "transparentPixels": 856392
+  },
+  {
+    "name": "ButtonPrimary",
+    "width": 2092,
+    "height": 752,
+    "spriteX": 45,
+    "spriteY": 101,
+    "spriteWidth": 2004,
+    "spriteHeight": 534,
+    "transparentPixels": 545538
+  },
+  {
+    "name": "ButtonSecondary",
+    "width": 1902,
+    "height": 827,
+    "spriteX": 96,
+    "spriteY": 93,
+    "spriteWidth": 1711,
+    "spriteHeight": 655,
+    "transparentPixels": 482480
+  },
+  {
+    "name": "Close",
+    "width": 1254,
+    "height": 1254,
+    "spriteX": 251,
+    "spriteY": 269,
+    "spriteWidth": 752,
+    "spriteHeight": 717,
+    "transparentPixels": 1046369
+  },
+  {
+    "name": "BadgeNormal",
+    "width": 1254,
+    "height": 1254,
+    "spriteX": 286,
+    "spriteY": 312,
+    "spriteWidth": 682,
+    "spriteHeight": 635,
+    "transparentPixels": 1191528
+  },
+  {
+    "name": "BadgeSelected",
+    "width": 1334,
+    "height": 1179,
+    "spriteX": 200,
+    "spriteY": 147,
+    "spriteWidth": 934,
+    "spriteHeight": 907,
+    "transparentPixels": 822134
+  },
+  {
+    "name": "StarEarned",
+    "width": 1254,
+    "height": 1254,
+    "spriteX": 107,
+    "spriteY": 167,
+    "spriteWidth": 1039,
+    "spriteHeight": 952,
+    "transparentPixels": 1120128
+  },
+  {
+    "name": "StarEmpty",
+    "width": 1254,
+    "height": 1254,
+    "spriteX": 155,
+    "spriteY": 162,
+    "spriteWidth": 943,
+    "spriteHeight": 897,
+    "transparentPixels": 1205125
+  },
+  {
+    "name": "SelectionArrow",
+    "width": 1300,
+    "height": 1209,
+    "spriteX": 549,
+    "spriteY": 427,
+    "spriteWidth": 183,
+    "spriteHeight": 322,
+    "transparentPixels": 1513646
+  }
+]
