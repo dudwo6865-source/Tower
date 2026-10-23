@@ -125,7 +125,7 @@ public class GameResultUI : MonoBehaviour
     public TextMeshProUGUI starsText;
 
     [Label("클리어 평가 상세 텍스트")]
-    [Tooltip("적용한 평가 경로와 성적, 2·3성 기준을 표시합니다. 비워두면 크레딧 상세 텍스트에 함께 표시합니다.")]
+    [Tooltip("항목별 점수와 합계, 1·2·3성 기준을 표시합니다. 비워두면 크레딧 상세 텍스트에 함께 표시합니다.")]
     public TextMeshProUGUI objectivesText;
 
     [Label("크레딧 상세 텍스트")]

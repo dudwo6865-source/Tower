@@ -83,7 +83,7 @@ public class GameResultManager : MonoBehaviour
     public float EarnedManaStone { get; private set; }
     public int SurvivedWaves { get; private set; }
     public float HeadquartersDamageTaken { get; private set; }
-    public StageClearRewards.ClearRoute EvaluatedRoute { get; private set; }
+    public double ClearScore { get; private set; }
     public string ClearGradeTitle { get; private set; }
     public string ClearObjectivesText { get; private set; }
     public CreditWallet.ClearReward CreditReward { get; private set; }
@@ -314,10 +314,6 @@ public class GameResultManager : MonoBehaviour
         if (IsGameOver || result == Result.None)
             return;
 
-        // 종료 플래그를 세우기 전에 달성한 승리 경로를 확정한다.
-        bool conquestCompleted = CanWinBySpawnerDestruction;
-        bool survivalCompleted = winBySurvivingNights && dayNightCycle != null
-            && dayNightCycle.CycleCount >= survivalNightsToWin && hqHealth != null && hqHealth.IsAlive;
         var mana = ManaStoneManager.Instance;
         EarnedManaStone = mana != null && mana.ownerId == playerOwnerId ? mana.TotalEarnedManaStone : 0f;
         SurvivedWaves = dayNightCycle != null ? dayNightCycle.CycleCount : 0;
@@ -329,28 +325,19 @@ public class GameResultManager : MonoBehaviour
                 rewardConfig = MapLoader.Instance.LoadedConfig;
             if (string.IsNullOrEmpty(rewardRunId)) rewardRunId = Guid.NewGuid().ToString("N");
             var goals = rewardConfig != null ? rewardConfig.clearRewards : null;
-            ClearStars = 1;
+            ClearStars = 0;
             ClearGradeTitle = "작전 성공";
-            ClearObjectivesText = "스테이지 클리어";
+            ClearObjectivesText = "스테이지 점수 설정이 없습니다.";
             if (goals != null)
             {
-                var evaluation = goals.Evaluate(conquestCompleted, survivalCompleted, PlayTime, HeadquartersDamageTaken);
+                var evaluation = goals.Evaluate(PlayTime, DestroyedSpawnerCount, EarnedManaStone);
                 ClearStars = evaluation.Stars;
-                EvaluatedRoute = evaluation.Route;
-                if (EvaluatedRoute == StageClearRewards.ClearRoute.Conquest)
-                {
-                    ClearGradeTitle = ClearStars == 3 ? "신속한 토벌" : ClearStars == 2 ? "효율적인 토벌" : "토벌 성공";
-                    ClearObjectivesText = $"토벌 시간 {PlayTime:0.##}초\n"
-                        + $"2성 {goals.ConquestTwoStarLimit:0.##}초 / 3성 {goals.ConquestThreeStarLimit:0.##}초 이내";
-                }
-                else if (EvaluatedRoute == StageClearRewards.ClearRoute.Survival)
-                {
-                    ClearGradeTitle = ClearStars == 3 ? "견고한 방어" : ClearStars == 2 ? "안정적인 방어" : "방어 성공";
-                    ClearObjectivesText = $"본부 누적 피해 {HeadquartersDamageTaken:0.##}\n"
-                        + $"2성 {goals.SurvivalTwoStarLimit:0.##} / 3성 {goals.SurvivalThreeStarLimit:0.##} 이하";
-                }
-                if (conquestCompleted && survivalCompleted)
-                    ClearObjectivesText += "\n토벌·생존 동시 달성: 높은 등급 적용";
+                ClearScore = evaluation.TotalScore;
+                ClearGradeTitle = ClearStars == 3 ? "최고 등급 달성" : ClearStars == 2 ? "우수 등급 달성"
+                    : ClearStars == 1 ? "기본 등급 달성" : "별 획득 기준 미달";
+                ClearObjectivesText = $"시간 {evaluation.TimeScore:N0} + 스포너 {evaluation.SpawnerScore:N0} + 마석 {evaluation.ManaStoneScore:N0}\n"
+                    + $"총점 {ClearScore:N0} / 기준 {goals.TargetScore:N0}\n"
+                    + $"1성 {goals.OneStarScore:N0} / 2성 {goals.TwoStarScore:N0} / 3성 {goals.TargetScore:N0}";
             }
             TrySaveClearReward();
         }

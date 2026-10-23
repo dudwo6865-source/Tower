@@ -81,27 +81,32 @@ public static class CreditRewardsHarness
     {
         UnityEngine.Application.persistentDataPath = args[0];
         var settings = new StageClearRewards();
-        Check(settings.Evaluate(false, false, 0, 0).Stars == 1, "일반 승리 최소 1성");
-        Check(settings.Evaluate(true, false, 601, 0).Stars == 1, "늦은 토벌도 1성");
-        Check(settings.Evaluate(true, false, 600, 9999).Stars == 2, "토벌 2성 시간 경계와 피해 무관");
-        Check(settings.Evaluate(true, false, 300, 9999).Stars == 3, "토벌 3성 시간 경계와 피해 무관");
-        Check(settings.Evaluate(true, false, 301, 0).Stars == 2, "3성 시간 초과");
-        Check(settings.Evaluate(false, true, 0, 501).Stars == 1, "피해가 큰 방어도 1성");
-        Check(settings.Evaluate(false, true, 9999, 500).Stars == 2, "방어 2성 피해 경계와 시간 무관");
-        Check(settings.Evaluate(false, true, 9999, 100).Stars == 3, "방어 3성 피해 경계와 시간 무관");
-        Check(settings.Evaluate(false, true, 0, 101).Stars == 2, "3성 피해 초과");
-        var defenseBest = settings.Evaluate(true, true, 601, 0);
-        Check(defenseBest.Stars == 3 && defenseBest.Route == StageClearRewards.ClearRoute.Survival, "동시 달성 시 우수한 방어 선택");
-        var conquestBest = settings.Evaluate(true, true, 100, 501);
-        Check(conquestBest.Stars == 3 && conquestBest.Route == StageClearRewards.ClearRoute.Conquest, "동시 달성 시 우수한 토벌 선택");
-        Check(settings.Evaluate(true, true, 100, 0).Route == StageClearRewards.ClearRoute.Conquest, "동점은 토벌 표시");
-        var reversed = new StageClearRewards { conquestTwoStarSeconds = 100, conquestThreeStarSeconds = 500,
-            survivalTwoStarDamage = 50, survivalThreeStarDamage = 100 };
-        Check(reversed.Evaluate(true, false, 101, 0).Stars == 1, "역전된 시간 기준 보정");
-        Check(reversed.Evaluate(false, true, 0, 51).Stars == 1, "역전된 피해 기준 보정");
-        var noDamage = new StageClearRewards { survivalThreeStarDamage = 0 };
-        Check(noDamage.Evaluate(false, true, 1000, 0).Stars == 3, "무피해 3성");
-        Check(noDamage.Evaluate(false, true, 1000, 0.1f).Stars == 2, "무피해 기준의 작은 피해");
+        Check(settings.Evaluate(0, 0, 0).Stars == 0, "점수 없는 클리어는 0성");
+        Check(settings.Evaluate(499, 0, 0).Stars == 0, "50퍼센트 미달");
+        Check(settings.Evaluate(500, 0, 0).Stars == 1, "50퍼센트 경계");
+        Check(settings.Evaluate(749, 0, 0).Stars == 1, "75퍼센트 미달");
+        Check(settings.Evaluate(750, 0, 0).Stars == 2, "75퍼센트 경계");
+        Check(settings.Evaluate(999, 0, 0).Stars == 2, "100퍼센트 미달");
+        Check(settings.Evaluate(1000, 0, 0).Stars == 3, "100퍼센트 경계");
+        Check(settings.Evaluate(9999, 0, 0).Stars == 3, "기준 초과도 최대 3성");
+        var combined = settings.Evaluate(300, 4, 300);
+        Check(combined.TimeScore == 300 && combined.SpawnerScore == 400 && combined.ManaStoneScore == 300
+            && combined.TotalScore == 1000 && combined.Stars == 3, "세 항목 합산");
+        Check(settings.Evaluate(0, 10, 0).Stars == 3, "스포너만으로 기준 달성");
+        Check(settings.Evaluate(0, 0, 1000).Stars == 3, "마석만으로 기준 달성");
+        Check(settings.Evaluate(100, 1, 100).TotalScore < settings.Evaluate(101, 1, 100).TotalScore, "긴 게임 시간은 점수 증가");
+        Check(settings.Evaluate(100, 1, 100).TotalScore < settings.Evaluate(100, 2, 100).TotalScore, "스포너 추가 파괴는 점수 증가");
+        Check(settings.Evaluate(100, 1, 100).TotalScore < settings.Evaluate(100, 1, 101).TotalScore, "마석 추가 획득은 점수 증가");
+        var weighted = new StageClearRewards { pointsPerSecond = 2, pointsPerSpawner = 50, pointsPerManaStone = 3 };
+        Check(weighted.Evaluate(10, 2, 20).TotalScore == 180, "스테이지별 점수 배율");
+        Check(settings.Evaluate(499.9f, 0, 0.9f).TotalScore == 499, "항목별 소수점 버림");
+        Check(settings.Evaluate(-1, -1, -1).TotalScore == 0, "음수 실적 보정");
+        var invalid = new StageClearRewards { targetScore = 0, pointsPerSecond = -1, pointsPerSpawner = -1, pointsPerManaStone = -1 };
+        Check(invalid.TargetScore == 1 && invalid.Evaluate(10, 10, 10).Stars == 0, "잘못된 기준과 음수 배율 보정");
+        var odd = new StageClearRewards { targetScore = 1001 };
+        Check(odd.OneStarScore == 501 && odd.TwoStarScore == 751 && odd.Evaluate(500, 0, 0).Stars == 0,
+            "홀수 기준 점수의 경계 올림");
+        Check(settings.Evaluate(float.NaN, 0, float.PositiveInfinity).TotalScore == 0, "잘못된 실적 값 보호");
         var health = new EntityHealth { armor = 10 };
         typeof(EntityHealth).GetMethod("Awake", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(health, null);
         health.TakeDamage(30);
@@ -112,8 +117,7 @@ public static class CreditRewardsHarness
         Check(health.CurrentHealth == 200 && health.TotalDamageTaken == 20, "체력 업그레이드로 피해 기록 유지");
         health.TakeDamage(150);
         health.Heal(1000);
-        Check(health.TotalDamageTaken == 160 && settings.Evaluate(false, true, 0, health.TotalDamageTaken).Stars == 2,
-            "누적 피해로 평가하고 수리로 등급 복구 불가");
+        Check(health.TotalDamageTaken == 160, "누적 피해 통계 유지");
         health.TakeDamage(1000);
         Check(health.TotalDamageTaken == 360, "남은 체력보다 큰 피해는 실제 잃은 체력만 집계");
         var mana = new ManaStoneManager { startingManaStone = 50 };
