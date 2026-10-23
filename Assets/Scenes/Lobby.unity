@@ -5286,7 +5286,7 @@ MonoBehaviour:
   creditFormat: '{0:N0}'
   sceneInfoText: {fileID: 1574642541}
   lobbyTitle: 함교
-  sceneInfoFormat: "{0}\n<size=55%>{1}</size>"
+  sceneInfoFormat: "{0}"
   defaultStage: {fileID: 11400000, guid: 3e924dfe474f7fe4c9cbdb0f78996837, type: 2}
   keepPreviousSelection: 1
   noStageText: 미션을 선택해 주세요

@@ -30,7 +30,7 @@ public class LobbyManager : MonoBehaviour
     public string lobbyTitle = "함교";
     [Label("씬 정보 표시 형식")]
     [Tooltip("{0}=로비 표시 이름, {1}=선택한 스테이지 이름, {2}=스테이지 설명, {3}=현재 씬 이름입니다.")]
-    public string sceneInfoFormat = "{0}\n{1}";
+    public string sceneInfoFormat = "{0}";
 
     [Header("스테이지 데이터")]
     [Label("기본 스테이지")]
@@ -125,7 +125,7 @@ public class LobbyManager : MonoBehaviour
         if (sceneInfoText == null) return;
         string stageName = SelectedStage != null ? SelectedStage.displayName : noStageText;
         string description = SelectedStage != null ? SelectedStage.description : "";
-        sceneInfoText.text = Format(sceneInfoFormat, "{0}\n{1}", lobbyTitle, stageName,
+        sceneInfoText.text = Format(sceneInfoFormat, "{0}", lobbyTitle, stageName,
             description, SceneManager.GetActiveScene().name);
     }
 
