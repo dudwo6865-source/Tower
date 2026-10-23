@@ -3118,7 +3118,7 @@ MonoBehaviour:
   m_fontSize: 80
   m_fontSizeBase: 80
   m_fontWeight: 400
-  m_enableAutoSizing: 0
+  m_enableAutoSizing: 1
   m_fontSizeMin: 18
   m_fontSizeMax: 72
   m_fontStyle: 0
@@ -3786,7 +3786,7 @@ MonoBehaviour:
   m_fontSize: 50
   m_fontSizeBase: 50
   m_fontWeight: 400
-  m_enableAutoSizing: 0
+  m_enableAutoSizing: 1
   m_fontSizeMin: 18
   m_fontSizeMax: 72
   m_fontStyle: 0
@@ -4697,6 +4697,7 @@ GameObject:
   - component: {fileID: 2028838790}
   - component: {fileID: 2028838789}
   - component: {fileID: 2028838788}
+  - component: {fileID: 910800001}
   m_Layer: 5
   m_Name: Canvas
   m_TagString: Untagged
@@ -5266,6 +5267,45 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 22c2adc99cec3b6429a1050d62422b4e, type: 3}
   m_PrefabInstance: {fileID: 2115175862}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &910800001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2028838787}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 69b966c79bab40fca87d8fd11e9a4184, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  researchButton: {fileID: 782875093}
+  missionButton: {fileID: 211660918}
+  maintenanceButton: {fileID: 360382711}
+  creditText: {fileID: 1394514699}
+  creditFormat: '{0:N0}'
+  sceneInfoText: {fileID: 1574642541}
+  lobbyTitle: 함교
+  sceneInfoFormat: "{0}\n<size=55%>{1}</size>"
+  defaultStage: {fileID: 11400000, guid: 3e924dfe474f7fe4c9cbdb0f78996837, type: 2}
+  keepPreviousSelection: 1
+  noStageText: 미션을 선택해 주세요
+  researchPopup: {fileID: 0}
+  missionPopup: {fileID: 0}
+  maintenancePopup: {fileID: 0}
+  closePopupsOnStart: 1
+  onResearchRequested:
+    m_PersistentCalls:
+      m_Calls: []
+  onMissionRequested:
+    m_PersistentCalls:
+      m_Calls: []
+  onMaintenanceRequested:
+    m_PersistentCalls:
+      m_Calls: []
+  onStageChanged:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
