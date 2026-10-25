@@ -30,6 +30,7 @@ public class MissionListItemUI : MonoBehaviour
     public GameObject lockedIndicator;
     [Label("잠금 안내 텍스트")] public TMP_Text lockedText;
     [Label("잠금 안내 문구")] public string lockedMessage = "이전 미션 클리어 필요";
+    [Label("잠금 안내 표시 시간"), Min(0.1f)] public float lockedMessageDuration = 2f;
     [Label("미해금 미션 이름")] public string lockedMissionName = "항해 불가";
     [Label("항목 캔버스 그룹")]
     [Tooltip("비워두면 항목 루트의 CanvasGroup을 사용하거나 자동 추가합니다.")]
@@ -50,6 +51,8 @@ public class MissionListItemUI : MonoBehaviour
     bool unlocked = true;
     bool capturedAlpha;
     float normalAlpha;
+    float lockedMessageUntil;
+    bool showingLockedMessage;
 
     void Reset() { selectButton = GetComponent<Button>(); }
 
@@ -63,6 +66,18 @@ public class MissionListItemUI : MonoBehaviour
     {
         if (boundButton != null) boundButton.onClick.RemoveListener(Select);
         boundButton = null;
+        HideLockedMessage();
+    }
+
+    void Update()
+    {
+        if (showingLockedMessage && Time.unscaledTime >= lockedMessageUntil) HideLockedMessage();
+    }
+
+    void HideLockedMessage()
+    {
+        showingLockedMessage = false;
+        if (lockedText != null) lockedText.text = "";
     }
 
     public void Bind(string number, string missionName, int stars, Action selected, bool isUnlocked = true)
@@ -70,14 +85,15 @@ public class MissionListItemUI : MonoBehaviour
         unlocked = isUnlocked;
         onSelected = selected;
         Button button = selectButton != null ? selectButton : GetComponent<Button>();
-        if (button != null) button.interactable = unlocked;
+        // 잠긴 항목도 안내를 위한 클릭은 받으며 실제 선택은 Select에서 차단한다.
+        if (button != null) button.interactable = true;
         if (stateGroup == null) stateGroup = GetComponent<CanvasGroup>();
         if (stateGroup == null) stateGroup = gameObject.AddComponent<CanvasGroup>();
         if (!capturedAlpha) { normalAlpha = stateGroup.alpha; capturedAlpha = true; }
         stateGroup.alpha = unlocked ? normalAlpha : normalAlpha * lockedAlpha;
-        stateGroup.interactable = unlocked;
+        stateGroup.interactable = true;
         SetIndicator(lockedIndicator, !unlocked);
-        if (lockedText != null) lockedText.text = unlocked ? "" : lockedMessage;
+        HideLockedMessage();
         if (numberText != null) numberText.text = number;
         if (nameText != null) nameText.text = unlocked ? missionName : lockedMissionName;
         // 일반 이미지를 생략하면 제작한 항목에 들어 있던 이미지를 사용한다.
@@ -99,6 +115,7 @@ public class MissionListItemUI : MonoBehaviour
 
     public void SetSelected(bool selected)
     {
+        HideLockedMessage();
         selected &= unlocked;
         if (backgroundImage != null)
             backgroundImage.sprite = !unlocked && lockedBackground != null ? lockedBackground
@@ -116,5 +133,17 @@ public class MissionListItemUI : MonoBehaviour
             indicator.SetActive(visible);
     }
 
-    void Select() { if (unlocked) onSelected?.Invoke(); }
+    void Select()
+    {
+        if (unlocked)
+        {
+            HideLockedMessage();
+            onSelected?.Invoke();
+            return;
+        }
+        if (lockedText == null) return;
+        lockedText.text = lockedMessage;
+        lockedMessageUntil = Time.unscaledTime + Mathf.Max(0.1f, lockedMessageDuration);
+        showingLockedMessage = true;
+    }
 }
