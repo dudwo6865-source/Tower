@@ -59,6 +59,14 @@ public class UISoundManager : MonoBehaviour
     [Range(0f, 1f)]
     public float buttonClickVolume = 1f;
 
+    [Label("버튼 하이라이트음")]
+    [Tooltip("누를 수 있는 Button/Toggle에 마우스를 올리거나 키보드로 선택하면 재생합니다. 비워두면 무음입니다.")]
+    public AudioClip buttonHighlightClip;
+    [Label("버튼 하이라이트 볼륨"), Range(0f, 1f)]
+    public float buttonHighlightVolume = 0.5f;
+    [Label("하이라이트 재생 간격(초)"), Min(0f)]
+    public float highlightInterval = 0.06f;
+
     [Label("잠긴 버튼 클릭음")]
     [Tooltip("누를 수 없는(Interactable 꺼짐) 버튼을 클릭했을 때 재생합니다. 비워두면 소리를 내지 않습니다.")]
     public AudioClip buttonDisabledClip;
@@ -120,6 +128,9 @@ public class UISoundManager : MonoBehaviour
     PointerEventData pointerData;
     EventSystem pointerDataOwner;
     readonly List<RaycastResult> raycastResults = new List<RaycastResult>();
+    Selectable hoveredButton;
+    GameObject selectedObject;
+    float lastHighlightTime = float.NegativeInfinity;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void AutoCreate()
@@ -191,6 +202,52 @@ public class UISoundManager : MonoBehaviour
     void Update()
     {
         DetectButtonClick();
+    }
+
+    void LateUpdate()
+    {
+        if (Instance != this) return;
+        GameObject handler = FindClickHandlerUnderPointer();
+        Selectable hovered = handler != null ? handler.GetComponent<Selectable>() : null;
+        if (!CanHighlight(hovered)) hovered = null;
+        bool entered = hovered != hoveredButton;
+        hoveredButton = hovered;
+        if (entered && hovered != null && !Input.GetMouseButton(0) && !Input.GetMouseButtonUp(0))
+            PlayButtonHighlight(hovered);
+
+        GameObject current = EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null;
+        if (current == selectedObject) return;
+        selectedObject = current;
+        Selectable selected = current != null ? current.GetComponent<Selectable>() : null;
+        // 마우스 클릭으로 선택된 버튼은 클릭음만 내고, 탐색으로 바뀐 선택에 하이라이트음을 낸다.
+        if (selected != hovered && !Input.GetMouseButton(0) && !Input.GetMouseButtonUp(0) && CanHighlight(selected))
+            PlayButtonHighlight(selected);
+    }
+
+    void OnDisable()
+    {
+        hoveredButton = null;
+        selectedObject = null;
+    }
+
+    static bool CanHighlight(Selectable target)
+    {
+        return (target is Button || target is Toggle) && target.IsActive() && target.IsInteractable();
+    }
+
+    void PlayButtonHighlight(Selectable target)
+    {
+        UIButtonSound custom = target.GetComponent<UIButtonSound>();
+        if (custom != null && (custom.mute || custom.muteHighlight)) return;
+        AudioClip clip = custom != null && custom.highlightClip != null ? custom.highlightClip : buttonHighlightClip;
+        float volume = buttonHighlightVolume * masterVolume * (custom != null ? custom.volumeScale : 1f);
+        if (clip == null || source == null || volume <= 0f) return;
+        if (Time.unscaledTime - lastHighlightTime < highlightInterval) return;
+        lastHighlightTime = Time.unscaledTime;
+        // 클릭·명령음의 겹침 방지 시각을 갱신하지 않아, 바로 클릭해도 클릭음이 누락되지 않는다.
+        source.outputAudioMixerGroup = outputMixerGroup;
+        source.pitch = 1f + Random.Range(-pitchRandomRange, pitchRandomRange);
+        source.PlayOneShot(clip, volume);
     }
 
     // ───────── 버튼 클릭 감지 ─────────
