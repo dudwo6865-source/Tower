@@ -195,12 +195,28 @@ public static class CreditRewardsHarness
         Check(CreditWallet.HasCleared("stage-zero"), "0성 클리어도 재실행 후 다음 미션 해금");
         Check(CreditWallet.TryAwardClear("stage-zero", "run-improved", 1, settings, out var newStar)
             && newStar.FirstBonus == 100 && newStar.Total == 120, "0성 이후 첫 별 보너스");
+        using (var locked = new FileStream(CreditWallet.SavePath + ".tmp", FileMode.OpenOrCreate,
+            FileAccess.ReadWrite, FileShare.None))
+            Check(!CreditWallet.TryResetProgress(), "초기화 저장 실패 반환");
+        Check(CreditWallet.HasCleared("stage-a") && CreditWallet.TryGetBalance(out balance) && balance == 880,
+            "초기화 실패 시 기존 기록 유지");
+        int resetEvents = 0;
+        CreditWallet.Changed += () => resetEvents++;
+        Check(CreditWallet.TryResetProgress() && resetEvents == 1, "초기화 성공 및 화면 갱신 알림");
+        Reload();
+        Check(CreditWallet.TryGetBalance(out balance) && balance == 0
+            && !CreditWallet.HasCleared("stage-a") && !CreditWallet.HasCleared("stage-zero")
+            && CreditWallet.GetBestStars("stage-a") == 0, "초기화 후 재실행해도 잔액과 클리어 기록 비어 있음");
+        Check(CreditWallet.TryAwardClear("stage-a", "reset-run", 1, settings, out var resetReward)
+            && resetReward.FirstBonus == 100, "초기화 후 최초 보상 재획득");
         File.WriteAllText(CreditWallet.SavePath, "손상된 데이터");
         Reload();
         Check(!CreditWallet.TryGetBalance(out balance), "손상된 저장 차단");
         Check(!CreditWallet.HasCleared("stage-a"), "저장 손상 시 클리어로 오인하지 않음");
         Check(!CreditWallet.TryAwardClear("stage-d", "run-6", 3, settings, out var corrupt)
             && File.ReadAllText(CreditWallet.SavePath) == "손상된 데이터", "손상 파일 덮어쓰기 방지");
+        Check(CreditWallet.TryResetProgress() && CreditWallet.TryGetBalance(out balance) && balance == 0,
+            "손상된 저장도 명시적 초기화 가능");
         Console.WriteLine("통과: " + checks + "개 검증");
     }
 }

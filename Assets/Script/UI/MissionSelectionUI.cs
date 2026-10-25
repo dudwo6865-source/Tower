@@ -57,6 +57,7 @@ public class MissionSelectionUI : MonoBehaviour
         boundClose = closeButton;
         if (boundLaunch != null) boundLaunch.onClick.AddListener(Launch);
         if (boundClose != null) boundClose.onClick.AddListener(Close);
+        CreditWallet.Changed += RefreshProgress;
         Rebuild();
     }
 
@@ -64,6 +65,12 @@ public class MissionSelectionUI : MonoBehaviour
     {
         if (boundLaunch != null) boundLaunch.onClick.RemoveListener(Launch);
         if (boundClose != null) boundClose.onClick.RemoveListener(Close);
+        CreditWallet.Changed -= RefreshProgress;
+    }
+
+    void RefreshProgress()
+    {
+        if (!loading) Rebuild();
     }
 
     public void Rebuild()

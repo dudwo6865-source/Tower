@@ -51,6 +51,14 @@ public class LobbyManager : MonoBehaviour
     [Label("시작 시 팝업 닫기")]
     public bool closePopupsOnStart = true;
 
+    [Header("테스트용 저장 초기화")]
+    [Label("초기화 단축키 사용")]
+    [Tooltip("에디터와 Development Build의 로비에서만 동작합니다. 크레딧과 모든 스테이지 클리어·별·최초 보상 기록을 초기화합니다.")]
+    public bool enableProgressResetHotkey = true;
+    [Label("초기화 키")] public KeyCode progressResetKey = KeyCode.F9;
+    [Label("Ctrl 함께 누르기")] public bool resetRequiresControl = true;
+    [Label("Shift 함께 누르기")] public bool resetRequiresShift = true;
+
     [Header("버튼 요청 이벤트")]
     [Label("연구 열기 요청")]
     [Tooltip("팝업 연결 여부와 관계없이 호출합니다. 나중에 연구 화면을 만드는 동작을 연결할 수 있습니다.")]
@@ -100,6 +108,18 @@ public class LobbyManager : MonoBehaviour
         if (boundMission != null) boundMission.onClick.RemoveListener(OpenMission);
         if (boundMaintenance != null) boundMaintenance.onClick.RemoveListener(OpenMaintenance);
         CreditWallet.Changed -= RefreshCredits;
+    }
+
+    void Update()
+    {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (Instance != this || !enableProgressResetHotkey || progressResetKey == KeyCode.None) return;
+        if (!Input.GetKeyDown(progressResetKey)) return;
+        if (resetRequiresControl && !Input.GetKey(KeyCode.LeftControl) && !Input.GetKey(KeyCode.RightControl)) return;
+        if (resetRequiresShift && !Input.GetKey(KeyCode.LeftShift) && !Input.GetKey(KeyCode.RightShift)) return;
+        if (CreditWallet.TryResetProgress())
+            Debug.Log("로비: 크레딧과 모든 스테이지 클리어 기록을 초기화했습니다.", this);
+#endif
     }
 
     void OnDestroy()

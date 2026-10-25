@@ -151,6 +151,28 @@ public static class CreditWallet
         return true;
     }
 
+    // 테스트 초기화도 저장을 먼저 완료한 뒤 메모리와 화면에 반영한다.
+    public static bool TryResetProgress()
+    {
+        try
+        {
+            var empty = new SaveData();
+            Directory.CreateDirectory(Application.persistentDataPath);
+            string temporary = SavePath + ".tmp";
+            File.WriteAllText(temporary, JsonUtility.ToJson(empty, true));
+            if (File.Exists(SavePath))
+                File.Replace(temporary, SavePath, SavePath + ".bak");
+            else
+                File.Move(temporary, SavePath);
+            data = empty;
+            LastError = null;
+        }
+        catch (Exception exception) { return Fail(exception); }
+        try { Changed?.Invoke(); }
+        catch (Exception exception) { Debug.LogException(exception); }
+        return true;
+    }
+
     static bool Fail(Exception exception)
     {
         LastError = "크레딧 기록을 저장하거나 불러오지 못했습니다.";
