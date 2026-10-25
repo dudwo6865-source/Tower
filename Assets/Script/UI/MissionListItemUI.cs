@@ -30,6 +30,7 @@ public class MissionListItemUI : MonoBehaviour
     public GameObject lockedIndicator;
     [Label("잠금 안내 텍스트")] public TMP_Text lockedText;
     [Label("잠금 안내 문구")] public string lockedMessage = "이전 미션 클리어 필요";
+    [Label("미해금 미션 이름")] public string lockedMissionName = "항해 불가";
     [Label("항목 캔버스 그룹")]
     [Tooltip("비워두면 항목 루트의 CanvasGroup을 사용하거나 자동 추가합니다.")]
     public CanvasGroup stateGroup;
@@ -78,7 +79,7 @@ public class MissionListItemUI : MonoBehaviour
         SetIndicator(lockedIndicator, !unlocked);
         if (lockedText != null) lockedText.text = unlocked ? "" : lockedMessage;
         if (numberText != null) numberText.text = number;
-        if (nameText != null) nameText.text = missionName;
+        if (nameText != null) nameText.text = unlocked ? missionName : lockedMissionName;
         // 일반 이미지를 생략하면 제작한 항목에 들어 있던 이미지를 사용한다.
         if (normalBackground == null && backgroundImage != null) normalBackground = backgroundImage.sprite;
         if (normalBadge == null && badgeImage != null) normalBadge = badgeImage.sprite;
