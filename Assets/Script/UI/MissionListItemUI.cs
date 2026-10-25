@@ -22,6 +22,19 @@ public class MissionListItemUI : MonoBehaviour
     [Label("일반 번호 배지")] public Sprite normalBadge;
     [Label("선택 번호 배지")] public Sprite selectedBadge;
 
+    [Header("미해금 상태")]
+    [Label("미해금 배경")] public Sprite lockedBackground;
+    [Label("미해금 번호 배지")] public Sprite lockedBadge;
+    [Label("잠금 표시 오브젝트")]
+    [Tooltip("미해금 상태에서만 표시할 자물쇠 등의 자식 오브젝트입니다.")]
+    public GameObject lockedIndicator;
+    [Label("잠금 안내 텍스트")] public TMP_Text lockedText;
+    [Label("잠금 안내 문구")] public string lockedMessage = "이전 미션 클리어 필요";
+    [Label("항목 캔버스 그룹")]
+    [Tooltip("비워두면 항목 루트의 CanvasGroup을 사용하거나 자동 추가합니다.")]
+    public CanvasGroup stateGroup;
+    [Label("미해금 투명도"), Range(0f, 1f)] public float lockedAlpha = 0.45f;
+
     [Header("클리어 별")]
     [Label("별 이미지 목록")]
     [Tooltip("왼쪽부터 별 이미지 3개를 순서대로 연결합니다.")]
@@ -33,6 +46,9 @@ public class MissionListItemUI : MonoBehaviour
 
     Action onSelected;
     Button boundButton;
+    bool unlocked = true;
+    bool capturedAlpha;
+    float normalAlpha;
 
     void Reset() { selectButton = GetComponent<Button>(); }
 
@@ -48,9 +64,19 @@ public class MissionListItemUI : MonoBehaviour
         boundButton = null;
     }
 
-    public void Bind(string number, string missionName, int stars, Action selected)
+    public void Bind(string number, string missionName, int stars, Action selected, bool isUnlocked = true)
     {
+        unlocked = isUnlocked;
         onSelected = selected;
+        Button button = selectButton != null ? selectButton : GetComponent<Button>();
+        if (button != null) button.interactable = unlocked;
+        if (stateGroup == null) stateGroup = GetComponent<CanvasGroup>();
+        if (stateGroup == null) stateGroup = gameObject.AddComponent<CanvasGroup>();
+        if (!capturedAlpha) { normalAlpha = stateGroup.alpha; capturedAlpha = true; }
+        stateGroup.alpha = unlocked ? normalAlpha : normalAlpha * lockedAlpha;
+        stateGroup.interactable = unlocked;
+        SetIndicator(lockedIndicator, !unlocked);
+        if (lockedText != null) lockedText.text = unlocked ? "" : lockedMessage;
         if (numberText != null) numberText.text = number;
         if (nameText != null) nameText.text = missionName;
         // 일반 이미지를 생략하면 제작한 항목에 들어 있던 이미지를 사용한다.
@@ -72,15 +98,22 @@ public class MissionListItemUI : MonoBehaviour
 
     public void SetSelected(bool selected)
     {
+        selected &= unlocked;
         if (backgroundImage != null)
-            backgroundImage.sprite = selected && selectedBackground != null ? selectedBackground : normalBackground;
+            backgroundImage.sprite = !unlocked && lockedBackground != null ? lockedBackground
+                : selected && selectedBackground != null ? selectedBackground : normalBackground;
         if (badgeImage != null)
-            badgeImage.sprite = selected && selectedBadge != null ? selectedBadge : normalBadge;
-        // 항목 자체를 끄는 잘못된 연결은 무시한다.
-        if (selectionIndicator != null && selectionIndicator != gameObject
-            && !transform.IsChildOf(selectionIndicator.transform))
-            selectionIndicator.SetActive(selected);
+            badgeImage.sprite = !unlocked && lockedBadge != null ? lockedBadge
+                : selected && selectedBadge != null ? selectedBadge : normalBadge;
+        SetIndicator(selectionIndicator, selected);
     }
 
-    void Select() { onSelected?.Invoke(); }
+    void SetIndicator(GameObject indicator, bool visible)
+    {
+        // 항목 자체를 끄는 잘못된 연결은 무시한다.
+        if (indicator != null && indicator != gameObject && !transform.IsChildOf(indicator.transform))
+            indicator.SetActive(visible);
+    }
+
+    void Select() { if (unlocked) onSelected?.Invoke(); }
 }

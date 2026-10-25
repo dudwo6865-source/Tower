@@ -58,6 +58,14 @@ public static class CreditWallet
         return data.stages.Find(s => s.stageId == stageId)?.bestStars ?? 0;
     }
 
+    // 별이 0개인 승리도 클리어 기록으로 인정한다.
+    public static bool HasCleared(string stageId)
+    {
+        if (string.IsNullOrWhiteSpace(stageId) || !EnsureLoaded()) return false;
+        StageRecord stage = data.stages.Find(s => s.stageId == stageId);
+        return stage != null && (!string.IsNullOrWhiteSpace(stage.lastRunId) || stage.bestStars > 0);
+    }
+
     static bool EnsureLoaded()
     {
         if (data != null) return true;

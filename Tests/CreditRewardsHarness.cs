@@ -157,6 +157,7 @@ public static class CreditRewardsHarness
         mana.Add(-10);
         Check(mana.TotalEarnedManaStone == 130, "음수 획득 무시");
         Check(CreditWallet.TryGetBalance(out long balance) && balance == 0, "신규 저장");
+        Check(!CreditWallet.HasCleared("stage-a") && !CreditWallet.HasCleared(null), "미클리어 및 빈 식별자는 미해금");
         Check(CreditWallet.TryAwardClear("stage-a", "run-1", 1, settings, out var first)
             && first.FirstBonus == 100 && first.Total == 120, "첫 클리어");
         Check(CreditWallet.TryAwardClear("stage-a", "run-1", 1, settings, out var duplicate)
@@ -164,6 +165,7 @@ public static class CreditRewardsHarness
         Check(CreditWallet.TryGetBalance(out balance) && balance == 120, "중복 지급 방지");
         Reload();
         Check(CreditWallet.TryGetBalance(out balance) && balance == 120, "재실행 후 잔액");
+        Check(CreditWallet.HasCleared("stage-a"), "재실행 후 클리어 해금 유지");
         Check(CreditWallet.TryAwardClear("stage-a", "run-1", 1, settings, out duplicate)
             && CreditWallet.TryGetBalance(out balance) && balance == 120, "재실행 후 중복 방지");
         Check(CreditWallet.TryAwardClear("stage-a", "run-2", 3, settings, out var improved)
@@ -180,6 +182,7 @@ public static class CreditRewardsHarness
             Check(!CreditWallet.TryAwardClear("stage-c", "run-5", 3, settings, out var failed), "저장 실패 반환");
         Check(CreditWallet.TryGetBalance(out balance) && balance == 520
             && CreditWallet.GetBestStars("stage-c") == 0, "실패 시 메모리 유지");
+        Check(!CreditWallet.HasCleared("stage-c"), "저장 실패 시 다음 미션 해금 방지");
         Check(CreditWallet.TryAwardClear("stage-c", "run-5", 3, settings, out var retried)
             && retried.Total == 240, "저장 재시도");
         Reload();
@@ -189,11 +192,13 @@ public static class CreditRewardsHarness
         Reload();
         Check(CreditWallet.TryGetBalance(out balance) && balance == 760
             && CreditWallet.GetBestStars("stage-zero") == 0, "0성 기록 다시 불러오기");
+        Check(CreditWallet.HasCleared("stage-zero"), "0성 클리어도 재실행 후 다음 미션 해금");
         Check(CreditWallet.TryAwardClear("stage-zero", "run-improved", 1, settings, out var newStar)
             && newStar.FirstBonus == 100 && newStar.Total == 120, "0성 이후 첫 별 보너스");
         File.WriteAllText(CreditWallet.SavePath, "손상된 데이터");
         Reload();
         Check(!CreditWallet.TryGetBalance(out balance), "손상된 저장 차단");
+        Check(!CreditWallet.HasCleared("stage-a"), "저장 손상 시 클리어로 오인하지 않음");
         Check(!CreditWallet.TryAwardClear("stage-d", "run-6", 3, settings, out var corrupt)
             && File.ReadAllText(CreditWallet.SavePath) == "손상된 데이터", "손상 파일 덮어쓰기 방지");
         Console.WriteLine("통과: " + checks + "개 검증");

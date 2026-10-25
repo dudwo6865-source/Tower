@@ -22,7 +22,7 @@ public class MissionSelectionUI : MonoBehaviour
 
     [Header("미션 등록")]
     [Label("미션 목록")]
-    [Tooltip("표시할 스테이지를 순서대로 등록합니다. 스테이지가 비어 있는 항목은 생성하지 않습니다.")]
+    [Tooltip("첫 미션은 기본 해금됩니다. 이후 미션은 바로 이전의 유효한 스테이지를 클리어하면 해금됩니다. 비어 있는 항목은 건너뜁니다.")]
     public List<Mission> missions = new List<Mission>();
 
     [Header("목록 UI 연결")]
@@ -98,11 +98,12 @@ public class MissionSelectionUI : MonoBehaviour
                 MissionListItemUI item = Instantiate(itemTemplate, content, false);
                 items.Add(item);
                 visibleMissions.Add(mission);
+                bool unlocked = IsMissionUnlocked(index);
                 item.Bind(string.IsNullOrWhiteSpace(mission.number) ? (i + 1).ToString("00") : mission.number,
                     string.IsNullOrWhiteSpace(mission.displayName) ? mission.stage.displayName : mission.displayName,
-                    CreditWallet.GetBestStars(mission.stage.StageId), () => SelectMission(index));
+                    CreditWallet.GetBestStars(mission.stage.StageId), () => SelectMission(index), unlocked);
                 item.gameObject.SetActive(true);
-                if (mission.stage == previous && selectedIndex < 0) selectedIndex = index;
+                if (unlocked && mission.stage == previous && selectedIndex < 0) selectedIndex = index;
             }
         if (emptyListMessage != null) emptyListMessage.SetActive(items.Count == 0);
         if (items.Count > 0) SelectMission(selectedIndex >= 0 ? selectedIndex : 0);
@@ -112,7 +113,7 @@ public class MissionSelectionUI : MonoBehaviour
 
     public void SelectMission(int index)
     {
-        if (loading || index < 0 || index >= visibleMissions.Count) return;
+        if (loading || !IsMissionUnlocked(index)) return;
         selectedIndex = index;
         for (int i = 0; i < items.Count; i++) items[i].SetSelected(i == index);
         if (Lobby != null) Lobby.SetSelectedStage(visibleMissions[index].stage);
@@ -123,6 +124,7 @@ public class MissionSelectionUI : MonoBehaviour
     public void Launch()
     {
         if (loading || selectedIndex < 0 || selectedIndex >= visibleMissions.Count) return;
+        if (!IsMissionUnlocked(selectedIndex)) { Rebuild(); return; }
         MapConfig stage = visibleMissions[selectedIndex].stage;
         if (stage == null) return;
         if (string.IsNullOrWhiteSpace(battleSceneName) || !Application.CanStreamedLevelBeLoaded(battleSceneName))
@@ -141,5 +143,13 @@ public class MissionSelectionUI : MonoBehaviour
     public void Close()
     {
         if (!loading) gameObject.SetActive(false);
+    }
+
+    bool IsMissionUnlocked(int index)
+    {
+        if (index < 0 || index >= visibleMissions.Count) return false;
+        if (index == 0) return true;
+        MapConfig previous = visibleMissions[index - 1].stage;
+        return previous != null && CreditWallet.HasCleared(previous.StageId);
     }
 }
