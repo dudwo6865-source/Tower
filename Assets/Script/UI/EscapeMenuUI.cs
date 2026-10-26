@@ -60,6 +60,7 @@ public class EscapeMenuUI : MonoBehaviour
 
     void Awake()
     {
+        RefreshButtonLabels();
         if (menuRoot == null || menuRoot == gameObject || transform.IsChildOf(menuRoot.transform))
         {
             Debug.LogError("ESC 메뉴: 메뉴 전체 루트를 별도 자식 오브젝트로 연결해야 합니다.", this);
@@ -83,6 +84,79 @@ public class EscapeMenuUI : MonoBehaviour
             foreach (Button button in backButtons) Bind(button, Back);
         if (saveButton != null) saveButton.interactable = savePanel != null || onSaveRequested.GetPersistentEventCount() > 0;
         if (loadButton != null) loadButton.interactable = loadPanel != null || onLoadRequested.GetPersistentEventCount() > 0;
+    }
+
+    // 검증 콜백 밖에서 UI를 갱신해 인스펙터 연결 직후에도 안전하게 표시한다.
+#if UNITY_EDITOR
+    void OnValidate()
+    {
+        UnityEditor.EditorApplication.delayCall -= RefreshButtonLabelsInEditor;
+        UnityEditor.EditorApplication.delayCall += RefreshButtonLabelsInEditor;
+    }
+
+    void RefreshButtonLabelsInEditor()
+    {
+        if (this == null || Application.isPlaying) return;
+        RefreshButtonLabels();
+    }
+#endif
+
+    void RefreshButtonLabels()
+    {
+        SetButtonLabel(resumeButton, "게임으로 돌아가기");
+        SetButtonLabel(settingsButton, "설정");
+        SetButtonLabel(soundButton, "사운드");
+        SetButtonLabel(graphicsButton, "그래픽");
+        SetButtonLabel(gameplayButton, "게임플레이");
+        SetButtonLabel(saveButton, "스테이지 진행사항 저장");
+        SetButtonLabel(loadButton, "스테이지 진행사항 불러오기");
+        SetButtonLabel(lobbyButton, "로비로 이동");
+        SetButtonLabel(quitButton, "게임 종료");
+        SetButtonLabel(confirmButton, "확인");
+        SetButtonLabel(cancelButton, "취소");
+        if (backButtons != null)
+            foreach (Button button in backButtons) SetButtonLabel(button, "뒤로");
+    }
+
+    static void SetButtonLabel(Button button, string label)
+    {
+        if (button == null) return;
+        // 비활성 창도 포함하며, 안쪽의 다른 버튼에 속한 텍스트는 건드리지 않는다.
+        foreach (TMP_Text text in button.GetComponentsInChildren<TMP_Text>(true))
+        {
+            if (text.GetComponentInParent<Button>(true) != button) continue;
+            if (text.text == label) break;
+            RecordLabelChange(text);
+            text.text = label;
+            FinishLabelChange(text);
+            break;
+        }
+        foreach (Text text in button.GetComponentsInChildren<Text>(true))
+        {
+            if (text.GetComponentInParent<Button>(true) != button) continue;
+            if (text.text == label) break;
+            RecordLabelChange(text);
+            text.text = label;
+            FinishLabelChange(text);
+            break;
+        }
+    }
+
+    static void RecordLabelChange(Object target)
+    {
+#if UNITY_EDITOR
+        if (!Application.isPlaying) UnityEditor.Undo.RecordObject(target, "메뉴 버튼 이름 표시");
+#endif
+    }
+
+    static void FinishLabelChange(Object target)
+    {
+#if UNITY_EDITOR
+        if (Application.isPlaying) return;
+        UnityEditor.EditorUtility.SetDirty(target);
+        if (UnityEditor.PrefabUtility.IsPartOfPrefabInstance(target))
+            UnityEditor.PrefabUtility.RecordPrefabInstancePropertyModifications(target);
+#endif
     }
 
     void Bind(Button button, UnityAction action)
