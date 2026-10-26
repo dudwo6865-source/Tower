@@ -42,8 +42,17 @@ public class RTSMinimap : MonoBehaviour, IPointerClickHandler, IDragHandler
     public float mapAreaPadding = 0f;
 
     [Header("미니맵 텍스처")]
+    [Label("지형 텍스처에서 바닥색 추출")]
+    [Tooltip("지형 텍스처의 평균색을 사용합니다. RGB 지형은 칠해진 마스크 비율도 반영합니다. 끄거나 추출할 수 없으면 기본 바닥 색을 사용합니다.")]
+    public bool useTerrainTextureColors = true;
+
+    [Label("색 추출 해상도")]
+    [Tooltip("텍스처 평균색을 계산할 축소 해상도입니다. 맵 생성 시 텍스처당 한 번만 추출합니다.")]
+    [Range(16, 256)]
+    public int terrainColorSampleResolution = 64;
+
     [Label("기본 바닥 색")]
-    [Tooltip("메쉬 지형용 기본 바닥 색입니다.")]
+    [Tooltip("텍스처 색 추출을 끄거나 지형 재질을 읽을 수 없을 때 사용할 바닥 색입니다.")]
     public Color baseMapColor = new Color(0.22f, 0.48f, 0.18f, 1f);
 
     [Label("빈 영역 색")]
@@ -310,7 +319,7 @@ public class RTSMinimap : MonoBehaviour, IPointerClickHandler, IDragHandler
         return mapBoundsValid;
     }
 
-    [ContextMenu("Rebuild Minimap Texture")]
+    [ContextMenu("미니맵 텍스처 다시 생성")]
     public void RebuildMinimapTexture()
     {
         EnsureMapArea();
@@ -331,6 +340,8 @@ public class RTSMinimap : MonoBehaviour, IPointerClickHandler, IDragHandler
         var pixels = new Color[textureWidth * textureHeight];
         float rayDistance = MapPlayBounds.GetRaycastDistance(raycastHeightPadding);
         float referenceHeight = mapBounds.Origin.y;
+
+        using var terrainColors = new MinimapTerrainColorSampler(terrainColorSampleResolution, textureResolution);
 
         for (int y = 0; y < textureHeight; y++)
         {
@@ -357,6 +368,8 @@ public class RTSMinimap : MonoBehaviour, IPointerClickHandler, IDragHandler
                         QueryTriggerInteraction.Ignore))
                 {
                     pixelColor = baseMapColor;
+                    if (useTerrainTextureColors && terrainColors.TrySample(hit, out Color terrainColor))
+                        pixelColor = terrainColor;
 
                     if (tintByHeight)
                     {
