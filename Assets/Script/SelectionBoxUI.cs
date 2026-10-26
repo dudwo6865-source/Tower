@@ -3,6 +3,11 @@ using UnityEngine.UI;
 
 public class SelectionBoxUI : MonoBehaviour
 {
+    [Header("캔버스")]
+    [Label("선택 박스 캔버스")]
+    [Tooltip("비워두면 활성화된 최상위 Overlay Canvas를 찾습니다. 하위 Canvas를 지정해도 해당 최상위 Canvas 바로 아래에 생성합니다.")]
+    [SerializeField] private Canvas targetCanvas;
+
     private static readonly Color FillColor =
         new Color(0.2f, 0.85f, 0.3f, 0.18f);
 
@@ -22,6 +27,12 @@ public class SelectionBoxUI : MonoBehaviour
 
     void EnsureUI()
     {
+        Canvas assignedRoot = GetOverlayRoot(targetCanvas);
+        if (assignedRoot != null)
+            canvas = assignedRoot;
+        else
+            canvas = GetOverlayRoot(canvas);
+
         if (canvas == null)
             canvas = FindOverlayCanvas();
 
@@ -36,7 +47,11 @@ public class SelectionBoxUI : MonoBehaviour
         }
 
         if (boxRect != null)
+        {
+            if (boxRect.parent != canvas.transform)
+                boxRect.SetParent(canvas.transform, false);
             return;
+        }
 
         GameObject boxObject = new GameObject("SelectionBox");
         boxObject.transform.SetParent(canvas.transform, false);
@@ -69,14 +84,26 @@ public class SelectionBoxUI : MonoBehaviour
     static Canvas FindOverlayCanvas()
     {
         Canvas[] canvases = FindObjectsOfType<Canvas>();
+        Canvas best = null;
 
         foreach (Canvas candidate in canvases)
         {
-            if (candidate.renderMode == RenderMode.ScreenSpaceOverlay)
-                return candidate;
+            Canvas root = GetOverlayRoot(candidate);
+            if (root == null) continue;
+            if (best == null || root.sortingOrder > best.sortingOrder
+                || (root.sortingOrder == best.sortingOrder && root.GetInstanceID() < best.GetInstanceID()))
+                best = root;
         }
 
-        return null;
+        return best;
+    }
+
+    static Canvas GetOverlayRoot(Canvas candidate)
+    {
+        if (candidate == null || !candidate.isActiveAndEnabled) return null;
+        Canvas root = candidate.rootCanvas;
+        return root != null && root.isActiveAndEnabled && root.renderMode == RenderMode.ScreenSpaceOverlay
+            ? root : null;
     }
 
     public void UpdateBox(Vector2 screenStart, Vector2 screenEnd)
@@ -104,6 +131,7 @@ public class SelectionBoxUI : MonoBehaviour
 
         boxRect.anchoredPosition = center;
         boxRect.sizeDelta = size;
+        boxRect.SetAsLastSibling();
         boxRect.gameObject.SetActive(true);
     }
 
