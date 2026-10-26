@@ -59,6 +59,7 @@ public partial class StageEditorWindow : EditorWindow
 
     void OnEnable()
     {
+        Undo.undoRedoPerformed += OnStageOrderUndoRedo;
         RefreshStageList();
         RestoreLastSelection();
     }
@@ -84,7 +85,7 @@ public partial class StageEditorWindow : EditorWindow
                 stages.Add(config);
         }
 
-        stages.Sort((a, b) => string.Compare(a.displayName, b.displayName, System.StringComparison.OrdinalIgnoreCase));
+        StageEditorOrderSettings.instance.Sort(stages);
 
         if (selected != null && !stages.Contains(selected))
             SetSelected(null);
@@ -155,6 +156,7 @@ public partial class StageEditorWindow : EditorWindow
         EditorGUILayout.BeginVertical(GUILayout.Width(240));
 
         searchFilter = EditorGUILayout.TextField(searchFilter, EditorStyles.toolbarSearchField);
+        DrawStageOrderControls();
 
         // 표시 이름 중복 여부 - 여러 스테이지가 같은 이름이면 헷갈리므로 경고 아이콘을 붙인다.
         HashSet<string> seenNames = new HashSet<string>();
@@ -193,7 +195,7 @@ public partial class StageEditorWindow : EditorWindow
             else if (GUI.enabled && rowRect.Contains(Event.current.mousePosition))
                 EditorGUI.DrawRect(rowRect, new Color(1f, 1f, 1f, 0.04f));
 
-            string label = cfg.displayName;
+            string label = $"{stages.IndexOf(cfg) + 1:00}. {cfg.displayName}";
             if (duplicateNames.Contains(cfg.displayName))
                 label += "  ⚠"; // 이름 중복
 
