@@ -66,17 +66,17 @@ public class RTSCameraPivotController : MonoBehaviour
     public Vector2 focusViewport = new Vector2(0.5f, 0.38f);
 
     [Header("시작 포커스")]
-    [Label("시작 포커스 대상")]
-    [Tooltip("게임 시작 시 카메라가 이 대상(예: 본진 건물)을 Focus Viewport 위치에 맞춥니다. 비워두면 맵 중앙에서 시작합니다.")]
+    [Label("본부가 없을 때 시작 포커스 대상")]
+    [Tooltip("시작 시 플레이어 본부 또는 본부 스폰 포인트를 자동으로 찾습니다. 둘 다 없을 때만 이 대상을 사용하며, 비워두면 맵 중앙에서 시작합니다.")]
     public Transform startFocusTarget;
 
     [Label("Home 키로 시작 위치 복귀")]
-    [Tooltip("켜면 Home 키를 눌렀을 때도 Start Focus Target 위치로 돌아갑니다. (Use Custom Home Position이 꺼져 있을 때)")]
+    [Tooltip("켜면 Home 키로 자동 연결된 본부 위치에 돌아갑니다. 사용자 지정 Home 위치를 사용하면 그 위치가 우선입니다.")]
     public bool homeReturnsToStartFocus = true;
 
     [Header("홈")]
     [Label("사용자 지정 Home 위치 사용")]
-    [Tooltip("켜면 Home 키 입력 시 아래 Custom Home Position으로 이동합니다. 끄면 게임 시작 시 맵 중앙으로 이동합니다.")]
+    [Tooltip("켜면 Home 키 입력 시 아래 위치로 이동합니다. 시작 화면은 이 설정과 관계없이 플레이어 본부를 우선 표시합니다.")]
     public bool useCustomHomePosition;
 
     [Label("사용자 지정 Home 위치")]
@@ -156,6 +156,23 @@ public class RTSCameraPivotController : MonoBehaviour
 
     private Vector3 lastDragMousePosition;
     private bool isDragPanning;
+    private bool startupCameraReady;
+    private bool startupHeadquartersConfirmed;
+    private StageBuildingSpawnPoint startupHeadquartersMarker;
+    private Vector3 provisionalFocusPosition;
+    private bool hasProvisionalHeadquartersFocus;
+
+    void OnEnable()
+    {
+        StageBuildingSpawnPoint.OnAnyBuildingSpawned += OnStartupBuildingSpawned;
+        if (startupCameraReady && !startupHeadquartersConfirmed)
+            ResolveStartupHeadquarters();
+    }
+
+    void OnDisable()
+    {
+        StageBuildingSpawnPoint.OnAnyBuildingSpawned -= OnStartupBuildingSpawned;
+    }
 
     void Start()
     {
@@ -179,13 +196,69 @@ public class RTSCameraPivotController : MonoBehaviour
         targetPosition = mapCenter;
         targetYaw = transform.eulerAngles.y;
 
-        if (startFocusTarget != null)
+        startupCameraReady = true;
+        if (!ResolveStartupHeadquarters() && startFocusTarget != null)
             ApplyInstantFocus(startFocusTarget.position);
 
         if (useCustomHomePosition)
             homePosition = customHomePosition;
         else
             homePosition = mapCenter;
+    }
+
+    int StartupOwnerId => UnitSelectionManager.Instance != null
+        ? UnitSelectionManager.Instance.localPlayerOwnerId
+        : FogOfWarManager.Instance != null ? FogOfWarManager.Instance.LocalPlayerOwnerId : 1;
+
+    bool IsPlayerHeadquarters(GameObject building)
+    {
+        if (building == null || building.GetComponent<Headquarters>() == null) return false;
+        var entity = building.GetComponent<SelectableEntity>();
+        var health = building.GetComponent<EntityHealth>();
+        return entity != null && entity.ownerId == StartupOwnerId && (health == null || health.IsAlive);
+    }
+
+    bool ResolveStartupHeadquarters()
+    {
+        foreach (var headquarters in FindObjectsByType<Headquarters>(FindObjectsSortMode.InstanceID))
+        {
+            if (!IsPlayerHeadquarters(headquarters.gameObject)) continue;
+            ConfirmStartupHeadquarters(headquarters.transform);
+            return true;
+        }
+        foreach (var marker in FindObjectsByType<StageBuildingSpawnPoint>(FindObjectsSortMode.InstanceID))
+        {
+            if (!marker.isActiveAndEnabled || marker.buildingPrefab == null
+                || marker.buildingPrefab.GetComponent<Headquarters>() == null) continue;
+            var entity = marker.buildingPrefab.GetComponent<SelectableEntity>();
+            int owner = marker.overrideOwner ? marker.ownerId : entity != null ? entity.ownerId : -1;
+            if (owner != StartupOwnerId || marker.SpawnedBuilding != null) continue;
+            startupHeadquartersMarker = marker;
+            startFocusTarget = marker.transform;
+            // 본부가 다음 프레임 또는 지연 후 생성되더라도 첫 화면부터 배치 위치를 보여준다.
+            ApplyInstantFocus(marker.transform.position);
+            provisionalFocusPosition = targetPosition;
+            hasProvisionalHeadquartersFocus = true;
+            return true;
+        }
+        return false;
+    }
+
+    void OnStartupBuildingSpawned(GameObject building)
+    {
+        if (!startupCameraReady || startupHeadquartersConfirmed || !IsPlayerHeadquarters(building)) return;
+        if (startupHeadquartersMarker != null && startupHeadquartersMarker.SpawnedBuilding != building) return;
+        ConfirmStartupHeadquarters(building.transform);
+    }
+
+    void ConfirmStartupHeadquarters(Transform headquarters)
+    {
+        startFocusTarget = headquarters;
+        startupHeadquartersConfirmed = true;
+        // 생성 대기 중 플레이어가 다른 곳으로 이동했다면 화면을 다시 빼앗지 않는다.
+        if (!hasProvisionalHeadquartersFocus || (targetPosition - provisionalFocusPosition).sqrMagnitude < .01f)
+            ApplyInstantFocus(headquarters.position);
+        startupHeadquartersMarker = null;
     }
 
     void ApplyInstantFocus(Vector3 worldPosition)
