@@ -10,7 +10,7 @@ using UnityEngine.AI;
 using UnityEngine.SceneManagement;
 
 // 원본 스테이지를 보존하고 독립적인 절벽 맵과 경로 데이터를 생성한다.
-public static class StageExpansionGenerator
+public static partial class StageExpansionGenerator
 {
     const string SourcePath = "Assets/Data/Stage/1Stage.asset";
     const string OutputFolder = "Assets/Data/Stage/Expansion";
@@ -83,6 +83,7 @@ public static class StageExpansionGenerator
                     walkable.Add(new Vector2Int(x, z));
                 }
             ValidateConnected(walkable);
+            AddLowlandsAndHills(painter);
             painter.RebuildGeometry();
             var markerRoot = new GameObject("건물 배치");
             markerRoot.transform.SetParent(root.transform, false);
@@ -119,6 +120,7 @@ public static class StageExpansionGenerator
             try
             {
                 foreach (var enemy in enemies) ValidatePath(enemy.transform.position, hq.transform.position, surface.agentTypeID);
+                ValidateLowlandPaths(painter, hq.transform.position, surface.agentTypeID);
             }
             finally { navigation.Remove(); }
             surface.RemoveData();

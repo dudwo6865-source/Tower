@@ -1,0 +1,123 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 63b9589c94b7f8845aff0903c96d4d8a, type: 3}
+  m_Name: 6Stage
+  m_EditorClassIdentifier: 
+  stageId: a0af603672a91fe43ad35979f94079f3
+  clearRewards:
+    targetScore: 1000
+    pointsPerSecond: 1
+    pointsPerSpawner: 100
+    pointsPerManaStone: 1
+    firstStarCredits: 100
+    secondStarCredits: 50
+    thirdStarCredits: 50
+    oneStarRepeatCredits: 20
+    twoStarRepeatCredits: 30
+    threeStarRepeatCredits: 40
+  displayName: "\uD3EC\uC704\uB9DD"
+  description: "\uB09C\uC774\uB3C4 6 \xB7 \uC801 \uC2A4\uD3EC\uB108 9\uAC1C \xB7
+    \uAE30\uC900 \uB9F5 \uBA74\uC801\uC758 2.00\uBC30. \uC911\uC559 \uBD84\uAE30\uC640
+    \uB0A8\uBD81 \uC804\uC9C4 \uC2A4\uD3EC\uB108\uB97C \uB3D9\uC2DC\uC5D0 \uBC29\uC5B4\uD558\uB294
+    \uD3EC\uC704 \uC804\uC120."
+  previewImage: {fileID: 0}
+  mapRootPrefab: {fileID: 1656909040499902863, guid: d68f847a5d1c4d8418d5009fca81a23c, type: 3}
+  overrideEconomy: 1
+  maxWatt: 500
+  startingWatt: 100
+  incomePerSecond: 30
+  overrideDayNight: 1
+  startPhase: 0
+  dayDuration: 60
+  nightDuration: 60
+  dayLightColor: {r: 1, g: 0.95686275, b: 0.8392157, a: 1}
+  nightLightColor: {r: 0.4509804, g: 0.654902, b: 1, a: 1}
+  dayLightIntensity: 1
+  nightLightIntensity: 1
+  lightTransitionDuration: 5
+  applyAmbientLight: 1
+  dayAmbientColor: {r: 0.65882355, g: 0.63529414, b: 0.5764706, a: 1}
+  nightAmbientColor: {r: 0.41960785, g: 0.47843137, b: 0.7176471, a: 1}
+  overrideWave: 1
+  wavePlan:
+    waves:
+    - spawnCountMultiplier: 1
+      spawnCountBonus: 0
+      maxAliveEnemies: 0
+      healthMultiplier: 1
+      damageMultiplier: 1
+      speedMultiplier: 1
+      armorBonus: 0
+      enemyComposition:
+        entries:
+        - prefab: {fileID: 4389994320296523517, guid: 8924176a55da7874abdcdb12dbb1e645, type: 3}
+          count: 1
+        - prefab: {fileID: 4389994320296523517, guid: 8b37dda2a95a2fc4b8ea8d0bb2600499, type: 3}
+          count: 5
+    growthPerWaveAfterLast:
+      spawnCountMultiplier: 1
+      spawnCountBonus: 3
+      maxAliveEnemies: 0
+      healthMultiplier: 1.1
+      damageMultiplier: 1
+      speedMultiplier: 1
+      armorBonus: 0
+      enemyComposition:
+        entries: []
+  applyNightBonus: 0
+  nightBonus:
+    spawnCountMultiplier: 1
+    spawnCountBonus: 2
+    maxAliveEnemies: 0
+    healthMultiplier: 1
+    damageMultiplier: 1.2
+    speedMultiplier: 1.2
+    armorBonus: 0
+    enemyComposition:
+      entries: []
+  mutations:
+    enabled: 1
+    enemyOwnerId: 2
+    spawnChance: 0.5
+    spawnIncrease: 0.2
+    damageIncrease: 0.2
+    healthIncrease: 0.2
+    speedIncrease: 0.1
+    armorIncrease: 1
+    damageWeight: 1
+    healthWeight: 1
+    speedWeight: 1
+    armorWeight: 0
+  overrideInitialEnemies: 1
+  initialEnemies:
+  - prefab: {fileID: 4389994320296523517, guid: 8b37dda2a95a2fc4b8ea8d0bb2600499, type: 3}
+    countPerCluster: 5
+    clusterCount: 10
+    clusterRadius: 5
+    randomYawRange: 360
+  - prefab: {fileID: 2361311785900166410, guid: fc3ef11110c821c4e94b35b9f97708dd, type: 3}
+    countPerCluster: 1
+    clusterCount: 10
+    clusterRadius: 5
+    randomYawRange: 360
+  - prefab: {fileID: 4389994320296523517, guid: 8924176a55da7874abdcdb12dbb1e645, type: 3}
+    countPerCluster: 3
+    clusterCount: 5
+    clusterRadius: 5
+    randomYawRange: 360
+  initialEnemyMinDistanceFromHq: 25
+  initialEnemyAvoidPlayerVision: 1
+  initialEnemyAdvanceToPlayerBase: 0
+  overrideWinCondition: 1
+  winBySurvivingNights: 1
+  survivalNightsToWin: 5
+  winWhenAllSpawnersDestroyed: 1
