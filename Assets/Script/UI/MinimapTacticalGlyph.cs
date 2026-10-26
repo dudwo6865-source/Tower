@@ -2,10 +2,20 @@ using UnityEngine;
 using UnityEngine.UI;
 
 // 별도 아트 에셋 없이 기본 본부·스포너 아이콘과 경고 링을 그린다.
+[RequireComponent(typeof(RectTransform), typeof(CanvasRenderer))]
 public class MinimapTacticalGlyph : MaskableGraphic
 {
     public enum Shape { Headquarters, Spawner, Ring }
     Shape shape;
+
+    protected override void OnEnable()
+    {
+        // 코드 갱신 전에 생성된 아이콘도 마스킹 등록보다 먼저 필수 컴포넌트를 보완한다.
+        if (GetComponent<CanvasRenderer>() == null)
+            gameObject.AddComponent<CanvasRenderer>();
+        base.OnEnable();
+    }
+
     public void SetShape(Shape value)
     {
         if (shape == value) return;

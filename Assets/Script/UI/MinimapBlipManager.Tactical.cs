@@ -88,7 +88,7 @@ public partial class MinimapBlipManager
 
     static MinimapTacticalGlyph CreateGlyph(Transform parent, string name)
     {
-        var go = new GameObject(name, typeof(RectTransform), typeof(MinimapTacticalGlyph));
+        var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(MinimapTacticalGlyph));
         go.transform.SetParent(parent, false);
         var glyph = go.GetComponent<MinimapTacticalGlyph>();
         glyph.raycastTarget = false;
