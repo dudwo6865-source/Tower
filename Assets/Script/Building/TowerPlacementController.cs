@@ -253,12 +253,16 @@ public class TowerPlacementController : MonoBehaviour
 
     public void CancelPlacement()
     {
+        if (IsPlacing) LastCancelFrame = Time.frameCount;
         NotifyPreviewEnded();
         pendingBuildData = null;
         pendingFootprintCells = Vector2Int.one;
         pendingFootprintMask = null;
         DestroyGhost();
     }
+
+    // 같은 클릭으로 배치 취소와 미니맵 이동이 함께 실행되는 것을 막는다.
+    public int LastCancelFrame { get; private set; } = -1;
 
     void HandlePlacementInput()
     {

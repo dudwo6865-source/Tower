@@ -10,7 +10,7 @@ using UnityEngine.UI;
 [RequireComponent(typeof(Image))]
 [RequireComponent(typeof(MinimapBlipManager))]
 [DefaultExecutionOrder(200)]
-public class RTSMinimap : MonoBehaviour, IPointerClickHandler, IDragHandler
+public partial class RTSMinimap : MonoBehaviour, IPointerClickHandler, IDragHandler, IPointerDownHandler
 {
     const string MapAreaName = "MapArea";
 
@@ -338,6 +338,7 @@ public class RTSMinimap : MonoBehaviour, IPointerClickHandler, IDragHandler
         GetTextureSize(out int textureWidth, out int textureHeight);
 
         var pixels = new Color[textureWidth * textureHeight];
+        var terrainHits = new RaycastHit[pixels.Length];
         float rayDistance = MapPlayBounds.GetRaycastDistance(raycastHeightPadding);
         float referenceHeight = mapBounds.Origin.y;
 
@@ -367,6 +368,7 @@ public class RTSMinimap : MonoBehaviour, IPointerClickHandler, IDragHandler
                         groundRaycastMask,
                         QueryTriggerInteraction.Ignore))
                 {
+                    terrainHits[y * textureWidth + x] = hit;
                     pixelColor = baseMapColor;
                     if (useTerrainTextureColors && terrainColors.TrySample(hit, out Color terrainColor))
                         pixelColor = terrainColor;
@@ -388,6 +390,7 @@ public class RTSMinimap : MonoBehaviour, IPointerClickHandler, IDragHandler
             }
         }
 
+        DrawTerrainRoutes(pixels, terrainHits, textureWidth, textureHeight);
         ApplyPixelsToMinimapTexture(pixels, textureWidth, textureHeight);
     }
 
@@ -510,12 +513,13 @@ public class RTSMinimap : MonoBehaviour, IPointerClickHandler, IDragHandler
 
     public void OnPointerClick(PointerEventData eventData)
     {
-        FocusFromPointer(eventData);
+        if (eventData.button == PointerEventData.InputButton.Left)
+            FocusFromPointer(eventData);
     }
 
     public void OnDrag(PointerEventData eventData)
     {
-        if (!allowDragToPan)
+        if (!allowDragToPan || eventData.button != PointerEventData.InputButton.Left)
             return;
 
         FocusFromPointer(eventData);

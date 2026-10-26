@@ -4,12 +4,16 @@ using UnityEngine.UI;
 
 [RequireComponent(typeof(RTSMinimap))]
 [DefaultExecutionOrder(100)]
-public class MinimapBlipManager : MonoBehaviour
+public partial class MinimapBlipManager : MonoBehaviour
 {
     class BlipView
     {
         public RectTransform rect;
         public Image image;
+        public MinimapTacticalGlyph glyph;
+        public MinimapTacticalGlyph alert;
+        public bool headquarters;
+        public bool spawner;
     }
 
     [Header("플레이어")]
@@ -144,6 +148,7 @@ public class MinimapBlipManager : MonoBehaviour
         blipsRoot.anchorMax = Vector2.one;
         blipsRoot.offsetMin = Vector2.zero;
         blipsRoot.offsetMax = Vector2.zero;
+        rootObject.AddComponent<RectMask2D>();
     }
 
     void RefreshBlips()
@@ -279,6 +284,8 @@ public class MinimapBlipManager : MonoBehaviour
             : CreateBlipView();
 
         blip.rect.gameObject.SetActive(true);
+        blip.headquarters = entity.GetComponent<Headquarters>() != null;
+        blip.spawner = entity.GetComponent<EnemySpawner>() != null;
         activeBlips.Add(entity, blip);
         return blip;
     }
@@ -289,6 +296,7 @@ public class MinimapBlipManager : MonoBehaviour
             return;
 
         activeBlips.Remove(entity);
+        StopWatchingHeadquarters(entity);
         blip.rect.gameObject.SetActive(false);
         blipPool.Push(blip);
     }
@@ -335,6 +343,7 @@ public class MinimapBlipManager : MonoBehaviour
 
         blip.rect.sizeDelta = size;
         blip.image.color = display.color;
+        ApplyTacticalBlip(blip, entity, display.color);
     }
 
     bool IsEntityCurrentlyVisible(SelectableEntity entity)
