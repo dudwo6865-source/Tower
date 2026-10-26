@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: 1Stage
   m_EditorClassIdentifier: 
   stageId: 3e924dfe474f7fe4c9cbdb0f78996837
-  displayName: 1Stage
-  description: 
+  displayName: 착륙 교두보
+  description: 난이도 1 · 적 스포너 4개 · 기준 맵 면적의 1.00배. 절벽 지형에 첫 방어선을 구축하는 시작 전선.
   previewImage: {fileID: 0}
   mapRootPrefab: {fileID: 9130407086999981450, guid: 3958da6a75ee5ab438ef5e7f69adbe66, type: 3}
   overrideEconomy: 1
