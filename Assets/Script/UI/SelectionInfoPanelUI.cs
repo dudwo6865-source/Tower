@@ -103,31 +103,8 @@ public partial class SelectionInfoPanelUI : MonoBehaviour
     [Tooltip("(선택) 초상화 그리드 영역 전체 루트입니다. 단일/빈 선택 시 숨깁니다.")]
     public GameObject multiSelectionSection;
     [Label("최대 초상화 칸 수")]
-    [Tooltip("초상화 그리드에 표시할 최대 칸 수입니다. 0 이하이면 제한 없음.")]
+    [Tooltip("스크롤 뷰를 연결하지 않았을 때 표시할 최대 칸 수입니다. 0 이하이거나 스크롤 뷰를 연결하면 제한 없이 표시합니다.")]
     public int maxPortraitCells = 0;
-
-    [Header("다중 선택 - 셀 크기")]
-    [Label("셀 크기 자동 조절")]
-    [Tooltip("켜면 선택 수에 따라 초상화 셀 크기를 자동으로 조절합니다.")]
-    public bool dynamicCellSize = false;
-    [Label("초상화 그리드")]
-    [Tooltip("셀 크기를 조절할 그리드입니다. 비워두면 portraitGridParent에서 GridLayoutGroup을 찾습니다.")]
-    public GridLayoutGroup portraitGrid;
-    [Label("기본 셀 크기")]
-    [Tooltip("기본 셀 크기입니다. (선택 수가 축소 기준 미만일 때)")]
-    public Vector2 defaultCellSize = new Vector2(96f, 96f);
-    [Label("1차 축소 기준 수")]
-    [Tooltip("이 개수 이상 선택하면 셀 크기를 shrunkCellSize로 줄입니다. (1차)")]
-    public int cellShrinkThreshold = 8;
-    [Label("1차 축소 셀 크기")]
-    [Tooltip("1차 축소 기준 이상 선택 시 사용할 셀 크기입니다.")]
-    public Vector2 shrunkCellSize = new Vector2(56f, 56f);
-    [Label("2차 축소 기준 수")]
-    [Tooltip("이 개수 이상 선택하면 셀 크기를 shrunkCellSize2로 더 줄입니다. (2차)")]
-    public int cellShrinkThreshold2 = 16;
-    [Label("2차 축소 셀 크기")]
-    [Tooltip("2차 축소 기준 이상 선택 시 사용할 셀 크기입니다.")]
-    public Vector2 shrunkCellSize2 = new Vector2(40f, 40f);
 
     [Label("초상화 그리드 디버그 로그")]
     [Tooltip("켜면 다중 선택 초상화 그리드 생성 과정을 Console에 출력합니다.")]
@@ -224,9 +201,6 @@ public partial class SelectionInfoPanelUI : MonoBehaviour
 
         if (upgradeManager != null)
             upgradeManager.OnUpgradesChanged += HandleUpgradesChanged;
-
-        if (portraitGrid == null && portraitGridParent != null)
-            portraitGrid = portraitGridParent.GetComponent<GridLayoutGroup>();
 
         RefreshPanel();
     }
@@ -388,8 +362,7 @@ public partial class SelectionInfoPanelUI : MonoBehaviour
     void RefreshPortraitGrid(IReadOnlyList<SelectableEntity> selected)
     {
         SetSectionActive(multiSelectionSection, true);
-        EnsurePortraitScroll();
-        ApplyCellSize(selected.Count);
+        ConfigurePortraitScroll();
 
         if (debugPortraitGrid)
         {
@@ -411,7 +384,7 @@ public partial class SelectionInfoPanelUI : MonoBehaviour
             return;
         }
 
-        int limit = !scrollPortraits && maxPortraitCells > 0
+        int limit = !HasPortraitScroll && maxPortraitCells > 0
             ? Mathf.Min(selected.Count, maxPortraitCells)
             : selected.Count;
 
@@ -455,35 +428,11 @@ public partial class SelectionInfoPanelUI : MonoBehaviour
                 spawnedPortraitCells[i].gameObject.SetActive(false);
         }
 
+        RefreshPortraitScroll(selected.Count);
+
         if (debugPortraitGrid)
             Debug.Log(
                 $"[SelectionInfoPanel] RefreshPortraitGrid 완료: 표시={shown}, 풀 크기={spawnedPortraitCells.Count}",
-                this);
-    }
-
-    void ApplyCellSize(int selectedCount)
-    {
-        if (scrollPortraits && portraitGrid != null)
-        {
-            portraitGrid.cellSize = new Vector2(Mathf.Max(1f, defaultCellSize.x), Mathf.Max(1f, defaultCellSize.y));
-            return;
-        }
-        if (!dynamicCellSize || portraitGrid == null)
-            return;
-
-        if (selectedCount >= cellShrinkThreshold2)
-            portraitGrid.cellSize = shrunkCellSize2;
-        else if (selectedCount >= cellShrinkThreshold)
-            portraitGrid.cellSize = shrunkCellSize;
-        else
-            portraitGrid.cellSize = defaultCellSize;
-
-        RefreshPortraitScroll(shown);
-
-        if (debugPortraitGrid)
-            Debug.Log(
-                $"[SelectionInfoPanel] ApplyCellSize: 선택 수={selectedCount}, " +
-                $"기준={cellShrinkThreshold}, 셀크기={portraitGrid.cellSize}",
                 this);
     }
 
