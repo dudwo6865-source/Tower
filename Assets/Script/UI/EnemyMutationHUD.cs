@@ -42,6 +42,9 @@ public class EnemyMutationHUD : MonoBehaviour
     [Label("알림 표시 시간(초)")]
     [Tooltip("등장·퇴장 효과를 포함한 한 알림의 전체 시간입니다. 일시정지 중에도 흐릅니다.")]
     [Min(0.1f)] public float notificationDuration = 5f;
+    [Label("유물 선택 후 대기 시간(초)")]
+    [Tooltip("유물 선택·교체와 대기 중인 보상이 모두 끝난 뒤 알림을 표시하기까지의 시간입니다. 일시정지와 무관하게 흐릅니다.")]
+    [Min(0f)] public float delayAfterRelicSelection = 0.35f;
     [Label("텍스트 스타일 덮어쓰기")]
     [Tooltip("끄면 직접 연결한 텍스트의 폰트·크기·색상을 유지합니다. 자동 생성 UI에는 아래 설정을 사용합니다.")]
     public bool overrideTextStyle = true;
@@ -117,6 +120,9 @@ public class EnemyMutationHUD : MonoBehaviour
     readonly Queue<Notice> notifications = new Queue<Notice>();
     float notificationStartedAt;
     bool showingNotification;
+    bool suspendedNotification;
+    bool waitingForRelicSelection;
+    float notificationResumeAt;
     Notice currentNotice;
     Color originalNotificationColor;
     Color displayedColor;
@@ -171,7 +177,8 @@ public class EnemyMutationHUD : MonoBehaviour
         Refresh();
     }
 
-    void Update()
+    // 스포너 파괴와 유물 선택 처리가 끝난 뒤 표시 여부를 판단한다.
+    void LateUpdate()
     {
         Bind();
         if (GameResultManager.Instance != null && GameResultManager.Instance.IsGameOver)
@@ -188,6 +195,28 @@ public class EnemyMutationHUD : MonoBehaviour
                 notificationText.text = FormatNotification(currentNotice.type, currentNotice.increase);
                 displayedColor = ShouldStyle ? EffectColor(currentNotice.type) : originalNotificationColor;
             }
+        }
+        if (RelicManager.Instance != null && RelicManager.Instance.HasPendingSelection)
+        {
+            waitingForRelicSelection = true;
+            if (showingNotification)
+            {
+                // 가려진 알림은 선택 완료 후 처음부터 다시 보여준다.
+                suspendedNotification = true;
+                FinishNotification();
+            }
+            return;
+        }
+        if (waitingForRelicSelection)
+        {
+            waitingForRelicSelection = false;
+            notificationResumeAt = Time.unscaledTime + Mathf.Max(0f, delayAfterRelicSelection);
+        }
+        if (Time.unscaledTime < notificationResumeAt) return;
+        if (suspendedNotification)
+        {
+            suspendedNotification = false;
+            BeginNotification(currentNotice);
         }
         if (showingNotification)
         {
@@ -340,6 +369,9 @@ public class EnemyMutationHUD : MonoBehaviour
     void StopPresentation()
     {
         notifications.Clear();
+        suspendedNotification = false;
+        waitingForRelicSelection = false;
+        notificationResumeAt = 0f;
         FinishNotification();
         if (summaryText != null) summaryText.text = string.Empty;
         if (notificationText != null) notificationText.text = string.Empty;

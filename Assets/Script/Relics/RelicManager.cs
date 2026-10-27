@@ -62,6 +62,8 @@ public class RelicManager : MonoBehaviour
     public IReadOnlyList<RelicDefinition> OwnedRelics => owned;
     public IReadOnlyList<RelicDefinition> PendingCandidates => pendingCandidates;
     public RelicDefinition PendingReplacementChoice => pendingReplacement;
+    // 연속 파괴로 대기 중인 보상까지 포함해 알림이 선택 화면 사이에 끼어들지 않게 한다.
+    public bool HasPendingSelection => pendingCandidates != null || pendingReplacement != null || pendingSpawnerRewards.Count > 0;
     public int SlotCount => Mathf.Max(1, slotCount);
     public bool HasFreeSlot => owned.Count < SlotCount;
 
