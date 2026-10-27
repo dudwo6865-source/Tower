@@ -3,7 +3,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class SelectionInfoPanelUI : MonoBehaviour
+public partial class SelectionInfoPanelUI : MonoBehaviour
 {
     [Header("참조")]
     [Label("선택 매니저")]
@@ -388,6 +388,7 @@ public class SelectionInfoPanelUI : MonoBehaviour
     void RefreshPortraitGrid(IReadOnlyList<SelectableEntity> selected)
     {
         SetSectionActive(multiSelectionSection, true);
+        EnsurePortraitScroll();
         ApplyCellSize(selected.Count);
 
         if (debugPortraitGrid)
@@ -410,7 +411,7 @@ public class SelectionInfoPanelUI : MonoBehaviour
             return;
         }
 
-        int limit = maxPortraitCells > 0
+        int limit = !scrollPortraits && maxPortraitCells > 0
             ? Mathf.Min(selected.Count, maxPortraitCells)
             : selected.Count;
 
@@ -462,6 +463,11 @@ public class SelectionInfoPanelUI : MonoBehaviour
 
     void ApplyCellSize(int selectedCount)
     {
+        if (scrollPortraits && portraitGrid != null)
+        {
+            portraitGrid.cellSize = new Vector2(Mathf.Max(1f, defaultCellSize.x), Mathf.Max(1f, defaultCellSize.y));
+            return;
+        }
         if (!dynamicCellSize || portraitGrid == null)
             return;
 
@@ -471,6 +477,8 @@ public class SelectionInfoPanelUI : MonoBehaviour
             portraitGrid.cellSize = shrunkCellSize;
         else
             portraitGrid.cellSize = defaultCellSize;
+
+        RefreshPortraitScroll(shown);
 
         if (debugPortraitGrid)
             Debug.Log(
@@ -513,6 +521,7 @@ public class SelectionInfoPanelUI : MonoBehaviour
 
     void ClearPortraitGrid()
     {
+        ResetPortraitScroll();
         for (int i = 0; i < spawnedPortraitCells.Count; i++)
         {
             if (spawnedPortraitCells[i] != null)
