@@ -62,7 +62,7 @@ MonoBehaviour:
   autoAssignEntityTypeId: 1
   selectionCollider: {fileID: 3624898603343642002}
   showAttackRangeForUnit: 0
-  portrait: {fileID: 0}
+  portrait: {fileID: 21300000, guid: 15eab340e8e307744b0fe408f08fdff6, type: 3}
   autoSetupHealth: 1
 --- !u!114 &1960923446581481679
 MonoBehaviour:

@@ -589,6 +589,13 @@ public partial class StageEditorWindow : EditorWindow
         EditorGUILayout.PropertyField(serializedObject.FindProperty("dayLightIntensity"), new GUIContent("낮 라이트 강도"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("nightLightColor"), new GUIContent("밤 라이트 색상"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("nightLightIntensity"), new GUIContent("밤 라이트 강도"));
+
+        SerializedProperty applyAmbientProp = serializedObject.FindProperty("applyAmbientLight");
+        EditorGUILayout.PropertyField(applyAmbientProp, new GUIContent("환경광 적용", applyAmbientProp.tooltip));
+        EditorGUI.BeginDisabledGroup(!applyAmbientProp.boolValue);
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("dayAmbientColor"), new GUIContent("낮 환경광 색상"));
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("nightAmbientColor"), new GUIContent("밤 환경광 색상"));
+        EditorGUI.EndDisabledGroup();
         EditorGUI.EndDisabledGroup();
 
         if (selected.overrideDayNight)
@@ -1173,6 +1180,9 @@ public partial class StageEditorWindow : EditorWindow
             selected.dayLightIntensity = cycle.dayLightIntensity;
             selected.nightLightIntensity = cycle.nightLightIntensity;
             selected.lightTransitionDuration = cycle.lightTransitionDuration;
+            selected.applyAmbientLight = cycle.applyAmbientLight;
+            selected.dayAmbientColor = cycle.dayAmbientColor;
+            selected.nightAmbientColor = cycle.nightAmbientColor;
         }
 
         WaveManager wave = UnityEngine.Object.FindFirstObjectByType<WaveManager>();
@@ -1239,6 +1249,9 @@ public partial class StageEditorWindow : EditorWindow
                 cycle.dayLightIntensity = selected.dayLightIntensity;
                 cycle.nightLightIntensity = selected.nightLightIntensity;
                 cycle.lightTransitionDuration = selected.lightTransitionDuration;
+                cycle.applyAmbientLight = selected.applyAmbientLight;
+                cycle.dayAmbientColor = selected.dayAmbientColor;
+                cycle.nightAmbientColor = selected.nightAmbientColor;
                 EditorUtility.SetDirty(cycle);
                 appliedAny = true;
             }

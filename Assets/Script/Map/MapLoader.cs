@@ -269,6 +269,9 @@ public class MapLoader : MonoBehaviour
         cycle.dayLightIntensity = config.dayLightIntensity;
         cycle.nightLightIntensity = config.nightLightIntensity;
         cycle.lightTransitionDuration = config.lightTransitionDuration;
+        cycle.applyAmbientLight = config.applyAmbientLight;
+        cycle.dayAmbientColor = config.dayAmbientColor;
+        cycle.nightAmbientColor = config.nightAmbientColor;
     }
 
     void ApplyWaveConfig(MapConfig config)

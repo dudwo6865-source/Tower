@@ -31,9 +31,9 @@ MonoBehaviour:
   previewImage: {fileID: 0}
   mapRootPrefab: {fileID: 2819563160099570616, guid: bf18d32be3f9f3d418e13d8a3a7d158e, type: 3}
   overrideEconomy: 1
-  maxWatt: 500
+  maxWatt: 1000
   startingWatt: 100
-  incomePerSecond: 30
+  incomePerSecond: 5
   overrideDayNight: 1
   startPhase: 0
   dayDuration: 60

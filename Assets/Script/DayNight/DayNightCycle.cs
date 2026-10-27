@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 [DisallowMultipleComponent]
 public class DayNightCycle : MonoBehaviour
@@ -53,6 +54,21 @@ public class DayNightCycle : MonoBehaviour
     [Tooltip("낮/밤 전환 시 라이트가 먼저 변하는 시간(초)입니다. 완료 후 페이즈와 알림이 바뀝니다.")]
     public float lightTransitionDuration = 5f;
 
+    [Header("환경광")]
+    [Label("환경광 적용")]
+    [Tooltip("켜면 낮/밤에 따라 환경광(Lighting 창의 Ambient Color)도 바꿉니다. 켜면 환경광 모드가 Color로 바뀝니다.")]
+    public bool applyAmbientLight;
+
+    [Label("낮 환경광 색")]
+    [Tooltip("낮 시간대 환경광 색상입니다. 그림자 진 부분의 밝기를 정합니다.")]
+    [ColorUsage(false, true)]
+    public Color dayAmbientColor = new Color(0.212f, 0.227f, 0.259f, 1f);
+
+    [Label("밤 환경광 색")]
+    [Tooltip("밤 시간대 환경광 색상입니다.")]
+    [ColorUsage(false, true)]
+    public Color nightAmbientColor = new Color(0.08f, 0.1f, 0.16f, 1f);
+
     public DayNightPhase CurrentPhase { get; private set; } = DayNightPhase.Day;
 
     public float PhaseElapsed { get; private set; }
@@ -97,6 +113,8 @@ public class DayNightCycle : MonoBehaviour
     float lightTransitionStartIntensity;
     Color lightTransitionTargetColor;
     float lightTransitionTargetIntensity;
+    Color ambientTransitionStartColor;
+    Color ambientTransitionTargetColor;
     float lightTransitionElapsed;
     bool isLightTransitioning;
 
@@ -116,6 +134,9 @@ public class DayNightCycle : MonoBehaviour
 
     void Start()
     {
+        if (applyLightingOnPhaseChange && applyAmbientLight)
+            RenderSettings.ambientMode = AmbientMode.Flat;
+
         ApplyLightingForPhase(CurrentPhase);
 
         if (autoStart)
@@ -177,7 +198,7 @@ public class DayNightCycle : MonoBehaviour
         pendingPhase = nextPhase;
         isPhaseTransitioning = true;
 
-        if (!applyLightingOnPhaseChange || directionalLight == null)
+        if (!applyLightingOnPhaseChange || !HasLightingTarget())
         {
             CompletePhaseTransition();
             return;
@@ -185,19 +206,26 @@ public class DayNightCycle : MonoBehaviour
 
         lightTransitionTargetColor = GetLightColor(nextPhase);
         lightTransitionTargetIntensity = GetLightIntensity(nextPhase);
+        ambientTransitionTargetColor = GetAmbientColor(nextPhase);
 
         if (lightTransitionDuration <= 0f)
         {
             ApplyLightingValues(
                 lightTransitionTargetColor,
-                lightTransitionTargetIntensity);
+                lightTransitionTargetIntensity,
+                ambientTransitionTargetColor);
 
             CompletePhaseTransition();
             return;
         }
 
-        lightTransitionStartColor = directionalLight.color;
-        lightTransitionStartIntensity = directionalLight.intensity;
+        if (directionalLight != null)
+        {
+            lightTransitionStartColor = directionalLight.color;
+            lightTransitionStartIntensity = directionalLight.intensity;
+        }
+
+        ambientTransitionStartColor = RenderSettings.ambientLight;
         lightTransitionElapsed = 0f;
         isLightTransitioning = true;
     }
@@ -217,7 +245,7 @@ public class DayNightCycle : MonoBehaviour
 
     void UpdateLightTransition()
     {
-        if (!isLightTransitioning || directionalLight == null)
+        if (!isLightTransitioning)
             return;
 
         lightTransitionElapsed += Time.deltaTime;
@@ -227,7 +255,8 @@ public class DayNightCycle : MonoBehaviour
 
         ApplyLightingValues(
             Color.Lerp(lightTransitionStartColor, lightTransitionTargetColor, blend),
-            Mathf.Lerp(lightTransitionStartIntensity, lightTransitionTargetIntensity, blend));
+            Mathf.Lerp(lightTransitionStartIntensity, lightTransitionTargetIntensity, blend),
+            Color.Lerp(ambientTransitionStartColor, ambientTransitionTargetColor, blend));
 
         if (normalizedTime < 1f)
             return;
@@ -240,16 +269,31 @@ public class DayNightCycle : MonoBehaviour
 
     void ApplyLightingForPhase(DayNightPhase phase)
     {
-        if (!applyLightingOnPhaseChange || directionalLight == null)
+        if (!applyLightingOnPhaseChange || !HasLightingTarget())
             return;
 
-        ApplyLightingValues(GetLightColor(phase), GetLightIntensity(phase));
+        ApplyLightingValues(
+            GetLightColor(phase),
+            GetLightIntensity(phase),
+            GetAmbientColor(phase));
     }
 
-    void ApplyLightingValues(Color color, float intensity)
+    // 방향광이 없어도 환경광만 바꿀 수 있다.
+    bool HasLightingTarget()
     {
-        directionalLight.color = color;
-        directionalLight.intensity = intensity;
+        return directionalLight != null || applyAmbientLight;
+    }
+
+    void ApplyLightingValues(Color color, float intensity, Color ambientColor)
+    {
+        if (directionalLight != null)
+        {
+            directionalLight.color = color;
+            directionalLight.intensity = intensity;
+        }
+
+        if (applyAmbientLight)
+            RenderSettings.ambientLight = ambientColor;
     }
 
     Color GetLightColor(DayNightPhase phase)
@@ -260,6 +304,11 @@ public class DayNightCycle : MonoBehaviour
     float GetLightIntensity(DayNightPhase phase)
     {
         return phase == DayNightPhase.Day ? dayLightIntensity : nightLightIntensity;
+    }
+
+    Color GetAmbientColor(DayNightPhase phase)
+    {
+        return phase == DayNightPhase.Day ? dayAmbientColor : nightAmbientColor;
     }
 
     void ResolveLightingReference()

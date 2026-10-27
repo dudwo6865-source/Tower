@@ -94,7 +94,7 @@ MonoBehaviour:
   autoAssignEntityTypeId: 1
   selectionCollider: {fileID: 6629162137175184675}
   showAttackRangeForUnit: 0
-  portrait: {fileID: 21300000, guid: 565cc91799990c54184878f1b2e42de1, type: 3}
+  portrait: {fileID: 21300000, guid: 3f01920e9eedc6c49b685eddd3601801, type: 3}
   autoSetupHealth: 1
 --- !u!114 &7910523740443144050
 MonoBehaviour:
@@ -246,6 +246,8 @@ MonoBehaviour:
   projectileSpeed: 80
   firePoint: {fileID: 7890855621327567481}
   pierceHitRadius: 0.6
+  flameAimPitch: 1
+  flameMaxPitchAngle: 45
   beamWidth: 1
   minAttackRange: 0
   arcHeight: 4

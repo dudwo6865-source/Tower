@@ -410,6 +410,7 @@ public class RelicPanelUI : MonoBehaviour
         if (panelRoot == null || panelRoot.activeSelf == visible)
             return;
 
+        if (visible) PopupOpenAnimation.Ensure(panelRoot);
         panelRoot.SetActive(visible);
     }
 }

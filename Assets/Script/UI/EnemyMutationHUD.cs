@@ -16,8 +16,14 @@ public class EnemyMutationHUD : MonoBehaviour
     public TMP_Text summaryText;
     [Label("결과 알림 텍스트")]
     public TMP_Text notificationText;
+    [Label("알림 패널")]
+    [Tooltip("알림이 표시되는 동안 켜고 끝나면 끕니다. 알림 텍스트를 이 패널 안에 넣어 둡니다. 패널에 Canvas Group이 있으면 패널 전체를 페이드합니다. 이 매니저가 붙은 오브젝트나 그 부모는 연결하지 않습니다.")]
+    public GameObject notificationPanel;
+    [Label("누적 효과가 있으면 패널 유지")]
+    [Tooltip("켜면 돌연변이가 한 번이라도 생긴 뒤에는 알림이 끝나도 패널을 열어 둡니다. 누적 효과 텍스트를 패널 안에 넣었을 때 사용합니다.")]
+    public bool keepPanelOpenWithMutations;
     [Label("자동 UI 생성")]
-    [Tooltip("텍스트를 모두 비워두면 기본 UI를 생성합니다. 직접 만든 UI를 연결하면 자동 생성하지 않습니다.")]
+    [Tooltip("텍스트와 패널을 모두 비워두면 기본 UI를 생성합니다. 직접 만든 UI를 연결하면 자동 생성하지 않습니다.")]
     public bool createDefaultUI = true;
 
     [Header("알림 문구")]
@@ -38,7 +44,7 @@ public class EnemyMutationHUD : MonoBehaviour
     [Tooltip("{횟수}, {스폰}, {공격력}, {체력}, {이동속도}, {방어력}을 사용할 수 있습니다. 증가율에는 %가 포함되고, {방어력}은 더한 수치입니다.")]
     [TextArea(3, 6)] public string summaryFormat = "돌연변이 {횟수}회\n밤 공격대 +{스폰} · 공격력 +{공격력}\n체력 +{체력} · 이동 속도 +{이동속도} · 방어력 +{방어력}";
 
-    [Header("표시와 색상")]
+    [Header("표시")]
     [Label("알림 표시 시간(초)")]
     [Tooltip("등장·퇴장 효과를 포함한 한 알림의 전체 시간입니다. 일시정지 중에도 흐릅니다.")]
     [Min(0.1f)] public float notificationDuration = 5f;
@@ -46,25 +52,13 @@ public class EnemyMutationHUD : MonoBehaviour
     [Tooltip("유물 선택·교체와 대기 중인 보상이 모두 끝난 뒤 알림을 표시하기까지의 시간입니다. 일시정지와 무관하게 흐릅니다.")]
     [Min(0f)] public float delayAfterRelicSelection = 0.35f;
     [Label("텍스트 스타일 덮어쓰기")]
-    [Tooltip("끄면 직접 연결한 텍스트의 폰트·크기·색상을 유지합니다. 자동 생성 UI에는 아래 설정을 사용합니다.")]
-    public bool overrideTextStyle = true;
+    [Tooltip("끄면 직접 연결한 텍스트의 폰트·크기를 유지합니다. 자동 생성 UI에는 아래 설정을 사용합니다. 글자 색상은 항상 텍스트에 설정한 색을 씁니다.")]
+    public bool overrideTextStyle;
     [Label("글꼴")]
     [Tooltip("자동 UI에서 비워두면 프로젝트의 한글 글꼴을 사용합니다.")]
     public TMP_FontAsset font;
     [Label("글자 크기")]
     [Min(1f)] public float fontSize = 20f;
-    [Label("누적 효과 색상")]
-    public Color summaryColor = Color.white;
-    [Label("스폰 수 알림 색상")]
-    public Color spawnColor = new Color(1f, 0.75f, 0.4f);
-    [Label("공격력 알림 색상")]
-    public Color damageColor = new Color(1f, 0.4f, 0.35f);
-    [Label("체력 알림 색상")]
-    public Color healthColor = new Color(0.5f, 1f, 0.55f);
-    [Label("이동 속도 알림 색상")]
-    public Color speedColor = new Color(0.45f, 0.8f, 1f);
-    [Label("방어력 알림 색상")]
-    public Color armorColor = new Color(0.8f, 0.8f, 0.85f);
 
     [Header("알림 연출")]
     [Label("등장 시간(초)")]
@@ -72,7 +66,7 @@ public class EnemyMutationHUD : MonoBehaviour
     [Label("퇴장 시간(초)")]
     [Min(0f)] public float fadeOutDuration = 0.4f;
     [Label("크기 강조 대상")]
-    [Tooltip("비워두면 알림 텍스트 자체를 강조합니다. 다른 UI까지 움직이지 않도록 전용 오브젝트를 연결합니다.")]
+    [Tooltip("비워두면 알림 패널을, 패널도 없으면 알림 텍스트를 강조합니다. 다른 UI까지 움직이지 않도록 전용 오브젝트를 연결합니다.")]
     public RectTransform emphasisTarget;
     [Label("등장 크기 배율")]
     [Min(0.01f)] public float startScale = 1.15f;
@@ -84,7 +78,8 @@ public class EnemyMutationHUD : MonoBehaviour
     [Label("알림 효과음")]
     public AudioClip notificationSound;
     [Label("알림 음량")]
-    [Range(0f, 1f)] public float volume = 1f;
+    [Tooltip("1이 원래 크기입니다. 1보다 크면 효과음을 증폭하며, 너무 크게 올리면 소리가 찢어질 수 있습니다.")]
+    [Range(0f, 3f)] public float volume = 1f;
     [Label("알림 시작 효과")]
     [Tooltip("알림이 실제로 표시될 때 실행합니다. 파티클 Play 등 원하는 효과를 연결합니다. 미리보기에서도 실행됩니다.")]
     public UnityEvent onNotificationStarted = new UnityEvent();
@@ -125,7 +120,8 @@ public class EnemyMutationHUD : MonoBehaviour
     float notificationResumeAt;
     Notice currentNotice;
     Color originalNotificationColor;
-    Color displayedColor;
+    CanvasGroup panelGroup;
+    float originalPanelAlpha = 1f;
     Vector3 originalScale;
     RectTransform animatedTarget;
     GameObject generatedPanel;
@@ -191,10 +187,7 @@ public class EnemyMutationHUD : MonoBehaviour
             appearanceDirty = false;
             Refresh();
             if (showingNotification && notificationText != null)
-            {
                 notificationText.text = FormatNotification(currentNotice.type, currentNotice.increase);
-                displayedColor = ShouldStyle ? EffectColor(currentNotice.type) : originalNotificationColor;
-            }
         }
         if (RelicManager.Instance != null && RelicManager.Instance.HasPendingSelection)
         {
@@ -228,12 +221,7 @@ public class EnemyMutationHUD : MonoBehaviour
             {
                 float alphaIn = fadeInDuration > 0f ? Mathf.Clamp01(elapsed / fadeInDuration) : 1f;
                 float alphaOut = fadeOutDuration > 0f ? Mathf.Clamp01((duration - elapsed) / fadeOutDuration) : 1f;
-                if (notificationText != null)
-                {
-                    Color color = displayedColor;
-                    color.a *= Mathf.Min(alphaIn, alphaOut);
-                    notificationText.color = color;
-                }
+                SetFadeAlpha(Mathf.Min(alphaIn, alphaOut));
                 if (animatedTarget != null)
                 {
                     float progress = emphasisDuration > 0f ? Mathf.Clamp01(elapsed / emphasisDuration) : 1f;
@@ -266,16 +254,29 @@ public class EnemyMutationHUD : MonoBehaviour
         }
     }
 
-    Color EffectColor(EnemyMutationType type)
+    // 패널에 Canvas Group이 있으면 패널 전체를, 없으면 알림 텍스트만 페이드한다.
+    void SetFadeAlpha(float alpha)
     {
-        switch (type)
+        if (panelGroup != null)
         {
-            case EnemyMutationType.Spawn: return spawnColor;
-            case EnemyMutationType.Damage: return damageColor;
-            case EnemyMutationType.Health: return healthColor;
-            case EnemyMutationType.Armor: return armorColor;
-            default: return speedColor;
+            panelGroup.alpha = originalPanelAlpha * alpha;
+            return;
         }
+        if (notificationText == null) return;
+        Color color = originalNotificationColor;
+        color.a *= alpha;
+        notificationText.color = color;
+    }
+
+    // 매니저 자신이 패널 안에 있으면 패널을 끄는 순간 매니저도 멈추므로 토글하지 않는다.
+    bool CanTogglePanel => notificationPanel != null && !transform.IsChildOf(notificationPanel.transform);
+
+    void UpdatePanelActive()
+    {
+        if (!CanTogglePanel) return;
+        bool open = showingNotification
+            || (keepPanelOpenWithMutations && manager != null && manager.MutationCount > 0);
+        if (notificationPanel.activeSelf != open) notificationPanel.SetActive(open);
     }
 
     void HandleStateChanged()
@@ -301,6 +302,7 @@ public class EnemyMutationHUD : MonoBehaviour
             notificationText.text = string.Empty;
         if (generatedPanel != null)
             generatedPanel.SetActive(showingNotification || (manager != null && manager.MutationCount > 0));
+        UpdatePanelActive();
     }
 
     void EnqueueNotification(EnemyMutationType type, float increase)
@@ -322,16 +324,18 @@ public class EnemyMutationHUD : MonoBehaviour
         currentNotice = notice;
         showingNotification = true;
         notificationStartedAt = Time.unscaledTime;
+        UpdatePanelActive();
+        panelGroup = notificationPanel != null ? notificationPanel.GetComponent<CanvasGroup>() : null;
+        if (panelGroup != null) originalPanelAlpha = panelGroup.alpha;
         if (notificationText != null)
         {
             originalNotificationColor = notificationText.color;
-            displayedColor = ShouldStyle ? EffectColor(notice.type) : originalNotificationColor;
             notificationText.text = FormatNotification(notice.type, notice.increase);
-            Color color = displayedColor;
-            if (fadeInDuration > 0f) color.a = 0f;
-            notificationText.color = color;
         }
-        animatedTarget = emphasisTarget != null ? emphasisTarget : (notificationText != null ? notificationText.rectTransform : null);
+        SetFadeAlpha(fadeInDuration > 0f ? 0f : 1f);
+        animatedTarget = emphasisTarget != null ? emphasisTarget
+            : notificationPanel != null ? notificationPanel.transform as RectTransform
+            : notificationText != null ? notificationText.rectTransform : null;
         if (animatedTarget != null)
         {
             originalScale = animatedTarget.localScale;
@@ -345,7 +349,7 @@ public class EnemyMutationHUD : MonoBehaviour
                 audioSource.playOnAwake = false;
                 audioSource.spatialBlend = 0f;
             }
-            audioSource.PlayOneShot(notificationSound, Mathf.Clamp01(volume));
+            audioSource.PlayOneShot(notificationSound, Mathf.Max(0f, volume));
         }
         onNotificationStarted?.Invoke();
     }
@@ -361,8 +365,11 @@ public class EnemyMutationHUD : MonoBehaviour
             notificationText.text = string.Empty;
             notificationText.color = originalNotificationColor;
         }
+        if (panelGroup != null) panelGroup.alpha = originalPanelAlpha;
+        panelGroup = null;
         if (generatedPanel != null && (manager == null || manager.MutationCount == 0))
             generatedPanel.SetActive(false);
+        UpdatePanelActive();
         onNotificationFinished?.Invoke();
     }
 
@@ -376,11 +383,12 @@ public class EnemyMutationHUD : MonoBehaviour
         if (summaryText != null) summaryText.text = string.Empty;
         if (notificationText != null) notificationText.text = string.Empty;
         if (generatedPanel != null) generatedPanel.SetActive(false);
+        if (CanTogglePanel) notificationPanel.SetActive(false);
     }
 
     void EnsureUI()
     {
-        if (createDefaultUI && summaryText == null && notificationText == null)
+        if (createDefaultUI && summaryText == null && notificationText == null && notificationPanel == null)
             CreateDefaultPanel();
     }
 
@@ -390,7 +398,6 @@ public class EnemyMutationHUD : MonoBehaviour
         {
             ApplyTextStyle(summaryText);
             ApplyTextStyle(notificationText);
-            if (summaryText != null) summaryText.color = summaryColor;
         }
         if (generatedPanel == null) return;
         generatedPanel.GetComponent<Canvas>().sortingOrder = sortingOrder;

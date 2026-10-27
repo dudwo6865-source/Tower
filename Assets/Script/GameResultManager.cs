@@ -63,6 +63,15 @@ public class GameResultManager : MonoBehaviour
     [Tooltip("'함선으로' 버튼을 눌렀을 때 이동할 씬 이름입니다. File > Build Settings에 등록되어 있어야 합니다.")]
     public string lobbySceneName = "Lobby";
 
+    [Header("테스트")]
+    [Label("테스트 클리어 단축키 사용")]
+    [Tooltip("켜면 에디터와 개발 빌드에서 단축키로 바로 스테이지를 클리어(승리)합니다. 정식 빌드에서는 동작하지 않습니다.")]
+    public bool enableTestClearKey = true;
+
+    [Label("테스트 클리어 키")]
+    [Tooltip("누르면 그 시점의 기록으로 승리 처리하고 결과 창을 띄웁니다. 클리어 보상도 실제로 저장됩니다.")]
+    public KeyCode testClearKey = KeyCode.F9;
+
     public Result CurrentResult { get; private set; } = Result.None;
 
     public bool IsGameOver => CurrentResult != Result.None;
@@ -173,6 +182,13 @@ public class GameResultManager : MonoBehaviour
     {
         if (IsGameOver)
             return;
+
+        if (enableTestClearKey && (Application.isEditor || Debug.isDebugBuild) && Input.GetKeyDown(testClearKey))
+        {
+            Debug.Log("GameResultManager: 테스트 단축키로 스테이지를 클리어합니다.");
+            EndGame(Result.Victory);
+            return;
+        }
 
         PlayTime += Time.deltaTime;
         CheckAllSpawnersDestroyed();

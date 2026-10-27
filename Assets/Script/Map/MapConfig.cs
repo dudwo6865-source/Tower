@@ -89,6 +89,20 @@ public class MapConfig : ScriptableObject
     [Tooltip("낮/밤 전환 시 라이트가 먼저 변하는 시간(초)입니다.")]
     public float lightTransitionDuration = 5f;
 
+    [Label("환경광 적용")]
+    [Tooltip("켜면 낮/밤에 따라 환경광(Lighting 창의 Ambient Color)도 바꿉니다. 씬의 환경광 설정보다 우선합니다.")]
+    public bool applyAmbientLight;
+
+    [Label("낮 환경광 색")]
+    [Tooltip("낮 시간대 환경광 색상입니다. 그림자 진 부분의 밝기를 정합니다.")]
+    [ColorUsage(false, true)]
+    public Color dayAmbientColor = new Color(0.212f, 0.227f, 0.259f, 1f);
+
+    [Label("밤 환경광 색")]
+    [Tooltip("밤 시간대 환경광 색상입니다.")]
+    [ColorUsage(false, true)]
+    public Color nightAmbientColor = new Color(0.08f, 0.1f, 0.16f, 1f);
+
     [Header("웨이브")]
     [Label("웨이브 덮어쓰기")]
     [Tooltip("켜면 이 맵의 웨이브 설정으로 WaveManager를 덮어씁니다.")]

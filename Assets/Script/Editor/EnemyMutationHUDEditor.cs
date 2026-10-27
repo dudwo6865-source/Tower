@@ -42,7 +42,7 @@ public class EnemyMutationHUDEditor : Editor
 
     public override void OnInspectorGUI()
     {
-        EditorGUILayout.HelpBox("돌연변이 알림 매니저입니다. 직접 만든 TMP 텍스트를 연결하거나 자동 UI를 사용할 수 있습니다. " +
+        EditorGUILayout.HelpBox("돌연변이 알림 매니저입니다. 직접 만든 패널과 그 안의 TMP 텍스트를 연결하거나 자동 UI를 사용할 수 있습니다. " +
             "알림 시작/종료 효과에는 파티클 등 원하는 동작을 연결합니다. 설정을 보존하려면 플레이 전에 배치하고 씬을 저장하세요.", MessageType.Info);
         DrawDefaultInspector();
         EnemyMutationHUD hud = (EnemyMutationHUD)target;
@@ -65,7 +65,7 @@ public class EnemyMutationManagerEditor : Editor
     public override void OnInspectorGUI()
     {
         EditorGUILayout.HelpBox("확률과 강화 수치를 관리합니다. MapLoader가 있는 씬은 스테이지 에디터의 돌연변이 설정이 실행 시 적용됩니다. " +
-            "알림 문구·색상·효과는 돌연변이 알림 매니저에서 조절합니다.", MessageType.Info);
+            "알림 문구·패널·효과는 돌연변이 알림 매니저에서 조절합니다.", MessageType.Info);
         DrawDefaultInspector();
         if (GUILayout.Button("알림 매니저 생성 또는 선택"))
             EnemyMutationHUDEditor.CreateOrSelectManager();

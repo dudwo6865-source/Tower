@@ -90,11 +90,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   entityType: 0
   ownerId: 1
-  entityTypeId: Firebat
+  entityTypeId: Unit_Firebat
   autoAssignEntityTypeId: 1
   selectionCollider: {fileID: 6629162137175184675}
   showAttackRangeForUnit: 0
-  portrait: {fileID: 21300000, guid: 3ddb44dcdbf71414084ad8b69c08bfe8, type: 3}
+  portrait: {fileID: 21300000, guid: 55566eb4bc5dc6e48951e80e93b689b3, type: 3}
   autoSetupHealth: 1
 --- !u!114 &7910523740443144050
 MonoBehaviour:
@@ -252,6 +252,8 @@ MonoBehaviour:
   projectileSpeed: 12
   firePoint: {fileID: 3690888858003867574}
   pierceHitRadius: 1
+  flameAimPitch: 1
+  flameMaxPitchAngle: 45
   beamWidth: 1
   minAttackRange: 0
   arcHeight: 4

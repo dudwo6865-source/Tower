@@ -49,6 +49,8 @@ public class UnitSelectionManager : MonoBehaviour
 
     private SelectableEntity lastClickedEntity;
     private float lastClickTime;
+    // 선택된 엔티티가 사라져(사망 등) 다음 Update에 선택 변경을 알려야 하는지
+    private bool removedNotifyPending;
 
     private Vector2 dragStartScreen;
     private bool isDragging;
@@ -92,6 +94,12 @@ public class UnitSelectionManager : MonoBehaviour
 
     void Update()
     {
+        if (removedNotifyPending)
+        {
+            removedNotifyPending = false;
+            NotifySelectionChanged();
+        }
+
         if (selectionCamera == null)
             selectionCamera = Camera.main;
 
@@ -507,8 +515,9 @@ public class UnitSelectionManager : MonoBehaviour
         NotifySelectionChanged();
     }
 
-    /// <summary>기존 선택을 비우고 이 엔티티들만 선택합니다. (건물 업그레이드 교체 등)</summary>
-    public void SelectOnly(IReadOnlyList<SelectableEntity> entities)
+    /// <summary>기존 선택을 비우고 이 엔티티들만 선택합니다. (건물 업그레이드 교체 등)
+    /// ignoreTypeFilter를 켜면 '선택 타입 필터'를 무시하고 소속만 검사합니다. (이미 선택돼 있던 대상을 다시 고를 때)</summary>
+    public void SelectOnly(IReadOnlyList<SelectableEntity> entities, bool ignoreTypeFilter = false)
     {
         DeselectAll();
 
@@ -519,11 +528,27 @@ public class UnitSelectionManager : MonoBehaviour
         {
             SelectableEntity entity = entities[i];
 
-            if (entity != null && CanSelectEntity(entity))
+            if (entity != null &&
+                (ignoreTypeFilter ? CanSelectEntityInBox(entity) : CanSelectEntity(entity)))
                 SelectEntity(entity);
         }
 
         RefreshCommandIndicators();
+    }
+
+    /// <summary>이 엔티티만 선택에서 뺍니다. (다중 선택 초상화 Shift+클릭 등)</summary>
+    public void Deselect(SelectableEntity entity)
+    {
+        if (entity == null || !selectedEntities.Remove(entity))
+            return;
+
+        entity.SetSelected(false);
+
+        if (lastClickedEntity == entity)
+            lastClickedEntity = null;
+
+        RefreshCommandIndicators();
+        NotifySelectionChanged();
     }
 
     void ToggleSelectEntity(SelectableEntity entity)
@@ -586,7 +611,9 @@ public class UnitSelectionManager : MonoBehaviour
 
     public void NotifyEntityRemoved(SelectableEntity entity)
     {
-        selectedEntities.Remove(entity);
+        // 파괴 도중(OnDisable)에 UI를 바로 고치지 않고 다음 Update에서 한 번에 알린다.
+        if (selectedEntities.Remove(entity))
+            removedNotifyPending = true;
 
         if (lastClickedEntity == entity)
             lastClickedEntity = null;

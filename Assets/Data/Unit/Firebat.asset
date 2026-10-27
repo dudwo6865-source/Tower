@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Firebat
   m_EditorClassIdentifier: 
   unitPrefab: {fileID: 1258975795556199837, guid: 2b64b01cf04562548b27a73f1eb5b47b, type: 3}
-  displayName: Firebat
+  displayName: "\uD654\uC5FC\uBC29\uC0AC\uBCD1"
   icon: {fileID: 0}
   description: 
   initialSpawnDelay: 2
@@ -23,5 +23,5 @@ MonoBehaviour:
   requiredBuildings:
   - buildingData: {fileID: 11400000, guid: d1682e307c4b5cd49b9d5e57a2b8c705, type: 2}
     entityTypeId: 
-    scope: 0
+    scope: 1
   requiredUpgrades: []

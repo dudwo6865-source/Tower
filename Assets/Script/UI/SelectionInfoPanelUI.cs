@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 public partial class SelectionInfoPanelUI : MonoBehaviour
@@ -105,6 +106,12 @@ public partial class SelectionInfoPanelUI : MonoBehaviour
     [Label("최대 초상화 칸 수")]
     [Tooltip("스크롤 뷰를 연결하지 않았을 때 표시할 최대 칸 수입니다. 0 이하이거나 스크롤 뷰를 연결하면 제한 없이 표시합니다.")]
     public int maxPortraitCells = 0;
+    [Label("초상화 선택 해제 키")]
+    [Tooltip("이 키를 누른 채 초상화를 클릭하면 그 대상만 선택에서 뺍니다. 그냥 클릭하면 그 대상만 선택해 단일 정보창을 띄웁니다.")]
+    public KeyCode portraitDeselectKey = KeyCode.LeftShift;
+    [Label("보조 선택 해제 키")]
+    [Tooltip("선택 해제 키와 같은 역할을 하는 두 번째 키입니다. None이면 쓰지 않습니다.")]
+    public KeyCode portraitDeselectAltKey = KeyCode.RightShift;
 
     [Label("초상화 그리드 디버그 로그")]
     [Tooltip("켜면 다중 선택 초상화 그리드 생성 과정을 Console에 출력합니다.")]
@@ -224,6 +231,10 @@ public partial class SelectionInfoPanelUI : MonoBehaviour
         if (multiSelectionActive)
         {
             RefreshPortraitCellHealth();
+
+            if (debugPortraitGrid && Input.GetMouseButtonUp(0))
+                LogPortraitClickBlocker();
+
             return;
         }
 
@@ -443,6 +454,7 @@ public partial class SelectionInfoPanelUI : MonoBehaviour
 
         SelectionPortraitCell cell =
             Instantiate(portraitCellPrefab, portraitGridParent);
+        cell.OnClicked += HandlePortraitCellClicked;
 
         if (debugPortraitGrid)
             Debug.Log(
@@ -456,6 +468,66 @@ public partial class SelectionInfoPanelUI : MonoBehaviour
 
         return cell;
     }
+
+    // 초상화 클릭: 그 대상만 선택(단일 정보창), 해제 키를 누른 채면 그 대상만 선택에서 뺀다.
+    void HandlePortraitCellClicked(SelectionPortraitCell cell)
+    {
+        if (selectionManager == null || cell == null || cell.Entity == null)
+            return;
+
+        bool deselect = IsKeyHeld(portraitDeselectKey) || IsKeyHeld(portraitDeselectAltKey);
+        SelectableEntity entity = cell.Entity;
+
+        if (deselect)
+            selectionManager.Deselect(entity);
+        else
+            // 다중 선택에 이미 들어 있던 대상이므로 단일 클릭용 '선택 타입 필터'는 적용하지 않는다.
+            selectionManager.SelectOnly(new[] { entity }, ignoreTypeFilter: true);
+
+        if (debugPortraitGrid)
+        {
+            IReadOnlyList<SelectableEntity> selected = selectionManager.GetSelectedEntities();
+            Debug.Log(
+                $"[SelectionInfoPanel] 초상화 클릭: {entity.name}({entity.entityType}), " +
+                $"{(deselect ? "선택 해제" : "단독 선택")} → 선택 수={selected.Count}, " +
+                $"패널 표시={(panelRoot != null && panelRoot.activeInHierarchy)}",
+                entity);
+        }
+    }
+
+    // 디버그: 다중 선택 중 왼쪽 클릭을 뗐을 때 그 위치에서 클릭을 받는 UI를 위에서부터 출력한다.
+    // 초상화가 클릭되지 않으면 맨 위에 다른 패널이 덮고 있는지 여기서 확인한다.
+    void LogPortraitClickBlocker()
+    {
+        if (EventSystem.current == null)
+            return;
+
+        PointerEventData pointer = new PointerEventData(EventSystem.current) { position = Input.mousePosition };
+        List<RaycastResult> results = new List<RaycastResult>();
+        EventSystem.current.RaycastAll(pointer, results);
+
+        System.Text.StringBuilder log = new System.Text.StringBuilder("[SelectionInfoPanel] 클릭 위치 UI(위에서부터): ");
+
+        for (int i = 0; i < results.Count && i < 5; i++)
+            log.Append(i == 0 ? "" : " > ").Append(GetHierarchyPath(results[i].gameObject.transform));
+
+        if (results.Count == 0)
+            log.Append("없음");
+
+        Debug.Log(log.ToString(), this);
+    }
+
+    static string GetHierarchyPath(Transform target)
+    {
+        string path = target.name;
+
+        for (Transform parent = target.parent; parent != null; parent = parent.parent)
+            path = parent.name + "/" + path;
+
+        return path;
+    }
+
+    static bool IsKeyHeld(KeyCode key) => key != KeyCode.None && Input.GetKey(key);
 
     void RefreshPortraitCellHealth()
     {

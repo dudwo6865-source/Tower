@@ -67,7 +67,7 @@ public class BuildingRequirement
 
     [Label("찾는 범위")]
     [Tooltip("맵 전체: 맵 어딘가에 조건 건물이 있으면 충족합니다.\n생산 건물 자신: 이 레시피를 생산하는 건물 자체가 조건 건물(또는 그 상위 단계)이어야 충족합니다. 예) 배럭 3 조건이면 배럭 3에서만 생산하고, 다른 배럭 1은 배럭 3이 있어도 생산하지 못합니다.")]
-    public BuildingRequirementScope scope = BuildingRequirementScope.Anywhere;
+    public BuildingRequirementScope scope = BuildingRequirementScope.ProducerOnly;
 
     public IBuildablePlacementData Data => buildingData as IBuildablePlacementData;
 

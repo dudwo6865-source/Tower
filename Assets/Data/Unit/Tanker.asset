@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Tanker
   m_EditorClassIdentifier: 
   unitPrefab: {fileID: 1258975795556199837, guid: c2fddf23236f0764fb173a36ec78a7b8, type: 3}
-  displayName: Tanker
-  icon: {fileID: 0}
+  displayName: "\uBC29\uD328\uBCD1"
+  icon: {fileID: 21300000, guid: 3f01920e9eedc6c49b685eddd3601801, type: 3}
   description: 
   initialSpawnDelay: 2
   spawnInterval: 15
@@ -23,5 +23,5 @@ MonoBehaviour:
   requiredBuildings:
   - buildingData: {fileID: 11400000, guid: c5c037cb4eef3684c884576ea014f258, type: 2}
     entityTypeId: 
-    scope: 0
+    scope: 1
   requiredUpgrades: []

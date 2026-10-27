@@ -120,6 +120,15 @@ public class UISoundManager : MonoBehaviour
     [Range(0f, 1f)]
     public float commandCancelVolume = 1f;
 
+    [Header("팝업")]
+    [Label("팝업 열림음")]
+    [Tooltip("결과 창·유물 선택 창 같은 팝업 창이 열릴 때 재생합니다(PopupOpenAnimation이 붙은 창). 버튼 클릭음과 겹쳐도 겹침 방지에 막히지 않습니다. 비워두면 소리를 내지 않습니다.")]
+    public AudioClip popupOpenClip;
+
+    [Label("팝업 열림 볼륨")]
+    [Range(0f, 1f)]
+    public float popupOpenVolume = 1f;
+
     AudioSource source;
     float lastPlayTime = float.NegativeInfinity;
 
@@ -374,6 +383,17 @@ public class UISoundManager : MonoBehaviour
         manager.PlayInternal(manager.commandCancelClip, manager.commandCancelVolume);
     }
 
+    // ───────── 팝업 ─────────
+
+    /// <summary>팝업 창이 열릴 때 호출합니다. 창별 소리를 넘기면 기본 팝업 열림음 대신 씁니다.</summary>
+    public static void PlayPopupOpen(AudioClip overrideClip = null, float volumeScale = 1f)
+    {
+        UISoundManager manager = EnsureInstance();
+        AudioClip clip = overrideClip != null ? overrideClip : manager.popupOpenClip;
+        // 버튼을 눌러 팝업이 열리면 클릭음 바로 뒤에 나므로 겹침 방지를 건너뛴다.
+        manager.PlayInternal(clip, manager.popupOpenVolume * volumeScale, ignoreOverlapBlock: true);
+    }
+
     AudioClip GetConfirmClip(UICommandSound kind)
     {
         switch (kind)
@@ -389,7 +409,7 @@ public class UISoundManager : MonoBehaviour
 
     // ───────── 재생 ─────────
 
-    void PlayInternal(AudioClip clip, float volume)
+    void PlayInternal(AudioClip clip, float volume, bool ignoreOverlapBlock = false)
     {
         if (clip == null || source == null)
             return;
@@ -402,7 +422,7 @@ public class UISoundManager : MonoBehaviour
         // 결과 창 등 일시정지(timeScale 0) 중에도 동작하도록 unscaledTime을 쓴다.
         float now = Time.unscaledTime;
 
-        if (now - lastPlayTime < overlapBlockSeconds)
+        if (!ignoreOverlapBlock && now - lastPlayTime < overlapBlockSeconds)
             return;
 
         lastPlayTime = now;

@@ -14,11 +14,8 @@ public class ResultScoreUI : MonoBehaviour
     [Label("게이지 채움 이미지")]
     public Image fillImage;
     [Label("별 이미지 목록")]
-    [Tooltip("1성, 2성, 3성 순서입니다. 비어 있으면 자동 생성합니다.")]
+    [Tooltip("하이라키에 배치한 1성, 2성, 3성 획득 별 이미지를 순서대로 연결합니다. 스프라이트·위치·크기는 배치한 그대로 씁니다.")]
     public Image[] starImages = new Image[3];
-    [Label("별 스프라이트")]
-    [Tooltip("비워두면 오각별 모양을 생성합니다.")]
-    public Sprite starSprite;
     [Label("기준 점수 텍스트 목록")]
     public TextMeshProUGUI[] thresholdTexts = new TextMeshProUGUI[3];
 
@@ -33,8 +30,9 @@ public class ResultScoreUI : MonoBehaviour
     public float scoreFontSize = 18f;
     [Label("기준점 글자 크기"), Min(1)]
     public float thresholdFontSize = 10f;
-    [Label("별 크기"), Min(1)]
-    public float starSize = 18f;
+    [Label("별에 단계별 색 입히기")]
+    [Tooltip("켜면 획득한 별 이미지 색을 1성 동색·2성 은색·3성 금색으로 바꿉니다. 끄면 이미지에 설정한 색을 그대로 씁니다.")]
+    public bool tintStarsByTier;
 
     [Header("단계별 색")]
     [Label("미달 게이지 색")]
@@ -47,8 +45,6 @@ public class ResultScoreUI : MonoBehaviour
     public Color threeStarColor = new Color(1f, 0.8f, 0.23f);
     [Label("게이지 배경색")]
     public Color trackColor = new Color(0.07f, 0.1f, 0.15f, 0.9f);
-    [Label("미획득 별 색")]
-    public Color emptyStarColor = new Color(0.2f, 0.25f, 0.3f);
 
     StageClearRewards rules;
     double total;
@@ -59,7 +55,6 @@ public class ResultScoreUI : MonoBehaviour
     TMP_Text optionalStarsText;
     readonly float[] revealedAt = new float[3];
     readonly Vector3[] restScales = new Vector3[3];
-    Sprite generatedStar;
 
     public void Show(double score, StageClearRewards settings, bool victory, TMP_FontAsset font, TMP_Text starsText)
     {
@@ -99,7 +94,6 @@ public class ResultScoreUI : MonoBehaviour
         if (rules != null && elapsed < Mathf.Max(0, animationDuration) + Mathf.Max(0, starPopDuration)) running = true;
     }
     void OnDisable() { running = false; }
-    void OnDestroy() { if (generatedStar != null) Destroy(generatedStar); }
 
     double Threshold(int index) => index == 0 ? rules.OneStarScore : index == 1 ? rules.TwoStarScore : rules.TargetScore;
     Color TierColor(int stars) => stars >= 3 ? threeStarColor : stars == 2 ? twoStarColor : stars == 1 ? oneStarColor : zeroStarColor;
@@ -115,7 +109,7 @@ public class ResultScoreUI : MonoBehaviour
             if (starImages.Length <= i || starImages[i] == null) continue;
             if (stars > i && shownStars <= i) revealedAt[i] = elapsed;
             starImages[i].enabled = stars > i;
-            starImages[i].color = TierColor(i + 1);
+            if (tintStarsByTier) starImages[i].color = TierColor(i + 1);
             float t = starPopDuration <= 0 ? 1 : Mathf.Clamp01((elapsed - revealedAt[i]) / starPopDuration);
             starImages[i].rectTransform.localScale = restScales[i] * Mathf.Lerp(starPopScale, 1, t);
         }
@@ -165,23 +159,13 @@ public class ResultScoreUI : MonoBehaviour
         }
         if (starImages == null || starImages.Length < 3) System.Array.Resize(ref starImages, 3);
         if (thresholdTexts == null || thresholdTexts.Length < 3) System.Array.Resize(ref thresholdTexts, 3);
-        Sprite sprite = starSprite != null ? starSprite : GetGeneratedStar();
+        // 별은 하이라키에 배치한 이미지만 쓰고 코드로 만들지 않는다.
+        if (System.Array.IndexOf(starImages, null) >= 0)
+            Debug.LogWarning("ResultScoreUI: 별 이미지 목록에 비어 있는 칸이 있습니다. 하이라키의 별 이미지를 연결하세요.", this);
         for (int i = 0; i < 3; i++)
         {
             float fraction = i == 0 ? 0.5f : i == 1 ? 0.75f : 1f;
             float x = 0.04f + 0.92f * fraction;
-            if (starImages[i] == null)
-            {
-                var ghost = MakeImage($"{i + 1}성 자리", new Vector2(x, 0.57f), new Vector2(x, 0.57f), emptyStarColor);
-                ghost.rectTransform.sizeDelta = Vector2.one * starSize;
-                ghost.sprite = sprite;
-                ghost.useSpriteMesh = true;
-                var star = MakeImage($"{i + 1}성 획득", new Vector2(x, 0.57f), new Vector2(x, 0.57f), TierColor(i + 1));
-                star.rectTransform.sizeDelta = Vector2.one * starSize;
-                starImages[i] = star;
-            }
-            starImages[i].sprite = sprite;
-            starImages[i].useSpriteMesh = true;
             if (thresholdTexts[i] == null)
             {
                 thresholdTexts[i] = MakeText($"{i + 1}성 기준", new Vector2(x, 0.1f), new Vector2(x, 0.1f), thresholdFontSize, font);
@@ -223,25 +207,5 @@ public class ResultScoreUI : MonoBehaviour
         text.alignment = TextAlignmentOptions.Center;
         text.raycastTarget = false;
         return text;
-    }
-
-    Sprite GetGeneratedStar()
-    {
-        if (generatedStar != null) return generatedStar;
-        generatedStar = Sprite.Create(Texture2D.whiteTexture, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f), 1);
-        generatedStar.name = "결과 오각별";
-        var vertices = new Vector2[11];
-        var triangles = new ushort[30];
-        for (int i = 0; i < 10; i++)
-        {
-            float angle = (90 - i * 36) * Mathf.Deg2Rad;
-            float radius = i % 2 == 0 ? 0.5f : 0.22f;
-            vertices[i + 1] = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius;
-            triangles[i * 3] = 0;
-            triangles[i * 3 + 1] = (ushort)(i + 1);
-            triangles[i * 3 + 2] = (ushort)((i + 1) % 10 + 1);
-        }
-        generatedStar.OverrideGeometry(vertices, triangles);
-        return generatedStar;
     }
 }

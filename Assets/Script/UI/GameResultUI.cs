@@ -214,7 +214,10 @@ public class GameResultUI : MonoBehaviour
         ApplyCreditReward(victory);
 
         if (panelRoot != null)
+        {
+            PopupOpenAnimation.Ensure(panelRoot);
             panelRoot.SetActive(true);
+        }
         if (!hasShownResult && scoreUI != null && resultManager != null)
             scoreUI.Show(resultManager.ClearScore, resultManager.ScoreRules, victory,
                 titleText != null ? titleText.font : null, starsText);
