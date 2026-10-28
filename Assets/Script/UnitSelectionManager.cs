@@ -44,6 +44,15 @@ public class UnitSelectionManager : MonoBehaviour
     [Tooltip("켜면 적(다른 오너) 유닛·건물도 단일 클릭으로 선택해 정보를 볼 수 있습니다. 드래그 박스·다중 선택에는 포함되지 않습니다.")]
     public bool allowEnemySingleSelect = true;
 
+    [Header("부대 지정")]
+    [Label("부대 단축키 사용")]
+    [Tooltip("Shift+숫자(0~9)로 현재 아군 선택을 저장하고 숫자로 불러옵니다. 다시 저장하면 덮어쓰며 빈 선택을 저장하면 해당 부대를 비웁니다.")]
+    public bool enableControlGroups = true;
+
+    // 숫자는 키보드 윗줄과 숫자 패드를 함께 지원한다.
+    private const int ControlGroupCount = 10;
+    private readonly List<SelectableEntity>[] controlGroups = new List<SelectableEntity>[ControlGroupCount];
+
     private readonly List<SelectableEntity> selectedEntities =
         new List<SelectableEntity>();
 
@@ -103,11 +112,17 @@ public class UnitSelectionManager : MonoBehaviour
         if (selectionCamera == null)
             selectionCamera = Camera.main;
 
+        if (IsTextInputFocused())
+            return;
+
         if (Input.GetKeyDown(KeyCode.Space))
             FocusOnSelection();
 
         if (TowerPlacementController.Instance != null &&
             TowerPlacementController.Instance.IsPlacing)
+            return;
+
+        if (!isDragging && HandleControlGroupInput())
             return;
 
         if (selectAllUnitsKey != KeyCode.None && Input.GetKeyDown(selectAllUnitsKey) && !isDragging)
@@ -134,6 +149,58 @@ public class UnitSelectionManager : MonoBehaviour
         }
 
         HandleCommandInput();
+    }
+
+    bool HandleControlGroupInput()
+    {
+        if (!enableControlGroups || Input.GetKey(KeyCode.LeftControl) ||
+            Input.GetKey(KeyCode.RightControl) || Input.GetKey(KeyCode.LeftAlt) ||
+            Input.GetKey(KeyCode.RightAlt))
+            return false;
+
+        for (int i = 0; i < ControlGroupCount; i++)
+        {
+            if (!Input.GetKeyDown((KeyCode)((int)KeyCode.Alpha0 + i)) &&
+                !Input.GetKeyDown((KeyCode)((int)KeyCode.Keypad0 + i)))
+                continue;
+
+            bool save = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+            List<SelectableEntity> group = controlGroups[i];
+            if (save)
+            {
+                if (group == null)
+                    controlGroups[i] = group = new List<SelectableEntity>();
+                group.Clear();
+                foreach (SelectableEntity entity in selectedEntities)
+                    if (CanUseControlGroupEntity(entity))
+                        group.Add(entity);
+            }
+            else if (group != null)
+            {
+                group.RemoveAll(entity => !CanUseControlGroupEntity(entity));
+                // 비어 있는 부대를 눌러도 기존 선택은 유지한다.
+                if (group.Count > 0)
+                {
+                    SelectOnly(group, ignoreTypeFilter: true);
+                    PlaySelectSound(group, null);
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+
+    bool CanUseControlGroupEntity(SelectableEntity entity)
+    {
+        return entity != null && entity.isActiveAndEnabled && CanSelectEntityByOwner(entity) &&
+            (entity.CachedHealth == null || entity.CachedHealth.IsAlive);
+    }
+
+    static bool IsTextInputFocused()
+    {
+        GameObject current = EventSystem.current?.currentSelectedGameObject;
+        return current != null && (current.GetComponent<TMPro.TMP_InputField>() != null ||
+            current.GetComponent<UnityEngine.UI.InputField>() != null);
     }
 
     void HandleCommandInput()
@@ -611,6 +678,9 @@ public class UnitSelectionManager : MonoBehaviour
 
     public void NotifyEntityRemoved(SelectableEntity entity)
     {
+        foreach (List<SelectableEntity> group in controlGroups)
+            group?.Remove(entity);
+
         // 파괴 도중(OnDisable)에 UI를 바로 고치지 않고 다음 Update에서 한 번에 알린다.
         if (selectedEntities.Remove(entity))
             removedNotifyPending = true;

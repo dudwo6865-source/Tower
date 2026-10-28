@@ -67,12 +67,16 @@ public class BuildShopUI : MonoBehaviour
 
     [Header("단축키")]
     [Label("단축키 사용")]
-    [Tooltip("등록 순서대로 1~9 키로 구매·배치를 시작합니다.")]
+    [Tooltip("등록 순서대로 Q/W/E/R/T 키로 구매·배치를 시작합니다.")]
     public bool enableHotkeys = true;
 
     [Label("최대 단축키 슬롯 수")]
     [Tooltip("단축키로 사용할 최대 슬롯 수입니다.")]
-    public int maxHotkeySlots = 9;
+    public int maxHotkeySlots = 5;
+
+    [Label("건물 설치 단축키")]
+    [Tooltip("상점 항목 순서대로 사용할 키입니다. None이면 해당 항목의 단축키를 끕니다.")]
+    public KeyCode[] buildHotkeys = { KeyCode.Q, KeyCode.W, KeyCode.E, KeyCode.R, KeyCode.T };
 
     void Start()
     {
@@ -101,18 +105,17 @@ public class BuildShopUI : MonoBehaviour
     {
         RefreshSelectionStates();
 
-        if (!enableHotkeys || entries == null || entries.Length == 0)
+        if (!enableHotkeys || entries == null || entries.Length == 0 || buildHotkeys == null)
             return;
 
         if (IsTextInputFocused())
             return;
 
-        int hotkeyCount = Mathf.Min(maxHotkeySlots, entries.Length, 9);
+        int hotkeyCount = Mathf.Min(maxHotkeySlots, entries.Length, buildHotkeys.Length);
 
         for (int i = 0; i < hotkeyCount; i++)
         {
-            if (!Input.GetKeyDown(KeyCode.Alpha1 + i) &&
-                !Input.GetKeyDown(KeyCode.Keypad1 + i))
+            if (buildHotkeys[i] == KeyCode.None || !Input.GetKeyDown(buildHotkeys[i]))
                 continue;
 
             TryBeginPlacementByIndex(i);
@@ -215,13 +218,14 @@ public class BuildShopUI : MonoBehaviour
 
         if (entry.label != null)
         {
-            if (index < maxHotkeySlots)
+            if (enableHotkeys && buildHotkeys != null && index < maxHotkeySlots &&
+                index < buildHotkeys.Length && buildHotkeys[index] != KeyCode.None)
             {
                 entry.label.text = string.Format(
                     canAfford ? affordableFormat : unaffordableFormat,
                     buildData.DisplayName,
                     buildData.WattCost,
-                    index + 1);
+                    buildHotkeys[index].ToString());
             }
             else
             {

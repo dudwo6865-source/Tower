@@ -7277,7 +7277,7 @@ MonoBehaviour:
   iconAffordableTint: {r: 1, g: 1, b: 1, a: 1}
   iconUnaffordableTint: {r: 1, g: 1, b: 1, a: 0.4}
   enableHotkeys: 1
-  maxHotkeySlots: 9
+  maxHotkeySlots: 5
 --- !u!114 &425097005
 MonoBehaviour:
   m_ObjectHideFlags: 0

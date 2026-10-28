@@ -51779,8 +51779,8 @@ MonoBehaviour:
   pausedMark: {fileID: 0}
   enableHotkeys: 1
   hotkeys: 75000000690000006f000000
-  recipeHotkeys: 7100000077000000650000007a0000007800000063000000
-  pauseHotkey: 116
+  recipeHotkeys: 7a000000780000006300000076000000620000006e000000
+  pauseHotkey: 106
 --- !u!114 &1685719554
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -60532,7 +60532,7 @@ MonoBehaviour:
   iconUnaffordableTint: {r: 1, g: 1, b: 1, a: 1}
   selectedBoolParameter: IsSelected
   enableHotkeys: 1
-  maxHotkeySlots: 9
+  maxHotkeySlots: 5
 --- !u!4 &1906793090 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4679228017101274330, guid: c06a5b0af34ff544c9e792a4d33057c2, type: 3}

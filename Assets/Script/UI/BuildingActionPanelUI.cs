@@ -150,11 +150,11 @@ public class BuildingActionPanelUI : MonoBehaviour
 
     [Label("레시피 단축키")]
     [Tooltip("레시피 슬롯 순서대로 대응하는 단축키입니다.")]
-    public KeyCode[] recipeHotkeys = { KeyCode.Q, KeyCode.W, KeyCode.E, KeyCode.Z, KeyCode.X, KeyCode.C };
+    public KeyCode[] recipeHotkeys = { KeyCode.Z, KeyCode.X, KeyCode.C, KeyCode.V, KeyCode.B, KeyCode.N };
 
     [Label("일시정지 단축키")]
     [Tooltip("일시정지 버튼에 대응하는 단축키입니다. None이면 쓰지 않습니다.")]
-    public KeyCode pauseHotkey = KeyCode.T;
+    public KeyCode pauseHotkey = KeyCode.J;
 
     readonly List<BuildingUpgradeOption> upgradeOptions = new List<BuildingUpgradeOption>();
     readonly List<ProductionRecipe> recipeOptions = new List<ProductionRecipe>();

@@ -23,6 +23,10 @@ public class BuildingCommandPanelUI : MonoBehaviour
     [Label("단축키 사용")]
     public bool enableHotkeys = true;
 
+    [Label("집결지 단축키")]
+    [Tooltip("생산 건물의 집결지를 지정할 키입니다.")]
+    public KeyCode rallyPointHotkey = KeyCode.G;
+
     UnitCommandController commandController;
     UnitSelectionManager selectionManager;
 
@@ -75,7 +79,7 @@ public class BuildingCommandPanelUI : MonoBehaviour
             commandController?.BeginAttackMode();
         else if (Input.GetKeyDown(KeyCode.S) && IsButtonActive(stopButton))
             commandController?.IssueBuildingStop();
-        else if (Input.GetKeyDown(KeyCode.R) && IsButtonActive(rallyPointButton))
+        else if (Input.GetKeyDown(rallyPointHotkey) && IsButtonActive(rallyPointButton))
             commandController?.BeginRallyPointMode();
     }
 
