@@ -23,6 +23,10 @@ public class BuildingActionPanelUI : MonoBehaviour
         [Tooltip("분기 이름과 비용을 표시할 텍스트입니다. 비워두면 건너뜁니다.")]
         public TextMeshProUGUI label;
 
+        [Label("단축키 텍스트")]
+        [Tooltip("업그레이드 슬롯에 대응하는 단축키를 표시할 텍스트입니다. 단축키를 사용하지 않으면 비웁니다. 위치와 외형은 에디터에서 설정합니다.")]
+        public TextMeshProUGUI hotkeyLabel;
+
         [Label("아이콘")]
         [Tooltip("상위 건물 썸네일을 표시할 Image입니다. 비워두면 건너뜁니다.")]
         public Image icon;
@@ -178,7 +182,6 @@ public class BuildingActionPanelUI : MonoBehaviour
             selectionManager.OnSelectionChanged += HandleSelectionChanged;
 
         BindSlots();
-        RefreshHotkeyLabels();
         RefreshVisibility();
     }
 
@@ -205,6 +208,7 @@ public class BuildingActionPanelUI : MonoBehaviour
 
     public void RefreshVisibility()
     {
+        RefreshHotkeyLabels();
         upgradeVisible = BuildingCommandHandler.ShouldShowUpgradePanel(upgradeOptions, out upgradeReady);
         productionVisible = BuildingCommandHandler.ShouldShowProductionPanel(recipeOptions, out primaryBuilding);
 
@@ -287,6 +291,21 @@ public class BuildingActionPanelUI : MonoBehaviour
 
     void RefreshHotkeyLabels()
     {
+        if (slots != null)
+        {
+            for (int i = 0; i < slots.Length; i++)
+            {
+                TextMeshProUGUI hotkeyLabel = slots[i]?.hotkeyLabel;
+
+                if (hotkeyLabel == null)
+                    continue;
+
+                bool hasHotkey = enableHotkeys && hotkeys != null && i < hotkeys.Length &&
+                    hotkeys[i] != KeyCode.None;
+                hotkeyLabel.text = hasHotkey ? hotkeys[i].ToString() : string.Empty;
+            }
+        }
+
         if (recipeSlots == null)
             return;
 
