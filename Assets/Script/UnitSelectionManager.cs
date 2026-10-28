@@ -46,7 +46,7 @@ public class UnitSelectionManager : MonoBehaviour
 
     [Header("부대 지정")]
     [Label("부대 단축키 사용")]
-    [Tooltip("Shift+숫자(0~9)로 현재 아군 선택을 저장하고 숫자로 불러옵니다. 다시 저장하면 덮어쓰며 빈 선택을 저장하면 해당 부대를 비웁니다.")]
+    [Tooltip("Ctrl+숫자(0~9)로 현재 아군 선택을 저장하고 숫자로 불러옵니다. 다시 저장하면 덮어쓰며 빈 선택을 저장하면 해당 부대를 비웁니다.")]
     public bool enableControlGroups = true;
 
     // 숫자는 키보드 윗줄과 숫자 패드를 함께 지원한다.
@@ -153,8 +153,8 @@ public class UnitSelectionManager : MonoBehaviour
 
     bool HandleControlGroupInput()
     {
-        if (!enableControlGroups || Input.GetKey(KeyCode.LeftControl) ||
-            Input.GetKey(KeyCode.RightControl) || Input.GetKey(KeyCode.LeftAlt) ||
+        if (!enableControlGroups || Input.GetKey(KeyCode.LeftShift) ||
+            Input.GetKey(KeyCode.RightShift) || Input.GetKey(KeyCode.LeftAlt) ||
             Input.GetKey(KeyCode.RightAlt))
             return false;
 
@@ -164,7 +164,7 @@ public class UnitSelectionManager : MonoBehaviour
                 !Input.GetKeyDown((KeyCode)((int)KeyCode.Keypad0 + i)))
                 continue;
 
-            bool save = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+            bool save = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
             List<SelectableEntity> group = controlGroups[i];
             if (save)
             {
