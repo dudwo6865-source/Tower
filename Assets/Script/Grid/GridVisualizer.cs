@@ -25,7 +25,7 @@ public class GridVisualizer : MonoBehaviour
 
     [Header("건설 가능 구역")]
     [Label("전체 빌드존 표시")]
-    [Tooltip("건물 크기나 설치 가능한 지형 조건으로 줄이지 않고 내 빌드존 전체를 표시합니다. 실제 설치 가능 여부는 배치 미리보기 색상으로 확인합니다.")]
+    [Tooltip("건물 크기나 설치 가능한 지형 조건으로 줄이지 않고 내 빌드존 전체를 표시합니다. 이미 건물이 점유한 칸은 제외합니다. 실제 설치 가능 여부는 배치 미리보기 색상으로 확인합니다.")]
     public bool showFullBuildZones = true;
 
     [Label("구역 색")]
@@ -98,6 +98,8 @@ public class GridVisualizer : MonoBehaviour
 
     private int lastProviderSignature;
     private int lastPreviewSignature;
+    private int lastOccupancyInstanceId;
+    private int lastOccupancyRevision;
 
     private bool previewZoneActive;
     private Vector2Int previewZoneCenter;
@@ -372,7 +374,13 @@ public class GridVisualizer : MonoBehaviour
         MapGrid grid = MapGrid.Instance;
         int providerSignature = ComputeProviderSignature();
         int previewSignature = ComputeZonePreviewSignature();
-        bool dirty = false;
+        GridOccupancy occupancy = GridOccupancy.Instance;
+        int occupancyInstanceId = occupancy != null ? occupancy.GetInstanceID() : 0;
+        int occupancyRevision = occupancy != null ? occupancy.Revision : 0;
+        bool dirty = occupancyInstanceId != lastOccupancyInstanceId ||
+                     occupancyRevision != lastOccupancyRevision;
+        lastOccupancyInstanceId = occupancyInstanceId;
+        lastOccupancyRevision = occupancyRevision;
 
         if (providerSignature != lastProviderSignature)
         {
@@ -588,6 +596,10 @@ public class GridVisualizer : MonoBehaviour
 
         foreach (Vector2Int cell in zoneCells)
         {
+            // 실제 점유 모양만 가린다. 건설·철거 시 지형 캐시를 다시 만들 필요는 없다.
+            if (GridOccupancy.Instance != null && GridOccupancy.Instance.IsOccupied(cell))
+                continue;
+
             if (!TryGetCachedZoneSurfaceHeight(cell, out float surfaceY))
                 continue;
 

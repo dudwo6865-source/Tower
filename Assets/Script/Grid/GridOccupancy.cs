@@ -8,6 +8,9 @@ public class GridOccupancy : MonoBehaviour
 {
     public static GridOccupancy Instance { get; private set; }
 
+    // 점유가 바뀔 때만 빌드존 표시를 갱신하기 위한 변경 번호다.
+    public int Revision { get; private set; }
+
     [Header("씬 설정")]
     [Label("기본 건물 칸 수")]
     [Tooltip("씬에 미리 배치된 건물 중 GridFootprint가 없으면 이 크기로 자동 등록합니다.")]
@@ -152,6 +155,8 @@ public class GridOccupancy : MonoBehaviour
         foreach (Vector2Int cell in FootprintShape.IterateCells(originCell, footprintCells, cellMask))
             occupiedCells[cell] = owner;
 
+        unchecked { Revision++; }
+
         return true;
     }
 
@@ -170,6 +175,11 @@ public class GridOccupancy : MonoBehaviour
 
         foreach (Vector2Int cell in cellsToRemove)
             occupiedCells.Remove(cell);
+
+        if (cellsToRemove.Count > 0)
+        {
+            unchecked { Revision++; }
+        }
     }
 
     public bool IsOccupied(Vector2Int cell)
