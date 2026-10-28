@@ -24,6 +24,10 @@ public class GridVisualizer : MonoBehaviour
     public float heightOffset = 0.12f;
 
     [Header("건설 가능 구역")]
+    [Label("전체 빌드존 표시")]
+    [Tooltip("건물 크기나 설치 가능한 지형 조건으로 줄이지 않고 내 빌드존 전체를 표시합니다. 실제 설치 가능 여부는 배치 미리보기 색상으로 확인합니다.")]
+    public bool showFullBuildZones = true;
+
     [Label("구역 색")]
     [Tooltip("건설 가능 구역의 칸 색상입니다.")]
     public Color zoneFillColor = new Color(0.12f, 0.55f, 1f, 0.3f);
@@ -486,12 +490,15 @@ public class GridVisualizer : MonoBehaviour
     }
 
     /// <summary>
-    /// 배치 중인 건물의 발자국입니다. 건설 판정(CanBuildFootprint)은 발자국 전체가
-    /// 한 구역 안에 들어와야 통과하므로, 표시도 이 크기만큼 좁혀야 실제와 맞습니다.
+    /// 전체 표시에서는 한 칸 기준으로 구역을 그립니다. 전체 표시를 끄면 배치 중인
+    /// 건물의 발자국 전체가 구역 안에 들어가는 위치만 표시합니다.
     /// </summary>
     void ResolvePlacementFootprint()
     {
         placementFootprint = Vector2Int.one;
+
+        if (showFullBuildZones)
+            return;
 
         if (placementController == null || !placementController.IsPlacing)
             return;
@@ -525,6 +532,7 @@ public class GridVisualizer : MonoBehaviour
         {
             int hash = 17;
             hash = hash * 31 + displayProviders.Count;
+            hash = hash * 31 + (showFullBuildZones ? 1 : 0);
 
             for (int i = 0; i < displayProviders.Count; i++)
             {
@@ -559,6 +567,7 @@ public class GridVisualizer : MonoBehaviour
         {
             int hash = 17;
             hash = hash * 31 + (previewZoneActive ? 1 : 0);
+            hash = hash * 31 + (showFullBuildZones ? 1 : 0);
             hash = hash * 31 + previewZoneCenter.x;
             hash = hash * 31 + previewZoneCenter.y;
             hash = hash * 31 + previewZoneRadius;
@@ -662,15 +671,14 @@ public class GridVisualizer : MonoBehaviour
             {
                 Vector2Int cell = new Vector2Int(x, z);
 
-                // 맵 격자 밖이거나 NavMesh가 없는 칸은 건설할 수 없으므로
-                // 발자국 검사 전에 빼야 구멍 주변에서도 표시가 맞습니다.
+                // 맵 격자 밖은 표시하지 않는다.
                 if (!grid.IsFootprintInRect(cell, Vector2Int.one))
                     continue;
 
                 if (!BuildZoneProvider.ContainsCell(cell, center, radius))
                     continue;
 
-                if (!TryGetBuildableSurfaceHeight(grid, cell, out float surfaceY))
+                if (!TryGetZoneSurfaceHeight(grid, cell, out float surfaceY))
                     continue;
 
                 radiusCellScratch.Add(cell);
@@ -777,6 +785,23 @@ public class GridVisualizer : MonoBehaviour
             return grid.TryGetBuildableNavMeshHeight(cell, out surfaceY);
 
         Vector3 center = grid.GetCellCenterWorld(cell);
+        surfaceY = grid.SampleGroundHeight(center);
+        return true;
+    }
+
+    bool TryGetZoneSurfaceHeight(MapGrid grid, Vector2Int cell, out float surfaceY)
+    {
+        if (!showFullBuildZones)
+            return TryGetBuildableSurfaceHeight(grid, cell, out surfaceY);
+
+        // 전체 표시에서는 설치 가능 판정 대신 표면 높이만 구한다.
+        Vector3 center = grid.GetCellCenterWorld(cell);
+        if (FogGroundUtility.TrySampleSurfaceHeight(
+                center.x, center.z, FogSurfaceSampleMode.VisualGeometry, out surfaceY))
+            return true;
+        if (grid.UsesNavMesh && grid.TryGetTopmostNavMeshHeight(cell, out surfaceY))
+            return true;
+
         surfaceY = grid.SampleGroundHeight(center);
         return true;
     }
