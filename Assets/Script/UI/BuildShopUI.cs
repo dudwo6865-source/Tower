@@ -17,6 +17,10 @@ public class BuildShopUI : MonoBehaviour
         [Label("라벨 텍스트")]
         public TextMeshProUGUI label;
 
+        [Label("단축키 텍스트")]
+        [Tooltip("해당 상점 항목의 단축키를 표시할 텍스트입니다. 단축키를 사용하지 않는 항목은 빈 문자열로 표시합니다. 위치와 외형은 에디터에서 설정합니다.")]
+        public TextMeshProUGUI hotkeyLabel;
+
         [Label("아이콘")]
         [Tooltip("건물 썸네일을 표시할 Image입니다. 비워두면 아이콘 표시를 건너뜁니다.")]
         public Image icon;
@@ -203,7 +207,17 @@ public class BuildShopUI : MonoBehaviour
     {
         IBuildablePlacementData buildData = entry?.GetBuildData();
 
-        if (entry == null || buildData == null)
+        if (entry == null)
+            return;
+
+        bool hasHotkey = buildData != null && enableHotkeys && buildHotkeys != null &&
+            index < maxHotkeySlots && index < buildHotkeys.Length &&
+            buildHotkeys[index] != KeyCode.None;
+
+        if (entry.hotkeyLabel != null)
+            entry.hotkeyLabel.text = hasHotkey ? buildHotkeys[index].ToString() : string.Empty;
+
+        if (buildData == null)
             return;
 
         bool canAfford = currentWatt >= buildData.WattCost;
@@ -218,8 +232,7 @@ public class BuildShopUI : MonoBehaviour
 
         if (entry.label != null)
         {
-            if (enableHotkeys && buildHotkeys != null && index < maxHotkeySlots &&
-                index < buildHotkeys.Length && buildHotkeys[index] != KeyCode.None)
+            if (hasHotkey)
             {
                 entry.label.text = string.Format(
                     canAfford ? affordableFormat : unaffordableFormat,
