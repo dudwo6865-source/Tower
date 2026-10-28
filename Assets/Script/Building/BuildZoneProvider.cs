@@ -169,7 +169,8 @@ public class BuildZoneProvider : MonoBehaviour
 
     public static bool IsFootprintCurrentlyVisible(
         Vector2Int originCell,
-        Vector2Int footprintCells)
+        Vector2Int footprintCells,
+        bool[] cellMask = null)
     {
         FogOfWarManager fog = FogOfWarManager.Instance;
         MapGrid grid = MapGrid.Instance;
@@ -184,6 +185,9 @@ public class BuildZoneProvider : MonoBehaviour
         {
             for (int z = 0; z < depth; z++)
             {
+                if (!FootprintShape.Contains(cellMask, footprintCells, x, z))
+                    continue;
+
                 Vector2Int cell = new Vector2Int(originCell.x + x, originCell.y + z);
 
                 if (!IsCellCurrentlyVisible(fog, grid, cell))

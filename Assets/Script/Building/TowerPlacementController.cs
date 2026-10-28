@@ -710,13 +710,14 @@ public class TowerPlacementController : MonoBehaviour
             !BuildZoneManager.Instance.CanBuildFootprint(
                 originCell,
                 footprint,
-                ownerId))
+                ownerId,
+                footprintMask))
         {
             return false;
         }
 
         if (BuildZoneProvider.PrefabRequiresVisibleVision(data.Prefab) &&
-            !BuildZoneProvider.IsFootprintCurrentlyVisible(originCell, footprint))
+            !BuildZoneProvider.IsFootprintCurrentlyVisible(originCell, footprint, footprintMask))
         {
             return false;
         }

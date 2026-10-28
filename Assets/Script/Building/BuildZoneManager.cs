@@ -79,7 +79,8 @@ public class BuildZoneManager : MonoBehaviour
     public bool CanBuildFootprint(
         Vector2Int originCell,
         Vector2Int footprintCells,
-        int ownerId)
+        int ownerId,
+        bool[] cellMask = null)
     {
         if (!providersByOwner.TryGetValue(ownerId, out List<BuildZoneProvider> providers) ||
             providers.Count == 0)
@@ -100,6 +101,9 @@ public class BuildZoneManager : MonoBehaviour
         {
             for (int z = 0; z < footprintCells.y; z++)
             {
+                if (!FootprintShape.Contains(cellMask, footprintCells, x, z))
+                    continue;
+
                 Vector2Int cell = originCell + new Vector2Int(x, z);
                 bool covered = false;
 
