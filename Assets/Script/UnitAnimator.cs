@@ -15,7 +15,7 @@ public class UnitAnimator : MonoBehaviour
     public string speedParameter = "Speed";
 
     [Label("공격 트리거")]
-    [Tooltip("공격 1회 재생 트리거입니다.")]
+    [Tooltip("공격 1회 재생 트리거입니다. 애니메이터에 이 이름의 Trigger 파라미터가 없으면 무시합니다.")]
     public string attackTrigger = "Attack";
 
     [Label("공격 중 Bool")]
@@ -28,10 +28,6 @@ public class UnitAnimator : MonoBehaviour
         "연속 공격 사이에 false로 깜빡이면 늘리세요.")]
     [Min(0f)]
     public float attackingHoldTime = 0.2f;
-
-    [Label("사망 트리거")]
-    [Tooltip("사망 상태 전환 트리거입니다.")]
-    public string dieTrigger = "Die";
 
     [Header("이동")]
     [Label("이동 판정 속도")]
@@ -49,7 +45,7 @@ public class UnitAnimator : MonoBehaviour
 
     private int speedHash;
     private int attackHash;
-    private int dieHash;
+    private bool hasAttackTrigger;
     private int attackingHash;
     private bool hasAttackingBool;
     private bool isAttacking;
@@ -71,20 +67,22 @@ public class UnitAnimator : MonoBehaviour
 
         speedHash = Animator.StringToHash(speedParameter);
         attackHash = Animator.StringToHash(attackTrigger);
-        dieHash = Animator.StringToHash(dieTrigger);
         attackingHash = Animator.StringToHash(attackingBool);
-        hasAttackingBool = HasBoolParameter(attackingHash);
+        hasAttackTrigger = HasParameter(attackTrigger, AnimatorControllerParameterType.Trigger);
+        hasAttackingBool = HasParameter(attackingBool, AnimatorControllerParameterType.Bool);
     }
 
-    // 없는 파라미터에 SetBool하면 매번 경고가 찍히므로 미리 확인해 둔다.
-    bool HasBoolParameter(int hash)
+    // 없는 파라미터에 SetTrigger/SetBool하면 매번 경고가 찍히므로 미리 확인해 둔다.
+    // 트리거 방식(1회 재생)과 Bool 방식(계속 공격) 컨트롤러가 섞여 있다.
+    bool HasParameter(string parameterName, AnimatorControllerParameterType type)
     {
-        if (animator == null || string.IsNullOrEmpty(attackingBool))
+        if (animator == null || string.IsNullOrEmpty(parameterName))
             return false;
 
+        int hash = Animator.StringToHash(parameterName);
         foreach (AnimatorControllerParameter parameter in animator.parameters)
         {
-            if (parameter.nameHash == hash && parameter.type == AnimatorControllerParameterType.Bool)
+            if (parameter.nameHash == hash && parameter.type == type)
                 return true;
         }
 
@@ -154,7 +152,8 @@ public class UnitAnimator : MonoBehaviour
         if (isDead || animator == null)
             return;
 
-        animator.SetTrigger(attackHash);
+        if (hasAttackTrigger)
+            animator.SetTrigger(attackHash);
 
         attackingUntil = Time.time + Mathf.Max(0f, attackCooldown) + attackingHoldTime;
         SetAttacking(true);
@@ -164,7 +163,7 @@ public class UnitAnimator : MonoBehaviour
     // 나중에 피해 없는 공격 모션이 한 번 더 재생된다.
     public void ResetAttackTrigger()
     {
-        if (animator != null)
+        if (hasAttackTrigger && animator != null)
             animator.ResetTrigger(attackHash);
     }
 
@@ -182,16 +181,18 @@ public class UnitAnimator : MonoBehaviour
         return agent.hasPath || agent.pathPending;
     }
 
+    // 사망 모션은 쓰지 않는다(사망 연출은 EntityHealth의 사망 이펙트가 맡는다).
+    // 남은 공격·이동 애니메이션 입력만 멈춘다.
     public void PlayDie()
     {
         if (isDead || animator == null)
             return;
 
         isDead = true;
-        animator.ResetTrigger(attackHash);
+        if (hasAttackTrigger)
+            animator.ResetTrigger(attackHash);
         SetAttacking(false);
         animator.SetFloat(speedHash, 0f);
-        animator.SetTrigger(dieHash);
     }
 
     public void OnAttackHit()

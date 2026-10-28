@@ -113,9 +113,9 @@ MonoBehaviour:
   footprintCells: {x: 5, y: 4}
   blockCells: 1
   carveNavMesh: 1
-  snapTransformOnRegister: 0
-  useCustomShape: 0
-  cellMask: 0101010101010101010101010101010101010101
+  snapTransformOnRegister: 1
+  useCustomShape: 1
+  cellMask: 0001010100010101010101010101010001010100
   cellMaskSize: {x: 5, y: 4}
 --- !u!114 &4745142265333560524
 MonoBehaviour:

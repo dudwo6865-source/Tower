@@ -12,6 +12,8 @@ public enum PerfCategory
     EnemyInit,
     TargetSearch,
     PathCalc,
+    FogVision,
+    FogUpload,
     Count
 }
 
@@ -32,6 +34,8 @@ public static class PerfProbe
         "적 초기화",
         "목표 탐색",
         "경로 계산",
+        "안개 시야 계산",
+        "안개 텍스처 갱신",
     };
 
     static readonly ProfilerMarker[] Markers =
@@ -40,6 +44,8 @@ public static class PerfProbe
         new ProfilerMarker("Tank.EnemyInit"),
         new ProfilerMarker("Tank.TargetSearch"),
         new ProfilerMarker("Tank.PathCalc"),
+        new ProfilerMarker("Tank.FogVision"),
+        new ProfilerMarker("Tank.FogUpload"),
     };
 
     static readonly long[] frameTicks = new long[(int)PerfCategory.Count];

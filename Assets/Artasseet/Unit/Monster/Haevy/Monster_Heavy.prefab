@@ -176,6 +176,8 @@ MonoBehaviour:
   projectileSpeed: 25
   firePoint: {fileID: 0}
   pierceHitRadius: 0.6
+  flameAimPitch: 1
+  flameMaxPitchAngle: 45
   beamWidth: 1
   minAttackRange: 0
   arcHeight: 4
@@ -268,11 +270,11 @@ MonoBehaviour:
   debugCommandLog: 0
   dynamicAvoidancePriority: 1
   directMovePriority: 20
-  attackPositionPriority: 35
-  attackMoveApproachPriority: 30
-  chasePriority: 50
-  travelPriority: 65
-  idlePriority: 85
+  attackPositionPriority: 10
+  attackMoveApproachPriority: 10
+  chasePriority: 20
+  travelPriority: 30
+  idlePriority: 30
   priorityChangeDelay: 0.4
   priorityVariation: 3
   spreadAttackPositions: 1

@@ -1,0 +1,2666 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &5202813860890442202
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8293406117045494714}
+  - component: {fileID: 4039090276621353286}
+  m_Layer: 0
+  m_Name: CapturePoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8293406117045494714
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5202813860890442202}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 187, y: -1.2, z: 42.6}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7483302191548903924}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4039090276621353286
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5202813860890442202}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bf2faf934a744cdc99ae49eedf88e049, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  displayName: "\uC804\uCD08 \uC9C0\uC810"
+  radius: 8
+--- !u!1001 &3787335665942047838
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 7483302191548903924}
+    m_Modifications:
+    - target: {fileID: 3722699739490368193, guid: faad356c90c397f4a807f6692e8fbba0, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3722699739490368193, guid: faad356c90c397f4a807f6692e8fbba0, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3722699739490368193, guid: faad356c90c397f4a807f6692e8fbba0, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3722699739490368193, guid: faad356c90c397f4a807f6692e8fbba0, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3722699739490368193, guid: faad356c90c397f4a807f6692e8fbba0, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3722699739490368193, guid: faad356c90c397f4a807f6692e8fbba0, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3722699739490368193, guid: faad356c90c397f4a807f6692e8fbba0, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3722699739490368193, guid: faad356c90c397f4a807f6692e8fbba0, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3722699739490368193, guid: faad356c90c397f4a807f6692e8fbba0, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3722699739490368193, guid: faad356c90c397f4a807f6692e8fbba0, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4051951517520905855, guid: faad356c90c397f4a807f6692e8fbba0, type: 3}
+      propertyPath: m_Name
+      value: 2Stage
+      objectReference: {fileID: 0}
+    m_RemovedComponents:
+    - {fileID: 501011750729471141, guid: faad356c90c397f4a807f6692e8fbba0, type: 3}
+    - {fileID: 4569752423315936264, guid: faad356c90c397f4a807f6692e8fbba0, type: 3}
+    - {fileID: 1907408045619091212, guid: faad356c90c397f4a807f6692e8fbba0, type: 3}
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: faad356c90c397f4a807f6692e8fbba0, type: 3}
+--- !u!4 &515378520586163871 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3722699739490368193, guid: faad356c90c397f4a807f6692e8fbba0, type: 3}
+  m_PrefabInstance: {fileID: 3787335665942047838}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &1517993796363540697 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 2422847438132507783, guid: faad356c90c397f4a807f6692e8fbba0, type: 3}
+  m_PrefabInstance: {fileID: 3787335665942047838}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1001 &5957341922917782198
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 394167452291454699, guid: 3958da6a75ee5ab438ef5e7f69adbe66, type: 3}
+      propertyPath: m_Enabled
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 394167452291454699, guid: 3958da6a75ee5ab438ef5e7f69adbe66, type: 3}
+      propertyPath: m_NavMeshData
+      value: 
+      objectReference: {fileID: 23800000, guid: 4a85ac435bd14994b9ae5768bc6e3fab, type: 2}
+    - target: {fileID: 701471955304689405, guid: 3958da6a75ee5ab438ef5e7f69adbe66, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 433.78015
+      objectReference: {fileID: 0}
+    - target: {fileID: 701471955304689405, guid: 3958da6a75ee5ab438ef5e7f69adbe66, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 261.3277
+      objectReference: {fileID: 0}
+    - target: {fileID: 701471955304689405, guid: 3958da6a75ee5ab438ef5e7f69adbe66, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 116.66976
+      objectReference: {fileID: 0}
+    - target: {fileID: 701471955304689405, guid: 3958da6a75ee5ab438ef5e7f69adbe66, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 100.9
+      objectReference: {fileID: 0}
+    - target: {fileID: 701471955304689405, guid: 3958da6a75ee5ab438ef5e7f69adbe66, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 55.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 1365856340565502504, guid: 3958da6a75ee5ab438ef5e7f69adbe66, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7763025117159707540, guid: 3958da6a75ee5ab438ef5e7f69adbe66, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 9130407086999981450, guid: 3958da6a75ee5ab438ef5e7f69adbe66, type: 3}
+      propertyPath: m_Name
+      value: CaptureTutorial
+      objectReference: {fileID: 0}
+    m_RemovedComponents:
+    - {fileID: 394167452291454699, guid: 3958da6a75ee5ab438ef5e7f69adbe66, type: 3}
+    - {fileID: 6341641879047943335, guid: 3958da6a75ee5ab438ef5e7f69adbe66, type: 3}
+    - {fileID: 6295332070398674153, guid: 3958da6a75ee5ab438ef5e7f69adbe66, type: 3}
+    m_RemovedGameObjects:
+    - {fileID: 3488810655426468646, guid: 3958da6a75ee5ab438ef5e7f69adbe66, type: 3}
+    - {fileID: 7763025117159707540, guid: 3958da6a75ee5ab438ef5e7f69adbe66, type: 3}
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: 3852474732135981890, guid: 3958da6a75ee5ab438ef5e7f69adbe66, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8293406117045494714}
+    - targetCorrespondingSourceObject: {fileID: 3852474732135981890, guid: 3958da6a75ee5ab438ef5e7f69adbe66, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 515378520586163871}
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 9130407086999981450, guid: 3958da6a75ee5ab438ef5e7f69adbe66, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 645444045624229219}
+    - targetCorrespondingSourceObject: {fileID: 9130407086999981450, guid: 3958da6a75ee5ab438ef5e7f69adbe66, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7195771623077346442}
+    - targetCorrespondingSourceObject: {fileID: 9130407086999981450, guid: 3958da6a75ee5ab438ef5e7f69adbe66, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1692010359898143109}
+  m_SourcePrefab: {fileID: 100100000, guid: 3958da6a75ee5ab438ef5e7f69adbe66, type: 3}
+--- !u!1 &3177573436635045692 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 9130407086999981450, guid: 3958da6a75ee5ab438ef5e7f69adbe66, type: 3}
+  m_PrefabInstance: {fileID: 5957341922917782198}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &645444045624229219
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3177573436635045692}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a5ac11cc976e418e8d13136b07e1f52, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_AgentTypeID: 0
+  m_CollectObjects: 2
+  m_Size: {x: 10, y: 10, z: 10}
+  m_Center: {x: 0, y: 2, z: 0}
+  m_LayerMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_UseGeometry: 0
+  m_DefaultArea: 0
+  m_GenerateLinks: 0
+  m_IgnoreNavMeshAgent: 1
+  m_IgnoreNavMeshObstacle: 1
+  m_OverrideTileSize: 0
+  m_TileSize: 256
+  m_OverrideVoxelSize: 0
+  m_VoxelSize: 0.26
+  m_MinRegionArea: 2
+  m_NavMeshData: {fileID: 23800000, guid: da0be1c71559743469fe91b35b8526c6, type: 2}
+  m_BuildHeightMesh: 0
+--- !u!114 &7195771623077346442
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3177573436635045692}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3662549279f9ae543ac5ccc74744d6b0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  navMeshSurface: {fileID: 645444045624229219}
+  bakeNavMeshOnStart: 0
+--- !u!114 &1692010359898143109
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3177573436635045692}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: df38e1a814a66a84696e6f6dba5a31d4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  tileSet: {fileID: 11400000, guid: dfa37e9ec6b0d2846b7ce78c900c0c8a, type: 2}
+  hillTileSet: {fileID: 11400000, guid: c8ad04eb62e0b864bae04fd4bcd1b2cc, type: 2}
+  generatedRoot: {fileID: 1517993796363540697}
+  gridOrigin: {x: -19.75, y: 0, z: -14.050001}
+  baseHeight: 0
+  tops:
+  - cell:
+      x: 0
+      z: 0
+    maxLayer: 0
+  - cell:
+      x: 0
+      z: 1
+    maxLayer: 0
+  - cell:
+      x: 0
+      z: 2
+    maxLayer: 0
+  - cell:
+      x: 0
+      z: 3
+    maxLayer: 0
+  - cell:
+      x: 0
+      z: 4
+    maxLayer: 0
+  - cell:
+      x: 0
+      z: 5
+    maxLayer: 0
+  - cell:
+      x: 0
+      z: 6
+    maxLayer: 0
+  - cell:
+      x: 0
+      z: 7
+    maxLayer: 0
+  - cell:
+      x: 0
+      z: 8
+    maxLayer: 0
+  - cell:
+      x: 0
+      z: 9
+    maxLayer: 0
+  - cell:
+      x: 0
+      z: 10
+    maxLayer: 0
+  - cell:
+      x: 0
+      z: 11
+    maxLayer: 0
+  - cell:
+      x: 0
+      z: 12
+    maxLayer: 0
+  - cell:
+      x: 0
+      z: 13
+    maxLayer: 0
+  - cell:
+      x: 0
+      z: 14
+    maxLayer: 0
+  - cell:
+      x: 0
+      z: 15
+    maxLayer: 0
+  - cell:
+      x: 0
+      z: 16
+    maxLayer: 0
+  - cell:
+      x: 0
+      z: 17
+    maxLayer: 0
+  - cell:
+      x: 1
+      z: 0
+    maxLayer: 0
+  - cell:
+      x: 1
+      z: 1
+    maxLayer: 0
+  - cell:
+      x: 1
+      z: 2
+    maxLayer: 0
+  - cell:
+      x: 1
+      z: 3
+    maxLayer: 0
+  - cell:
+      x: 1
+      z: 4
+    maxLayer: 0
+  - cell:
+      x: 1
+      z: 5
+    maxLayer: 0
+  - cell:
+      x: 1
+      z: 6
+    maxLayer: 0
+  - cell:
+      x: 1
+      z: 7
+    maxLayer: 0
+  - cell:
+      x: 1
+      z: 8
+    maxLayer: 0
+  - cell:
+      x: 1
+      z: 9
+    maxLayer: 0
+  - cell:
+      x: 1
+      z: 10
+    maxLayer: 0
+  - cell:
+      x: 1
+      z: 11
+    maxLayer: 0
+  - cell:
+      x: 1
+      z: 12
+    maxLayer: 0
+  - cell:
+      x: 1
+      z: 13
+    maxLayer: 0
+  - cell:
+      x: 1
+      z: 14
+    maxLayer: 0
+  - cell:
+      x: 1
+      z: 15
+    maxLayer: 0
+  - cell:
+      x: 1
+      z: 16
+    maxLayer: 0
+  - cell:
+      x: 1
+      z: 17
+    maxLayer: 0
+  - cell:
+      x: 2
+      z: 0
+    maxLayer: 0
+  - cell:
+      x: 2
+      z: 1
+    maxLayer: 0
+  - cell:
+      x: 2
+      z: 2
+    maxLayer: 0
+  - cell:
+      x: 2
+      z: 3
+    maxLayer: 0
+  - cell:
+      x: 2
+      z: 4
+    maxLayer: 0
+  - cell:
+      x: 2
+      z: 5
+    maxLayer: 0
+  - cell:
+      x: 2
+      z: 6
+    maxLayer: 0
+  - cell:
+      x: 2
+      z: 7
+    maxLayer: 0
+  - cell:
+      x: 2
+      z: 8
+    maxLayer: 0
+  - cell:
+      x: 2
+      z: 9
+    maxLayer: 0
+  - cell:
+      x: 2
+      z: 10
+    maxLayer: 0
+  - cell:
+      x: 2
+      z: 11
+    maxLayer: 0
+  - cell:
+      x: 2
+      z: 12
+    maxLayer: 0
+  - cell:
+      x: 2
+      z: 13
+    maxLayer: 0
+  - cell:
+      x: 2
+      z: 14
+    maxLayer: 0
+  - cell:
+      x: 2
+      z: 15
+    maxLayer: 0
+  - cell:
+      x: 2
+      z: 16
+    maxLayer: 0
+  - cell:
+      x: 2
+      z: 17
+    maxLayer: 0
+  - cell:
+      x: 3
+      z: 0
+    maxLayer: 0
+  - cell:
+      x: 3
+      z: 1
+    maxLayer: 0
+  - cell:
+      x: 3
+      z: 2
+    maxLayer: 0
+  - cell:
+      x: 3
+      z: 3
+    maxLayer: 0
+  - cell:
+      x: 3
+      z: 4
+    maxLayer: 0
+  - cell:
+      x: 3
+      z: 5
+    maxLayer: 0
+  - cell:
+      x: 3
+      z: 6
+    maxLayer: 0
+  - cell:
+      x: 3
+      z: 7
+    maxLayer: 0
+  - cell:
+      x: 3
+      z: 8
+    maxLayer: 0
+  - cell:
+      x: 3
+      z: 9
+    maxLayer: 0
+  - cell:
+      x: 3
+      z: 10
+    maxLayer: 0
+  - cell:
+      x: 3
+      z: 11
+    maxLayer: 0
+  - cell:
+      x: 3
+      z: 12
+    maxLayer: 0
+  - cell:
+      x: 3
+      z: 13
+    maxLayer: 0
+  - cell:
+      x: 3
+      z: 14
+    maxLayer: 0
+  - cell:
+      x: 3
+      z: 15
+    maxLayer: 0
+  - cell:
+      x: 3
+      z: 16
+    maxLayer: 0
+  - cell:
+      x: 3
+      z: 17
+    maxLayer: 0
+  - cell:
+      x: 4
+      z: 0
+    maxLayer: 0
+  - cell:
+      x: 4
+      z: 1
+    maxLayer: 0
+  - cell:
+      x: 4
+      z: 2
+    maxLayer: 0
+  - cell:
+      x: 4
+      z: 3
+    maxLayer: 0
+  - cell:
+      x: 4
+      z: 4
+    maxLayer: 0
+  - cell:
+      x: 4
+      z: 5
+    maxLayer: 0
+  - cell:
+      x: 4
+      z: 6
+    maxLayer: 0
+  - cell:
+      x: 4
+      z: 7
+    maxLayer: 0
+  - cell:
+      x: 4
+      z: 8
+    maxLayer: 0
+  - cell:
+      x: 4
+      z: 9
+    maxLayer: 0
+  - cell:
+      x: 4
+      z: 10
+    maxLayer: 0
+  - cell:
+      x: 4
+      z: 11
+    maxLayer: 0
+  - cell:
+      x: 4
+      z: 12
+    maxLayer: 0
+  - cell:
+      x: 4
+      z: 13
+    maxLayer: 0
+  - cell:
+      x: 4
+      z: 14
+    maxLayer: 0
+  - cell:
+      x: 4
+      z: 15
+    maxLayer: 0
+  - cell:
+      x: 4
+      z: 16
+    maxLayer: 0
+  - cell:
+      x: 4
+      z: 17
+    maxLayer: 0
+  - cell:
+      x: 5
+      z: 0
+    maxLayer: 0
+  - cell:
+      x: 5
+      z: 1
+    maxLayer: 0
+  - cell:
+      x: 5
+      z: 2
+    maxLayer: 0
+  - cell:
+      x: 5
+      z: 3
+    maxLayer: 0
+  - cell:
+      x: 5
+      z: 4
+    maxLayer: 0
+  - cell:
+      x: 5
+      z: 5
+    maxLayer: 0
+  - cell:
+      x: 5
+      z: 6
+    maxLayer: 0
+  - cell:
+      x: 5
+      z: 7
+    maxLayer: 0
+  - cell:
+      x: 5
+      z: 8
+    maxLayer: 0
+  - cell:
+      x: 5
+      z: 9
+    maxLayer: 0
+  - cell:
+      x: 5
+      z: 10
+    maxLayer: 0
+  - cell:
+      x: 5
+      z: 11
+    maxLayer: 0
+  - cell:
+      x: 5
+      z: 12
+    maxLayer: 0
+  - cell:
+      x: 5
+      z: 13
+    maxLayer: 0
+  - cell:
+      x: 5
+      z: 14
+    maxLayer: 0
+  - cell:
+      x: 5
+      z: 15
+    maxLayer: 0
+  - cell:
+      x: 5
+      z: 16
+    maxLayer: 0
+  - cell:
+      x: 5
+      z: 17
+    maxLayer: 0
+  - cell:
+      x: 6
+      z: 0
+    maxLayer: 0
+  - cell:
+      x: 6
+      z: 1
+    maxLayer: 0
+  - cell:
+      x: 6
+      z: 2
+    maxLayer: 0
+  - cell:
+      x: 6
+      z: 3
+    maxLayer: 0
+  - cell:
+      x: 6
+      z: 4
+    maxLayer: 0
+  - cell:
+      x: 6
+      z: 5
+    maxLayer: 0
+  - cell:
+      x: 6
+      z: 6
+    maxLayer: 0
+  - cell:
+      x: 6
+      z: 7
+    maxLayer: 0
+  - cell:
+      x: 6
+      z: 8
+    maxLayer: 0
+  - cell:
+      x: 6
+      z: 9
+    maxLayer: 0
+  - cell:
+      x: 6
+      z: 10
+    maxLayer: 0
+  - cell:
+      x: 6
+      z: 11
+    maxLayer: 0
+  - cell:
+      x: 6
+      z: 12
+    maxLayer: 0
+  - cell:
+      x: 6
+      z: 13
+    maxLayer: 0
+  - cell:
+      x: 6
+      z: 14
+    maxLayer: 0
+  - cell:
+      x: 6
+      z: 15
+    maxLayer: 0
+  - cell:
+      x: 6
+      z: 16
+    maxLayer: 0
+  - cell:
+      x: 6
+      z: 17
+    maxLayer: 0
+  - cell:
+      x: 7
+      z: 0
+    maxLayer: 0
+  - cell:
+      x: 7
+      z: 1
+    maxLayer: 0
+  - cell:
+      x: 7
+      z: 2
+    maxLayer: 0
+  - cell:
+      x: 7
+      z: 3
+    maxLayer: 0
+  - cell:
+      x: 7
+      z: 4
+    maxLayer: 0
+  - cell:
+      x: 7
+      z: 5
+    maxLayer: 0
+  - cell:
+      x: 7
+      z: 6
+    maxLayer: 0
+  - cell:
+      x: 7
+      z: 7
+    maxLayer: 0
+  - cell:
+      x: 7
+      z: 8
+    maxLayer: 0
+  - cell:
+      x: 7
+      z: 9
+    maxLayer: 0
+  - cell:
+      x: 7
+      z: 10
+    maxLayer: 0
+  - cell:
+      x: 7
+      z: 11
+    maxLayer: 0
+  - cell:
+      x: 7
+      z: 12
+    maxLayer: 0
+  - cell:
+      x: 7
+      z: 13
+    maxLayer: 0
+  - cell:
+      x: 7
+      z: 14
+    maxLayer: 0
+  - cell:
+      x: 7
+      z: 15
+    maxLayer: 0
+  - cell:
+      x: 7
+      z: 16
+    maxLayer: 0
+  - cell:
+      x: 7
+      z: 17
+    maxLayer: 0
+  - cell:
+      x: 8
+      z: 0
+    maxLayer: 0
+  - cell:
+      x: 8
+      z: 1
+    maxLayer: 0
+  - cell:
+      x: 8
+      z: 2
+    maxLayer: 0
+  - cell:
+      x: 8
+      z: 3
+    maxLayer: 0
+  - cell:
+      x: 8
+      z: 4
+    maxLayer: 0
+  - cell:
+      x: 8
+      z: 5
+    maxLayer: 0
+  - cell:
+      x: 8
+      z: 6
+    maxLayer: 0
+  - cell:
+      x: 8
+      z: 7
+    maxLayer: 0
+  - cell:
+      x: 8
+      z: 8
+    maxLayer: 0
+  - cell:
+      x: 8
+      z: 9
+    maxLayer: 0
+  - cell:
+      x: 8
+      z: 10
+    maxLayer: 0
+  - cell:
+      x: 8
+      z: 11
+    maxLayer: 0
+  - cell:
+      x: 8
+      z: 12
+    maxLayer: 0
+  - cell:
+      x: 8
+      z: 13
+    maxLayer: 0
+  - cell:
+      x: 8
+      z: 14
+    maxLayer: 0
+  - cell:
+      x: 8
+      z: 15
+    maxLayer: 0
+  - cell:
+      x: 8
+      z: 16
+    maxLayer: 0
+  - cell:
+      x: 8
+      z: 17
+    maxLayer: 0
+  - cell:
+      x: 9
+      z: 0
+    maxLayer: 0
+  - cell:
+      x: 9
+      z: 1
+    maxLayer: 0
+  - cell:
+      x: 9
+      z: 2
+    maxLayer: 0
+  - cell:
+      x: 9
+      z: 3
+    maxLayer: 0
+  - cell:
+      x: 9
+      z: 4
+    maxLayer: 0
+  - cell:
+      x: 9
+      z: 5
+    maxLayer: 0
+  - cell:
+      x: 9
+      z: 6
+    maxLayer: 0
+  - cell:
+      x: 9
+      z: 7
+    maxLayer: 0
+  - cell:
+      x: 9
+      z: 8
+    maxLayer: 0
+  - cell:
+      x: 9
+      z: 9
+    maxLayer: 0
+  - cell:
+      x: 9
+      z: 10
+    maxLayer: 0
+  - cell:
+      x: 9
+      z: 11
+    maxLayer: 0
+  - cell:
+      x: 9
+      z: 12
+    maxLayer: 0
+  - cell:
+      x: 9
+      z: 13
+    maxLayer: 0
+  - cell:
+      x: 9
+      z: 14
+    maxLayer: 0
+  - cell:
+      x: 9
+      z: 15
+    maxLayer: 0
+  - cell:
+      x: 9
+      z: 16
+    maxLayer: 0
+  - cell:
+      x: 9
+      z: 17
+    maxLayer: 0
+  - cell:
+      x: 10
+      z: 0
+    maxLayer: 0
+  - cell:
+      x: 10
+      z: 1
+    maxLayer: 0
+  - cell:
+      x: 10
+      z: 2
+    maxLayer: 0
+  - cell:
+      x: 10
+      z: 3
+    maxLayer: 0
+  - cell:
+      x: 10
+      z: 4
+    maxLayer: 0
+  - cell:
+      x: 10
+      z: 5
+    maxLayer: 0
+  - cell:
+      x: 10
+      z: 6
+    maxLayer: 0
+  - cell:
+      x: 10
+      z: 7
+    maxLayer: 0
+  - cell:
+      x: 10
+      z: 8
+    maxLayer: 0
+  - cell:
+      x: 10
+      z: 9
+    maxLayer: 0
+  - cell:
+      x: 10
+      z: 10
+    maxLayer: 0
+  - cell:
+      x: 10
+      z: 11
+    maxLayer: 0
+  - cell:
+      x: 10
+      z: 12
+    maxLayer: 0
+  - cell:
+      x: 10
+      z: 13
+    maxLayer: 0
+  - cell:
+      x: 10
+      z: 14
+    maxLayer: 0
+  - cell:
+      x: 10
+      z: 15
+    maxLayer: 0
+  - cell:
+      x: 10
+      z: 16
+    maxLayer: 0
+  - cell:
+      x: 10
+      z: 17
+    maxLayer: 0
+  - cell:
+      x: 11
+      z: 0
+    maxLayer: 0
+  - cell:
+      x: 11
+      z: 1
+    maxLayer: 0
+  - cell:
+      x: 11
+      z: 2
+    maxLayer: 0
+  - cell:
+      x: 11
+      z: 3
+    maxLayer: 0
+  - cell:
+      x: 11
+      z: 4
+    maxLayer: 0
+  - cell:
+      x: 11
+      z: 5
+    maxLayer: 0
+  - cell:
+      x: 11
+      z: 6
+    maxLayer: 0
+  - cell:
+      x: 11
+      z: 7
+    maxLayer: 0
+  - cell:
+      x: 11
+      z: 8
+    maxLayer: 0
+  - cell:
+      x: 11
+      z: 9
+    maxLayer: 0
+  - cell:
+      x: 11
+      z: 10
+    maxLayer: 0
+  - cell:
+      x: 11
+      z: 11
+    maxLayer: 0
+  - cell:
+      x: 11
+      z: 12
+    maxLayer: 0
+  - cell:
+      x: 11
+      z: 13
+    maxLayer: 0
+  - cell:
+      x: 11
+      z: 14
+    maxLayer: 0
+  - cell:
+      x: 11
+      z: 15
+    maxLayer: 0
+  - cell:
+      x: 11
+      z: 16
+    maxLayer: 0
+  - cell:
+      x: 11
+      z: 17
+    maxLayer: 0
+  - cell:
+      x: 12
+      z: 0
+    maxLayer: 0
+  - cell:
+      x: 12
+      z: 1
+    maxLayer: 0
+  - cell:
+      x: 12
+      z: 2
+    maxLayer: 0
+  - cell:
+      x: 12
+      z: 3
+    maxLayer: 0
+  - cell:
+      x: 12
+      z: 4
+    maxLayer: 0
+  - cell:
+      x: 12
+      z: 5
+    maxLayer: 0
+  - cell:
+      x: 12
+      z: 6
+    maxLayer: 0
+  - cell:
+      x: 12
+      z: 7
+    maxLayer: 0
+  - cell:
+      x: 12
+      z: 8
+    maxLayer: 0
+  - cell:
+      x: 12
+      z: 9
+    maxLayer: 0
+  - cell:
+      x: 12
+      z: 10
+    maxLayer: 0
+  - cell:
+      x: 12
+      z: 11
+    maxLayer: 0
+  - cell:
+      x: 12
+      z: 12
+    maxLayer: 0
+  - cell:
+      x: 12
+      z: 13
+    maxLayer: 0
+  - cell:
+      x: 12
+      z: 14
+    maxLayer: 0
+  - cell:
+      x: 12
+      z: 15
+    maxLayer: 0
+  - cell:
+      x: 12
+      z: 16
+    maxLayer: 0
+  - cell:
+      x: 12
+      z: 17
+    maxLayer: 0
+  - cell:
+      x: 13
+      z: 0
+    maxLayer: 0
+  - cell:
+      x: 13
+      z: 1
+    maxLayer: 0
+  - cell:
+      x: 13
+      z: 2
+    maxLayer: 0
+  - cell:
+      x: 13
+      z: 3
+    maxLayer: 0
+  - cell:
+      x: 13
+      z: 4
+    maxLayer: 0
+  - cell:
+      x: 13
+      z: 5
+    maxLayer: 0
+  - cell:
+      x: 13
+      z: 6
+    maxLayer: 0
+  - cell:
+      x: 13
+      z: 7
+    maxLayer: 0
+  - cell:
+      x: 13
+      z: 8
+    maxLayer: 0
+  - cell:
+      x: 13
+      z: 9
+    maxLayer: 0
+  - cell:
+      x: 13
+      z: 10
+    maxLayer: 0
+  - cell:
+      x: 13
+      z: 11
+    maxLayer: 0
+  - cell:
+      x: 13
+      z: 12
+    maxLayer: 0
+  - cell:
+      x: 13
+      z: 13
+    maxLayer: 0
+  - cell:
+      x: 13
+      z: 14
+    maxLayer: 0
+  - cell:
+      x: 13
+      z: 15
+    maxLayer: 0
+  - cell:
+      x: 13
+      z: 16
+    maxLayer: 0
+  - cell:
+      x: 13
+      z: 17
+    maxLayer: 0
+  - cell:
+      x: 14
+      z: 0
+    maxLayer: 0
+  - cell:
+      x: 14
+      z: 1
+    maxLayer: 0
+  - cell:
+      x: 14
+      z: 2
+    maxLayer: 0
+  - cell:
+      x: 14
+      z: 3
+    maxLayer: 0
+  - cell:
+      x: 14
+      z: 4
+    maxLayer: 0
+  - cell:
+      x: 14
+      z: 13
+    maxLayer: 0
+  - cell:
+      x: 14
+      z: 14
+    maxLayer: 0
+  - cell:
+      x: 14
+      z: 15
+    maxLayer: 0
+  - cell:
+      x: 14
+      z: 16
+    maxLayer: 0
+  - cell:
+      x: 14
+      z: 17
+    maxLayer: 0
+  - cell:
+      x: 15
+      z: 0
+    maxLayer: 0
+  - cell:
+      x: 15
+      z: 1
+    maxLayer: 0
+  - cell:
+      x: 15
+      z: 2
+    maxLayer: 0
+  - cell:
+      x: 15
+      z: 3
+    maxLayer: 0
+  - cell:
+      x: 15
+      z: 4
+    maxLayer: 0
+  - cell:
+      x: 15
+      z: 13
+    maxLayer: 0
+  - cell:
+      x: 15
+      z: 14
+    maxLayer: 0
+  - cell:
+      x: 15
+      z: 15
+    maxLayer: 0
+  - cell:
+      x: 15
+      z: 16
+    maxLayer: 0
+  - cell:
+      x: 15
+      z: 17
+    maxLayer: 0
+  - cell:
+      x: 16
+      z: 0
+    maxLayer: 0
+  - cell:
+      x: 16
+      z: 1
+    maxLayer: 0
+  - cell:
+      x: 16
+      z: 2
+    maxLayer: 0
+  - cell:
+      x: 16
+      z: 3
+    maxLayer: 0
+  - cell:
+      x: 16
+      z: 4
+    maxLayer: 0
+  - cell:
+      x: 16
+      z: 13
+    maxLayer: 0
+  - cell:
+      x: 16
+      z: 14
+    maxLayer: 0
+  - cell:
+      x: 16
+      z: 15
+    maxLayer: 0
+  - cell:
+      x: 16
+      z: 16
+    maxLayer: 0
+  - cell:
+      x: 16
+      z: 17
+    maxLayer: 0
+  - cell:
+      x: 17
+      z: 0
+    maxLayer: 0
+  - cell:
+      x: 17
+      z: 1
+    maxLayer: 0
+  - cell:
+      x: 17
+      z: 2
+    maxLayer: 0
+  - cell:
+      x: 17
+      z: 3
+    maxLayer: 0
+  - cell:
+      x: 17
+      z: 4
+    maxLayer: 0
+  - cell:
+      x: 17
+      z: 5
+    maxLayer: 0
+  - cell:
+      x: 17
+      z: 6
+    maxLayer: 0
+  - cell:
+      x: 17
+      z: 7
+    maxLayer: 0
+  - cell:
+      x: 17
+      z: 8
+    maxLayer: 0
+  - cell:
+      x: 17
+      z: 9
+    maxLayer: 0
+  - cell:
+      x: 17
+      z: 10
+    maxLayer: 0
+  - cell:
+      x: 17
+      z: 11
+    maxLayer: 0
+  - cell:
+      x: 17
+      z: 12
+    maxLayer: 0
+  - cell:
+      x: 17
+      z: 13
+    maxLayer: 0
+  - cell:
+      x: 17
+      z: 14
+    maxLayer: 0
+  - cell:
+      x: 17
+      z: 15
+    maxLayer: 0
+  - cell:
+      x: 17
+      z: 16
+    maxLayer: 0
+  - cell:
+      x: 17
+      z: 17
+    maxLayer: 0
+  - cell:
+      x: 18
+      z: 0
+    maxLayer: 0
+  - cell:
+      x: 18
+      z: 1
+    maxLayer: 0
+  - cell:
+      x: 18
+      z: 2
+    maxLayer: 0
+  - cell:
+      x: 18
+      z: 3
+    maxLayer: 0
+  - cell:
+      x: 18
+      z: 4
+    maxLayer: 0
+  - cell:
+      x: 18
+      z: 5
+    maxLayer: 0
+  - cell:
+      x: 18
+      z: 6
+    maxLayer: 0
+  - cell:
+      x: 18
+      z: 7
+    maxLayer: 0
+  - cell:
+      x: 18
+      z: 8
+    maxLayer: 0
+  - cell:
+      x: 18
+      z: 9
+    maxLayer: 0
+  - cell:
+      x: 18
+      z: 10
+    maxLayer: 0
+  - cell:
+      x: 18
+      z: 11
+    maxLayer: 0
+  - cell:
+      x: 18
+      z: 12
+    maxLayer: 0
+  - cell:
+      x: 18
+      z: 13
+    maxLayer: 0
+  - cell:
+      x: 18
+      z: 14
+    maxLayer: 0
+  - cell:
+      x: 18
+      z: 15
+    maxLayer: 0
+  - cell:
+      x: 18
+      z: 16
+    maxLayer: 0
+  - cell:
+      x: 18
+      z: 17
+    maxLayer: 0
+  - cell:
+      x: 19
+      z: 0
+    maxLayer: 0
+  - cell:
+      x: 19
+      z: 1
+    maxLayer: 0
+  - cell:
+      x: 19
+      z: 2
+    maxLayer: 0
+  - cell:
+      x: 19
+      z: 3
+    maxLayer: 0
+  - cell:
+      x: 19
+      z: 4
+    maxLayer: 0
+  - cell:
+      x: 19
+      z: 5
+    maxLayer: 0
+  - cell:
+      x: 19
+      z: 6
+    maxLayer: 0
+  - cell:
+      x: 19
+      z: 7
+    maxLayer: 0
+  - cell:
+      x: 19
+      z: 8
+    maxLayer: 0
+  - cell:
+      x: 19
+      z: 9
+    maxLayer: 0
+  - cell:
+      x: 19
+      z: 10
+    maxLayer: 0
+  - cell:
+      x: 19
+      z: 11
+    maxLayer: 0
+  - cell:
+      x: 19
+      z: 12
+    maxLayer: 0
+  - cell:
+      x: 19
+      z: 13
+    maxLayer: 0
+  - cell:
+      x: 19
+      z: 14
+    maxLayer: 0
+  - cell:
+      x: 19
+      z: 15
+    maxLayer: 0
+  - cell:
+      x: 19
+      z: 16
+    maxLayer: 0
+  - cell:
+      x: 19
+      z: 17
+    maxLayer: 0
+  - cell:
+      x: 20
+      z: 0
+    maxLayer: 0
+  - cell:
+      x: 20
+      z: 1
+    maxLayer: 0
+  - cell:
+      x: 20
+      z: 2
+    maxLayer: 0
+  - cell:
+      x: 20
+      z: 3
+    maxLayer: 0
+  - cell:
+      x: 20
+      z: 4
+    maxLayer: 0
+  - cell:
+      x: 20
+      z: 5
+    maxLayer: 0
+  - cell:
+      x: 20
+      z: 6
+    maxLayer: 0
+  - cell:
+      x: 20
+      z: 7
+    maxLayer: 0
+  - cell:
+      x: 20
+      z: 8
+    maxLayer: 0
+  - cell:
+      x: 20
+      z: 9
+    maxLayer: 0
+  - cell:
+      x: 20
+      z: 10
+    maxLayer: 0
+  - cell:
+      x: 20
+      z: 11
+    maxLayer: 0
+  - cell:
+      x: 20
+      z: 12
+    maxLayer: 0
+  - cell:
+      x: 20
+      z: 13
+    maxLayer: 0
+  - cell:
+      x: 20
+      z: 14
+    maxLayer: 0
+  - cell:
+      x: 20
+      z: 15
+    maxLayer: 0
+  - cell:
+      x: 20
+      z: 16
+    maxLayer: 0
+  - cell:
+      x: 20
+      z: 17
+    maxLayer: 0
+  - cell:
+      x: 21
+      z: 0
+    maxLayer: 0
+  - cell:
+      x: 21
+      z: 1
+    maxLayer: 0
+  - cell:
+      x: 21
+      z: 2
+    maxLayer: 0
+  - cell:
+      x: 21
+      z: 3
+    maxLayer: 0
+  - cell:
+      x: 21
+      z: 4
+    maxLayer: 0
+  - cell:
+      x: 21
+      z: 5
+    maxLayer: 0
+  - cell:
+      x: 21
+      z: 6
+    maxLayer: 0
+  - cell:
+      x: 21
+      z: 7
+    maxLayer: 0
+  - cell:
+      x: 21
+      z: 8
+    maxLayer: 0
+  - cell:
+      x: 21
+      z: 9
+    maxLayer: 0
+  - cell:
+      x: 21
+      z: 10
+    maxLayer: 0
+  - cell:
+      x: 21
+      z: 11
+    maxLayer: 0
+  - cell:
+      x: 21
+      z: 12
+    maxLayer: 0
+  - cell:
+      x: 21
+      z: 13
+    maxLayer: 0
+  - cell:
+      x: 21
+      z: 14
+    maxLayer: 0
+  - cell:
+      x: 21
+      z: 15
+    maxLayer: 0
+  - cell:
+      x: 21
+      z: 16
+    maxLayer: 0
+  - cell:
+      x: 21
+      z: 17
+    maxLayer: 0
+  - cell:
+      x: 22
+      z: 0
+    maxLayer: 0
+  - cell:
+      x: 22
+      z: 1
+    maxLayer: 0
+  - cell:
+      x: 22
+      z: 2
+    maxLayer: 0
+  - cell:
+      x: 22
+      z: 3
+    maxLayer: 0
+  - cell:
+      x: 22
+      z: 4
+    maxLayer: 0
+  - cell:
+      x: 22
+      z: 5
+    maxLayer: 0
+  - cell:
+      x: 22
+      z: 6
+    maxLayer: 0
+  - cell:
+      x: 22
+      z: 7
+    maxLayer: 0
+  - cell:
+      x: 22
+      z: 8
+    maxLayer: 0
+  - cell:
+      x: 22
+      z: 9
+    maxLayer: 0
+  - cell:
+      x: 22
+      z: 10
+    maxLayer: 0
+  - cell:
+      x: 22
+      z: 11
+    maxLayer: 0
+  - cell:
+      x: 22
+      z: 12
+    maxLayer: 0
+  - cell:
+      x: 22
+      z: 13
+    maxLayer: 0
+  - cell:
+      x: 22
+      z: 14
+    maxLayer: 0
+  - cell:
+      x: 22
+      z: 15
+    maxLayer: 0
+  - cell:
+      x: 22
+      z: 16
+    maxLayer: 0
+  - cell:
+      x: 22
+      z: 17
+    maxLayer: 0
+  - cell:
+      x: 23
+      z: 0
+    maxLayer: 0
+  - cell:
+      x: 23
+      z: 1
+    maxLayer: 0
+  - cell:
+      x: 23
+      z: 2
+    maxLayer: 0
+  - cell:
+      x: 23
+      z: 3
+    maxLayer: 0
+  - cell:
+      x: 23
+      z: 4
+    maxLayer: 0
+  - cell:
+      x: 23
+      z: 5
+    maxLayer: 0
+  - cell:
+      x: 23
+      z: 6
+    maxLayer: 0
+  - cell:
+      x: 23
+      z: 7
+    maxLayer: 0
+  - cell:
+      x: 23
+      z: 8
+    maxLayer: 0
+  - cell:
+      x: 23
+      z: 9
+    maxLayer: 0
+  - cell:
+      x: 23
+      z: 10
+    maxLayer: 0
+  - cell:
+      x: 23
+      z: 11
+    maxLayer: 0
+  - cell:
+      x: 23
+      z: 12
+    maxLayer: 0
+  - cell:
+      x: 23
+      z: 13
+    maxLayer: 0
+  - cell:
+      x: 23
+      z: 14
+    maxLayer: 0
+  - cell:
+      x: 23
+      z: 15
+    maxLayer: 0
+  - cell:
+      x: 23
+      z: 16
+    maxLayer: 0
+  - cell:
+      x: 23
+      z: 17
+    maxLayer: 0
+  - cell:
+      x: 24
+      z: 0
+    maxLayer: 0
+  - cell:
+      x: 24
+      z: 1
+    maxLayer: 0
+  - cell:
+      x: 24
+      z: 2
+    maxLayer: 0
+  - cell:
+      x: 24
+      z: 3
+    maxLayer: 0
+  - cell:
+      x: 24
+      z: 4
+    maxLayer: 0
+  - cell:
+      x: 24
+      z: 5
+    maxLayer: 0
+  - cell:
+      x: 24
+      z: 6
+    maxLayer: 0
+  - cell:
+      x: 24
+      z: 7
+    maxLayer: 0
+  - cell:
+      x: 24
+      z: 8
+    maxLayer: 0
+  - cell:
+      x: 24
+      z: 9
+    maxLayer: 0
+  - cell:
+      x: 24
+      z: 10
+    maxLayer: 0
+  - cell:
+      x: 24
+      z: 11
+    maxLayer: 0
+  - cell:
+      x: 24
+      z: 12
+    maxLayer: 0
+  - cell:
+      x: 24
+      z: 13
+    maxLayer: 0
+  - cell:
+      x: 24
+      z: 14
+    maxLayer: 0
+  - cell:
+      x: 24
+      z: 15
+    maxLayer: 0
+  - cell:
+      x: 24
+      z: 16
+    maxLayer: 0
+  - cell:
+      x: 24
+      z: 17
+    maxLayer: 0
+  - cell:
+      x: 25
+      z: 0
+    maxLayer: 0
+  - cell:
+      x: 25
+      z: 1
+    maxLayer: 0
+  - cell:
+      x: 25
+      z: 2
+    maxLayer: 0
+  - cell:
+      x: 25
+      z: 3
+    maxLayer: 0
+  - cell:
+      x: 25
+      z: 4
+    maxLayer: 0
+  - cell:
+      x: 25
+      z: 5
+    maxLayer: 0
+  - cell:
+      x: 25
+      z: 6
+    maxLayer: 0
+  - cell:
+      x: 25
+      z: 7
+    maxLayer: 0
+  - cell:
+      x: 25
+      z: 8
+    maxLayer: 0
+  - cell:
+      x: 25
+      z: 9
+    maxLayer: 0
+  - cell:
+      x: 25
+      z: 10
+    maxLayer: 0
+  - cell:
+      x: 25
+      z: 11
+    maxLayer: 0
+  - cell:
+      x: 25
+      z: 12
+    maxLayer: 0
+  - cell:
+      x: 25
+      z: 13
+    maxLayer: 0
+  - cell:
+      x: 25
+      z: 14
+    maxLayer: 0
+  - cell:
+      x: 25
+      z: 15
+    maxLayer: 0
+  - cell:
+      x: 25
+      z: 16
+    maxLayer: 0
+  - cell:
+      x: 25
+      z: 17
+    maxLayer: 0
+  - cell:
+      x: 26
+      z: 0
+    maxLayer: 0
+  - cell:
+      x: 26
+      z: 1
+    maxLayer: 0
+  - cell:
+      x: 26
+      z: 2
+    maxLayer: 0
+  - cell:
+      x: 26
+      z: 3
+    maxLayer: 0
+  - cell:
+      x: 26
+      z: 4
+    maxLayer: 0
+  - cell:
+      x: 26
+      z: 5
+    maxLayer: 0
+  - cell:
+      x: 26
+      z: 6
+    maxLayer: 0
+  - cell:
+      x: 26
+      z: 7
+    maxLayer: 0
+  - cell:
+      x: 26
+      z: 8
+    maxLayer: 0
+  - cell:
+      x: 26
+      z: 9
+    maxLayer: 0
+  - cell:
+      x: 26
+      z: 10
+    maxLayer: 0
+  - cell:
+      x: 26
+      z: 11
+    maxLayer: 0
+  - cell:
+      x: 26
+      z: 12
+    maxLayer: 0
+  - cell:
+      x: 26
+      z: 13
+    maxLayer: 0
+  - cell:
+      x: 26
+      z: 14
+    maxLayer: 0
+  - cell:
+      x: 26
+      z: 15
+    maxLayer: 0
+  - cell:
+      x: 26
+      z: 16
+    maxLayer: 0
+  - cell:
+      x: 26
+      z: 17
+    maxLayer: 0
+  - cell:
+      x: 27
+      z: 0
+    maxLayer: 0
+  - cell:
+      x: 27
+      z: 1
+    maxLayer: 0
+  - cell:
+      x: 27
+      z: 2
+    maxLayer: 0
+  - cell:
+      x: 27
+      z: 3
+    maxLayer: 0
+  - cell:
+      x: 27
+      z: 4
+    maxLayer: 0
+  - cell:
+      x: 27
+      z: 5
+    maxLayer: 0
+  - cell:
+      x: 27
+      z: 6
+    maxLayer: 0
+  - cell:
+      x: 27
+      z: 7
+    maxLayer: 0
+  - cell:
+      x: 27
+      z: 8
+    maxLayer: 0
+  - cell:
+      x: 27
+      z: 9
+    maxLayer: 0
+  - cell:
+      x: 27
+      z: 10
+    maxLayer: 0
+  - cell:
+      x: 27
+      z: 11
+    maxLayer: 0
+  - cell:
+      x: 27
+      z: 12
+    maxLayer: 0
+  - cell:
+      x: 27
+      z: 13
+    maxLayer: 0
+  - cell:
+      x: 27
+      z: 14
+    maxLayer: 0
+  - cell:
+      x: 27
+      z: 15
+    maxLayer: 0
+  - cell:
+      x: 27
+      z: 16
+    maxLayer: 0
+  - cell:
+      x: 27
+      z: 17
+    maxLayer: 0
+  - cell:
+      x: 28
+      z: 0
+    maxLayer: 0
+  - cell:
+      x: 28
+      z: 1
+    maxLayer: 0
+  - cell:
+      x: 28
+      z: 2
+    maxLayer: 0
+  - cell:
+      x: 28
+      z: 3
+    maxLayer: 0
+  - cell:
+      x: 28
+      z: 4
+    maxLayer: 0
+  - cell:
+      x: 28
+      z: 5
+    maxLayer: 0
+  - cell:
+      x: 28
+      z: 6
+    maxLayer: 0
+  - cell:
+      x: 28
+      z: 7
+    maxLayer: 0
+  - cell:
+      x: 28
+      z: 8
+    maxLayer: 0
+  - cell:
+      x: 28
+      z: 9
+    maxLayer: 0
+  - cell:
+      x: 28
+      z: 10
+    maxLayer: 0
+  - cell:
+      x: 28
+      z: 11
+    maxLayer: 0
+  - cell:
+      x: 28
+      z: 12
+    maxLayer: 0
+  - cell:
+      x: 28
+      z: 13
+    maxLayer: 0
+  - cell:
+      x: 28
+      z: 14
+    maxLayer: 0
+  - cell:
+      x: 28
+      z: 15
+    maxLayer: 0
+  - cell:
+      x: 28
+      z: 16
+    maxLayer: 0
+  - cell:
+      x: 28
+      z: 17
+    maxLayer: 0
+  - cell:
+      x: 29
+      z: 0
+    maxLayer: 0
+  - cell:
+      x: 29
+      z: 1
+    maxLayer: 0
+  - cell:
+      x: 29
+      z: 2
+    maxLayer: 0
+  - cell:
+      x: 29
+      z: 3
+    maxLayer: 0
+  - cell:
+      x: 29
+      z: 4
+    maxLayer: 0
+  - cell:
+      x: 29
+      z: 5
+    maxLayer: 0
+  - cell:
+      x: 29
+      z: 6
+    maxLayer: 0
+  - cell:
+      x: 29
+      z: 7
+    maxLayer: 0
+  - cell:
+      x: 29
+      z: 8
+    maxLayer: 0
+  - cell:
+      x: 29
+      z: 9
+    maxLayer: 0
+  - cell:
+      x: 29
+      z: 10
+    maxLayer: 0
+  - cell:
+      x: 29
+      z: 11
+    maxLayer: 0
+  - cell:
+      x: 29
+      z: 12
+    maxLayer: 0
+  - cell:
+      x: 29
+      z: 13
+    maxLayer: 0
+  - cell:
+      x: 29
+      z: 14
+    maxLayer: 0
+  - cell:
+      x: 29
+      z: 15
+    maxLayer: 0
+  - cell:
+      x: 29
+      z: 16
+    maxLayer: 0
+  - cell:
+      x: 29
+      z: 17
+    maxLayer: 0
+  - cell:
+      x: 30
+      z: 0
+    maxLayer: 0
+  - cell:
+      x: 30
+      z: 1
+    maxLayer: 0
+  - cell:
+      x: 30
+      z: 2
+    maxLayer: 0
+  - cell:
+      x: 30
+      z: 3
+    maxLayer: 0
+  - cell:
+      x: 30
+      z: 4
+    maxLayer: 0
+  - cell:
+      x: 30
+      z: 5
+    maxLayer: 0
+  - cell:
+      x: 30
+      z: 6
+    maxLayer: 0
+  - cell:
+      x: 30
+      z: 7
+    maxLayer: 0
+  - cell:
+      x: 30
+      z: 8
+    maxLayer: 0
+  - cell:
+      x: 30
+      z: 9
+    maxLayer: 0
+  - cell:
+      x: 30
+      z: 10
+    maxLayer: 0
+  - cell:
+      x: 30
+      z: 11
+    maxLayer: 0
+  - cell:
+      x: 30
+      z: 12
+    maxLayer: 0
+  - cell:
+      x: 30
+      z: 13
+    maxLayer: 0
+  - cell:
+      x: 30
+      z: 14
+    maxLayer: 0
+  - cell:
+      x: 30
+      z: 15
+    maxLayer: 0
+  - cell:
+      x: 30
+      z: 16
+    maxLayer: 0
+  - cell:
+      x: 30
+      z: 17
+    maxLayer: 0
+  topCells: []
+  hills:
+  - cell:
+      x: 16
+      z: 8
+    layer: 0
+  - cell:
+      x: 14
+      z: 11
+    layer: 0
+  hillCells: []
+  groundCells:
+  - x: -1
+    z: -1
+  - x: -1
+    z: 0
+  - x: -1
+    z: 1
+  - x: -1
+    z: 2
+  - x: -1
+    z: 3
+  - x: -1
+    z: 4
+  - x: -1
+    z: 5
+  - x: -1
+    z: 6
+  - x: -1
+    z: 7
+  - x: -1
+    z: 8
+  - x: -1
+    z: 9
+  - x: -1
+    z: 10
+  - x: -1
+    z: 11
+  - x: -1
+    z: 12
+  - x: -1
+    z: 13
+  - x: -1
+    z: 14
+  - x: -1
+    z: 15
+  - x: -1
+    z: 16
+  - x: -1
+    z: 17
+  - x: -1
+    z: 18
+  - x: 0
+    z: -1
+  - x: 0
+    z: 18
+  - x: 1
+    z: -1
+  - x: 1
+    z: 18
+  - x: 2
+    z: -1
+  - x: 2
+    z: 18
+  - x: 3
+    z: -1
+  - x: 3
+    z: 18
+  - x: 4
+    z: -1
+  - x: 4
+    z: 18
+  - x: 5
+    z: -1
+  - x: 5
+    z: 18
+  - x: 6
+    z: -1
+  - x: 6
+    z: 18
+  - x: 7
+    z: -1
+  - x: 7
+    z: 18
+  - x: 8
+    z: -1
+  - x: 8
+    z: 18
+  - x: 9
+    z: -1
+  - x: 9
+    z: 18
+  - x: 10
+    z: -1
+  - x: 10
+    z: 18
+  - x: 11
+    z: -1
+  - x: 11
+    z: 18
+  - x: 12
+    z: -1
+  - x: 12
+    z: 18
+  - x: 13
+    z: -1
+  - x: 13
+    z: 18
+  - x: 14
+    z: -1
+  - x: 14
+    z: 5
+  - x: 14
+    z: 6
+  - x: 14
+    z: 7
+  - x: 14
+    z: 8
+  - x: 14
+    z: 9
+  - x: 14
+    z: 10
+  - x: 14
+    z: 12
+  - x: 14
+    z: 18
+  - x: 15
+    z: -1
+  - x: 15
+    z: 5
+  - x: 15
+    z: 6
+  - x: 15
+    z: 7
+  - x: 15
+    z: 8
+  - x: 15
+    z: 9
+  - x: 15
+    z: 10
+  - x: 15
+    z: 11
+  - x: 15
+    z: 12
+  - x: 15
+    z: 18
+  - x: 16
+    z: -1
+  - x: 16
+    z: 5
+  - x: 16
+    z: 6
+  - x: 16
+    z: 7
+  - x: 16
+    z: 9
+  - x: 16
+    z: 10
+  - x: 16
+    z: 11
+  - x: 16
+    z: 12
+  - x: 16
+    z: 18
+  - x: 17
+    z: -1
+  - x: 17
+    z: 18
+  - x: 18
+    z: -1
+  - x: 18
+    z: 18
+  - x: 19
+    z: -1
+  - x: 19
+    z: 18
+  - x: 20
+    z: -1
+  - x: 20
+    z: 18
+  - x: 21
+    z: -1
+  - x: 21
+    z: 18
+  - x: 22
+    z: -1
+  - x: 22
+    z: 18
+  - x: 23
+    z: -1
+  - x: 23
+    z: 18
+  - x: 24
+    z: -1
+  - x: 24
+    z: 18
+  - x: 25
+    z: -1
+  - x: 25
+    z: 18
+  - x: 26
+    z: -1
+  - x: 26
+    z: 18
+  - x: 27
+    z: -1
+  - x: 27
+    z: 18
+  - x: 28
+    z: -1
+  - x: 28
+    z: 18
+  - x: 29
+    z: -1
+  - x: 29
+    z: 18
+  - x: 30
+    z: -1
+  - x: 30
+    z: 18
+  - x: 31
+    z: -1
+  - x: 31
+    z: 0
+  - x: 31
+    z: 1
+  - x: 31
+    z: 2
+  - x: 31
+    z: 3
+  - x: 31
+    z: 4
+  - x: 31
+    z: 5
+  - x: 31
+    z: 6
+  - x: 31
+    z: 7
+  - x: 31
+    z: 8
+  - x: 31
+    z: 9
+  - x: 31
+    z: 10
+  - x: 31
+    z: 11
+  - x: 31
+    z: 12
+  - x: 31
+    z: 13
+  - x: 31
+    z: 14
+  - x: 31
+    z: 15
+  - x: 31
+    z: 16
+  - x: 31
+    z: 17
+  - x: 31
+    z: 18
+  ramps: []
+  drawGizmos: 1
+  topGizmoColor: {r: 0.2, g: 0.8, b: 0.3, a: 0.35}
+  hillGizmoColor: {r: 0.3, g: 0.6, b: 1, a: 0.4}
+  groundGizmoColor: {r: 0.55, g: 0.4, b: 0.25, a: 0.3}
+  rampGizmoColor: {r: 0.9, g: 0.7, b: 0.2, a: 0.5}
+--- !u!4 &7483302191548903924 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3852474732135981890, guid: 3958da6a75ee5ab438ef5e7f69adbe66, type: 3}
+  m_PrefabInstance: {fileID: 5957341922917782198}
+  m_PrefabAsset: {fileID: 0}

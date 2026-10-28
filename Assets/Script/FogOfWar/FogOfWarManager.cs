@@ -105,8 +105,22 @@ public class FogOfWarManager : MonoBehaviour
 
     [Header("갱신")]
     [Label("갱신 간격(초)")]
-    [Tooltip("안개 텍스처를 갱신하는 간격(초)입니다.")]
+    [Tooltip("안개 텍스처를 갱신하는 간격(초)입니다. 시야 계산을 여러 프레임에 나누면 그 프레임 수만큼 실제 간격이 조금 늘어납니다.")]
     public float updateInterval = 0.1f;
+
+    [Label("시야 계산 분산 프레임 수")]
+    [Tooltip("한 번의 안개 갱신에 필요한 시야 계산을 이 프레임 수에 나눠 처리합니다. 시야 소스가 많을 때 한 프레임만 크게 튀는 것을 막습니다. 1이면 한 프레임에 모두 계산합니다(예전 방식).")]
+    [Min(1)]
+    public int visionSpreadFrames = 4;
+
+    [Label("제자리 시야 재사용")]
+    [Tooltip("켜면 지난 계산 이후 움직이지 않은 시야 소스(타워·건물·멈춘 유닛)는 다시 계산하지 않고 이전 결과를 그대로 씁니다.")]
+    public bool reuseStationaryVision = true;
+
+    [Label("제자리 판정 이동 거리")]
+    [Tooltip("지난 계산 위치에서 이 거리(미터) 이하로만 움직였으면 제자리로 보고 이전 시야를 재사용합니다. 너무 크면 이동한 유닛의 시야가 늦게 따라옵니다.")]
+    [Min(0f)]
+    public float stationaryMoveTolerance = 0.05f;
 
     [Header("오버레이")]
     [Label("월드 오버레이 생성")]
@@ -242,6 +256,33 @@ public class FogOfWarManager : MonoBehaviour
     private RawImage minimapFogOverlay;
     private float updateTimer;
 
+    /// <summary>시야 소스 하나가 밝힌 칸과 밝기입니다. 소스가 제자리에 있으면 재사용합니다.</summary>
+    public class VisionStamp
+    {
+        public Vector3 position;
+        public float radius;
+        public float edgeSoftness;
+        public float eyeHeight;
+        public int generation;
+
+        // (칸 번호 << 8) | 밝기
+        public readonly List<int> cells = new List<int>();
+    }
+
+    // 시야 계산을 여러 프레임에 나눠 처리하는 동안의 상태. 계산 중에는 fogPixels(게임플레이
+    // 판정용)를 건드리지 않고 visionAccum에 모았다가, 다 끝나면 한 번에 반영한다.
+    private readonly List<FogOfWarVisionSource> passSources = new List<FogOfWarVisionSource>();
+    private bool visionPassActive;
+    private int passNextIndex;
+    private int passSourcesPerFrame;
+    private byte[] visionAccum;
+
+    // 소스 하나를 계산할 때 쓰는 임시 칸 버퍼. 계산 후 해당 범위만 0으로 되돌린다.
+    private byte[] stampScratch;
+
+    // 격자·지형 데이터가 바뀌면 올려서 저장된 시야 결과를 모두 무효로 만든다.
+    private int stampGeneration;
+
     void Awake()
     {
         if (Instance != null && Instance != this)
@@ -278,6 +319,7 @@ public class FogOfWarManager : MonoBehaviour
         BuildElevationHeightGrid();
         BuildElevationEdgeHeightGrid();
         BuildHillTerrainGrid();
+        stampGeneration++;
 
         FogOfWarVisionSource[] existingSources =
             FindObjectsOfType<FogOfWarVisionSource>();
@@ -316,15 +358,21 @@ public class FogOfWarManager : MonoBehaviour
             Destroy(overlayMesh);
     }
 
+    // 인스펙터에서 시야 관련 값을 바꾸면 저장된 시야 결과를 다시 계산하게 한다.
+    void OnValidate()
+    {
+        stampGeneration++;
+    }
+
     void Update()
     {
         updateTimer -= Time.deltaTime;
 
-        if (updateTimer <= 0f)
-        {
-            updateTimer = updateInterval;
-            UpdateFogTexture();
-        }
+        if (!visionPassActive && updateTimer <= 0f)
+            BeginVisionPass();
+
+        if (visionPassActive)
+            StepVisionPass(passSourcesPerFrame);
 
         UpdateFogBlend();
     }
@@ -430,6 +478,10 @@ public class FogOfWarManager : MonoBehaviour
         displayPixels = new Color32[pixelCount];
         prevDisplayPixels = new Color32[pixelCount];
         blurScratchPixels = new Color32[pixelCount];
+        visionAccum = new byte[pixelCount];
+        stampScratch = new byte[pixelCount];
+        visionPassActive = false;
+        stampGeneration++;
 
         for (int i = 0; i < fogPixels.Length; i++)
             fogPixels[i] = new Color32(0, 0, 0, 255);
@@ -1073,10 +1125,17 @@ public class FogOfWarManager : MonoBehaviour
         }
     }
 
+    // 시야를 한 프레임에 모두 계산해 바로 반영한다(시작 시·RefreshVisionNow용).
     void UpdateFogTexture()
     {
-        for (int i = 0; i < fogPixels.Length; i++)
-            fogPixels[i].g = 0;
+        BeginVisionPass();
+        StepVisionPass(int.MaxValue);
+    }
+
+    void BeginVisionPass()
+    {
+        System.Array.Clear(visionAccum, 0, visionAccum.Length);
+        passSources.Clear();
 
         for (int i = visionSources.Count - 1; i >= 0; i--)
         {
@@ -1088,23 +1147,145 @@ public class FogOfWarManager : MonoBehaviour
                 continue;
             }
 
-            if (source.OwnerId != localPlayerOwnerId)
-                continue;
-
-            StampVision(
-                source.GroundPosition,
-                source.VisionRange,
-                ResolveEdgeSoftness(source),
-                ResolveEyeHeight(source));
+            if (source.OwnerId == localPlayerOwnerId)
+                passSources.Add(source);
         }
 
+        passNextIndex = 0;
+        passSourcesPerFrame = Mathf.Max(
+            1,
+            Mathf.CeilToInt(passSources.Count / (float)Mathf.Max(1, visionSpreadFrames)));
+        visionPassActive = true;
+    }
+
+    // 소스를 최대 count개 계산하고, 모두 끝났으면 결과를 반영한다.
+    void StepVisionPass(int count)
+    {
+        using (PerfProbe.Measure(PerfCategory.FogVision))
+        {
+            int end = count >= passSources.Count - passNextIndex
+                ? passSources.Count
+                : passNextIndex + count;
+
+            for (; passNextIndex < end; passNextIndex++)
+            {
+                // 계산 도중 파괴된 소스는 건너뛴다.
+                FogOfWarVisionSource source = passSources[passNextIndex];
+                if (source != null)
+                    StampSource(source);
+            }
+        }
+
+        if (passNextIndex < passSources.Count)
+            return;
+
+        using (PerfProbe.Measure(PerfCategory.FogUpload))
+            CommitVisionPass();
+    }
+
+    void CommitVisionPass()
+    {
         for (int i = 0; i < fogPixels.Length; i++)
         {
-            if (fogPixels[i].g > fogPixels[i].r)
-                fogPixels[i].r = fogPixels[i].g;
+            byte visible = visionAccum[i];
+            fogPixels[i].g = visible;
+
+            if (visible > fogPixels[i].r)
+                fogPixels[i].r = visible;
         }
 
+        passSources.Clear();
+        visionPassActive = false;
+
+        // 부드러운 전환이 새 결과를 반영한 시점부터 시작되도록 여기서 타이머를 돌린다.
+        updateTimer = updateInterval;
         UploadDisplayTexture();
+    }
+
+    void StampSource(FogOfWarVisionSource source)
+    {
+        Vector3 position = source.Position;
+        float radius = source.VisionRange;
+        float edgeSoftness = ResolveEdgeSoftness(source);
+        float eyeHeight = ResolveEyeHeight(source);
+
+        VisionStamp stamp = source.CachedStamp;
+
+        if (reuseStationaryVision && stamp != null &&
+            stamp.generation == stampGeneration &&
+            stamp.radius == radius &&
+            stamp.edgeSoftness == edgeSoftness &&
+            stamp.eyeHeight == eyeHeight &&
+            (stamp.position - position).sqrMagnitude <=
+                stationaryMoveTolerance * stationaryMoveTolerance)
+        {
+            ApplyStamp(stamp);
+            return;
+        }
+
+        if (stamp == null)
+            source.CachedStamp = stamp = new VisionStamp();
+
+        stamp.position = position;
+        stamp.radius = radius;
+        stamp.edgeSoftness = edgeSoftness;
+        stamp.eyeHeight = eyeHeight;
+        stamp.generation = stampGeneration;
+        stamp.cells.Clear();
+
+        Vector3 groundPosition = source.GroundPosition;
+        StampVision(groundPosition, radius, edgeSoftness, eyeHeight);
+
+        // 임시 버퍼에 찍힌 칸을 저장하고 버퍼는 다시 0으로 비운다.
+        GetStampBounds(groundPosition, radius, out int minX, out int maxX, out int minZ, out int maxZ);
+
+        for (int z = minZ; z <= maxZ; z++)
+        {
+            int row = z * gridWidth;
+
+            for (int x = minX; x <= maxX; x++)
+            {
+                int index = row + x;
+                byte value = stampScratch[index];
+
+                if (value == 0)
+                    continue;
+
+                stampScratch[index] = 0;
+                stamp.cells.Add((index << 8) | value);
+            }
+        }
+
+        ApplyStamp(stamp);
+    }
+
+    void ApplyStamp(VisionStamp stamp)
+    {
+        List<int> cells = stamp.cells;
+
+        for (int i = 0; i < cells.Count; i++)
+        {
+            int packed = cells[i];
+            int index = packed >> 8;
+            byte value = (byte)(packed & 0xFF);
+
+            if (value > visionAccum[index])
+                visionAccum[index] = value;
+        }
+    }
+
+    void GetStampBounds(Vector3 worldPosition, float radius, out int minX, out int maxX, out int minZ, out int maxZ)
+    {
+        int centerX = WorldToGridX(worldPosition.x);
+        int centerZ = WorldToGridZ(worldPosition.z);
+
+        int radiusCellsX = Mathf.Max(1, Mathf.CeilToInt(radius / cellSizeX));
+        int radiusCellsZ = Mathf.Max(1, Mathf.CeilToInt(radius / cellSizeZ));
+
+        minX = Mathf.Max(0, centerX - radiusCellsX);
+        maxX = Mathf.Min(gridWidth - 1, centerX + radiusCellsX);
+        minZ = Mathf.Max(0, centerZ - radiusCellsZ);
+        maxZ = Mathf.Min(gridHeight - 1, centerZ + radiusCellsZ);
     }
 
     // 게임플레이 판정용 원본(fogPixels)은 그대로 두고, 화면에 그릴 사본만 흐려서 올린다.
@@ -1205,14 +1386,7 @@ public class FogOfWarManager : MonoBehaviour
     {
         int centerX = WorldToGridX(worldPosition.x);
         int centerZ = WorldToGridZ(worldPosition.z);
-
-        int radiusCellsX = Mathf.Max(1, Mathf.CeilToInt(radius / cellSizeX));
-        int radiusCellsZ = Mathf.Max(1, Mathf.CeilToInt(radius / cellSizeZ));
-
-        int minX = Mathf.Max(0, centerX - radiusCellsX);
-        int maxX = Mathf.Min(gridWidth - 1, centerX + radiusCellsX);
-        int minZ = Mathf.Max(0, centerZ - radiusCellsZ);
-        int maxZ = Mathf.Min(gridHeight - 1, centerZ + radiusCellsZ);
+        GetStampBounds(worldPosition, radius, out int minX, out int maxX, out int minZ, out int maxZ);
 
         // 소스가 서 있는 칸은 항상 밝힌다.
         float centerSlope = float.NegativeInfinity;
@@ -1371,8 +1545,8 @@ public class FogOfWarManager : MonoBehaviour
             float strength = CalculateVisionStrength(distance, radius, edgeSoftness);
             byte value = (byte)(strength * 255f);
 
-            if (value > fogPixels[index].g)
-                fogPixels[index].g = value;
+            if (value > stampScratch[index])
+                stampScratch[index] = value;
         }
 
         return true;

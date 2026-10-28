@@ -34,6 +34,9 @@ public class FogOfWarVisionSource : MonoBehaviour
 
     public float EyeHeightOverride => eyeHeightOverride;
 
+    // FogOfWarManager가 마지막으로 계산한 시야 결과. 제자리에 있으면 다시 계산하지 않고 재사용한다.
+    public FogOfWarManager.VisionStamp CachedStamp { get; set; }
+
     void Awake()
     {
         selectableEntity = GetComponent<SelectableEntity>();
