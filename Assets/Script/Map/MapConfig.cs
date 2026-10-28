@@ -165,4 +165,12 @@ public class MapConfig : ScriptableObject
     [Label("스포너 전멸 승리 사용")]
     [Tooltip("켜면 맵의 적 스포너를 모두 파괴했을 때 승리합니다.")]
     public bool winWhenAllSpawnersDestroyed = true;
+
+    [Label("거점 점령 승리 사용")]
+    [Tooltip("켜면 지정된 거점 한 곳을 점령했을 때 승리합니다.")]
+    public bool winByCapturingPoint;
+
+    [Label("점령 시간(초)")]
+    [Tooltip("아군 유닛이 있고 적이 없는 상태로 유지해야 하는 시간입니다. 0보다 커야 합니다.")]
+    public float captureDuration = 5f;
 }

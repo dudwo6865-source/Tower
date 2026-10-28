@@ -5,7 +5,7 @@ using UnityEngine.SceneManagement;
 
 // 승리/패배 판정을 모아두는 매니저입니다.
 // - 패배: 본부 파괴
-// - 승리: 지정한 밤까지 생존 / 적 스포너 모두 파괴 (켜 둔 조건 중 먼저 달성한 것)
+// - 승리: 지정한 밤까지 생존 / 적 스포너 모두 파괴 / 거점 점령 (켜 둔 조건 중 먼저 달성한 것)
 // 게임 통계(게임 시간, 파괴한 스포너, 처치한 적 유닛, 소모한 와트)도 여기서 기록하고,
 // 결과 창(GameResultUI)의 재시작/로비 이동도 이 매니저가 처리합니다.
 // 나중에 조건을 늘릴 때는 EndGame(Result...)을 호출하는 검사 함수를 추가하면 됩니다
@@ -49,6 +49,21 @@ public class GameResultManager : MonoBehaviour
     [Label("판정 시작 대기(초)")]
     [Tooltip("게임 시작 후 이 시간이 지나야 스포너 전멸 판정을 시작합니다. 맵이 불러와지기 전에 승리하는 것을 막습니다.")]
     public float spawnerCheckStartDelay = 3f;
+
+    [Header("승리 조건 - 거점 점령")]
+    [Label("거점 점령 승리 사용")]
+    public bool winByCapturingPoint;
+
+    [Label("점령 시간(초)")]
+    [Tooltip("0보다 커야 합니다. 맵 로더가 있으면 스테이지 설정을 사용합니다.")]
+    public float captureDuration = 5f;
+
+    [Label("점령 거점")]
+    [Tooltip("맵 로더가 없으면 직접 연결합니다. 맵 로더는 실제 맵의 거점 하나를 연결합니다.")]
+    public CapturePoint capturePoint;
+
+    public string CaptureError { get; private set; }
+    int captureCompletedFrame = -1;
 
     [Header("결과 창")]
     [Label("결과 창 표시 대기(초)")]
@@ -156,6 +171,11 @@ public class GameResultManager : MonoBehaviour
 
     void Start()
     {
+        if (winByCapturingPoint)
+        {
+            ValidateCapturePoint();
+            if (capturePoint != null) capturePoint.ResetProgress();
+        }
         if (!IsGameOver)
         {
             rewardConfig = MapLoader.Instance != null ? MapLoader.Instance.LoadedConfig : null;
@@ -192,6 +212,57 @@ public class GameResultManager : MonoBehaviour
 
         PlayTime += Time.deltaTime;
         CheckAllSpawnersDestroyed();
+        UpdateCapturePoint();
+    }
+
+    public void BindCapturePoint(CapturePoint point, bool validate = true)
+    {
+        capturePoint = point;
+        captureCompletedFrame = -1;
+        CaptureError = null;
+        if (point != null) point.ResetProgress();
+        if (validate && winByCapturingPoint) ValidateCapturePoint();
+    }
+
+    bool ValidateCapturePoint()
+    {
+        string error = capturePoint == null
+            ? "활성 점령 거점을 정확히 하나 연결해야 합니다."
+            : !capturePoint.isActiveAndEnabled || !capturePoint.HasValidRadius
+                ? "점령 거점이 비활성 상태이거나 반경이 올바르지 않습니다."
+                : captureDuration <= 0f || float.IsNaN(captureDuration) || float.IsInfinity(captureDuration)
+                    ? "점령 시간은 0보다 큰 유한한 값이어야 합니다." : null;
+        if (error != null && CaptureError != error)
+            Debug.LogError("GameResultManager: " + error, this);
+        CaptureError = error;
+        return error == null;
+    }
+
+    void UpdateCapturePoint()
+    {
+        if (IsGameOver || !winByCapturingPoint || Time.deltaTime <= 0f)
+            return;
+        if (!ValidateCapturePoint())
+        {
+            captureCompletedFrame = -1;
+            return;
+        }
+
+        TrySubscribeHq();
+        if (hqHealth == null || !hqHealth.IsAlive)
+            return;
+
+        // 완료 프레임의 모든 피해 처리가 끝난 다음 프레임에 승리를 확정한다.
+        // 그 사이 본부가 파괴되면 기존 사망 콜백에서 패배가 먼저 확정된다.
+        if (captureCompletedFrame >= 0 && Time.frameCount > captureCompletedFrame)
+        {
+            EndGame(Result.Victory);
+            return;
+        }
+
+        capturePoint.Tick(playerOwnerId, captureDuration, Time.deltaTime);
+        if (capturePoint.State == CapturePoint.CaptureState.Complete && captureCompletedFrame < 0)
+            captureCompletedFrame = Time.frameCount;
     }
 
     void TrySubscribeHq()

@@ -1,0 +1,107 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 63b9589c94b7f8845aff0903c96d4d8a, type: 3}
+  m_Name: CaptureTutorial
+  m_EditorClassIdentifier:
+  stageId: 6f3f4814aa5a44478fc94f5effaf246a
+  clearRewards:
+    targetScore: 1000
+    pointsPerSecond: 1
+    pointsPerSpawner: 100
+    pointsPerManaStone: 1
+    firstStarCredits: 100
+    secondStarCredits: 50
+    thirdStarCredits: 50
+    oneStarRepeatCredits: 20
+    twoStarRepeatCredits: 30
+    threeStarRepeatCredits: 40
+  displayName: 점령 연습
+  description: 단일 거점 점령 판정용 테스트 스테이지
+  previewImage: {fileID: 0}
+  mapRootPrefab: {fileID: 100001, guid: a3570512cd494885bf03a44354ab9647, type: 3}
+  overrideEconomy: 1
+  maxWatt: 1000
+  startingWatt: 100
+  incomePerSecond: 20
+  overrideDayNight: 1
+  startPhase: 0
+  dayDuration: 600
+  nightDuration: 60
+  dayLightColor: {r: 1, g: 0.95686275, b: 0.8392157, a: 1}
+  nightLightColor: {r: 0.4509804, g: 0.654902, b: 1, a: 1}
+  dayLightIntensity: 1
+  nightLightIntensity: 1
+  lightTransitionDuration: 5
+  applyAmbientLight: 1
+  dayAmbientColor: {r: 0.65882355, g: 0.63529414, b: 0.5764706, a: 1}
+  nightAmbientColor: {r: 0.41960785, g: 0.47843137, b: 0.7176471, a: 1}
+  overrideWave: 1
+  wavePlan:
+    waves:
+    - spawnCountMultiplier: 1
+      spawnCountBonus: 0
+      maxAliveEnemies: 0
+      healthMultiplier: 1
+      damageMultiplier: 1
+      speedMultiplier: 1
+      armorBonus: 0
+      enemyComposition:
+        entries:
+        - prefab: {fileID: 4389994320296523517, guid: 8924176a55da7874abdcdb12dbb1e645, type: 3}
+          count: 1
+        - prefab: {fileID: 4389994320296523517, guid: 8b37dda2a95a2fc4b8ea8d0bb2600499, type: 3}
+          count: 5
+    growthPerWaveAfterLast:
+      spawnCountMultiplier: 1
+      spawnCountBonus: 3
+      maxAliveEnemies: 0
+      healthMultiplier: 1.1
+      damageMultiplier: 1
+      speedMultiplier: 1
+      armorBonus: 0
+      enemyComposition:
+        entries: []
+  applyNightBonus: 0
+  nightBonus:
+    spawnCountMultiplier: 1
+    spawnCountBonus: 2
+    maxAliveEnemies: 0
+    healthMultiplier: 1
+    damageMultiplier: 1.2
+    speedMultiplier: 1.2
+    armorBonus: 0
+    enemyComposition:
+      entries: []
+  mutations:
+    enabled: 1
+    enemyOwnerId: 2
+    spawnChance: 0.5
+    spawnIncrease: 0.2
+    damageIncrease: 0.2
+    healthIncrease: 0.2
+    speedIncrease: 0.1
+    armorIncrease: 1
+    damageWeight: 1
+    healthWeight: 1
+    speedWeight: 1
+    armorWeight: 0
+  overrideInitialEnemies: 1
+  initialEnemies: []
+  initialEnemyMinDistanceFromHq: 25
+  initialEnemyAvoidPlayerVision: 1
+  initialEnemyAdvanceToPlayerBase: 0
+  overrideWinCondition: 1
+  winBySurvivingNights: 0
+  survivalNightsToWin: 5
+  winWhenAllSpawnersDestroyed: 0
+  winByCapturingPoint: 1
+  captureDuration: 5

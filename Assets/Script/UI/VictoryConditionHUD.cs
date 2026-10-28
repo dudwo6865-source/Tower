@@ -25,6 +25,13 @@ public class VictoryConditionHUD : MonoBehaviour
     [Tooltip("'적 스포너 모두 파괴' 조건을 표시할 텍스트입니다. 비워두면 표시하지 않습니다.")]
     public TMP_Text spawnerText;
 
+    [Label("점령 조건 텍스트")]
+    [Tooltip("거점 이름과 진행 상태를 표시할 텍스트를 연결합니다.")]
+    public TMP_Text captureText;
+
+    [Label("점령 조건 묶음")]
+    public GameObject captureRoot;
+
     [Header("숨기기")]
     [Label("꺼진 조건 숨기기")]
     [Tooltip("켜면 사용하지 않는 승리 조건의 텍스트(또는 아래 묶음 오브젝트)를 숨깁니다.")]
@@ -38,7 +45,7 @@ public class VictoryConditionHUD : MonoBehaviour
     [Tooltip("스포너 조건이 꺼져 있을 때 함께 숨길 오브젝트입니다(아이콘·배경 등을 묶은 부모). 비워두면 텍스트만 숨깁니다.")]
     public GameObject spawnerRoot;
 
-    [Label("둘 다 꺼졌을 때 숨길 오브젝트")]
+    [Label("모든 조건이 꺼졌을 때 숨길 오브젝트")]
     [Tooltip("승리 조건이 하나도 없을 때 숨길 오브젝트입니다(패널 전체 등). 비워두면 아무것도 숨기지 않습니다. 이 컴포넌트가 붙은 오브젝트는 넣지 마세요(꺼지면 다시 켜지지 않습니다).")]
     public GameObject panelRoot;
 
@@ -75,6 +82,9 @@ public class VictoryConditionHUD : MonoBehaviour
         if (resultManager == null)
             Debug.LogWarning("VictoryConditionHUD: 씬에서 GameResultManager를 찾지 못했습니다.");
 
+        if (resultManager != null && resultManager.winByCapturingPoint && captureText == null)
+            Debug.LogWarning("VictoryConditionHUD: 점령 조건 텍스트를 연결하세요.", this);
+
         Refresh();
     }
 
@@ -95,18 +105,26 @@ public class VictoryConditionHUD : MonoBehaviour
 
         // 게임이 끝난 뒤에는 마지막 표시를 그대로 둔다.
         if (resultManager.IsGameOver)
+        {
+            if (captureText != null && resultManager.winByCapturingPoint &&
+                resultManager.CurrentResult == GameResultManager.Result.Victory &&
+                resultManager.capturePoint != null && resultManager.capturePoint.State == CapturePoint.CaptureState.Complete)
+                captureText.text = $"{resultManager.capturePoint.displayName} 점령 완료";
             return;
+        }
 
         bool survivalOn = resultManager.winBySurvivingNights;
         bool spawnerOn = resultManager.winWhenAllSpawnersDestroyed;
+        bool captureOn = resultManager.winByCapturingPoint;
 
         if (hideDisabledConditions)
         {
             SetVisible(survivalRoot, survivalText, survivalOn);
             SetVisible(spawnerRoot, spawnerText, spawnerOn);
+            SetVisible(captureRoot, captureText, captureOn);
 
-            if (panelRoot != null && panelRoot.activeSelf != (survivalOn || spawnerOn))
-                panelRoot.SetActive(survivalOn || spawnerOn);
+            if (panelRoot != null && panelRoot.activeSelf != (survivalOn || spawnerOn || captureOn))
+                panelRoot.SetActive(survivalOn || spawnerOn || captureOn);
         }
 
         if (survivalOn && survivalText != null)
@@ -125,6 +143,34 @@ public class VictoryConditionHUD : MonoBehaviour
                 resultManager.MaxSpawnersSeen,
                 resultManager.DestroyedSpawnerCount + remaining);
             spawnerText.text = string.Format(spawnerFormat, Mathf.Max(0, total - remaining), total, remaining);
+        }
+
+        if (captureOn && captureText != null)
+        {
+            CapturePoint point = resultManager.capturePoint;
+            if (!string.IsNullOrEmpty(resultManager.CaptureError) || point == null)
+                captureText.text = "점령 목표 설정을 확인하세요.";
+            else
+            {
+                string progress = $"{point.Elapsed:0.0} / {resultManager.captureDuration:0.0}초";
+                switch (point.State)
+                {
+                    case CapturePoint.CaptureState.Capturing:
+                        captureText.text = $"{point.displayName} 점령 중 · {progress}";
+                        break;
+                    case CapturePoint.CaptureState.Contested:
+                        captureText.text = $"{point.displayName} · 적 때문에 점령 중단 ({progress})";
+                        break;
+                    case CapturePoint.CaptureState.Complete:
+                        captureText.text = $"{point.displayName} 점령 완료";
+                        break;
+                    default:
+                        captureText.text = point.WasReset
+                            ? $"{point.displayName} · 아군이 없어 점령 진행 초기화"
+                            : $"{point.displayName} 점령 · 유닛을 구역 안으로 이동하세요.";
+                        break;
+                }
+            }
         }
     }
 

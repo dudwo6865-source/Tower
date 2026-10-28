@@ -205,6 +205,9 @@ public partial class StageEditorWindow
             if (selected.winWhenAllSpawnersDestroyed)
                 win.Add("스포너 전멸");
 
+            if (selected.winByCapturingPoint)
+                win.Add($"거점 점령 {selected.captureDuration:0.#}초");
+
             Add(win.Count > 0 ? "승리: " + string.Join(" / ", win) : "승리 조건 없음",
                 win.Count > 0 ? WinConditionColor : ChipErrorColor);
         }

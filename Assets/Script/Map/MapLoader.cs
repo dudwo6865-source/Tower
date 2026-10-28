@@ -122,6 +122,8 @@ public class MapLoader : MonoBehaviour
         ApplyWaveConfig(config);
         ApplyInitialEnemyConfig(config);
         ApplyWinConditionConfig(config);
+        GameResultManager captureResult = FindFirstObjectByType<GameResultManager>();
+        if (captureResult != null) captureResult.BindCapturePoint(null, false);
         EnemyMutationManager.EnsureInstance().Configure(config.mutations);
 
         // 재로드 대비: 이전에 만든 맵 인스턴스 제거
@@ -178,6 +180,20 @@ public class MapLoader : MonoBehaviour
             CurrentMap.BuildNavMesh();
         else
             CurrentMap.RefreshMapGrid();
+
+        GameResultManager result = FindFirstObjectByType<GameResultManager>();
+        if (result != null)
+        {
+            CapturePoint point = null;
+            int count = 0;
+            foreach (CapturePoint candidate in CurrentMap.GetComponentsInChildren<CapturePoint>())
+            {
+                if (!candidate.isActiveAndEnabled) continue;
+                point = candidate;
+                count++;
+            }
+            result.BindCapturePoint(count == 1 ? point : null);
+        }
     }
 
     /// <summary>
@@ -335,5 +351,7 @@ public class MapLoader : MonoBehaviour
         result.winBySurvivingNights = config.winBySurvivingNights;
         result.survivalNightsToWin = config.survivalNightsToWin;
         result.winWhenAllSpawnersDestroyed = config.winWhenAllSpawnersDestroyed;
+        result.winByCapturingPoint = config.winByCapturingPoint;
+        result.captureDuration = config.captureDuration;
     }
 }

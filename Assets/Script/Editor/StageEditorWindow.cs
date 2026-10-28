@@ -1019,6 +1019,10 @@ public partial class StageEditorWindow : EditorWindow
         EditorGUILayout.PropertyField(serializedObject.FindProperty("survivalNightsToWin"), new GUIContent("생존 목표 (몇 번째 밤까지)"));
         EditorGUI.EndDisabledGroup();
         EditorGUILayout.PropertyField(serializedObject.FindProperty("winWhenAllSpawnersDestroyed"), new GUIContent("적 스포너 전멸 시 승리"));
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("winByCapturingPoint"), new GUIContent("거점 점령 승리 사용"));
+        EditorGUI.BeginDisabledGroup(!selected.winByCapturingPoint);
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("captureDuration"), new GUIContent("점령 시간(초)"));
+        EditorGUI.EndDisabledGroup();
         EditorGUI.EndDisabledGroup();
 
         if (selected.overrideWinCondition)
@@ -1026,7 +1030,7 @@ public partial class StageEditorWindow : EditorWindow
             if (selected.winBySurvivingNights && selected.survivalNightsToWin <= 0)
                 EditorGUILayout.HelpBox("생존 목표가 0 이하입니다. 게임 시작과 거의 동시에 승리 조건이 충족됩니다.", MessageType.Warning);
 
-            if (!selected.winBySurvivingNights && !selected.winWhenAllSpawnersDestroyed)
+            if (!selected.winBySurvivingNights && !selected.winWhenAllSpawnersDestroyed && !selected.winByCapturingPoint)
                 EditorGUILayout.HelpBox("승리 조건이 모두 꺼져 있습니다. 이 스테이지는 승리할 수 없습니다.", MessageType.Warning);
 
             if (selected.winBySurvivingNights)
@@ -1043,15 +1047,45 @@ public partial class StageEditorWindow : EditorWindow
                     EditorStyles.miniLabel);
             }
 
-            EditorGUILayout.LabelField(
-                "다른 승리/패배 조건은 GameResultManager.EndGame()을 호출하는 방식으로 나중에 추가할 수 있습니다.",
-                EditorStyles.miniLabel);
+            if (selected.winByCapturingPoint)
+            {
+                EditorGUILayout.LabelField($"미리보기: 거점 한 곳을 {selected.captureDuration:0.#}초 동안 점령하면 승리합니다.", EditorStyles.miniLabel);
+                if (selected.captureDuration <= 0f || float.IsNaN(selected.captureDuration) || float.IsInfinity(selected.captureDuration))
+                    EditorGUILayout.HelpBox("점령 시간은 0보다 큰 유한한 값이어야 합니다.", MessageType.Error);
+                if (selected.winBySurvivingNights || selected.winWhenAllSpawnersDestroyed)
+                    EditorGUILayout.HelpBox("켜진 조건 중 하나만 달성해도 승리합니다. 점령 전용 미션은 생존과 스포너 전멸 승리를 끄세요.", MessageType.Warning);
+
+                int count = 0;
+                CapturePoint point = null;
+                if (selected.mapRootPrefab != null)
+                    foreach (CapturePoint candidate in selected.mapRootPrefab.GetComponentsInChildren<CapturePoint>(true))
+                    {
+                        if (!candidate.enabled || !IsCapturePointActive(candidate, selected.mapRootPrefab.transform)) continue;
+                        point = candidate;
+                        count++;
+                    }
+                if (count != 1)
+                    EditorGUILayout.HelpBox($"맵 프리팹의 활성 점령 거점은 정확히 하나여야 합니다. 현재 {count}개입니다. 씬 맵 사용 시에는 해당 씬의 거점을 확인하세요.", MessageType.Warning);
+                else if (!point.HasValidRadius)
+                    EditorGUILayout.HelpBox("거점의 점령 반경은 0보다 큰 유한한 값이어야 합니다.", MessageType.Error);
+                EditorGUILayout.HelpBox("맵의 MapRoot 아래에 CapturePoint를 배치하고, 목표 UI의 점령 조건 텍스트를 연결하세요.", MessageType.Info);
+            }
         }
 
         EditorGUILayout.Space(6);
     }
 
     // ---------- Helpers ----------
+
+    static bool IsCapturePointActive(CapturePoint point, Transform root)
+    {
+        for (Transform current = point.transform; current != null; current = current.parent)
+        {
+            if (!current.gameObject.activeSelf) return false;
+            if (current == root) return true;
+        }
+        return false;
+    }
 
     bool DrawSectionFoldout(string title, Color color, bool expanded)
     {
@@ -1285,6 +1319,8 @@ public partial class StageEditorWindow : EditorWindow
                 result.winBySurvivingNights = selected.winBySurvivingNights;
                 result.survivalNightsToWin = selected.survivalNightsToWin;
                 result.winWhenAllSpawnersDestroyed = selected.winWhenAllSpawnersDestroyed;
+                result.winByCapturingPoint = selected.winByCapturingPoint;
+                result.captureDuration = selected.captureDuration;
                 EditorUtility.SetDirty(result);
                 appliedAny = true;
             }
