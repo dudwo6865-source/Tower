@@ -87,18 +87,39 @@ public class BuildZoneManager : MonoBehaviour
             return allowBuildWithoutHeadquarters;
         }
 
+        // 같은 소유자의 구역을 합쳐 판정하므로, 구역별 중심은 한 번만 갱신한다.
         for (int i = 0; i < providers.Count; i++)
         {
             BuildZoneProvider provider = providers[i];
+            if (provider != null)
+                provider.RefreshCenterCell();
+        }
 
-            if (provider != null &&
-                provider.ContainsFootprint(originCell, footprintCells))
+        // 건물 전체가 한 구역 안에 있을 필요는 없지만, 모든 칸은 구역에 포함되어야 한다.
+        for (int x = 0; x < footprintCells.x; x++)
+        {
+            for (int z = 0; z < footprintCells.y; z++)
             {
-                return true;
+                Vector2Int cell = originCell + new Vector2Int(x, z);
+                bool covered = false;
+
+                for (int i = 0; i < providers.Count; i++)
+                {
+                    BuildZoneProvider provider = providers[i];
+                    if (provider != null && BuildZoneProvider.ContainsCell(
+                            cell, provider.CenterCell, provider.buildRadiusCells))
+                    {
+                        covered = true;
+                        break;
+                    }
+                }
+
+                if (!covered)
+                    return false;
             }
         }
 
-        return false;
+        return true;
     }
 
     public bool TryGetHeadquarters(int ownerId, out Headquarters headquarters)
