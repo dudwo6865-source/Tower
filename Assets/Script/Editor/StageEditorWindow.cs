@@ -1068,7 +1068,7 @@ public partial class StageEditorWindow : EditorWindow
                     EditorGUILayout.HelpBox($"맵 프리팹의 활성 점령 거점은 정확히 하나여야 합니다. 현재 {count}개입니다. 씬 맵 사용 시에는 해당 씬의 거점을 확인하세요.", MessageType.Warning);
                 else if (!point.HasValidRadius)
                     EditorGUILayout.HelpBox("거점의 점령 반경은 0보다 큰 유한한 값이어야 합니다.", MessageType.Error);
-                EditorGUILayout.HelpBox("맵의 MapRoot 아래에 CapturePoint를 배치하고, 목표 UI의 점령 조건 텍스트를 연결하세요.", MessageType.Info);
+                EditorGUILayout.HelpBox("맵의 MapRoot 아래에 CapturePoint를 배치하고, VictoryConditionHUD의 기준 텍스트 하나를 연결하세요.", MessageType.Info);
             }
         }
 
