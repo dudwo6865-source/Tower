@@ -161,9 +161,7 @@ public partial class UnitCombatAI : MobileCombatAI
 
         if (ReachedManualDestination())
         {
-            manualMoveActive = false;
-            attackMoveActive = false;
-            hasManualDestination = false;
+            EndManualMove();
             return true;
         }
 
@@ -230,7 +228,10 @@ public partial class UnitCombatAI : MobileCombatAI
             return false;
 
         // 목적지 근처에서 다른 유닛에 막힌 것이면 도착으로 본다.
-        if (!pathInvalid && distance <= crowdedArrivalRadius)
+        if (!pathInvalid && agent.pathStatus == NavMeshPathStatus.PathComplete &&
+            distance <= crowdedArrivalRadius &&
+            Mathf.Abs(transform.position.y - destination.y) <= Mathf.Max(agent.height, 0.5f) &&
+            agent.remainingDistance <= crowdedArrivalRadius)
         {
             UnitCommandDebugLog.Log(this, $"{moveName}: 목적지 근처 혼잡으로 도착 처리 (남은 거리 {distance:F1}m)");
             EndManualMove();
@@ -282,6 +283,13 @@ public partial class UnitCombatAI : MobileCombatAI
 
     void EndManualMove()
     {
+        if (agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh)
+        {
+            agent.ResetPath();
+            agent.velocity = Vector3.zero;
+        }
+        hasDestination = false;
+        ResetMoveStuckState();
         manualMoveActive = false;
         attackMoveActive = false;
         attackMovePathIssued = false;
@@ -292,6 +300,12 @@ public partial class UnitCombatAI : MobileCombatAI
     {
         if (!agent.isOnNavMesh)
             return true;
+
+        if (agent.pathPending) return false;
+        Vector3 goal = attackMoveActive ? attackMoveDestination : manualDestination;
+        if ((attackMoveActive || hasManualDestination) &&
+            Mathf.Abs(transform.position.y - goal.y) > Mathf.Max(agent.height, 0.5f)) return false;
+        if (agent.hasPath && agent.remainingDistance > Mathf.Max(0.75f, agent.stoppingDistance + 0.1f)) return false;
 
         if (attackMoveActive)
             return IsWithinFlatDistance(attackMoveDestination, 0.75f);

@@ -6,6 +6,14 @@ public class UnitCommandController : MonoBehaviour
 {
     public static UnitCommandController Instance { get; private set; }
 
+    [Header("부대 이동")]
+    [Label("개별 도착점 배정")]
+    public bool spreadMoveDestinations = true;
+    [Label("도착 유닛 사이 여유 거리")]
+    [Min(0f)] public float arrivalSpacing = 0.5f;
+    [Label("도착점 추가 탐색 배수")]
+    [Range(1, 8)] public int arrivalSearchMultiplier = 3;
+
     [Header("입력")]
     [Label("명령 마우스 버튼")]
     [Tooltip("Move/Attack/Patrol 모드에서 지형·대상을 지정할 마우스 버튼입니다. (0=좌클릭, 1=우클릭)")]

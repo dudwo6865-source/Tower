@@ -257,11 +257,73 @@ public static class UnitCommandHandler
         return true;
     }
 
+    // 도착점만 분산하고 이동 중 대열은 강제하지 않는다.
+    static List<Vector3> BuildArrivalSlots(List<SelectableEntity> units, Vector3 center)
+    {
+        var slots = new List<Vector3>();
+        UnitCommandController settings = UnitCommandController.Instance;
+        if (units.Count < 2 || (settings != null && !settings.spreadMoveDestinations)) return slots;
+        float diameter = 0f;
+        foreach (SelectableEntity unit in units)
+        {
+            NavMeshAgent agent = unit.GetComponent<NavMeshAgent>();
+            if (agent != null) diameter = Mathf.Max(diameter, agent.radius * 2f);
+        }
+        float spacing = Mathf.Max(diameter + (settings != null ? Mathf.Max(0f, settings.arrivalSpacing) : 0.5f),
+            MapGrid.Instance != null ? MapGrid.Instance.cellSize : diameter);
+        spacing = Mathf.Max(0.1f, spacing);
+        int count = units.Count * (settings != null ? Mathf.Clamp(settings.arrivalSearchMultiplier, 1, 8) : 3);
+        slots.Add(center);
+        for (int ring = 1; slots.Count < count; ring++)
+            for (int x = -ring; x <= ring && slots.Count < count; x++)
+                for (int z = -ring; z <= ring && slots.Count < count; z++)
+                    if (Mathf.Abs(x) == ring || Mathf.Abs(z) == ring)
+                        slots.Add(center + new Vector3(x * spacing, 0f, z * spacing));
+        return slots;
+    }
+
+    static Vector3 ChooseArrivalSlot(NavMeshAgent agent, Vector3 center, Vector2Int footprint,
+        List<Vector3> slots, List<Vector3> reserved)
+    {
+        Vector3 fallback = GridMovement.SnapMoveDestination(center, footprint);
+        if (slots.Count == 0) return fallback;
+        var filter = new NavMeshQueryFilter { agentTypeID = agent.agentTypeID, areaMask = agent.areaMask };
+        float radius = Mathf.Max(agent.radius, 0.1f);
+        if (!NavMesh.SamplePosition(fallback, out NavMeshHit anchor, radius, filter)) return fallback;
+        int bestIndex = -1;
+        float bestScore = float.PositiveInfinity;
+        Vector3 best = fallback;
+        for (int i = 0; i < slots.Count; i++)
+        {
+            Vector3 candidate = GridMovement.SnapMoveDestination(slots[i], footprint);
+            if (!NavMesh.SamplePosition(candidate, out NavMeshHit hit, radius, filter)) continue;
+            // 명령점에서 벽이나 절벽을 넘어야 하는 자리는 배정하지 않는다.
+            if (NavMesh.Raycast(anchor.position, hit.position, out _, filter)) continue;
+            bool occupied = false;
+            float clearance = radius * 2f;
+            foreach (Vector3 used in reserved)
+                if ((used - hit.position).sqrMagnitude < clearance * clearance) { occupied = true; break; }
+            if (occupied) continue;
+            // 목적지 가까운 자리를 우선하고, 같은 거리라면 유닛과 가까운 쪽을 고른다.
+            float score = (hit.position - center).sqrMagnitude +
+                (hit.position - agent.transform.position).sqrMagnitude / Mathf.Max(1f, (agent.transform.position - center).sqrMagnitude);
+            if (score >= bestScore) continue;
+            bestScore = score;
+            bestIndex = i;
+            best = hit.position;
+        }
+        if (bestIndex >= 0) slots.RemoveAt(bestIndex);
+        return best;
+    }
+
     static bool IssueMove(List<SelectableEntity> units, Vector3 hitPoint)
     {
         PerfProbe.BeginCommand("이동");
         bool anyIssued = false;
         var moveTracks = new List<(NavMeshAgent agent, Vector3 destination)>();
+
+        var arrivalSlots = BuildArrivalSlots(units, hitPoint);
+        var reserved = new List<Vector3>();
 
         foreach (SelectableEntity unit in units)
         {
@@ -271,11 +333,12 @@ public static class UnitCommandHandler
                 continue;
 
             Vector2Int footprint = GridMovement.GetFootprintCells(unit);
-            Vector3 destination = GridMovement.SnapMoveDestination(hitPoint, footprint);
+            Vector3 destination = ChooseArrivalSlot(agent, hitPoint, footprint, arrivalSlots, reserved);
 
             if (!GridMovement.TrySetAgentDestination(agent, destination, immediate: true))
                 continue;
 
+            reserved.Add(destination);
             UnitCombatAI combatAI = unit.GetComponent<UnitCombatAI>();
 
             if (combatAI != null)
@@ -304,6 +367,9 @@ public static class UnitCommandHandler
         bool anyIssued = false;
         var moveTracks = new List<(NavMeshAgent agent, Vector3 destination)>();
 
+        var arrivalSlots = BuildArrivalSlots(units, hitPoint);
+        var reserved = new List<Vector3>();
+
         foreach (SelectableEntity unit in units)
         {
             NavMeshAgent agent = unit.GetComponent<NavMeshAgent>();
@@ -318,11 +384,12 @@ public static class UnitCommandHandler
                 continue;
 
             Vector2Int footprint = GridMovement.GetFootprintCells(unit);
-            Vector3 destination = GridMovement.SnapMoveDestination(hitPoint, footprint);
+            Vector3 destination = ChooseArrivalSlot(agent, hitPoint, footprint, arrivalSlots, reserved);
 
             if (!combatAI.BeginAttackMove(destination))
                 continue;
 
+            reserved.Add(destination);
             PerfProbe.TrackCommandAgent(agent);
             moveTracks.Add((agent, destination));
             anyIssued = true;
