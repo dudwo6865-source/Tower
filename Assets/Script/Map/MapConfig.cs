@@ -173,4 +173,20 @@ public class MapConfig : ScriptableObject
     [Label("점령 시간(초)")]
     [Tooltip("아군 유닛이 있고 적이 없는 상태로 유지해야 하는 시간입니다. 0보다 커야 합니다.")]
     public float captureDuration = 5f;
+
+    [Header("점령지 공격대")]
+    [Label("점령 공격대 설정 덮어쓰기")]
+    [Tooltip("켜면 모든 적 스포너의 점령 공격대 설정을 아래 값으로 통일합니다. 끄면 각 스포너의 설정을 유지합니다.")]
+    public bool overrideCaptureRaid;
+
+    [Label("점령 중 출격")]
+    public bool spawnDuringCapture = true;
+
+    [Label("점령 출격 간격(초)")]
+    [Tooltip("점령 시작 후 첫 출격까지의 시간과 이후 출격 간격입니다.")]
+    [Min(0.1f)] public float captureSpawnInterval = 10f;
+
+    [Label("점령 출격 수")]
+    [Tooltip("매 출격마다 스포너 한 곳에서 생성할 수입니다. 활동 시작 웨이브와 공격대 생존 상한은 각 스포너의 설정을 따릅니다.")]
+    [Min(0)] public int captureSpawnCount = 3;
 }

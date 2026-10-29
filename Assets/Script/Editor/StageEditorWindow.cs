@@ -1025,6 +1025,22 @@ public partial class StageEditorWindow : EditorWindow
         EditorGUI.EndDisabledGroup();
         EditorGUI.EndDisabledGroup();
 
+        EditorGUILayout.Space();
+        EditorGUILayout.LabelField("점령지 공격대", EditorStyles.boldLabel);
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("overrideCaptureRaid"), new GUIContent("점령 공격대 설정 덮어쓰기"));
+        EditorGUI.BeginDisabledGroup(!selected.overrideCaptureRaid);
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("spawnDuringCapture"), new GUIContent("점령 중 출격"));
+        EditorGUI.BeginDisabledGroup(!selected.spawnDuringCapture);
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("captureSpawnInterval"), new GUIContent("점령 출격 간격(초)"));
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("captureSpawnCount"), new GUIContent("스포너당 점령 출격 수"));
+        EditorGUI.EndDisabledGroup();
+        EditorGUI.EndDisabledGroup();
+        EditorGUILayout.HelpBox("덮어쓰기를 켜면 모든 적 스포너에 적용합니다. 끄면 스포너별 설정을 유지합니다. " +
+            "점령·경합 중에 낮밤과 관계없이 출격하며, 첫 출격도 설정한 간격 후에 시작합니다.", MessageType.Info);
+        if (selected.overrideCaptureRaid && selected.spawnDuringCapture && selected.overrideWinCondition &&
+            selected.winByCapturingPoint && selected.captureSpawnInterval >= selected.captureDuration)
+            EditorGUILayout.HelpBox("출격 간격이 점령 시간 이상입니다. 방해 없이 점령하면 첫 출격 전에 미션이 끝날 수 있습니다.", MessageType.Warning);
+
         if (selected.overrideWinCondition)
         {
             if (selected.winBySurvivingNights && selected.survivalNightsToWin <= 0)
@@ -1322,6 +1338,18 @@ public partial class StageEditorWindow : EditorWindow
                 result.winByCapturingPoint = selected.winByCapturingPoint;
                 result.captureDuration = selected.captureDuration;
                 EditorUtility.SetDirty(result);
+                appliedAny = true;
+            }
+        }
+
+        if (selected.overrideCaptureRaid)
+        {
+            foreach (EnemySpawner spawner in UnityEngine.Object.FindObjectsByType<EnemySpawner>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                Undo.RecordObject(spawner, "점령 공격대 설정 적용");
+                spawner.ApplyCaptureRaidConfig(selected);
+                PrefabUtility.RecordPrefabInstancePropertyModifications(spawner);
+                EditorUtility.SetDirty(spawner);
                 appliedAny = true;
             }
         }

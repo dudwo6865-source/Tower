@@ -122,6 +122,9 @@ public class MapLoader : MonoBehaviour
         ApplyWaveConfig(config);
         ApplyInitialEnemyConfig(config);
         ApplyWinConditionConfig(config);
+        // 씬에 미리 배치되거나 비활성화된 스포너에도 적용한다. 이후 생성분은 OnEnable에서 적용한다.
+        foreach (EnemySpawner spawner in FindObjectsByType<EnemySpawner>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            spawner.ApplyCaptureRaidConfig(config);
         GameResultManager captureResult = FindFirstObjectByType<GameResultManager>();
         if (captureResult != null) captureResult.BindCapturePoint(null, false);
         EnemyMutationManager.EnsureInstance().Configure(config.mutations);

@@ -110,12 +110,23 @@ public class EnemySpawner : MonoBehaviour
     {
         if (!active.Contains(this)) active.Add(this);
         WaveManager.Instance?.ApplyCurrentWaveTo(this);
+        ApplyCaptureRaidConfig(MapLoader.Instance != null ? MapLoader.Instance.LoadedConfig : null);
     }
     void OnDisable() => active.Remove(this);
     void OnDestroy()
     {
         if (health != null) health.OnDied -= HandleDied;
     }
+    public void ApplyCaptureRaidConfig(MapConfig config)
+    {
+        if (config == null || !config.overrideCaptureRaid) return;
+        spawnDuringCapture = config.spawnDuringCapture;
+        captureSpawnInterval = float.IsNaN(config.captureSpawnInterval) || float.IsInfinity(config.captureSpawnInterval)
+            ? 10f : Mathf.Max(0.1f, config.captureSpawnInterval);
+        captureSpawnCount = Mathf.Max(0, config.captureSpawnCount);
+        captureSpawnElapsed = 0f;
+    }
+
     public void ApplyWaveTuning(WaveTuning value, int waveNumber)
     {
         tuning = (value ?? new WaveTuning()).Sanitized();
