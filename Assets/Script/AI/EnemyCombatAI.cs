@@ -87,6 +87,38 @@ public class EnemyCombatAI : MobileCombatAI
     float lastEngagedTime = float.NegativeInfinity;
     bool wasEngaged;
     UnitSound unitSound;
+    CapturePoint captureDestination;
+    float capturePathTime;
+
+    public void SetCaptureDestination(CapturePoint point)
+    {
+        captureDestination = point;
+        shareTargetWithNearbyAllies = false;
+        squadLeader = null;
+        SetTarget(null);
+        ResetRetargetTimer();
+        capturePathTime = 0f;
+    }
+
+    // 교전이 끝나면 본부 대신 출격 명령을 받은 점령지로 이동한다.
+    void MoveToCaptureDestination()
+    {
+        if (captureDestination == null || !captureDestination.isActiveAndEnabled ||
+            agent == null || !agent.enabled || !agent.isOnNavMesh || Time.deltaTime <= 0f ||
+            (GameResultManager.Instance != null && GameResultManager.Instance.IsGameOver)) return;
+        float arrival = Mathf.Min(Mathf.Max(0.1f, stoppingDistance), captureDestination.radius * 0.5f);
+        Vector3 offset = transform.position - captureDestination.transform.position;
+        offset.y = 0f;
+        if (offset.sqrMagnitude <= arrival * arrival)
+        {
+            StopAgentMovement();
+            return;
+        }
+        if (Time.time < capturePathTime) return;
+        capturePathTime = Time.time + Mathf.Max(0.1f, destinationRefreshInterval);
+        agent.stoppingDistance = arrival;
+        GridMovement.TrySetAgentDestination(agent, captureDestination.transform.position);
+    }
 
     protected override void Awake()
     {
@@ -197,7 +229,10 @@ public class EnemyCombatAI : MobileCombatAI
         }
 
         if (!HasValidTarget())
+        {
+            MoveToCaptureDestination();
             return;
+        }
 
         UpdateAheadOfLeader(follower);
 
@@ -786,7 +821,7 @@ public class EnemyCombatAI : MobileCombatAI
         if (inAggro != null)
             return inAggro;
 
-        if (!advanceToEnemyBuildings || selfEntity == null)
+        if (captureDestination != null || !advanceToEnemyBuildings || selfEntity == null)
             return null;
 
         return TargetFinder.FindOpposingHeadquarters(

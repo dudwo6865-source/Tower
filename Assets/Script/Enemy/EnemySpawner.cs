@@ -28,6 +28,16 @@ public class EnemySpawner : MonoBehaviour
     [Min(0)] public int maxAliveEnemies;
     [Label("본부로 진군")]
     public bool advanceToEnemyBuildings = true;
+    [Header("점령지 공격대")]
+    [Label("점령 중 출격")]
+    [Tooltip("낮밤과 관계없이 점령 또는 경합 중인 거점으로 추가 공격대를 보냅니다. 활동 시작 웨이브와 공격대 생존 상한을 적용합니다.")]
+    public bool spawnDuringCapture = true;
+    [Label("점령 출격 간격(초)")]
+    [Tooltip("점령 시작 후 첫 출격까지의 시간과 이후 출격 간격입니다.")]
+    [Min(0.1f)] public float captureSpawnInterval = 10f;
+    [Label("점령 출격 수")]
+    [Tooltip("매 출격마다 이 스포너에서 생성할 수입니다. 적 프리팹 목록을 사용하며 웨이브의 능력치 보정만 적용합니다.")]
+    [Min(0)] public int captureSpawnCount = 3;
     [Header("수비대")]
     [Label("수비대 정원")]
     [Tooltip("첫 배치와 매일 아침에 생존 수와 보충 예약 수를 뺀 부족분만 생성합니다. 공격대 수 배율과 생존 상한은 적용하지 않습니다.")]
@@ -66,6 +76,8 @@ public class EnemySpawner : MonoBehaviour
     bool wasNight;
     bool isDead;
     double mutationRemainder;
+    CapturePoint captureObjective;
+    float captureSpawnElapsed;
 
     public int AliveCount { get { attackers.RemoveAll(IsGone); return attackers.Count; } }
     public int GuardAliveCount { get { guards.RemoveAll(IsGone); return guards.Count; } }
@@ -121,6 +133,7 @@ public class EnemySpawner : MonoBehaviour
     void Update()
     {
         if (isDead || (GameResultManager.Instance != null && GameResultManager.Instance.IsGameOver)) return;
+        UpdateCaptureSpawns();
         if (cycle == null) cycle = DayNightCycle.Instance != null ? DayNightCycle.Instance : FindObjectOfType<DayNightCycle>();
         if (cycle == null || !IsAwakeForCurrentWave) return;
         // 모든 페이즈 이벤트와 웨이브 보정이 끝난 뒤 처리하여 구독 순서에 영향을 받지 않는다.
@@ -147,6 +160,35 @@ public class EnemySpawner : MonoBehaviour
             ReleaseBatch();
         while (dueAttackers.Count > 0 && !IsBlockedByAliveCap)
             QueueEnemy(dueAttackers.Dequeue(), nightTuning, false);
+    }
+
+    bool CanSendToCapturePoint(CapturePoint point)
+    {
+        GameResultManager result = GameResultManager.Instance;
+        return spawnDuringCapture && IsAwakeForCurrentWave && isActiveAndEnabled && !isDead &&
+            result != null && !result.IsGameOver && result.winByCapturingPoint &&
+            enemyOwnerId != result.playerOwnerId && result.capturePoint == point &&
+            point != null && point.isActiveAndEnabled && point.HasValidRadius &&
+            (point.State == CapturePoint.CaptureState.Capturing || point.State == CapturePoint.CaptureState.Contested);
+    }
+
+    void UpdateCaptureSpawns()
+    {
+        CapturePoint point = GameResultManager.Instance != null ? GameResultManager.Instance.capturePoint : null;
+        if (captureObjective != point || !CanSendToCapturePoint(point))
+        {
+            captureObjective = point;
+            captureSpawnElapsed = 0f;
+        }
+        if (!CanSendToCapturePoint(point) || Time.deltaTime <= 0f) return;
+        captureSpawnElapsed += Time.deltaTime;
+        if (captureSpawnElapsed < Mathf.Max(0.1f, captureSpawnInterval)) return;
+        captureSpawnElapsed = 0f;
+        for (int i = 0; i < captureSpawnCount && !IsBlockedByAliveCap; i++)
+        {
+            GameObject prefab = PickPrefab(enemyPrefabs);
+            if (prefab != null) QueueEnemy(prefab, new WaveTuning(tuning), false, captureTarget: point);
+        }
     }
 
     void BeginNight()
@@ -205,8 +247,9 @@ public class EnemySpawner : MonoBehaviour
         return null;
     }
 
-    void QueueEnemy(GameObject prefab, WaveTuning spawnTuning, bool guard, bool deathBurst = false)
+    void QueueEnemy(GameObject prefab, WaveTuning spawnTuning, bool guard, bool deathBurst = false, CapturePoint captureTarget = null)
     {
+        bool captureRaid = captureTarget != null;
         Vector3 center = transform.position;
         float radius = guard ? Mathf.Min(spawnRadius, guardRadius * 0.5f) : spawnRadius;
         int attempts = spawnPositionAttempts;
@@ -221,7 +264,8 @@ public class EnemySpawner : MonoBehaviour
             else if (!deathBurst) PendingSpawnCount = Mathf.Max(0, PendingSpawnCount - 1);
             if (GameResultManager.Instance != null && GameResultManager.Instance.IsGameOver) return;
             if (!deathBurst && (this == null || isDead)) return;
-            if (!guard && !deathBurst && (cycle == null || !cycle.IsNight || cycle.CycleCount != scheduledCycle)) return;
+            if (captureRaid && !CanSendToCapturePoint(captureTarget)) return;
+            if (!guard && !deathBurst && !captureRaid && (cycle == null || !cycle.IsNight || cycle.CycleCount != scheduledCycle)) return;
             Vector3 position = EnemySpawnUtility.GetRandomPositionInRadius(center, radius, false, attempts);
             GameObject enemy = EnemySpawnUtility.SpawnEnemy(prefab, position, prefab.transform.rotation, owner,
                 spawnTuning.healthMultiplier, spawnTuning.damageMultiplier, spawnTuning.speedMultiplier,
@@ -231,6 +275,7 @@ public class EnemySpawner : MonoBehaviour
             if (!deathBurst && unitHealth != null) (guard ? guards : attackers).Add(unitHealth);
             EnemyCombatAI ai = enemy.GetComponent<EnemyCombatAI>();
             if (ai != null) ai.SetAdvanceToEnemyBuildings(!guard && advance && DayNightCycle.Instance != null && DayNightCycle.Instance.IsNight);
+            if (captureRaid && ai != null) ai.SetCaptureDestination(captureTarget);
             if (guard)
             {
                 if (ai != null) ai.shareTargetWithNearbyAllies = false;
