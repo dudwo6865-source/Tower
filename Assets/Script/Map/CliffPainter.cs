@@ -827,11 +827,54 @@ public class CliffPainter : MonoBehaviour
         if (HasHill(cell) || !IsEdgeSlot(cell, layer))
             return false;
 
-        if (layer == 0)
-            return HasGround(cell);
+        if (layer <= 0)
+            return HasGround(cell) || HasTop(cell);
 
         // 윗층 Hill: 해당 층 Top 가장자리 (보통 아랫층 Top 위 링)
         return true;
+    }
+
+    // 같은 칸에 벽이 여러 층이면 마우스가 가리킨 높이에 가까운 층을 선택한다.
+    public bool TryFindHillLayer(CellCoord cell, float worldHeight, out int layer)
+    {
+        EnsureLookup();
+        if (HasHill(cell))
+        {
+            layer = GetHillLayer(cell);
+            return true;
+        }
+
+        int highest = int.MinValue;
+        int lowest = topMaxLayer.TryGetValue(cell, out int ownLayer) ? ownLayer + 1 : 0;
+        for (int dx = -1; dx <= 1; dx++)
+        {
+            for (int dz = -1; dz <= 1; dz++)
+            {
+                var neighbor = new CellCoord(cell.x + dx, cell.z + dz);
+                if (topMaxLayer.TryGetValue(neighbor, out int top))
+                    highest = Mathf.Max(highest, top);
+                if (HasGround(neighbor))
+                    highest = Mathf.Max(highest, -1);
+            }
+        }
+
+        layer = 0;
+        float bestDistance = float.PositiveInfinity;
+        bool found = false;
+        for (int candidate = highest; candidate >= lowest; candidate--)
+        {
+            if (!CanPlaceHill(cell, candidate))
+                continue;
+            float center = GetEdgeSurfaceHeight(candidate) + LayerStepHeight * 0.5f
+                + (tileSet != null ? tileSet.edgeHeightOffset : 0f);
+            float distance = float.IsNaN(worldHeight) ? 0f : Mathf.Abs(center - worldHeight);
+            if (found && distance >= bestDistance)
+                continue;
+            layer = candidate;
+            bestDistance = distance;
+            found = true;
+        }
+        return found;
     }
 
     public bool IsEdgeSlot(CellCoord cell) => IsEdgeSlot(cell, 0);

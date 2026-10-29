@@ -25,6 +25,7 @@ public class CliffMapEditorWindow : EditorWindow
     int rampDirection = 0;
     int brushSize = 1;
     int groundFillSize = 5;
+    float hillPickHeight = float.NaN;
     int paintTopLayer; // 0=1층, 1=2층…
     bool groundFillMode; // true면 클릭 한 번에 N×N 채우기
     bool painting;
@@ -97,7 +98,7 @@ public class CliffMapEditorWindow : EditorWindow
 
         EditorGUILayout.LabelField("절벽 맵 에디터", EditorStyles.boldLabel);
         EditorGUILayout.HelpBox(
-            "• Paint Top / Place Hill: 층 슬라이더 공유 (-8층~9층, 실제 층수 표시)\n" +
+            "• Paint Top: -8층~9층 선택 / Place Hill: 벽의 층 자동 감지\n" +
             "• 2층+ Top: 아랫층 가장자리 한 칸 안쪽만 (In 코너 Top 위 제외) / Hill: 해당 층 Top 가장자리\n" +
             "• 1층 Top/Hill 칠하면 Ground 제거, 바닥/낮은 지형이 없는 칸엔 1층 벽 미생성\n" +
             "• 월 슬롯은 Ground 데이터는 유지하되 Ground 메시는 Top처럼 생략\n" +
@@ -177,26 +178,18 @@ public class CliffMapEditorWindow : EditorWindow
 
         EditorGUI.BeginDisabledGroup(!paintEnabled);
 
-        if (brushMode == BrushMode.PaintTop || brushMode == BrushMode.EraseTop ||
-            brushMode == BrushMode.PlaceHill || brushMode == BrushMode.EraseHill)
+        if (brushMode == BrushMode.PaintTop || brushMode == BrushMode.EraseTop)
         {
             paintTopLayer = EditorGUILayout.IntSlider("층", paintTopLayer + 1, -8, 9) - 1;
-            if (brushMode == BrushMode.PaintTop || brushMode == BrushMode.EraseTop)
-            {
-                EditorGUILayout.HelpBox(
-                    paintTopLayer <= 0
-                        ? $"{paintTopLayer + 1}층 Top: 지정한 높이로 칠합니다. 0층 이하는 기존 높이도 바꿉니다."
-                        : $"{paintTopLayer + 1}층 Top: 아랫층 가장자리 한 칸 안쪽만 (In 코너 Top 위 제외).",
-                    MessageType.None);
-            }
-            else
-            {
-                EditorGUILayout.HelpBox(
-                    paintTopLayer == 0
-                        ? "1층 Hill: Ground 있는 Top 가장자리에만."
-                        : $"{paintTopLayer + 1}층 Hill: 해당 층 Top 가장자리(아랫층 위 링)에 칠합니다.",
-                    MessageType.None);
-            }
+            EditorGUILayout.HelpBox(
+                paintTopLayer <= 0
+                    ? $"{paintTopLayer + 1}층 Top: 지정한 높이로 칠합니다. 0층 이하는 기존 높이도 바꿉니다."
+                    : $"{paintTopLayer + 1}층 Top: 아랫층 가장자리 한 칸 안쪽만 배치합니다.",
+                MessageType.None);
+        }
+        else if (IsHillBrush())
+        {
+            EditorGUILayout.HelpBox("언덕은 가리킨 벽의 층을 자동 감지합니다. 층 선택은 필요하지 않습니다.", MessageType.Info);
         }
 
         if (brushMode == BrushMode.PaintTop || brushMode == BrushMode.EraseTop ||
@@ -580,7 +573,7 @@ public class CliffMapEditorWindow : EditorWindow
             Color trailOutline = new Color(1f, 1f, 1f, 0.85f);
 
             for (int i = 0; i < strokePreviewList.Count; i++)
-                DrawCellPreviewAtHeight(strokePreviewList[i], size, trailColor, previewY, trailOutline);
+                DrawCellPreviewAtHeight(strokePreviewList[i], size, trailColor, IsHillBrush() ? painter.GetEdgeSurfaceHeight(GetHillBrushLayer(strokePreviewList[i])) + 0.2f : previewY, trailOutline);
         }
 
         if (!TryGetCellUnderMouse(e, out CliffPainter.CellCoord origin))
@@ -598,8 +591,8 @@ public class CliffMapEditorWindow : EditorWindow
                 CliffPainter.CellCoord cell = new CliffPainter.CellCoord(origin.x + dx, origin.z + dz);
                 hoverPaintCells.Add(cell);
 
-                if (brushMode == BrushMode.PlaceHill && painter.CanPlaceHill(cell, paintTopLayer))
-                    painter.CollectAutoConnectorNeighbors(cell, paintTopLayer, hoverConnectorCells);
+                if (brushMode == BrushMode.PlaceHill && painter.CanPlaceHill(cell, GetHillBrushLayer(cell)))
+                    painter.CollectAutoConnectorNeighbors(cell, GetHillBrushLayer(cell), hoverConnectorCells);
             }
         }
 
@@ -626,8 +619,8 @@ public class CliffMapEditorWindow : EditorWindow
             hillInvalid = true;
             for (int i = 0; i < hoverPaintCells.Count; i++)
             {
-                if (painter.CanPlaceHill(hoverPaintCells[i], paintTopLayer) ||
-                    painter.HasHillOnLayer(hoverPaintCells[i], paintTopLayer))
+                if (painter.CanPlaceHill(hoverPaintCells[i], GetHillBrushLayer(hoverPaintCells[i])) ||
+                    painter.HasHill(hoverPaintCells[i]))
                 {
                     hillInvalid = false;
                     break;
@@ -642,17 +635,16 @@ public class CliffMapEditorWindow : EditorWindow
         hoverColor.a = Mathf.Min(0.65f, color.a + 0.25f);
 
         for (int i = 0; i < hoverPaintCells.Count; i++)
-            DrawCellPreviewAtHeight(hoverPaintCells[i], size, hoverColor, previewY);
+            DrawCellPreviewAtHeight(hoverPaintCells[i], size, hoverColor, IsHillBrush() ? painter.GetEdgeSurfaceHeight(GetHillBrushLayer(hoverPaintCells[i])) + 0.2f : previewY);
 
         if (brushMode == BrushMode.PlaceHill && !hillInvalid)
         {
             Color connColor = new Color(0.5f, 0.85f, 1f, 0.18f);
-            float edgeY = painter.GetEdgeSurfaceHeight(paintTopLayer) + 0.2f;
             for (int i = 0; i < hoverConnectorCells.Count; i++)
             {
                 if (hoverPaintCells.Contains(hoverConnectorCells[i]))
                     continue;
-                DrawCellPreviewAtHeight(hoverConnectorCells[i], size, connColor, edgeY);
+                DrawCellPreviewAtHeight(hoverConnectorCells[i], size, connColor, painter.GetEdgeSurfaceHeight(GetHillBrushLayer(hoverConnectorCells[i])) + 0.2f);
             }
         }
     }
@@ -845,7 +837,7 @@ public class CliffMapEditorWindow : EditorWindow
             case BrushMode.EraseRamp:
                 return painter.TryRemoveRamp(cell, rampDirection);
             case BrushMode.PlaceHill:
-                return painter.TryAddHill(cell, paintTopLayer);
+                return painter.TryFindHillLayer(cell, hillPickHeight, out int layer) && painter.TryAddHill(cell, layer);
             case BrushMode.EraseHill:
                 return painter.TryRemoveHill(cell);
             case BrushMode.PaintGround:
@@ -857,10 +849,32 @@ public class CliffMapEditorWindow : EditorWindow
         }
     }
 
+    int GetHillBrushLayer(CliffPainter.CellCoord cell)
+    {
+        return painter.TryFindHillLayer(cell, hillPickHeight, out int layer) ? layer : 0;
+    }
+
     bool TryGetCellUnderMouse(Event e, out CliffPainter.CellCoord cell)
     {
         cell = default;
         Ray ray = HandleUtility.GUIPointToWorldRay(e.mousePosition);
+        hillPickHeight = float.NaN;
+        if (IsHillBrush() && painter.generatedRoot != null)
+        {
+            // 다른 씬 오브젝트는 제외하고 생성된 절벽의 실제 표면을 찾는다.
+            RaycastHit[] hits = Physics.RaycastAll(ray);
+            float nearest = float.PositiveInfinity;
+            foreach (RaycastHit surface in hits)
+            {
+                if (!surface.transform.IsChildOf(painter.generatedRoot) || surface.distance >= nearest)
+                    continue;
+                nearest = surface.distance;
+                hillPickHeight = surface.point.y;
+                cell = painter.WorldToCell(surface.point);
+            }
+            if (!float.IsPositiveInfinity(nearest))
+                return true;
+        }
         float planeY = painter.baseHeight;
 
         if (Mathf.Abs(ray.direction.y) < 0.0001f)
