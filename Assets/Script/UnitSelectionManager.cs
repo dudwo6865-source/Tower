@@ -15,7 +15,7 @@ public class UnitSelectionManager : MonoBehaviour
 
     [Header("참조")]
     [Label("카메라 컨트롤러")]
-    [Tooltip("유닛 더블클릭·스페이스바 중심 이동에 사용할 RTS 카메라 컨트롤러입니다.")]
+    [Tooltip("유닛 더블클릭·스페이스바·선택 단축키 두 번 누르기의 중심 이동에 사용할 RTS 카메라 컨트롤러입니다. 비워두면 시작할 때 찾습니다.")]
     public RTSCameraPivotController cameraController;
 
     [Header("플레이어")]
@@ -27,6 +27,10 @@ public class UnitSelectionManager : MonoBehaviour
     [Label("더블클릭 간격(초)")]
     [Tooltip("같은 유닛을 연속 클릭할 때 더블클릭으로 인식하는 최대 시간(초)입니다.")]
     public float doubleClickThreshold = 0.3f;
+
+    [Label("선택 단축키 연속 입력 간격(초)")]
+    [Tooltip("같은 부대 번호 또는 전체 유닛 선택 키를 이 시간 안에 두 번 누르면 선택 중심으로 이동합니다. 0이면 사용하지 않습니다.")]
+    [Min(0f)] public float selectionShortcutDoublePressInterval = 0.3f;
 
     [Label("드래그 판정(픽셀)")]
     [Tooltip("이 픽셀 이상 드래그하면 클릭이 아닌 박스 선택으로 처리합니다.")]
@@ -51,6 +55,9 @@ public class UnitSelectionManager : MonoBehaviour
 
     // 숫자는 키보드 윗줄과 숫자 패드를 함께 지원한다.
     private const int ControlGroupCount = 10;
+    private const int AllUnitsShortcut = ControlGroupCount;
+    private int lastSelectionShortcut = -1;
+    private float lastSelectionShortcutTime;
     private readonly List<SelectableEntity>[] controlGroups = new List<SelectableEntity>[ControlGroupCount];
 
     private readonly List<SelectableEntity> selectedEntities =
@@ -84,6 +91,8 @@ public class UnitSelectionManager : MonoBehaviour
     void Start()
     {
         selectionCamera = Camera.main;
+        if (cameraController == null)
+            cameraController = FindFirstObjectByType<RTSCameraPivotController>();
 
         if (selectionBoxUI == null)
             selectionBoxUI = FindObjectOfType<SelectionBoxUI>();
@@ -112,21 +121,41 @@ public class UnitSelectionManager : MonoBehaviour
         if (selectionCamera == null)
             selectionCamera = Camera.main;
 
+        if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
+            lastSelectionShortcut = -1;
+
         if (IsTextInputFocused())
+        {
+            lastSelectionShortcut = -1;
             return;
+        }
 
         if (Input.GetKeyDown(KeyCode.Space))
+        {
+            lastSelectionShortcut = -1;
             FocusOnSelection();
+        }
 
         if (TowerPlacementController.Instance != null &&
             TowerPlacementController.Instance.IsPlacing)
+        {
+            lastSelectionShortcut = -1;
             return;
+        }
 
         if (!isDragging && HandleControlGroupInput())
             return;
 
         if (selectAllUnitsKey != KeyCode.None && Input.GetKeyDown(selectAllUnitsKey) && !isDragging)
+        {
             SelectAllOwnedUnits();
+            if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift) ||
+                Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl) ||
+                Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt))
+                lastSelectionShortcut = -1;
+            else
+                HandleSelectionShortcutFocus(AllUnitsShortcut);
+        }
 
         if (isDragging)
         {
@@ -168,6 +197,7 @@ public class UnitSelectionManager : MonoBehaviour
             List<SelectableEntity> group = controlGroups[i];
             if (save)
             {
+                lastSelectionShortcut = -1;
                 if (group == null)
                     controlGroups[i] = group = new List<SelectableEntity>();
                 group.Clear();
@@ -183,8 +213,11 @@ public class UnitSelectionManager : MonoBehaviour
                 {
                     SelectOnly(group, ignoreTypeFilter: true);
                     PlaySelectSound(group, null);
+                    HandleSelectionShortcutFocus(i);
                 }
+                else lastSelectionShortcut = -1;
             }
+            else lastSelectionShortcut = -1;
             return true;
         }
         return false;
@@ -194,6 +227,23 @@ public class UnitSelectionManager : MonoBehaviour
     {
         return entity != null && entity.isActiveAndEnabled && CanSelectEntityByOwner(entity) &&
             (entity.CachedHealth == null || entity.CachedHealth.IsAlive);
+    }
+
+    void HandleSelectionShortcutFocus(int shortcut)
+    {
+        if (selectedEntities.Count == 0 || selectionShortcutDoublePressInterval <= 0f)
+        {
+            lastSelectionShortcut = -1;
+            return;
+        }
+
+        float now = Time.unscaledTime;
+        bool repeated = lastSelectionShortcut == shortcut &&
+            now - lastSelectionShortcutTime <= selectionShortcutDoublePressInterval;
+        lastSelectionShortcutTime = now;
+        // 두 번을 한 쌍으로 소비해 세 번째 입력이 다시 카메라를 이동시키지 않게 한다.
+        lastSelectionShortcut = repeated ? -1 : shortcut;
+        if (repeated) FocusOnSelection();
     }
 
     static bool IsTextInputFocused()
@@ -701,7 +751,8 @@ public class UnitSelectionManager : MonoBehaviour
 
         foreach (SelectableEntity entity in selectedEntities)
         {
-            if (entity == null)
+            if (entity == null || !entity.isActiveAndEnabled ||
+                (entity.CachedHealth != null && !entity.CachedHealth.IsAlive))
                 continue;
 
             center += GetEntityFocusPoint(entity);
