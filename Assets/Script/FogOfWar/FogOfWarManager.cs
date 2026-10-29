@@ -103,7 +103,7 @@ public class FogOfWarManager : MonoBehaviour
     [Tooltip("아래에서 보이는 고지대 가장자리 안쪽 지형만 어둡게 보여줍니다. 적과 건물의 발견 판정은 바꾸지 않습니다.")]
     public bool revealHighGroundTerrain = true;
     [Label("고지대 지형 안내 거리")]
-    [Tooltip("시야 방향을 따라 고지대 가장자리에서 안쪽으로 보여줄 거리입니다. 0이면 표시하지 않습니다.")]
+    [Tooltip("시야 방향을 따라 고지대 가장자리 안쪽과, 밝혀진 경사면 주변의 고지대 지형을 보여줄 거리입니다. 유닛의 시야 반경 안에서만 적용하며 적·건물 발견 범위는 늘리지 않습니다. 0이면 표시하지 않습니다.")]
     [Min(0f)] public float highGroundTerrainRevealDistance = 4f;
 
     [Label("시야 주인 지면 탐색 거리")]
@@ -1312,6 +1312,7 @@ public class FogOfWarManager : MonoBehaviour
 
         Vector3 groundPosition = source.GroundPosition;
         StampVision(groundPosition, radius, edgeSoftness, eyeHeight);
+        StampTerrainAroundVisibleHills(groundPosition, radius, edgeSoftness);
 
         // 임시 버퍼에 찍힌 칸을 저장하고 버퍼는 다시 0으로 비운다.
         GetStampBounds(groundPosition, radius, out int minX, out int maxX, out int minZ, out int maxZ);
@@ -1340,6 +1341,60 @@ public class FogOfWarManager : MonoBehaviour
         }
 
         ApplyStamp(stamp);
+    }
+
+    // 실제로 보이는 경사 칸만 시작점으로 사용한다. 안내된 지형이 다시 주변을 밝히지는 않는다.
+    void StampTerrainAroundVisibleHills(Vector3 source, float radius, float edgeSoftness)
+    {
+        if (!revealHillTerrain || !revealHighGroundTerrain || !enableElevationVision || !blockHigherGround ||
+            highGroundTerrainRevealDistance <= 0f || hillTerrainByCell == null) return;
+
+        GetStampBounds(source, radius, out int minX, out int maxX, out int minZ, out int maxZ);
+        int reachX = Mathf.Min(gridWidth, Mathf.CeilToInt(highGroundTerrainRevealDistance / cellSizeX));
+        int reachZ = Mathf.Min(gridHeight, Mathf.CeilToInt(highGroundTerrainRevealDistance / cellSizeZ));
+        float revealSqr = highGroundTerrainRevealDistance * highGroundTerrainRevealDistance;
+        for (int z = minZ; z <= maxZ; z++)
+        for (int x = minX; x <= maxX; x++)
+        {
+            int seed = z * gridWidth + x;
+            if (!hillTerrainByCell[seed] || stampScratch[seed] == 0) continue;
+            float seedHeight = SampleTerrainHeightAtCell(x, z);
+            for (int targetZ = Mathf.Max(minZ, z - reachZ); targetZ <= Mathf.Min(maxZ, z + reachZ); targetZ++)
+            for (int targetX = Mathf.Max(minX, x - reachX); targetX <= Mathf.Min(maxX, x + reachX); targetX++)
+            {
+                float dx = (targetX - x) * cellSizeX;
+                float dz = (targetZ - z) * cellSizeZ;
+                if (dx * dx + dz * dz > revealSqr) continue;
+                int target = targetZ * gridWidth + targetX;
+                if (hillTerrainByCell[target]) continue;
+                float height = SampleTerrainHeightAtCell(targetX, targetZ);
+                if (height - source.y < highGroundBlockHeight || Mathf.Abs(height - seedHeight) >= highGroundBlockHeight) continue;
+                Vector2 world = GetCellWorldXZ(targetX, targetZ);
+                float distance = Vector2.Distance(world, new Vector2(source.x, source.z));
+                if (distance > radius) continue;
+                byte strength = (byte)(CalculateVisionStrength(distance, radius, edgeSoftness) * 255f);
+                if (strength <= highGroundTerrainScratch[target]) continue;
+                if (!HasClearHillTerrainConnection(x, z, targetX, targetZ, seedHeight, height)) continue;
+                highGroundTerrainScratch[target] = strength;
+            }
+        }
+    }
+
+    // 다른 절벽이나 낮은 골짜기를 건너 반대편 고지대까지 안내하지 않는다.
+    bool HasClearHillTerrainConnection(int x, int z, int targetX, int targetZ, float fromHeight, float toHeight)
+    {
+        int steps = Mathf.Max(Mathf.Abs(targetX - x), Mathf.Abs(targetZ - z));
+        float lower = Mathf.Min(fromHeight, toHeight) - highGroundBlockHeight;
+        float upper = Mathf.Max(fromHeight, toHeight) + highGroundEdgeMinRise;
+        for (int step = 1; step < steps; step++)
+        {
+            float t = (float)step / steps;
+            int sampleX = Mathf.RoundToInt(Mathf.Lerp(x, targetX, t));
+            int sampleZ = Mathf.RoundToInt(Mathf.Lerp(z, targetZ, t));
+            float height = SampleTerrainHeightAtCell(sampleX, sampleZ);
+            if (height <= lower || height > upper) return false;
+        }
+        return true;
     }
 
     void ApplyStamp(VisionStamp stamp)
