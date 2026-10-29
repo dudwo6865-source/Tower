@@ -3,9 +3,9 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 
-// 스타크래프트식 절벽 맵 에디터입니다.
+// 스타크래프트식 맵 생성기입니다.
 // Top + 벽/코너 자동 생성, Hill 한 칸 페인트 시 주변 벽/코너 오토타일.
-// Tools > 맵 > 절벽 맵 에디터
+// Tools > 맵 > 맵 생성기
 public class CliffMapEditorWindow : EditorWindow
 {
     enum BrushMode
@@ -46,16 +46,17 @@ public class CliffMapEditorWindow : EditorWindow
 
     static readonly string[] RampDirectionLabels = { "북 (+Z)", "동 (+X)", "남 (-Z)", "서 (-X)" };
 
-    [MenuItem("Tools/맵/절벽 맵 에디터")]
+    [MenuItem("Tools/맵/맵 생성기")]
     static void Open()
     {
-        CliffMapEditorWindow window = GetWindow<CliffMapEditorWindow>(false, "절벽 맵", true);
+        CliffMapEditorWindow window = GetWindow<CliffMapEditorWindow>(false, "맵 생성기", true);
         window.minSize = new Vector2(360f, 520f);
         window.Show();
     }
 
     void OnEnable()
     {
+        titleContent = new GUIContent("맵 생성기");
         SceneView.duringSceneGui += OnSceneGUI;
         Undo.undoRedoPerformed += OnUndoRedo;
         AutoFindPainter();
@@ -96,7 +97,7 @@ public class CliffMapEditorWindow : EditorWindow
     {
         scroll = EditorGUILayout.BeginScrollView(scroll);
 
-        EditorGUILayout.LabelField("절벽 맵 에디터", EditorStyles.boldLabel);
+        EditorGUILayout.LabelField("맵 생성기", EditorStyles.boldLabel);
         EditorGUILayout.HelpBox(
             "• Paint Top: -8층~9층 선택 / Place Hill: 벽의 층 자동 감지\n" +
             "• 2층+ Top: 아랫층 가장자리 한 칸 안쪽만 (In 코너 Top 위 제외) / Hill: 해당 층 Top 가장자리\n" +
@@ -265,7 +266,7 @@ public class CliffMapEditorWindow : EditorWindow
         if (GUILayout.Button("Top/Hill만 지우기", GUILayout.Height(28f)))
         {
             if (EditorUtility.DisplayDialog(
-                    "절벽 맵",
+                    "맵 생성기",
                     "바닥(Ground)은 남기고 Top / Hill / 램프만 지울까요?",
                     "지우기",
                     "취소"))
@@ -279,7 +280,7 @@ public class CliffMapEditorWindow : EditorWindow
 
         if (GUILayout.Button("전부 지우기", GUILayout.Height(28f)))
         {
-            if (EditorUtility.DisplayDialog("절벽 맵", "모든 Top/바닥/언덕/램프를 지울까요?", "지우기", "취소"))
+            if (EditorUtility.DisplayDialog("맵 생성기", "모든 Top/바닥/언덕/램프를 지울까요?", "지우기", "취소"))
             {
                 Undo.RecordObject(painter, "Clear Cliffs");
                 painter.ClearAllTops();
