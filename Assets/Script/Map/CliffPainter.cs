@@ -109,6 +109,18 @@ public class CliffPainter : MonoBehaviour
     [Tooltip("수동으로 배치한 램프입니다.")]
     public List<RampEntry> ramps = new List<RampEntry>();
 
+    [Header("타일 경계 노멀")]
+    [Label("타일 경계 노멀 연결")]
+    [Tooltip("재생성할 때 서로 다른 타일의 맞닿는 경계 노멀을 연결합니다. 원본 메시와 충돌 형상은 변경하지 않습니다.")]
+    public bool connectTileNormals = false;
+    [Label("경계 탐색 거리")]
+    [Tooltip("같은 경계 정점으로 취급할 최대 월드 거리입니다. 타일 간격과 실제 폭이 먼저 일치해야 합니다.")]
+    [Min(0.0001f)] public float normalJoinDistance = 0.01f;
+    [Label("노멀 연결 최대 각도")]
+    [Tooltip("원래 노멀의 차이가 이 각도 이하인 연결부만 부드럽게 합니다. 날카로운 모서리를 유지하려면 낮추세요.")]
+    [Range(0f, 90f)] public float normalJoinAngle = 60f;
+    [SerializeField, HideInInspector] List<Mesh> generatedNormalMeshes = new List<Mesh>();
+
     [Header("기즈모")]
     [Label("기즈모 표시")]
     public bool drawGizmos = true;
@@ -132,7 +144,6 @@ public class CliffPainter : MonoBehaviour
     // SpawnHill* 처리 중 현재 층 (커넥터 오토타일 조회용)
     int hillBuildLayer;
 
-    // 프리팹별 메시 바닥 오프셋 캐시 (재생성마다 Instantiate 임시 오브젝트 방지)
 
     bool lookupDirty = true;
 
@@ -1094,6 +1105,17 @@ public class CliffPainter : MonoBehaviour
         for (int i = root.childCount - 1; i >= 0; i--)
             DestroyImmediate(root.GetChild(i).gameObject);
 
+        foreach (Mesh mesh in generatedNormalMeshes)
+            if (mesh != null)
+            {
+#if UNITY_EDITOR
+                // 저장된 메시 에셋은 다른 맵에서도 참조할 수 있으므로 자동 삭제하지 않는다.
+                if (UnityEditor.EditorUtility.IsPersistent(mesh)) continue;
+#endif
+                DestroyImmediate(mesh);
+            }
+        generatedNormalMeshes.Clear();
+
         SpawnGrounds(root);
 
         int highest = 0;
@@ -1109,7 +1131,146 @@ public class CliffPainter : MonoBehaviour
             SpawnLayerGeometry(layer, root);
 
         SpawnRamps(root);
+        if (connectTileNormals)
+            ConnectTileBoundaryNormals(root);
     }
+
+    class NormalMeshData
+    {
+        public MeshFilter filter;
+        public Transform tile;
+        public Mesh source;
+        public Vector3[] normals;
+        public bool changed;
+    }
+
+    class BoundaryNormal
+    {
+        public NormalMeshData data;
+        public int index;
+        public Vector3 position;
+        public Vector3 normal;
+        public bool assigned;
+    }
+
+    void ConnectTileBoundaryNormals(Transform root)
+    {
+        float tolerance = Mathf.Max(0.0001f, normalJoinDistance);
+        float cosine = Mathf.Cos(Mathf.Clamp(normalJoinAngle, 0f, 90f) * Mathf.Deg2Rad);
+        var meshes = new List<NormalMeshData>();
+        var buckets = new Dictionary<Vector3Int, List<BoundaryNormal>>();
+        var vertices = new List<BoundaryNormal>();
+        foreach (MeshFilter filter in root.GetComponentsInChildren<MeshFilter>())
+        {
+            Mesh source = filter.sharedMesh;
+            if (source == null) continue;
+            if (!source.isReadable)
+            {
+                Debug.LogWarning($"맵 생성기: '{source.name}'의 Read/Write Enabled를 켜야 경계 노멀을 연결할 수 있습니다.", filter);
+                continue;
+            }
+            Vector3[] positions = source.vertices;
+            Vector3[] normals = source.normals;
+            if (normals.Length != positions.Length) continue;
+            Transform tile = filter.transform;
+            while (tile.parent != null && tile.parent != root) tile = tile.parent;
+            var data = new NormalMeshData { filter = filter, tile = tile, source = source, normals = normals };
+            meshes.Add(data);
+            var edges = new Dictionary<(int, int), int>();
+            int[] triangles = source.triangles;
+            for (int i = 0; i < triangles.Length; i += 3)
+                for (int e = 0; e < 3; e++)
+                {
+                    int a = triangles[i + e], b = triangles[i + (e + 1) % 3];
+                    var key = (Mathf.Min(a, b), Mathf.Max(a, b));
+                    edges.TryGetValue(key, out int count);
+                    edges[key] = count + 1;
+                }
+            var boundary = new HashSet<int>();
+            foreach (var edge in edges)
+                if (edge.Value == 1) { boundary.Add(edge.Key.Item1); boundary.Add(edge.Key.Item2); }
+            Matrix4x4 normalMatrix = filter.transform.worldToLocalMatrix.transpose;
+            foreach (int index in boundary)
+            {
+                var vertex = new BoundaryNormal { data = data, index = index,
+                    position = filter.transform.TransformPoint(positions[index]),
+                    normal = normalMatrix.MultiplyVector(normals[index]).normalized };
+                Vector3Int key = NormalBucket(vertex.position, tolerance);
+                if (!buckets.TryGetValue(key, out var list)) buckets[key] = list = new List<BoundaryNormal>();
+                list.Add(vertex);
+                vertices.Add(vertex);
+            }
+        }
+
+        foreach (BoundaryNormal seed in vertices)
+        {
+            if (seed.assigned) continue;
+            var group = new List<BoundaryNormal> { seed };
+            Vector3Int key = NormalBucket(seed.position, tolerance);
+            bool crossesTiles = false;
+            for (int x = -1; x <= 1; x++)
+                for (int y = -1; y <= 1; y++)
+                    for (int z = -1; z <= 1; z++)
+                    {
+                        if (!buckets.TryGetValue(key + new Vector3Int(x, y, z), out var candidates)) continue;
+                        foreach (BoundaryNormal candidate in candidates)
+                        {
+                            if (candidate == seed || candidate.assigned ||
+                                (candidate.position - seed.position).sqrMagnitude > tolerance * tolerance) continue;
+                            bool compatible = true;
+                            foreach (BoundaryNormal member in group)
+                                if (Vector3.Dot(member.normal, candidate.normal) < cosine) { compatible = false; break; }
+                            if (!compatible) continue;
+                            group.Add(candidate);
+                            crossesTiles |= candidate.data.tile != seed.data.tile;
+                        }
+                    }
+            if (!crossesTiles) continue;
+            Vector3 average = Vector3.zero;
+            foreach (BoundaryNormal member in group) average += member.normal;
+            average.Normalize();
+            foreach (BoundaryNormal member in group)
+            {
+                member.data.normals[member.index] = member.data.filter.transform.localToWorldMatrix.transpose.MultiplyVector(average).normalized;
+                member.data.changed = true;
+                member.assigned = true;
+            }
+        }
+#if UNITY_EDITOR
+        string meshAssetPath = null;
+#endif
+        foreach (NormalMeshData data in meshes)
+        {
+            if (!data.changed) continue;
+            Mesh copy = Instantiate(data.source);
+            copy.name = data.source.name + "_경계연결";
+            copy.normals = data.normals;
+            if (copy.uv.Length == copy.vertexCount) copy.RecalculateTangents();
+#if UNITY_EDITOR
+            // 프리팹 저장 후에도 노멀이 유지되도록 생성 메시를 별도 에셋으로 보관한다.
+            if (!Application.isPlaying)
+            {
+                if (meshAssetPath == null)
+                {
+                    const string folder = "Assets/GeneratedMapNormals";
+                    if (!UnityEditor.AssetDatabase.IsValidFolder(folder))
+                        UnityEditor.AssetDatabase.CreateFolder("Assets", "GeneratedMapNormals");
+                    meshAssetPath = UnityEditor.AssetDatabase.GenerateUniqueAssetPath(folder + "/MapNormals.asset");
+                    UnityEditor.AssetDatabase.CreateAsset(copy, meshAssetPath);
+                }
+                else UnityEditor.AssetDatabase.AddObjectToAsset(copy, meshAssetPath);
+            }
+#endif
+            data.filter.sharedMesh = copy;
+            generatedNormalMeshes.Add(copy);
+        }
+#if UNITY_EDITOR
+        if (meshAssetPath != null) UnityEditor.AssetDatabase.SaveAssets();
+#endif
+    }
+
+    static Vector3Int NormalBucket(Vector3 position, float size) => new Vector3Int(
+        Mathf.FloorToInt(position.x / size), Mathf.FloorToInt(position.y / size), Mathf.FloorToInt(position.z / size));
 
     void SpawnLayerGeometry(int layer, Transform root)
     {

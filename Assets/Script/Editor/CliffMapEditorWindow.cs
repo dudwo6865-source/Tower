@@ -148,6 +148,14 @@ public class CliffMapEditorWindow : EditorWindow
             CreateDefaultHillTileSet();
         EditorGUILayout.EndHorizontal();
 
+        painter.connectTileNormals = EditorGUILayout.Toggle("타일 경계 노멀 연결", painter.connectTileNormals);
+        if (painter.connectTileNormals)
+        {
+            painter.normalJoinDistance = Mathf.Max(0.0001f, EditorGUILayout.FloatField("경계 탐색 거리", painter.normalJoinDistance));
+            painter.normalJoinAngle = EditorGUILayout.Slider("노멀 연결 최대 각도", painter.normalJoinAngle, 0f, 90f);
+            EditorGUILayout.HelpBox("설정 후 '지금 재생성'을 누르세요. 원본 FBX의 Read/Write Enabled가 필요합니다. 타일 간격과 실제 폭을 먼저 맞추세요.", MessageType.Info);
+        }
+
         painter.gridOrigin = EditorGUILayout.Vector3Field("그리드 원점", painter.gridOrigin);
         painter.baseHeight = EditorGUILayout.FloatField("저지대 높이 (Y)", painter.baseHeight);
 
