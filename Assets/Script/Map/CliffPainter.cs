@@ -133,7 +133,6 @@ public class CliffPainter : MonoBehaviour
     int hillBuildLayer;
 
     // 프리팹별 메시 바닥 오프셋 캐시 (재생성마다 Instantiate 임시 오브젝트 방지)
-    readonly Dictionary<int, float> prefabBottomOffsetCache = new Dictionary<int, float>();
 
     bool lookupDirty = true;
 
@@ -1369,8 +1368,7 @@ public class CliffPainter : MonoBehaviour
             yaw,
             yOffset,
             $"Hill_L{layer}_{kind}_{slot.x}_{slot.z}",
-            root,
-            matchStraightMeshBottom: true);
+            root);
     }
 
     void SpawnHillConnector(
@@ -1419,7 +1417,6 @@ public class CliffPainter : MonoBehaviour
             yOffset,
             $"HillConn_L{layer}_{slot.x}_{slot.z}_{kind}",
             root,
-            matchStraightMeshBottom: true,
             flipScaleX: flipScaleX);
     }
 
@@ -2070,8 +2067,7 @@ public class CliffPainter : MonoBehaviour
                 yaw + tileSet.rampYawOffset,
                 tileSet.edgeHeightOffset,
                 $"Ramp_{ramp.cell.x}_{ramp.cell.z}_{dir}",
-                root,
-                matchStraightMeshBottom: true);
+                root);
         }
     }
 
@@ -2097,7 +2093,7 @@ public class CliffPainter : MonoBehaviour
                 break;
         }
 
-        Spawn(prefab, pos, yaw + yawOffset, tileSet.edgeHeightOffset, name, root, matchStraightMeshBottom: true);
+        Spawn(prefab, pos, yaw + yawOffset, tileSet.edgeHeightOffset, name, root);
     }
 
     void Spawn(
@@ -2107,7 +2103,6 @@ public class CliffPainter : MonoBehaviour
         float yOffset,
         string name,
         Transform root,
-        bool matchStraightMeshBottom = false,
         bool flipScaleX = false)
     {
         if (prefab == null)
@@ -2133,9 +2128,6 @@ public class CliffPainter : MonoBehaviour
             scale.x = -scale.x;
             instance.transform.localScale = scale;
         }
-
-        if (matchStraightMeshBottom)
-            MatchMeshBottomToStraight(instance, prefab, flipScaleX);
     }
 
     static void MarkGeneratedStatic(GameObject instance)
@@ -2161,104 +2153,6 @@ public class CliffPainter : MonoBehaviour
 #else
         instance.isStatic = true;
 #endif
-    }
-
-    void MatchMeshBottomToStraight(GameObject instance, GameObject sourcePrefab, bool flipScaleX)
-    {
-        if (!TryGetCachedPrefabBottomOffset(sourcePrefab, flipScaleX, out float instanceBottomOffset))
-        {
-            if (!TryGetMeshBottomOffset(instance, out instanceBottomOffset))
-                return;
-        }
-
-        float targetBottomOffset = 0f;
-
-        if (tileSet != null && tileSet.straight != null)
-        {
-            if (!TryGetCachedPrefabBottomOffset(
-                    tileSet.straight,
-                    flipScaleX: false,
-                    out float straightBottomOffset))
-                return;
-
-            targetBottomOffset = straightBottomOffset;
-        }
-
-        float delta = targetBottomOffset - instanceBottomOffset;
-
-        if (Mathf.Abs(delta) > 0.0001f)
-            instance.transform.position += new Vector3(0f, delta, 0f);
-    }
-
-    bool TryGetCachedPrefabBottomOffset(GameObject prefab, bool flipScaleX, out float bottomOffset)
-    {
-        bottomOffset = 0f;
-        if (prefab == null)
-            return false;
-
-        // flip 여부에 따라 bounds가 달라질 수 있어 키를 분리
-        int key = prefab.GetInstanceID() ^ (flipScaleX ? 1 : 0);
-        if (prefabBottomOffsetCache.TryGetValue(key, out bottomOffset))
-            return true;
-
-        if (!TryGetPrefabMeshBottomOffset(prefab, flipScaleX, out bottomOffset))
-            return false;
-
-        prefabBottomOffsetCache[key] = bottomOffset;
-        return true;
-    }
-
-    static bool TryGetPrefabMeshBottomOffset(GameObject prefab, bool flipScaleX, out float bottomOffset)
-    {
-        bottomOffset = 0f;
-
-        if (prefab == null)
-            return false;
-
-#if UNITY_EDITOR
-        GameObject temp = (GameObject)UnityEditor.PrefabUtility.InstantiatePrefab(prefab);
-#else
-        GameObject temp = Instantiate(prefab);
-#endif
-        if (temp == null)
-            return false;
-
-        temp.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
-        if (flipScaleX)
-        {
-            Vector3 scale = temp.transform.localScale;
-            scale.x = -scale.x;
-            temp.transform.localScale = scale;
-        }
-
-        bool ok = TryGetMeshBottomOffset(temp, out bottomOffset);
-
-#if UNITY_EDITOR
-        DestroyImmediate(temp);
-#else
-        Destroy(temp);
-#endif
-        return ok;
-    }
-
-    static bool TryGetMeshBottomOffset(GameObject instance, out float bottomOffset)
-    {
-        bottomOffset = 0f;
-        Renderer[] renderers = instance.GetComponentsInChildren<Renderer>();
-
-        if (renderers == null || renderers.Length == 0)
-            return false;
-
-        Bounds bounds = renderers[0].bounds;
-
-        for (int i = 1; i < renderers.Length; i++)
-        {
-            if (renderers[i] != null)
-                bounds.Encapsulate(renderers[i].bounds);
-        }
-
-        bottomOffset = bounds.min.y - instance.transform.position.y;
-        return true;
     }
 
     void OnValidate()
