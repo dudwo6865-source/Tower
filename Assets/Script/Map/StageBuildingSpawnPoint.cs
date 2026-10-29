@@ -20,6 +20,21 @@ public class StageBuildingSpawnPoint : MonoBehaviour
     [Tooltip("켜면 마커의 Y 회전으로 건물을 돌려서 짓습니다. 끄면 프리팹의 회전을 그대로 씁니다.")]
     public bool useMarkerRotation = false;
 
+    [Header("바닥 맞춤")]
+    [Label("NavMesh 바닥 맞춤")]
+    [Tooltip("격자에 맞춘 위치에서 NavMesh를 찾아 바닥 높이에 건물을 생성합니다.")]
+    public bool snapToNavMesh = true;
+
+    [Label("위아래 탐색 거리")]
+    [Tooltip("마커 높이를 기준으로 위와 아래에서 바닥을 찾는 최대 거리입니다. 여러 층이면 마커 높이에 가장 가까운 층을 선택합니다.")]
+    [Range(0.5f, 128f)]
+    public float groundSearchHeight = 32f;
+
+    [Label("수평 탐색 허용 거리")]
+    [Tooltip("탐색 지점에서 이 거리 안에 있는 NavMesh만 사용합니다. 절벽 옆의 다른 지형을 잡으면 이 값을 줄이세요. 건물의 가로 위치는 이동하지 않습니다.")]
+    [Range(0.1f, 2f)]
+    public float groundSearchRadius = 0.5f;
+
     [Header("소유자")]
     [Label("소유자 덮어쓰기")]
     [Tooltip("켜면 아래 소유자 ID로 건물의 소유자를 바꿉니다. 끄면 프리팹에 설정된 소유자를 그대로 씁니다.")]
@@ -182,7 +197,7 @@ public class StageBuildingSpawnPoint : MonoBehaviour
             ? Quaternion.Euler(0f, transform.eulerAngles.y, 0f) * buildingPrefab.transform.rotation
             : buildingPrefab.transform.rotation;
 
-        Vector3 position = ResolveGroundPosition(transform.position);
+        Vector3 position = transform.position;
         GridFootprint prefabFootprint = buildingPrefab.GetComponent<GridFootprint>();
         bool blockCells = prefabFootprint != null && prefabFootprint.blockCells;
 
@@ -196,11 +211,17 @@ public class StageBuildingSpawnPoint : MonoBehaviour
             Vector2Int cells = GridFootprint.ResolveFootprintCells(buildingPrefab);
             originCell = MapGrid.Instance.GetFootprintOriginFromCenterWorld(position, cells);
 
-            // 점유 칸 한가운데에 서도록 격자에 맞춘다. (높이는 방금 구한 지면 높이를 유지)
+            // 점유 칸 한가운데로 맞춘 뒤 최종 위치에서 바닥 높이를 찾는다.
             Vector3 snapped = MapGrid.Instance.GetFootprintCenterWorld(originCell, cells);
-            snapped.y = MapGrid.Instance.SampleGroundHeight(snapped, position.y);
+            snapped.y = position.y;
             position = snapped;
+        }
 
+        position = ResolveGroundPosition(position);
+
+        if (blockCells && MapGrid.Instance != null)
+        {
+            Vector2Int cells = GridFootprint.ResolveFootprintCells(buildingPrefab);
             if (GridOccupancy.Instance != null)
                 terrainValid = GridOccupancy.Instance.CanOccupy(
                     originCell,
@@ -228,8 +249,23 @@ public class StageBuildingSpawnPoint : MonoBehaviour
 
             GridFootprint footprint = building.GetComponent<GridFootprint>();
 
-            if (footprint != null && MapGrid.Instance != null &&
-                !footprint.RegisterAtOriginCell(originCell, terrainValid))
+            bool registered = true;
+            if (footprint != null && MapGrid.Instance != null)
+            {
+                // 이미 최종 격자 위치와 높이를 구했으므로 등록 중 다시 높이를 바꾸지 않는다.
+                bool originalSnap = footprint.snapTransformOnRegister;
+                footprint.snapTransformOnRegister = false;
+                try
+                {
+                    registered = footprint.RegisterAtOriginCell(originCell, terrainValid);
+                }
+                finally
+                {
+                    footprint.snapTransformOnRegister = originalSnap;
+                }
+            }
+
+            if (!registered)
             {
                 string reason = GridOccupancy.Instance != null
                     ? GridOccupancy.Instance.DescribeBlockReason(
@@ -292,17 +328,48 @@ public class StageBuildingSpawnPoint : MonoBehaviour
             PendingSpawnerCount = Mathf.Max(0, PendingSpawnerCount - 1);
     }
 
-    static Vector3 ResolveGroundPosition(Vector3 position)
+    Vector3 ResolveGroundPosition(Vector3 position)
     {
-        if (MapGrid.Instance != null)
-        {
-            position.y = MapGrid.Instance.SampleGroundHeight(position, position.y);
+        if (!snapToNavMesh)
             return position;
+
+        float radius = Mathf.Clamp(groundSearchRadius, 0.1f, 2f);
+        float height = Mathf.Clamp(groundSearchHeight, 0.5f, 128f);
+        int steps = Mathf.CeilToInt(height / radius);
+        bool found = false;
+        float nearestHeight = float.PositiveInfinity;
+        float groundY = position.y;
+
+        // 큰 구형 탐색 대신 수직선을 따라 작은 범위로 검사해 옆 절벽을 고르지 않는다.
+        for (int step = 0; step <= steps; step++)
+        {
+            float offset = Mathf.Min(step * radius, height);
+            if (found && offset - radius > nearestHeight)
+                break;
+
+            for (int direction = -1; direction <= 1; direction += 2)
+            {
+                if (step == 0 && direction == 1)
+                    continue;
+                Vector3 probe = position + Vector3.up * (offset * direction);
+                if (!NavMesh.SamplePosition(probe, out NavMeshHit hit, radius, NavMesh.AllAreas))
+                    continue;
+
+                Vector2 horizontal = new Vector2(hit.position.x - position.x, hit.position.z - position.z);
+                float difference = Mathf.Abs(hit.position.y - position.y);
+                if (horizontal.sqrMagnitude > radius * radius || difference > height || difference >= nearestHeight)
+                    continue;
+
+                found = true;
+                nearestHeight = difference;
+                groundY = hit.position.y;
+            }
         }
 
-        if (NavMesh.SamplePosition(position, out NavMeshHit hit, 4f, NavMesh.AllAreas))
-            position.y = hit.position.y;
-
+        if (found)
+            position.y = groundY;
+        else
+            Debug.LogWarning($"StageBuildingSpawnPoint: '{name}' 주변에서 NavMesh 바닥을 찾지 못해 마커 높이로 생성합니다. NavMesh 베이크 상태와 바닥 탐색 거리를 확인하세요.", this);
         return position;
     }
 
