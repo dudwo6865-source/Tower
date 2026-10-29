@@ -96,7 +96,7 @@ public class FogOfWarManager : MonoBehaviour
     public float highGroundEdgeMinRise = 0.3f;
 
     [Label("아래에서 언덕 지형 안내")]
-    [Tooltip("보이는 낮은 입구에서 이어지는 언덕·램프를 시야 반경 안에서 밝게 드러냅니다. 시야를 벗어나면 탐색된 색으로 남습니다. 밝혀진 경사면의 적·건물도 일반 시야 기준으로 발견합니다. 고지대 평지의 지형 안내는 별도로 처리합니다. 지형 정보는 시작할 때 굽습니다.")]
+    [Tooltip("시야 반경 안의 언덕·램프 타일은 자체 경사에 가리지 않고 평지처럼 드러냅니다. 다른 절벽에 가린 부분은 공개하지 않습니다. 시야를 벗어나면 탐색된 색으로 남습니다. 밝혀진 경사면의 적·건물도 일반 시야 기준으로 발견합니다. 고지대 평지의 지형 안내는 별도로 처리합니다. 지형 정보는 시작할 때 굽습니다.")]
     public bool revealHillTerrain = true;
 
     [Label("고지대 가장자리 지형 안내")]
@@ -1484,10 +1484,10 @@ public class FogOfWarManager : MonoBehaviour
 
         // 소스가 서 있는 칸은 항상 밝힌다.
         float centerSlope = float.NegativeInfinity;
-        bool centerHill = false;
+        float centerNonHillSlope = float.NegativeInfinity;
         float centerEdgeDistance = -1f;
         float centerEdgeHeight = 0f;
-        StampVisionCell(centerX, centerZ, worldPosition, eyeHeight, radius, edgeSoftness, ref centerSlope, ref centerHill, ref centerEdgeDistance, ref centerEdgeHeight);
+        StampVisionCell(centerX, centerZ, worldPosition, eyeHeight, radius, edgeSoftness, ref centerSlope, ref centerNonHillSlope, ref centerEdgeDistance, ref centerEdgeHeight);
 
         // 경계 상자의 테두리 칸으로만 광선을 쏜다. 박스 전체를 채우는 것과 점근적으로
         // 같은 비용이면서, 광선을 따라 고도각(지평선)을 추적할 수 있다.
@@ -1531,13 +1531,13 @@ public class FogOfWarManager : MonoBehaviour
         // 칸 중 이 각도를 못 넘는 칸만 가려진 것으로 보고 밝히지 않는다(광선 자체는 계속
         // 진행). 눈높이보다 낮거나 같은 칸은 이 규칙과 무관하게 항상 보인다.
         float maxSlope = float.NegativeInfinity;
-        bool connectedHill = false;
+        float maxNonHillSlope = float.NegativeInfinity;
         float edgeDistance = -1f;
         float edgeHeight = 0f;
 
         while (true)
         {
-            if (!StampVisionCell(x, z, sourceWorldPos, eyeHeight, radius, edgeSoftness, ref maxSlope, ref connectedHill, ref edgeDistance, ref edgeHeight))
+            if (!StampVisionCell(x, z, sourceWorldPos, eyeHeight, radius, edgeSoftness, ref maxSlope, ref maxNonHillSlope, ref edgeDistance, ref edgeHeight))
                 return;
 
             if (x == x1 && z == z1)
@@ -1580,7 +1580,7 @@ public class FogOfWarManager : MonoBehaviour
         float radius,
         float edgeSoftness,
         ref float maxSlope,
-        ref bool connectedHill,
+        ref float maxNonHillSlope,
         ref float edgeDistance,
         ref float edgeHeight)
     {
@@ -1600,8 +1600,8 @@ public class FogOfWarManager : MonoBehaviour
         float eyeY = sourceWorldPos.y + eyeHeight;
         bool elevationVisible = true;
 
-        // 낮은 입구부터 같은 광선을 따라 이어지는 오르막만 안내한다.
-        // 눈높이 아래도 지평선 검사를 생략하지 않아 다른 절벽 뒤로 새지 않게 한다.
+        // 경사면 자체가 만드는 지평선과 일반 지형의 가림을 분리한다.
+        // 경사면 옆으로 들어오는 광선도 낮은 입구를 반드시 통과할 필요는 없다.
         int cellIndex = z * gridWidth + x;
         float terrainHeight = SampleTerrainHeightAtCell(x, z);
         bool terrainLineVisible = distance < MinElevationSampleDistance ||
@@ -1625,11 +1625,12 @@ public class FogOfWarManager : MonoBehaviour
                 if (strength > highGroundTerrainScratch[cellIndex]) highGroundTerrainScratch[cellIndex] = strength;
             }
         }
-        connectedHill = revealHillTerrain && enableElevationVision &&
-            hillTerrainByCell != null && hillTerrainByCell[cellIndex] &&
-            terrainLineVisible &&
-            (connectedHill || terrainHeight - sourceWorldPos.y < highGroundBlockHeight);
-        if (connectedHill)
+        bool isHill = hillTerrainByCell != null && hillTerrainByCell[cellIndex];
+        float terrainSlope = distance < MinElevationSampleDistance
+            ? float.NegativeInfinity : (terrainHeight - eyeY) / distance;
+        bool hillVisible = revealHillTerrain && enableElevationVision && isHill &&
+            (distance < MinElevationSampleDistance || terrainSlope >= maxNonHillSlope - ElevationSlopeEpsilon);
+        if (hillVisible)
         {
             byte strength = (byte)(CalculateVisionStrength(distance, radius, edgeSoftness) * 255f);
             // 경사면은 일반 시야 버퍼에 기록해 적·건물 표시와 탐색 상태도 함께 갱신한다.
@@ -1637,6 +1638,10 @@ public class FogOfWarManager : MonoBehaviour
             if (strength > hillTerrainExplored[cellIndex])
                 hillTerrainExplored[cellIndex] = strength;
         }
+
+        // 일반 지형은 경사면 시야도 차단하지만, 경사면끼리는 자체 높이로 서로 가리지 않는다.
+        if (!isHill && distance >= MinElevationSampleDistance)
+            maxNonHillSlope = Mathf.Max(maxNonHillSlope, terrainSlope);
 
         // 아주 가까운 칸(소스 자신의 칸 등)은 거리가 0에 가까워 고도각이 불안정해지므로
         // 최소 거리 밑에서는 고도각 판정을 건너뛰고 항상 보이는 것으로 취급한다.
