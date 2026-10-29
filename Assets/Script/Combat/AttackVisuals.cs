@@ -222,7 +222,7 @@ public static class AttackVisuals
             if (health == null || !health.IsAlive)
                 continue;
 
-            health.TakeDamage(damage, attacker);
+            Projectile.ApplyRangedDamage(health, damage, attacker);
 
             SpawnHitEffect(point, direction, hitEffectPrefab, hitFallbackColor);
         }

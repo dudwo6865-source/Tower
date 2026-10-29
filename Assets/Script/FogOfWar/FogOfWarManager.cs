@@ -257,6 +257,65 @@ public class FogOfWarManager : MonoBehaviour
     private float updateTimer;
 
     /// <summary>시야 소스 하나가 밝힌 칸과 밝기입니다. 소스가 제자리에 있으면 재사용합니다.</summary>
+    [Header("원거리 피격 시 시야")]
+    [Label("원거리 공격자 주변 공개")]
+    [Tooltip("아군이 적 투사체에 맞으면 공격자 주변을 고저차와 관계없이 잠시 밝힙니다.")]
+    public bool revealRangedAttacker = true;
+    [Label("공격자 공개 반경")]
+    [Min(0.1f)] public float attackerRevealRadius = 4f;
+    [Label("공격자 공개 시간")]
+    [Min(0.1f)] public float attackerRevealDuration = 2f;
+
+    struct AttackReveal
+    {
+        public int attackerId;
+        public Vector3 position;
+        public float expires;
+    }
+    readonly List<AttackReveal> attackReveals = new List<AttackReveal>();
+
+    public void RevealRangedAttacker(SelectableEntity attacker, SelectableEntity victim)
+    {
+        if (!revealRangedAttacker || attacker == null || victim == null ||
+            victim.ownerId != localPlayerOwnerId || attacker.ownerId == victim.ownerId)
+            return;
+        var reveal = new AttackReveal { attackerId = attacker.GetInstanceID(),
+            position = attacker.transform.position, expires = Time.time + attackerRevealDuration };
+        for (int i = attackReveals.Count - 1; i >= 0; i--)
+        {
+            if (attackReveals[i].expires <= Time.time) { attackReveals.RemoveAt(i); continue; }
+            if (attackReveals[i].attackerId == reveal.attackerId)
+            {
+                attackReveals[i] = reveal;
+                return;
+            }
+        }
+        attackReveals.Add(reveal);
+    }
+
+    void StampAttackReveals()
+    {
+        float radius = Mathf.Max(0.1f, attackerRevealRadius);
+        for (int i = attackReveals.Count - 1; i >= 0; i--)
+        {
+            AttackReveal reveal = attackReveals[i];
+            if (!revealRangedAttacker || reveal.expires <= Time.time)
+            {
+                attackReveals.RemoveAt(i);
+                continue;
+            }
+            GetStampBounds(reveal.position, radius, out int minX, out int maxX, out int minZ, out int maxZ);
+            // 고저차에 의한 가림과 별개로 공격자 주변의 작은 범위를 공개한다.
+            for (int z = minZ; z <= maxZ; z++)
+                for (int x = minX; x <= maxX; x++)
+                {
+                    Vector2 delta = GetCellWorldXZ(x, z) - new Vector2(reveal.position.x, reveal.position.z);
+                    if (delta.sqrMagnitude <= radius * radius)
+                        visionAccum[z * gridWidth + x] = 255;
+                }
+        }
+    }
+
     public class VisionStamp
     {
         public Vector3 position;
@@ -1185,6 +1244,7 @@ public class FogOfWarManager : MonoBehaviour
 
     void CommitVisionPass()
     {
+        StampAttackReveals();
         for (int i = 0; i < fogPixels.Length; i++)
         {
             byte visible = visionAccum[i];

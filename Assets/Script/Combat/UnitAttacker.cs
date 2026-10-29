@@ -619,7 +619,7 @@ public class UnitAttacker : MonoBehaviour
         }
         else if (attackType == AttackType.Hitscan)
         {
-            targetHealth.TakeDamage(GetEffectiveDamage(), selfEntity);
+            Projectile.ApplyRangedDamage(targetHealth, GetEffectiveDamage(), selfEntity);
 
             // 히트 이펙트와 같은 시점에 명중 사운드를 낸다.
             // 이펙트 표시 여부와 상관없이 타격은 났으므로 spawnVisualEffects 밖에 둔다.

@@ -181,7 +181,7 @@ public class Projectile : MonoBehaviour
         if (health == null || !health.IsAlive)
             return;
 
-        health.TakeDamage(damage, attacker);
+        ApplyRangedDamage(health, damage, attacker);
 
         // 히트 이펙트와 같은 시점에 공격자의 명중 사운드를 낸다.
         UnitSound.PlayAttackHit(attacker);
@@ -449,10 +449,19 @@ public class Projectile : MonoBehaviour
         FaceMoveDirection();
     }
 
+    public static void ApplyRangedDamage(EntityHealth health, float amount, SelectableEntity source)
+    {
+        if (health == null || !health.IsAlive || amount <= 0f) return;
+        // 치명타로 대상이 제거되기 전에 피격 소유자를 확인한다.
+        if (FogOfWarManager.Instance != null)
+            FogOfWarManager.Instance.RevealRangedAttacker(source, health.GetComponent<SelectableEntity>());
+        health.TakeDamage(amount, source);
+    }
+
     public void Impact()
     {
         if (targetHealth != null && targetHealth.IsAlive)
-            targetHealth.TakeDamage(damage, attacker);
+            ApplyRangedDamage(targetHealth, damage, attacker);
 
         UnitSound.PlayAttackHit(attacker);
 
@@ -522,7 +531,7 @@ public class Projectile : MonoBehaviour
             float distanceRatio = Mathf.Sqrt(sqrDistance) / radius;
             float damageRatio = Mathf.Lerp(1f, minDamageRatio, distanceRatio);
 
-            health.TakeDamage(damage * damageRatio, attacker);
+            ApplyRangedDamage(health, damage * damageRatio, attacker);
         }
     }
 
