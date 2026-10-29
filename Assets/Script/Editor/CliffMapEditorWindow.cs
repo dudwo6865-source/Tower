@@ -97,9 +97,9 @@ public class CliffMapEditorWindow : EditorWindow
 
         EditorGUILayout.LabelField("절벽 맵 에디터", EditorStyles.boldLabel);
         EditorGUILayout.HelpBox(
-            "• Paint Top / Place Hill: 층 슬라이더 공유 (0=1층, 1=2층…)\n" +
+            "• Paint Top / Place Hill: 층 슬라이더 공유 (-8층~9층, 실제 층수 표시)\n" +
             "• 2층+ Top: 아랫층 가장자리 한 칸 안쪽만 (In 코너 Top 위 제외) / Hill: 해당 층 Top 가장자리\n" +
-            "• 1층 Top/Hill 칠하면 Ground 제거, Ground 없는 칸엔 1층 벽 미생성\n" +
+            "• 1층 Top/Hill 칠하면 Ground 제거, 바닥/낮은 지형이 없는 칸엔 1층 벽 미생성\n" +
             "• 월 슬롯은 Ground 데이터는 유지하되 Ground 메시는 Top처럼 생략\n" +
             "• 페인트 OFF(B): 창을 켠 채로 다른 오브젝트 작업",
             MessageType.Info);
@@ -154,7 +154,7 @@ public class CliffMapEditorWindow : EditorWindow
             EditorGUILayout.LabelField(
                 $"1층 Top: {painter.TopSurfaceHeight:0.##}  /  절벽면: {painter.EdgeSurfaceHeight:0.##}");
             EditorGUILayout.LabelField($"층 간격: {painter.LayerStepHeight:0.##}");
-            if (paintTopLayer > 0)
+            if (paintTopLayer != 0)
             {
                 EditorGUILayout.LabelField(
                     $"{paintTopLayer + 1}층 Top: {painter.GetTopSurfaceHeight(paintTopLayer):0.##}  /  " +
@@ -180,12 +180,12 @@ public class CliffMapEditorWindow : EditorWindow
         if (brushMode == BrushMode.PaintTop || brushMode == BrushMode.EraseTop ||
             brushMode == BrushMode.PlaceHill || brushMode == BrushMode.EraseHill)
         {
-            paintTopLayer = EditorGUILayout.IntSlider("층 (0=1층)", paintTopLayer, 0, 8);
+            paintTopLayer = EditorGUILayout.IntSlider("층", paintTopLayer + 1, -8, 9) - 1;
             if (brushMode == BrushMode.PaintTop || brushMode == BrushMode.EraseTop)
             {
                 EditorGUILayout.HelpBox(
-                    paintTopLayer == 0
-                        ? "1층 Top: Ground/빈 칸에 칠합니다."
+                    paintTopLayer <= 0
+                        ? $"{paintTopLayer + 1}층 Top: 지정한 높이로 칠합니다. 0층 이하는 기존 높이도 바꿉니다."
                         : $"{paintTopLayer + 1}층 Top: 아랫층 가장자리 한 칸 안쪽만 (In 코너 Top 위 제외).",
                     MessageType.None);
             }
@@ -234,7 +234,7 @@ public class CliffMapEditorWindow : EditorWindow
         if (brushMode == BrushMode.EraseTop)
         {
             EditorGUILayout.HelpBox(
-                paintTopLayer == 0
+                paintTopLayer <= 0
                     ? "Top 지우개: 칸의 모든 Top과 위 지형(Hill/Ramp)을 지우고 Ground로 채웁니다."
                     : $"Top 지우개: {paintTopLayer + 1}층 이상 Top과 그 층 Hill을 지웁니다.",
                 MessageType.Info);

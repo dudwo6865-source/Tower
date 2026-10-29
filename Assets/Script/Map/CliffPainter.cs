@@ -41,7 +41,7 @@ public class CliffPainter : MonoBehaviour
         [Label("칸")]
         public CellCoord cell;
         [Label("최고 층")]
-        [Tooltip("이 칸의 최고 층 (0=1층). 아래에 0..maxLayer 가 모두 있다고 봅니다.")]
+        [Tooltip("이 칸의 최고 층 (0=1층). 음수 값도 저장합니다 (-1=0층, -2=-1층).")]
         public int maxLayer;
     }
 
@@ -164,22 +164,20 @@ public class CliffPainter : MonoBehaviour
     public float TopSurfaceHeight => GetTopSurfaceHeight(0);
     public float EdgeSurfaceHeight => GetEdgeSurfaceHeight(0);
 
-    // cliffHeight가 0인 타일셋도 윗층만 LayerStep만큼 추가로 올립니다.
+    // cliffHeight가 0인 타일셋도 층 간격에 따라 높이거나 낮춘다.
     public float GetTopSurfaceHeight(int layer)
     {
-        layer = Mathf.Max(0, layer);
         return baseHeight + CliffHeight * (layer + 1) + ExtraLayerLift(layer);
     }
 
     public float GetEdgeSurfaceHeight(int layer)
     {
-        layer = Mathf.Max(0, layer);
         return baseHeight + CliffHeight * layer + ExtraLayerLift(layer);
     }
 
     float ExtraLayerLift(int layer)
     {
-        if (layer <= 0)
+        if (layer == 0)
             return 0f;
 
         // cliffHeight를 이미 쓰는 경우 이중 가산 방지
@@ -195,7 +193,8 @@ public class CliffPainter : MonoBehaviour
     public bool HasTop(int x, int z) => elevatedSet.Contains(new CellCoord(x, z));
     public bool HasTop(CellCoord cell) => elevatedSet.Contains(cell);
     public bool HasTopLayer(CellCoord cell, int layer) =>
-        topMaxLayer.TryGetValue(cell, out int max) && max >= layer;
+        (topMaxLayer.TryGetValue(cell, out int max) && max >= layer) ||
+        (layer < 0 && groundSet.Contains(cell));
     public bool HasHill(CellCoord cell) => hillSet.Contains(cell);
     public bool HasHillOnLayer(CellCoord cell, int layer) =>
         hillLayerMap.TryGetValue(cell, out int hillLayer) && hillLayer == layer;
@@ -297,7 +296,7 @@ public class CliffPainter : MonoBehaviour
             for (int i = 0; i < tops.Count; i++)
             {
                 TopEntry entry = tops[i];
-                int layer = Mathf.Max(0, entry.maxLayer);
+                int layer = entry.maxLayer;
                 elevatedSet.Add(entry.cell);
                 if (!topMaxLayer.TryGetValue(entry.cell, out int existing) || layer > existing)
                     topMaxLayer[entry.cell] = layer;
@@ -310,7 +309,7 @@ public class CliffPainter : MonoBehaviour
             {
                 HillEntry entry = hills[i];
                 hillSet.Add(entry.cell);
-                hillLayerMap[entry.cell] = Mathf.Max(0, entry.layer);
+                hillLayerMap[entry.cell] = entry.layer;
             }
         }
 
@@ -351,7 +350,6 @@ public class CliffPainter : MonoBehaviour
 
     void SetTopMaxLayer(CellCoord cell, int maxLayer)
     {
-        maxLayer = Mathf.Max(0, maxLayer);
         int index = FindTopIndex(cell);
         if (index >= 0)
         {
@@ -382,7 +380,9 @@ public class CliffPainter : MonoBehaviour
     // 아랫층 Inner 코너를 구성하는 Top 위에는 윗층을 올리지 않습니다.
     public bool CanPlaceTop(CellCoord cell, int layer)
     {
-        layer = Mathf.Max(0, layer);
+        // 낮은 층은 기존 높이를 직접 바꿔 골짜기를 그린다.
+        if (layer < 0)
+            return !topMaxLayer.TryGetValue(cell, out int current) || current != layer;
 
         if (HasTopLayer(cell, layer))
             return false;
@@ -412,16 +412,17 @@ public class CliffPainter : MonoBehaviour
 
     public bool TryAddTop(CellCoord cell, int layer)
     {
-        layer = Mathf.Max(0, layer);
-
         if (!CanPlaceTop(cell, layer))
             return false;
 
-        if (layer == 0)
+        if (layer <= 0)
         {
-            SetTopMaxLayer(cell, 0);
+            SetTopMaxLayer(cell, layer);
             TryRemoveGround(cell);
             TryRemoveHill(cell);
+            RemoveRampsOnCell(cell);
+            RemoveInvalidUpperLayers();
+            RemoveInvalidHills();
             return true;
         }
 
@@ -433,22 +434,20 @@ public class CliffPainter : MonoBehaviour
 
     public bool TryRemoveTop(CellCoord cell) => TryRemoveTop(cell, 0);
 
-    // 지정 층 이상 제거. layer 0이면 칸의 Top 전부와 위 지형(램프/언덕)을 지운 뒤 Ground를 채웁니다.
+    // 지정 층 이상 제거. layer가 0 이하이면 Top과 위 지형을 지우고 기본 바닥을 채운다.
     public bool TryRemoveTop(CellCoord cell, int layer)
     {
-        layer = Mathf.Max(0, layer);
-        int current = GetTopMaxLayer(cell);
-        if (current < layer)
+        if (!topMaxLayer.TryGetValue(cell, out int current) || current < layer)
         {
             // Top은 없어도 같은 칸의 Hill/Ramp는 지운다 (지우개 = 위 지형 정리).
             bool clearedExtras = ClearAboveTerrainOnCell(cell, layer);
             return clearedExtras;
         }
 
-        if (layer == 0)
+        if (layer <= 0)
         {
             RemoveTopEntry(cell);
-            ClearAboveTerrainOnCell(cell, 0);
+            ClearAboveTerrainOnCell(cell, int.MinValue);
             RemoveInvalidHills();
             RemoveInvalidUpperLayers();
             // Top이 사라진 빈 칸은 Ground로 채운다.
@@ -468,9 +467,8 @@ public class CliffPainter : MonoBehaviour
     bool ClearAboveTerrainOnCell(CellCoord cell, int minLayer)
     {
         bool changed = false;
-        minLayer = Mathf.Max(0, minLayer);
 
-        if (minLayer == 0)
+        if (minLayer <= 0)
         {
             int rampCount = ramps != null ? ramps.Count : 0;
             RemoveRampsOnCell(cell);
@@ -515,7 +513,7 @@ public class CliffPainter : MonoBehaviour
             changed = true;
         }
 
-        if (RemoveHillDataIfLayerAtLeast(cell, 0))
+        if (RemoveHillDataIfLayerAtLeast(cell, int.MinValue))
             changed = true;
 
         int rampCount = ramps != null ? ramps.Count : 0;
@@ -546,15 +544,6 @@ public class CliffPainter : MonoBehaviour
                 {
                     max--;
                     changed = true;
-                }
-
-                if (max < 0)
-                {
-                    CellCoord cleared = entry.cell;
-                    RemoveTopEntry(cleared);
-                    TryAddGround(cleared);
-                    changed = true;
-                    continue;
                 }
 
                 if (max != entry.maxLayer)
@@ -722,7 +711,7 @@ public class CliffPainter : MonoBehaviour
             return false;
 
         // Top / Hill 자리에는 Ground 데이터를 올리지 않는다.
-        if (HasTopLayer(cell, 0) || HasHill(cell))
+        if (HasTop(cell) || HasHill(cell))
             return false;
 
         groundCells.Add(cell);
@@ -771,8 +760,6 @@ public class CliffPainter : MonoBehaviour
 
     public bool TryAddHill(CellCoord cell, int layer)
     {
-        layer = Mathf.Max(0, layer);
-
         if (!CanPlaceHill(cell, layer))
             return false;
 
@@ -837,8 +824,6 @@ public class CliffPainter : MonoBehaviour
 
     public bool CanPlaceHill(CellCoord cell, int layer)
     {
-        layer = Mathf.Max(0, layer);
-
         if (HasHill(cell) || !IsEdgeSlot(cell, layer))
             return false;
 
@@ -854,8 +839,6 @@ public class CliffPainter : MonoBehaviour
     // 지정 Top 층 기준 가장자리 슬롯 (그 층 Top이 없는 칸)
     public bool IsEdgeSlot(CellCoord cell, int layer)
     {
-        layer = Mathf.Max(0, layer);
-
         if (HasTopLayer(cell, layer))
             return false;
 
@@ -1072,13 +1055,15 @@ public class CliffPainter : MonoBehaviour
         SpawnGrounds(root);
 
         int highest = 0;
+        int lowest = 0;
         foreach (KeyValuePair<CellCoord, int> kv in topMaxLayer)
         {
+            lowest = Mathf.Min(lowest, kv.Value);
             if (kv.Value > highest)
                 highest = kv.Value;
         }
 
-        for (int layer = 0; layer <= highest; layer++)
+        for (int layer = lowest; layer <= highest; layer++)
             SpawnLayerGeometry(layer, root);
 
         SpawnRamps(root);
@@ -1098,6 +1083,9 @@ public class CliffPainter : MonoBehaviour
         for (int i = 0; i < layerCells.Count; i++)
         {
             CellCoord cell = layerCells[i];
+            // 지하에는 실제 상면만 생성한다.
+            if (layer < 0 && topMaxLayer[cell] != layer)
+                continue;
             Vector3 pos = CellCenterWorldAtTop(cell, layer);
             Spawn(
                 tileSet.top,
@@ -1107,6 +1095,12 @@ public class CliffPainter : MonoBehaviour
                 $"Top_L{layer}_{cell.x}_{cell.z}",
                 root);
         }
+
+        // 기본 바닥도 지하 지형을 둘러싼 높은 면으로 취급한다.
+        if (layer < 0)
+            foreach (CellCoord cell in groundSet)
+                if (!topMaxLayer.ContainsKey(cell))
+                    layerCells.Add(cell);
 
         for (int i = 0; i < layerCells.Count; i++)
             PlaceEdgesForCell(layerCells[i], layer, root, spawnedSlots);
@@ -1245,8 +1239,8 @@ public class CliffPainter : MonoBehaviour
             return;
         }
 
-        // 1층만 Ground 마스크 적용 (맵 가장자리 등 Ground 없는 칸에는 벽 미생성)
-        if (layer == 0 && !HasGround(slot))
+        // 낮은 층의 벽은 바닥이나 지형이 있는 칸에만 생성한다.
+        if (layer <= 0 && !HasGround(slot) && !HasTop(slot))
             return;
 
         if (CountOrthoHillNeighbors(slot, layer) >= 2)
@@ -2244,7 +2238,7 @@ public class CliffPainter : MonoBehaviour
             for (int i = 0; i < tops.Count; i++)
             {
                 TopEntry entry = tops[i];
-                for (int layer = 0; layer <= entry.maxLayer; layer++)
+                for (int layer = Mathf.Min(0, entry.maxLayer); layer <= entry.maxLayer; layer++)
                 {
                     Vector3 center = CellCenterWorldAtTop(entry.cell, layer);
                     center.y += 0.05f;
