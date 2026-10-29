@@ -99,6 +99,13 @@ public class FogOfWarManager : MonoBehaviour
     [Tooltip("보이는 낮은 입구에서 이어지는 언덕·램프를 시야 반경 안에서 어둡게 드러냅니다. 고지대 평지와 적·건물의 발견 판정은 바뀌지 않습니다. 지형 정보는 시작할 때 굽습니다.")]
     public bool revealHillTerrain = true;
 
+    [Label("고지대 가장자리 지형 안내")]
+    [Tooltip("아래에서 보이는 고지대 가장자리 안쪽 지형만 어둡게 보여줍니다. 적과 건물의 발견 판정은 바꾸지 않습니다.")]
+    public bool revealHighGroundTerrain = true;
+    [Label("고지대 지형 안내 거리")]
+    [Tooltip("시야 방향을 따라 고지대 가장자리에서 안쪽으로 보여줄 거리입니다. 0이면 표시하지 않습니다.")]
+    [Min(0f)] public float highGroundTerrainRevealDistance = 4f;
+
     [Label("시야 주인 지면 탐색 거리")]
     [Tooltip("유닛·건물이 서 있는 지면 높이를 찾을 때, 실제 위치에서 가장 가까운 NavMesh를 이 거리(미터) 안에서 찾습니다. 못 찾으면 그 자리의 가장 높은 표면을 씁니다. 너무 크게 잡을 필요는 없습니다.")]
     public float sourceGroundSnapDistance = 2f;
@@ -219,6 +226,9 @@ public class FogOfWarManager : MonoBehaviour
     // 지형 안내는 화면에만 합성해 적·건물의 탐색 판정과 분리한다.
     private bool[] hillTerrainByCell;
     private byte[] hillTerrainExplored;
+    private byte[] highGroundTerrainScratch;
+    private byte[] highGroundTerrainAccum;
+    private byte[] highGroundTerrainDisplay;
 
     // 화면 표시용 버퍼. fogPixels(게임플레이 판정용 원본)를 흐려서 담고, 부드러운 전환을
     // 위해 직전 표시 결과를 fogPrevTexture에 남겨둔다.
@@ -326,6 +336,7 @@ public class FogOfWarManager : MonoBehaviour
 
         // (칸 번호 << 8) | 밝기
         public readonly List<int> cells = new List<int>();
+        public readonly List<int> terrainCells = new List<int>();
     }
 
     // 시야 계산을 여러 프레임에 나눠 처리하는 동안의 상태. 계산 중에는 fogPixels(게임플레이
@@ -1161,6 +1172,9 @@ public class FogOfWarManager : MonoBehaviour
     {
         hillTerrainByCell = new bool[gridWidth * gridHeight];
         hillTerrainExplored = new byte[hillTerrainByCell.Length];
+        highGroundTerrainScratch = new byte[hillTerrainByCell.Length];
+        highGroundTerrainAccum = new byte[hillTerrainByCell.Length];
+        highGroundTerrainDisplay = new byte[hillTerrainByCell.Length];
         CliffPainter[] painters = FindObjectsOfType<CliffPainter>();
         foreach (CliffPainter painter in painters)
         {
@@ -1194,6 +1208,7 @@ public class FogOfWarManager : MonoBehaviour
     void BeginVisionPass()
     {
         System.Array.Clear(visionAccum, 0, visionAccum.Length);
+        System.Array.Clear(highGroundTerrainAccum, 0, highGroundTerrainAccum.Length);
         passSources.Clear();
 
         for (int i = visionSources.Count - 1; i >= 0; i--)
@@ -1245,6 +1260,7 @@ public class FogOfWarManager : MonoBehaviour
     void CommitVisionPass()
     {
         StampAttackReveals();
+        System.Array.Copy(highGroundTerrainAccum, highGroundTerrainDisplay, highGroundTerrainAccum.Length);
         for (int i = 0; i < fogPixels.Length; i++)
         {
             byte visible = visionAccum[i];
@@ -1292,6 +1308,7 @@ public class FogOfWarManager : MonoBehaviour
         stamp.eyeHeight = eyeHeight;
         stamp.generation = stampGeneration;
         stamp.cells.Clear();
+        stamp.terrainCells.Clear();
 
         Vector3 groundPosition = source.GroundPosition;
         StampVision(groundPosition, radius, edgeSoftness, eyeHeight);
@@ -1306,6 +1323,12 @@ public class FogOfWarManager : MonoBehaviour
             for (int x = minX; x <= maxX; x++)
             {
                 int index = row + x;
+                byte terrainValue = highGroundTerrainScratch[index];
+                if (terrainValue > 0)
+                {
+                    stamp.terrainCells.Add((index << 8) | terrainValue);
+                    highGroundTerrainScratch[index] = 0;
+                }
                 byte value = stampScratch[index];
 
                 if (value == 0)
@@ -1321,6 +1344,12 @@ public class FogOfWarManager : MonoBehaviour
 
     void ApplyStamp(VisionStamp stamp)
     {
+        foreach (int packed in stamp.terrainCells)
+        {
+            int index = packed >> 8;
+            byte value = (byte)(packed & 0xFF);
+            if (value > highGroundTerrainAccum[index]) highGroundTerrainAccum[index] = value;
+        }
         List<int> cells = stamp.cells;
 
         for (int i = 0; i < cells.Count; i++)
@@ -1369,6 +1398,11 @@ public class FogOfWarManager : MonoBehaviour
                 if (hillTerrainExplored[i] > displayPixels[i].r)
                     displayPixels[i].r = hillTerrainExplored[i];
         }
+
+        if (revealHighGroundTerrain && highGroundTerrainRevealDistance > 0f && highGroundTerrainDisplay != null)
+            for (int i = 0; i < displayPixels.Length; i++)
+                if (highGroundTerrainDisplay[i] > displayPixels[i].r)
+                    displayPixels[i].r = highGroundTerrainDisplay[i];
 
         for (int i = 0; i < displayBlurIterations; i++)
             BlurDisplayPixels();
@@ -1451,7 +1485,9 @@ public class FogOfWarManager : MonoBehaviour
         // 소스가 서 있는 칸은 항상 밝힌다.
         float centerSlope = float.NegativeInfinity;
         bool centerHill = false;
-        StampVisionCell(centerX, centerZ, worldPosition, eyeHeight, radius, edgeSoftness, ref centerSlope, ref centerHill);
+        float centerEdgeDistance = -1f;
+        float centerEdgeHeight = 0f;
+        StampVisionCell(centerX, centerZ, worldPosition, eyeHeight, radius, edgeSoftness, ref centerSlope, ref centerHill, ref centerEdgeDistance, ref centerEdgeHeight);
 
         // 경계 상자의 테두리 칸으로만 광선을 쏜다. 박스 전체를 채우는 것과 점근적으로
         // 같은 비용이면서, 광선을 따라 고도각(지평선)을 추적할 수 있다.
@@ -1496,10 +1532,12 @@ public class FogOfWarManager : MonoBehaviour
         // 진행). 눈높이보다 낮거나 같은 칸은 이 규칙과 무관하게 항상 보인다.
         float maxSlope = float.NegativeInfinity;
         bool connectedHill = false;
+        float edgeDistance = -1f;
+        float edgeHeight = 0f;
 
         while (true)
         {
-            if (!StampVisionCell(x, z, sourceWorldPos, eyeHeight, radius, edgeSoftness, ref maxSlope, ref connectedHill))
+            if (!StampVisionCell(x, z, sourceWorldPos, eyeHeight, radius, edgeSoftness, ref maxSlope, ref connectedHill, ref edgeDistance, ref edgeHeight))
                 return;
 
             if (x == x1 && z == z1)
@@ -1542,7 +1580,9 @@ public class FogOfWarManager : MonoBehaviour
         float radius,
         float edgeSoftness,
         ref float maxSlope,
-        ref bool connectedHill)
+        ref bool connectedHill,
+        ref float edgeDistance,
+        ref float edgeHeight)
     {
         if (x < 0 || x >= gridWidth || z < 0 || z >= gridHeight)
             return false;
@@ -1566,6 +1606,24 @@ public class FogOfWarManager : MonoBehaviour
         float terrainHeight = SampleTerrainHeightAtCell(x, z);
         bool terrainLineVisible = distance < MinElevationSampleDistance ||
             (terrainHeight - eyeY) / distance >= maxSlope - ElevationSlopeEpsilon;
+        if (revealHighGroundTerrain && enableElevationVision && blockHigherGround && highGroundTerrainRevealDistance > 0f)
+        {
+            float rise = terrainHeight - sourceWorldPos.y;
+            if (terrainLineVisible && rise >= highGroundBlockHeight &&
+                (edgeDistance < 0f || (distance - edgeDistance <= highGroundTerrainRevealDistance &&
+                    terrainHeight > edgeHeight && terrainHeight - edgeHeight < highGroundBlockHeight)))
+            {
+                edgeDistance = distance;
+                edgeHeight = terrainHeight;
+            }
+            // 최초로 보인 고지대의 좁은 띠만 표시한다. 다른 고지대나 뒤쪽 저지대로 확장하지 않는다.
+            if (edgeDistance >= 0f && distance - edgeDistance <= highGroundTerrainRevealDistance &&
+                rise >= highGroundBlockHeight && Mathf.Abs(terrainHeight - edgeHeight) < highGroundBlockHeight)
+            {
+                byte strength = (byte)(CalculateVisionStrength(distance, radius, edgeSoftness) * 255f);
+                if (strength > highGroundTerrainScratch[cellIndex]) highGroundTerrainScratch[cellIndex] = strength;
+            }
+        }
         connectedHill = revealHillTerrain && enableElevationVision &&
             hillTerrainByCell != null && hillTerrainByCell[cellIndex] &&
             terrainLineVisible &&
