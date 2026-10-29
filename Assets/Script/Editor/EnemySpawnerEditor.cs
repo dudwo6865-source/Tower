@@ -27,7 +27,8 @@ public class EnemySpawnerEditor : Editor
         EnemySpawner spawner = (EnemySpawner)target;
         EditorGUILayout.HelpBox("밤 시작·밤 길이의 1/3·2/3에 공격대를 세 번 나눠 출격합니다. 나머지는 앞 출격부터 배분합니다. " +
             "수비대는 첫 배치 및 매일 아침에 부족분만 보충하며 밤에는 진군하지 않습니다.", MessageType.Info);
-        if (spawner.enemyPrefabs.Count == 0 && spawner.guardPrefabs.Count == 0)
+        if (spawner.enemyPrefabs.Count == 0 && spawner.guardPrefabs.Count == 0 &&
+            (spawner.captureComposition == null || !spawner.captureComposition.HasAny))
             EditorGUILayout.HelpBox("수비대 프리팹 또는 적 프리팹을 지정하세요. 웨이브 적 구성은 공격대에만 사용합니다.", MessageType.Warning);
         if (Application.isPlaying)
         {

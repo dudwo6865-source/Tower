@@ -1033,6 +1033,9 @@ public partial class StageEditorWindow : EditorWindow
         EditorGUI.BeginDisabledGroup(!selected.spawnDuringCapture);
         EditorGUILayout.PropertyField(serializedObject.FindProperty("captureSpawnInterval"), new GUIContent("점령 출격 간격(초)"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("captureSpawnCount"), new GUIContent("스포너당 점령 출격 수"));
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("captureComposition"), new GUIContent("점령 공격대 편성"), true);
+        EditorGUILayout.HelpBox("편성에 적 프리팹과 마리 수를 추가하세요. 유효한 편성이 있으면 스포너마다 매 출격에 편성 합계만큼 보냅니다. " +
+            "비우면 기존 적 프리팹 목록과 점령 출격 수를 사용합니다. 생존 상한에 걸리면 목록 앞쪽부터 가능한 수만 출격합니다.", MessageType.Info);
         EditorGUI.EndDisabledGroup();
         EditorGUI.EndDisabledGroup();
         EditorGUILayout.HelpBox("덮어쓰기를 켜면 모든 적 스포너에 적용합니다. 끄면 스포너별 설정을 유지합니다. " +

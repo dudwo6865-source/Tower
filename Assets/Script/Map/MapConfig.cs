@@ -189,4 +189,8 @@ public class MapConfig : ScriptableObject
     [Label("점령 출격 수")]
     [Tooltip("매 출격마다 스포너 한 곳에서 생성할 수입니다. 활동 시작 웨이브와 공격대 생존 상한은 각 스포너의 설정을 따릅니다.")]
     [Min(0)] public int captureSpawnCount = 3;
+
+    [Label("점령 공격대 편성")]
+    [Tooltip("스포너 한 곳이 매 출격마다 보낼 적 종류와 수입니다. 유효한 편성이 있으면 점령 출격 수 대신 편성 합계를 사용합니다. 비우면 기존 적 프리팹 목록과 점령 출격 수를 사용합니다.")]
+    public WaveEnemyComposition captureComposition = new WaveEnemyComposition();
 }

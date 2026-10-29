@@ -38,6 +38,9 @@ public class EnemySpawner : MonoBehaviour
     [Label("점령 출격 수")]
     [Tooltip("매 출격마다 이 스포너에서 생성할 수입니다. 적 프리팹 목록을 사용하며 웨이브의 능력치 보정만 적용합니다.")]
     [Min(0)] public int captureSpawnCount = 3;
+    [Label("점령 공격대 편성")]
+    [Tooltip("스포너 한 곳이 매 출격마다 보낼 적 종류와 수입니다. 유효한 편성이 있으면 점령 출격 수 대신 편성 합계를 사용합니다. 비우면 적 프리팹 목록과 점령 출격 수를 사용합니다.")]
+    public WaveEnemyComposition captureComposition = new WaveEnemyComposition();
     [Header("수비대")]
     [Label("수비대 정원")]
     [Tooltip("첫 배치와 매일 아침에 생존 수와 보충 예약 수를 뺀 부족분만 생성합니다. 공격대 수 배율과 생존 상한은 적용하지 않습니다.")]
@@ -63,6 +66,7 @@ public class EnemySpawner : MonoBehaviour
     readonly List<EntityHealth> attackers = new List<EntityHealth>();
     readonly List<EntityHealth> guards = new List<EntityHealth>();
     readonly List<GameObject> nightOrder = new List<GameObject>();
+    readonly List<GameObject> captureOrder = new List<GameObject>();
     readonly Queue<GameObject> dueAttackers = new Queue<GameObject>();
     EntityHealth health;
     DayNightCycle cycle;
@@ -124,6 +128,7 @@ public class EnemySpawner : MonoBehaviour
         captureSpawnInterval = float.IsNaN(config.captureSpawnInterval) || float.IsInfinity(config.captureSpawnInterval)
             ? 10f : Mathf.Max(0.1f, config.captureSpawnInterval);
         captureSpawnCount = Mathf.Max(0, config.captureSpawnCount);
+        captureComposition = config.captureComposition != null ? config.captureComposition.Clone() : new WaveEnemyComposition();
         captureSpawnElapsed = 0f;
     }
 
@@ -195,9 +200,12 @@ public class EnemySpawner : MonoBehaviour
         captureSpawnElapsed += Time.deltaTime;
         if (captureSpawnElapsed < Mathf.Max(0.1f, captureSpawnInterval)) return;
         captureSpawnElapsed = 0f;
-        for (int i = 0; i < captureSpawnCount && !IsBlockedByAliveCap; i++)
+        captureOrder.Clear();
+        captureComposition?.BuildSpawnOrder(captureOrder);
+        int count = captureOrder.Count > 0 ? captureOrder.Count : captureSpawnCount;
+        for (int i = 0; i < count && !IsBlockedByAliveCap; i++)
         {
-            GameObject prefab = PickPrefab(enemyPrefabs);
+            GameObject prefab = captureOrder.Count > 0 ? captureOrder[i] : PickPrefab(enemyPrefabs);
             if (prefab != null) QueueEnemy(prefab, new WaveTuning(tuning), false, captureTarget: point);
         }
     }

@@ -1,7 +1,7 @@
 using UnityEditor;
 using UnityEngine;
 
-// 웨이브 표의 '적 구성' 목록을 그립니다.
+// 웨이브 표의 '적 구성'과 점령 공격대 편성 목록을 그린다.
 // WaveTuning은 밤 보정·이후 웨이브 증가율에도 쓰이지만, 적 구성은 웨이브 표에서만
 // 의미가 있으므로 그 밖의 자리에서는 숨깁니다. 목록 제목도 여기서 한글로 넘깁니다.
 [CustomPropertyDrawer(typeof(WaveEnemyComposition))]
@@ -11,7 +11,7 @@ public class WaveEnemyCompositionDrawer : PropertyDrawer
 
     public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
     {
-        if (!IsInWaveTable(property))
+        if (!ShouldDraw(property))
             return;
 
         SerializedProperty entries = property.FindPropertyRelative("entries");
@@ -21,7 +21,7 @@ public class WaveEnemyCompositionDrawer : PropertyDrawer
     public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
     {
         // 숨길 때는 줄 사이 간격까지 지워 빈 칸이 남지 않게 한다.
-        if (!IsInWaveTable(property))
+        if (!ShouldDraw(property))
             return -EditorGUIUtility.standardVerticalSpacing;
 
         SerializedProperty entries = property.FindPropertyRelative("entries");
@@ -42,14 +42,15 @@ public class WaveEnemyCompositionDrawer : PropertyDrawer
             total += Mathf.Max(0, entry.FindPropertyRelative("count").intValue);
         }
 
-        string title = total > 0 ? $"{ListTitle} · 총 {total}마리" : $"{ListTitle} · 비어 있음";
+        string listTitle = property.name == "captureComposition" ? "점령 공격대 편성 (스포너당 1회 출격)" : ListTitle;
+        string title = total > 0 ? $"{listTitle} · 총 {total}마리" : $"{listTitle} · 비어 있음";
         return new GUIContent(title, property.tooltip);
     }
 
-    // 웨이브 표(WavePlan.waves)의 한 칸 안에 있을 때만 그린다.
-    static bool IsInWaveTable(SerializedProperty property)
+    // 웨이브 표와 점령 편성에서만 표시하고 밤 보정·증가율에서는 숨긴다.
+    static bool ShouldDraw(SerializedProperty property)
     {
-        return property.propertyPath.Contains("waves.Array.data[");
+        return property.name == "captureComposition" || property.propertyPath.Contains("waves.Array.data[");
     }
 }
 
@@ -80,7 +81,9 @@ public class WaveEnemyEntryDrawer : PropertyDrawer
         EditorGUI.PropertyField(prefabRect, prefab, new GUIContent(string.Empty, prefab.tooltip));
 
         EditorGUI.BeginChangeCheck();
-        int newCount = EditorGUI.IntField(countRect, new GUIContent(string.Empty, count.tooltip), count.intValue);
+        string countTooltip = property.propertyPath.Contains("captureComposition.")
+            ? "스포너 한 곳이 점령 공격대 1회 출격에 보낼 수입니다." : count.tooltip;
+        int newCount = EditorGUI.IntField(countRect, new GUIContent(string.Empty, countTooltip), count.intValue);
         if (EditorGUI.EndChangeCheck())
             count.intValue = Mathf.Max(0, newCount);
 
