@@ -1286,8 +1286,9 @@ public class CliffPainter : MonoBehaviour
         for (int i = 0; i < layerCells.Count; i++)
         {
             CellCoord cell = layerCells[i];
-            // 지하에는 실제 상면만 생성한다.
-            if (layer < 0 && topMaxLayer[cell] != layer)
+            // 윗층 Top 아래의 평면과 바로 위 벽·언덕이 대체하는 평면은 생성하지 않는다.
+            // 칠 데이터는 남겨 지지층 판정과 지우개 복구에 사용한다.
+            if (topMaxLayer[cell] != layer || IsEdgeSlot(cell, layer + 1))
                 continue;
             Vector3 pos = CellCenterWorldAtTop(cell, layer);
             Spawn(
@@ -1328,9 +1329,9 @@ public class CliffPainter : MonoBehaviour
         {
             CellCoord cell = groundCells[i];
 
-            // 월/코너 슬롯은 Top과 같이 Ground 메시를 올리지 않는다.
-            // (Ground 데이터는 남겨 1층 벽 마스크·Hill 배치에 사용)
-            if (IsEdgeSlot(cell, 0))
+            // 기존 데이터에 바닥과 지형이 함께 있어도 겹친 바닥 메시를 만들지 않는다.
+            // Ground 데이터는 벽 마스크와 지형 제거 후 복구를 위해 유지한다.
+            if (HasTop(cell) || HasHill(cell) || IsEdgeSlot(cell, 0))
                 continue;
 
             Vector3 pos = CellCenterWorld(cell);
