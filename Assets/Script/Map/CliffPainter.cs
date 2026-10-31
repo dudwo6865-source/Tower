@@ -73,7 +73,7 @@ public class CliffPainter : MonoBehaviour
     public HillTileSet hillTileSet;
 
     [Label("생성 부모")]
-    [Tooltip("생성된 모듈이 들어갈 부모입니다. 비워두면 자동 생성합니다.")]
+    [Tooltip("자동으로 준비하는 '지형' 부모입니다. 기존 Generated 부모는 재사용하며 직접 연결하지 않아도 됩니다.")]
     public Transform generatedRoot;
 
     [Label("그리드 원점")]
@@ -1082,18 +1082,37 @@ public class CliffPainter : MonoBehaviour
 
     public Transform EnsureGeneratedRoot()
     {
-        if (generatedRoot != null)
+        if (generatedRoot != null && generatedRoot != transform && generatedRoot.IsChildOf(transform))
+        {
+            generatedRoot.name = "지형";
             return generatedRoot;
+        }
 
-        Transform existing = transform.Find("Generated");
+        Transform existing = transform.Find("지형") ?? transform.Find("Generated");
+        // 예전 맵에서 전용 생성 부모가 형제로 배치된 경우 기존 타일째 가져온다.
+        if (existing == null && generatedRoot != null && generatedRoot != transform &&
+            !transform.IsChildOf(generatedRoot))
+        {
+            if (generatedRoot.name == "Generated" || generatedRoot.name == "지형")
+                existing = generatedRoot;
+        }
+        // 생성 부모가 맵 루트로 연결되어 있어도 그 아래의 전용 폴더만 재사용한다.
+        if (existing == null && generatedRoot != null)
+        {
+            Transform candidate = generatedRoot.Find("지형") ?? generatedRoot.Find("Generated");
+            if (candidate != null && candidate != transform && !transform.IsChildOf(candidate))
+                existing = candidate;
+        }
 
         if (existing != null)
         {
+            existing.SetParent(transform, true);
+            existing.name = "지형";
             generatedRoot = existing;
             return generatedRoot;
         }
 
-        GameObject go = new GameObject("Generated");
+        GameObject go = new GameObject("지형");
         go.transform.SetParent(transform, false);
         generatedRoot = go.transform;
         return generatedRoot;
@@ -1102,12 +1121,7 @@ public class CliffPainter : MonoBehaviour
     // Top 연결에 맞춰 가장자리 모듈을 전부 다시 생성합니다.
     public void RebuildGeometry(bool validateTerrain = true)
     {
-        // 생성 부모를 맵 루트나 다른 오브젝트로 잘못 연결해 지형 외 자식까지 삭제하지 않게 한다.
-        if (generatedRoot != null && (generatedRoot == transform || !generatedRoot.IsChildOf(transform)))
-        {
-            Debug.LogError("맵 생성기: 생성 부모는 이 지형 오브젝트 아래의 전용 자식이어야 합니다.", this);
-            return;
-        }
+        // 전용 생성 부모는 아래에서 자동으로 확보하고 그 안의 타일만 재생성한다.
         RebuildLookup();
         // 배치 규칙이 바뀌었거나 잘못된 윗층이 있으면 정리한다.
         if (validateTerrain) RemoveInvalidUpperLayers();

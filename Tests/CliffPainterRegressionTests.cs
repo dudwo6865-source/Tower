@@ -123,5 +123,25 @@ public static class CliffPainterRegressionTests
         Undo.FlushUndoRecordObjects();
         Undo.PerformUndo();
         Check(p.generatedRoot.GetChild(0).GetInstanceID() == generatedId, "다른 오브젝트 Undo는 맵을 재생성하지 않는다");
+        Check(p.generatedRoot.name == "지형", "자동 생성 부모 이름은 지형이다");
+        Transform originalRoot = p.generatedRoot;
+        originalRoot.name = "Generated";
+        p.generatedRoot = null;
+        Check(p.EnsureGeneratedRoot() == originalRoot && originalRoot.name == "지형", "기존 Generated를 중복 없이 재사용한다");
+        originalRoot.SetParent(null, true);
+        p.generatedRoot = originalRoot;
+        Check(p.EnsureGeneratedRoot() == originalRoot && originalRoot.parent == p.transform, "외부 전용 부모도 기존 타일째 재사용한다");
+        p.generatedRoot = p.transform;
+        Check(p.EnsureGeneratedRoot() == originalRoot, "자기 자신이 연결되어도 기존 전용 자식을 선택한다");
+        var otherPainter = new GameObject("다른 지형").AddComponent<CliffPainter>();
+        var mapRoot = new GameObject("맵 루트");
+        otherPainter.transform.SetParent(mapRoot.transform);
+        var building = new GameObject("보존할 본부");
+        building.transform.SetParent(mapRoot.transform);
+        otherPainter.generatedRoot = mapRoot.transform;
+        otherPainter.tileSet = set;
+        otherPainter.RebuildGeometry(false);
+        Check(otherPainter.generatedRoot.name == "지형" && otherPainter.generatedRoot.parent == otherPainter.transform &&
+            building != null && building.transform.parent == mapRoot.transform, "잘못 연결된 맵 루트 대신 전용 부모를 만들고 본부는 보존한다");
     }
 }
