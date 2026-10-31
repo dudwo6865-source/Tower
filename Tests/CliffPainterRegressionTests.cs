@@ -148,101 +148,72 @@ public static class CliffPainterRegressionTests
 
     static void VerifyEdgeCombinations(CliffTileSet set)
     {
-        var painter = new GameObject("경계 조합 검증").AddComponent<CliffPainter>();
+        var painter = new GameObject("지우기 경계 검증").AddComponent<CliffPainter>();
         painter.tileSet = set;
         var neighbors = new[] { Cell(0, 1), Cell(1, 1), Cell(1, 0), Cell(1, -1),
             Cell(0, -1), Cell(-1, -1), Cell(-1, 0), Cell(-1, 1) };
         for (int mask = 0; mask < 256; mask++)
         {
             painter.ClearTopsAndHills();
-            painter.FillGround(Cell(-3, -3), 7, false);
+            painter.FillGround(Cell(-4, -4), 9, false);
+            for (int x = -2; x <= 2; x++)
+                for (int z = -2; z <= 2; z++)
+                    if (Mathf.Abs(x) == 2 || Mathf.Abs(z) == 2) painter.TryAddTop(Cell(x, z));
+            painter.TryAddTop(Cell(0, 0));
             for (int i = 0; i < neighbors.Length; i++)
                 if ((mask & (1 << i)) != 0) painter.TryAddTop(neighbors[i]);
-            painter.EnsureGeneratedRoot();
-            string before = EditorJsonUtility.ToJson(painter);
+            var ground = Ground(painter);
+            Check(painter.TryRemoveTop(Cell(0, 0)), "주변 조합별 중앙 Top 삭제: " + mask);
             painter.RebuildGeometry(false);
-            var slots = new HashSet<CliffPainter.CellCoord>();
+            Check(painter.TopCount == 16 && ground.IsSubsetOf(Ground(painter)),
+                "주변 8칸의 Top만 전환하고 기존 바닥과 바깥 Top을 보존한다: " + mask);
+            Check(painter.generatedRoot.Find("Ground_0_0") != null,
+                "중앙 칸은 벽이나 상판이 아닌 바닥이다: " + mask);
+            int straight = 0, inner = 0;
             foreach (Transform tile in painter.generatedRoot)
             {
                 var cell = painter.WorldToCell(tile.position);
-                if (!slots.Add(cell)) throw new Exception("경계 중복: " + mask + " / " + tile.name);
+                if (Mathf.Abs(cell.x) > 1 || Mathf.Abs(cell.z) > 1 || cell.Equals(Cell(0, 0))) continue;
+                if (tile.name.StartsWith("Straight_")) straight++;
+                if (tile.name.StartsWith("Inner_")) inner++;
+                if (tile.localScale != Vector3.one) throw new Exception("벽·코너 크기가 변했다: " + tile.name);
             }
-            Check(slots.Count == 49, "주변 8칸 조합의 바닥·상판·경계에 빈 칸이 없다: " + mask);
-            Check(EditorJsonUtility.ToJson(painter) == before, "자동 연결이 칠 데이터를 변경하지 않는다: " + mask);
-            if (mask == 17 || mask == 34 || mask == 255 || mask == 7)
-            {
-                var names = GeometryNames(painter);
-                painter.tops.Reverse();
-                painter.RebuildGeometry(false);
-                Check(names.SetEquals(GeometryNames(painter)), "칠 순서를 뒤집어도 같은 모듈과 방향을 생성한다: " + mask);
-            }
-            Check(painter.generatedRoot.Find("Top_L0_0_0") == null,
-                "칠하지 않은 중앙 칸을 자동 상판으로 메우지 않는다: " + mask);
-            if (mask == 17)
-                Check(painter.generatedRoot.Find("Junction_L0_0_0/벽_0") != null &&
-                    painter.generatedRoot.Find("Junction_L0_0_0/벽_2") != null,
-                    "마주 보는 두 벽을 빠뜨리지 않고 함께 생성한다");
-            if (mask == 7)
-                Check(painter.generatedRoot.Find("Top_L0_0_0") == null,
-                    "정상적인 단일 안쪽 코너는 상판으로 메우지 않는다");
+            Check(straight == 4 && inner == 4, "네 방향 벽과 네 안쪽 코너를 원래 크기로 생성한다: " + mask);
+            Check(!painter.TryRemoveTop(Cell(0, 0)) && painter.TopCount == 16,
+                "이미 지운 바닥을 반복 클릭해도 주변을 더 깎지 않는다: " + mask);
         }
         painter.ClearTopsAndHills();
-        painter.FillGround(Cell(-3, -3), 7, false);
-        painter.TryAddTop(Cell(0, 1));
+        for (int x = -2; x <= 2; x++)
+            for (int z = -2; z <= 2; z++) painter.TryAddTop(Cell(x, z));
         painter.RebuildGeometry(false);
-        Check(painter.generatedRoot.Find("Top_L0_0_0") == null, "접점이 사라지면 자동 상판도 사라진다");
-        foreach (int layer in new[] { -1, 1 })
-        {
-            painter.ClearTopsAndHills();
-            painter.groundCells.Clear();
-            for (int x = -3; x <= 3; x++)
-                for (int z = -3; z <= 3; z++)
-                    painter.tops.Add(new CliffPainter.TopEntry { cell = Cell(x, z), maxLayer = layer - 1 });
-            painter.tops.Add(new CliffPainter.TopEntry { cell = Cell(0, 1), maxLayer = layer });
-            painter.tops.Add(new CliffPainter.TopEntry { cell = Cell(0, -1), maxLayer = layer });
-            painter.RebuildLookup();
-            painter.RebuildGeometry(false);
-            Check(painter.generatedRoot.Find("Top_L" + layer + "_0_0") == null &&
-                painter.generatedRoot.Find("Junction_L" + layer + "_0_0/낮은 바닥") != null,
-                "지하·윗층에서도 충돌 칸을 낮게 유지한다: " + layer);
-            Check(painter.GetTopMaxLayer(Cell(0, 0)) == layer - 1,
-                "생성 후 원래 지하·윗층 높이 조회를 복원한다: " + layer);
-        }
-        painter.ClearTopsAndHills();
-        painter.FillGround(Cell(-3, -3), 7, false);
-        for (int x = -1; x <= 1; x++)
-            for (int z = -1; z <= 1; z++) painter.TryAddTop(Cell(x, z));
-        painter.RebuildGeometry(false);
-        int group = CliffPainterUndo.Begin(painter, "한 칸 지우기 검증");
-        Check(painter.TryRemoveTop(Cell(0, 0)), "둘러싸인 중앙 한 칸도 지워진다");
+        int group = CliffPainterUndo.Begin(painter, "지우기 경계 실행 취소");
+        painter.TryRemoveTop(Cell(0, 0));
         painter.RebuildGeometry(false);
         CliffPainterUndo.MarkDirty(painter);
         CliffPainterUndo.End(group);
-        Check(painter.TopCount == 8 && painter.generatedRoot.Find("Top_L0_0_0") == null &&
-            painter.generatedRoot.Find("Junction_L0_0_0/낮은 바닥") != null,
-            "한 칸을 지운 뒤 주변 여덟 칸을 보존하고 낮은 바닥을 생성한다");
-        Transform pit = painter.generatedRoot.Find("Junction_L0_0_0");
-        Check(pit.childCount == 5, "한 칸 구덩이에 바닥과 네 방향 벽을 생성한다");
-        Physics.SyncTransforms();
-        var ray = new Ray(pit.position + Vector3.up * 100f, Vector3.down);
-        foreach (Transform part in pit)
-        {
-            bool hit = part.GetComponentInChildren<Collider>().Raycast(ray, out RaycastHit info, 200f);
-            Check(hit == (part.name == "낮은 바닥"), "중앙 광선은 벽 대신 낮은 바닥에만 닿는다: " + part.name);
-        }
         Undo.PerformUndo();
-        Check(painter.TopCount == 9 && painter.generatedRoot.Find("Top_L0_0_0") != null,
-            "지우기 Undo는 중앙 상판을 복원한다");
+        Check(painter.TopCount == 25 && painter.generatedRoot.Find("Top_L0_0_0") != null,
+            "Undo가 중심과 주변 Top을 함께 복원한다");
         Undo.PerformRedo();
-        Check(painter.TopCount == 8 && painter.generatedRoot.Find("Top_L0_0_0") == null,
-            "지우기 Redo는 중앙 상판을 다시 제거한다");
-    }
+        Check(painter.TopCount == 16 && painter.generatedRoot.Find("Ground_0_0") != null,
+            "Redo가 중심 바닥과 벽·코너 경계를 다시 만든다");
 
-    static HashSet<string> GeometryNames(CliffPainter painter)
-    {
-        var result = new HashSet<string>();
-        foreach (Transform tile in painter.generatedRoot.GetComponentsInChildren<Transform>())
-            result.Add(tile.name + ":" + tile.localPosition + ":" + tile.localEulerAngles.y + ":" + tile.localScale);
-        return result;
+        painter.ClearTopsAndHills();
+        for (int x = -3; x <= 3; x++)
+            for (int z = -3; z <= 3; z++) painter.TryAddTop(Cell(x, z));
+        painter.TryRemoveTops(new[] { Cell(0, 0), Cell(1, 0), Cell(0, 1), Cell(1, 1) }, 0);
+        Check(painter.TopCount == 33 && !painter.HasTop(Cell(2, 2)),
+            "큰 브러시는 전체 선택 영역의 바깥 한 칸까지 순서와 무관하게 전환한다");
+
+        painter.ClearTopsAndHills();
+        for (int x = -3; x <= 3; x++)
+            for (int z = -3; z <= 3; z++) painter.TryAddTop(Cell(x, z));
+        for (int x = -2; x <= 2; x++)
+            for (int z = -2; z <= 2; z++) painter.TryAddTop(Cell(x, z), 1);
+        Check(painter.TryRemoveTop(Cell(0, 0), 1), "윗층 지우기 적용");
+        Check(painter.GetTopMaxLayer(Cell(0, 0)) == 0 && painter.GetTopMaxLayer(Cell(1, 1)) == 0 &&
+            painter.GetTopMaxLayer(Cell(2, 0)) == 1, "윗층 중심·주변만 낮추고 아랫층과 바깥 윗층을 보존한다");
+        painter.RebuildGeometry(false);
+        Check(painter.generatedRoot.Find("Top_L0_0_0") != null, "윗층을 지운 중앙에 아랫층 상판이 보인다");
     }
 }

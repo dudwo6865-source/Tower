@@ -109,11 +109,6 @@ public class CliffPainter : MonoBehaviour
     [Tooltip("수동으로 배치한 램프입니다.")]
     public List<RampEntry> ramps = new List<RampEntry>();
 
-    [Header("벽 충돌 구간")]
-    [Label("충돌 구간 벽 폭 비율")]
-    [Tooltip("여러 벽이 한 칸에서 만날 때 벽의 깊이를 줄여 중앙의 낮은 바닥을 남깁니다.")]
-    [Range(0.1f, 0.45f)] public float junctionWallWidth = 0.35f;
-
     [Header("타일 경계 노멀")]
     [Label("타일 경계 노멀 연결")]
     [Tooltip("재생성할 때 서로 다른 타일의 맞닿는 경계 노멀을 연결합니다. 원본 메시와 충돌 형상은 변경하지 않습니다.")]
@@ -453,31 +448,46 @@ public class CliffPainter : MonoBehaviour
 
     public bool TryRemoveTop(CellCoord cell) => TryRemoveTop(cell, 0);
 
-    // 지정 층 이상 제거. layer가 0 이하이면 Top과 위 지형을 지우고 기본 바닥을 채운다.
-    public bool TryRemoveTop(CellCoord cell, int layer)
+    public bool TryRemoveTop(CellCoord cell, int layer) => TryRemoveTops(new[] { cell }, layer);
+
+    // 지운 칸 주변의 Top도 한 칸 폭으로 낮춰 원래 크기의 벽·코너 자리를 확보한다.
+    public bool TryRemoveTops(IEnumerable<CellCoord> cells, int layer)
     {
         EnsureLookup();
-        if (!topMaxLayer.TryGetValue(cell, out int current) || (layer > 0 && current < layer))
+        var targets = new HashSet<CellCoord>();
+        bool changed = false;
+        foreach (CellCoord cell in cells)
         {
-            // Top은 없어도 같은 칸의 Hill/Ramp는 지운다 (지우개 = 위 지형 정리).
-            bool clearedExtras = ClearAboveTerrainOnCell(cell, layer);
-            return clearedExtras;
+            if (!topMaxLayer.TryGetValue(cell, out int current) || (layer > 0 && current < layer))
+            {
+                changed |= ClearAboveTerrainOnCell(cell, layer);
+                continue;
+            }
+            // 변경 전 상태로 모아 큰 브러시에서도 처리 순서에 따라 범위가 달라지지 않게 한다.
+            for (int x = -1; x <= 1; x++)
+                for (int z = -1; z <= 1; z++)
+                {
+                    var neighbor = new CellCoord(cell.x + x, cell.z + z);
+                    if (topMaxLayer.TryGetValue(neighbor, out int height) && (layer <= 0 || height >= layer))
+                        targets.Add(neighbor);
+                }
         }
-
-        if (layer <= 0)
+        foreach (CellCoord cell in targets)
         {
-            RemoveTopEntry(cell);
-            ClearAboveTerrainOnCell(cell, int.MinValue);
-            RemoveInvalidHills();
-            RemoveInvalidUpperLayers();
-            // Top이 사라진 빈 칸은 Ground로 채운다.
-            TryAddGround(cell);
-            return true;
+            if (layer <= 0)
+            {
+                RemoveTopEntry(cell);
+                ClearAboveTerrainOnCell(cell, int.MinValue);
+                TryAddGround(cell);
+            }
+            else
+            {
+                SetTopMaxLayer(cell, layer - 1);
+                ClearAboveTerrainOnCell(cell, layer);
+            }
+            changed = true;
         }
-
-        // layer 이상만 깎음 → max = layer-1
-        SetTopMaxLayer(cell, layer - 1);
-        ClearAboveTerrainOnCell(cell, layer);
+        if (!changed) return false;
         RemoveInvalidHills();
         RemoveInvalidUpperLayers();
         return true;
@@ -1173,29 +1183,6 @@ public class CliffPainter : MonoBehaviour
             ConnectTileBoundaryNormals(root);
     }
 
-    int CountEdgeModules(CellCoord cell, int layer)
-    {
-        int count = 0;
-        int covered = 0;
-        for (int dir = 0; dir < 4; dir++)
-        {
-            CellCoord a = Neighbor(cell, dir);
-            CellCoord b = Neighbor(cell, (dir + 1) % 4);
-            bool hasA = HasTopLayer(a, layer);
-            bool hasB = HasTopLayer(b, layer);
-            bool diagonal = HasTopLayer(new CellCoord(a.x + b.x - cell.x, a.z + b.z - cell.z), layer);
-            if (diagonal && !hasA && !hasB) count++;
-            if (diagonal && hasA && hasB)
-            {
-                count++;
-                covered |= (1 << dir) | (1 << ((dir + 1) % 4));
-            }
-        }
-        for (int dir = 0; dir < 4; dir++)
-            if ((covered & (1 << dir)) == 0 && HasTopLayer(Neighbor(cell, dir), layer)) count++;
-        return count;
-    }
-
     class NormalMeshData
     {
         public MeshFilter filter;
@@ -1498,13 +1485,6 @@ public class CliffPainter : MonoBehaviour
         if (spawnedSlots != null && !spawnedSlots.Add(slot))
             return;
 
-        if (CountEdgeModules(slot, layer) > 1 && !HasHillOnLayer(slot, layer) &&
-            !IsVisionHillCell(slot) && (layer > 0 || HasGround(slot) || HasTop(slot)))
-        {
-            SpawnEdgeJunction(slot, layer, root);
-            return;
-        }
-
         pos.y = GetEdgeSurfaceHeight(layer);
         hillBuildLayer = layer;
 
@@ -1531,50 +1511,6 @@ public class CliffPainter : MonoBehaviour
         }
 
         SpawnEdge(kind, pos, yaw, name, root);
-    }
-
-    // 충돌 칸은 낮은 바닥을 유지하고 필요한 벽을 칸의 가장자리로 압축해 배치한다.
-    void SpawnEdgeJunction(CellCoord slot, int layer, Transform root)
-    {
-        Vector3 center = CellCenterWorldAtEdge(slot, layer);
-        var junction = new GameObject($"Junction_L{layer}_{slot.x}_{slot.z}");
-        junction.transform.SetParent(root, false);
-        junction.transform.position = center;
-        MarkGeneratedStatic(junction);
-        Spawn(tileSet.ground != null ? tileSet.ground : tileSet.top, center,
-            tileSet.groundYawOffset, tileSet.groundHeightOffset, "낮은 바닥", junction.transform);
-
-        float width = Mathf.Clamp(junctionWallWidth, 0.1f, 0.45f);
-        for (int dir = 0; dir < 4; dir++)
-        {
-            CellCoord a = Neighbor(slot, dir);
-            CellCoord b = Neighbor(slot, (dir + 1) % 4);
-            bool hasA = HasTopLayer(a, layer);
-            bool hasB = HasTopLayer(b, layer);
-            Vector3 toward = new Vector3(a.x - slot.x, 0f, a.z - slot.z);
-            if (hasA)
-                SpawnCompressedEdge(EdgeKind.Straight, (dir + 2) % 4 * 90f,
-                    toward, width, center, "벽_" + dir, junction.transform);
-            var diagonal = new CellCoord(a.x + b.x - slot.x, a.z + b.z - slot.z);
-            if (!hasA && !hasB && HasTopLayer(diagonal, layer))
-                SpawnCompressedEdge(EdgeKind.OuterCorner, (dir + 2) % 4 * 90f,
-                    new Vector3(diagonal.x - slot.x, 0f, diagonal.z - slot.z),
-                    width, center, "코너_" + dir, junction.transform);
-        }
-    }
-
-    void SpawnCompressedEdge(EdgeKind kind, float yaw, Vector3 toward, float width,
-        Vector3 center, string name, Transform root)
-    {
-        var pivot = new GameObject(name);
-        pivot.transform.SetParent(root, false);
-        pivot.transform.position = center;
-        MarkGeneratedStatic(pivot);
-        SpawnEdge(kind, center, yaw, name, pivot.transform);
-        // 프리팹의 회전 보정과 무관하게 격자의 가로·세로 축으로 폭을 줄인다.
-        pivot.transform.localScale = new Vector3(toward.x != 0f ? width : 1f,
-            1f, toward.z != 0f ? width : 1f);
-        pivot.transform.position += toward * (TileSize * (1f - width) * 0.5f);
     }
 
     int CountOrthoHillNeighbors(CellCoord cell, int layer)

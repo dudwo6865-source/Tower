@@ -241,8 +241,8 @@ public class CliffMapEditorWindow : EditorWindow
         {
             EditorGUILayout.HelpBox(
                 paintTopLayer <= 0
-                    ? "Top 지우개: 칸의 모든 Top과 위 지형(Hill/Ramp)을 지우고 낮은 바닥으로 바꿉니다. 주변 벽이 겹쳐도 상판으로 다시 메우지 않습니다."
-                    : $"Top 지우개: {paintTopLayer + 1}층 이상 Top과 그 층 Hill을 지웁니다.",
+                    ? "Top 지우개: 선택 칸을 바닥으로 바꾸고 주변 8칸의 Top을 벽·코너 자리로 바꿉니다. 기존 바닥은 유지하며 타일 크기는 변경하지 않습니다."
+                    : $"Top 지우개: {paintTopLayer + 1}층 이상을 지우고 주변 8칸의 같은 층 Top을 벽·코너 자리로 바꿉니다. 아랫층은 유지합니다.",
                 MessageType.Info);
         }
 
@@ -813,6 +813,15 @@ public class CliffMapEditorWindow : EditorWindow
         {
             int size = GetStampSize();
             changed = painter.FillGround(origin, size, erase: brushMode == BrushMode.EraseGround) > 0;
+        }
+        else if (brushMode == BrushMode.EraseTop)
+        {
+            int stamp = GetStampSize();
+            var cells = new List<CliffPainter.CellCoord>();
+            for (int dx = 0; dx < stamp; dx++)
+                for (int dz = 0; dz < stamp; dz++)
+                    cells.Add(new CliffPainter.CellCoord(origin.x + dx, origin.z + dz));
+            changed = painter.TryRemoveTops(cells, paintTopLayer);
         }
         else
         {
