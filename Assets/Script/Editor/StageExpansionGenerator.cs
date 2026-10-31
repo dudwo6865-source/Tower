@@ -18,7 +18,6 @@ public static partial class StageExpansionGenerator
     static readonly int[] Widths = { 33, 34, 35, 36, 36 };
     static readonly int[] Heights = { 20, 21, 22, 23, 24 };
 
-    [MenuItem("Tools/맵/1Stage 기반 추가 스테이지 5개 생성")]
     public static void Generate()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)

@@ -84,7 +84,6 @@ public static partial class StageExpansionGenerator
         }
     }
 
-    [MenuItem("Tools/맵/추가 스테이지 5개를 저지대와 언덕으로 변경")]
     public static void UpgradeTerrain()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)
