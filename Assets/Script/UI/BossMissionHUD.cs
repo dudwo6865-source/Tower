@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 [DisallowMultipleComponent]
-[AddComponentMenu("게임/UI/보스 미션 표시")]
+[AddComponentMenu("게임/UI/BossMissionHUD")]
 public class BossMissionHUD : MonoBehaviour
 {
     [Label("결과 매니저")]

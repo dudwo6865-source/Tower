@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.AI;
 
 [DisallowMultipleComponent]
-[AddComponentMenu("게임/미션/보스 둥지")]
+[AddComponentMenu("게임/미션/BossNest")]
 public class BossNest : MonoBehaviour
 {
     [Header("보스")]

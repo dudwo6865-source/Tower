@@ -3,7 +3,7 @@ using UnityEngine.AI;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(EntityHealth))]
-[AddComponentMenu("게임/전투/보스 전투 AI")]
+[AddComponentMenu("게임/전투/BossCombatAI")]
 public class BossCombatAI : MobileCombatAI
 {
     [Header("보스 이동")]
