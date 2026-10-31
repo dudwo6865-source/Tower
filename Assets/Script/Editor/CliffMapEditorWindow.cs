@@ -241,7 +241,7 @@ public class CliffMapEditorWindow : EditorWindow
         {
             EditorGUILayout.HelpBox(
                 paintTopLayer <= 0
-                    ? "Top 지우개: 칸의 모든 Top과 위 지형(Hill/Ramp)을 지우고 Ground로 채웁니다."
+                    ? "Top 지우개: 칸의 모든 Top과 위 지형(Hill/Ramp)을 지우고 낮은 바닥으로 바꿉니다. 주변 벽이 겹쳐도 상판으로 다시 메우지 않습니다."
                     : $"Top 지우개: {paintTopLayer + 1}층 이상 Top과 그 층 Hill을 지웁니다.",
                 MessageType.Info);
         }

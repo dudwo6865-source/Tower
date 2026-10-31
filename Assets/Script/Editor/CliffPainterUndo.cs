@@ -19,6 +19,7 @@ public static class CliffPainterUndo
         public bool normals;
         public float distance;
         public float angle;
+        public float junctionWidth;
         public List<CliffPainter.TopEntry> tops;
         public List<CliffPainter.CellCoord> legacyTops;
         public List<CliffPainter.HillEntry> hills;
@@ -40,6 +41,7 @@ public static class CliffPainterUndo
         tileSet = painter.tileSet, hillTileSet = painter.hillTileSet,
         origin = painter.gridOrigin, height = painter.baseHeight,
         normals = painter.connectTileNormals, distance = painter.normalJoinDistance, angle = painter.normalJoinAngle,
+        junctionWidth = painter.junctionWallWidth,
         tops = painter.tops, legacyTops = painter.topCells, hills = painter.hills,
         legacyHills = painter.hillCells, ground = painter.groundCells, ramps = painter.ramps
     });

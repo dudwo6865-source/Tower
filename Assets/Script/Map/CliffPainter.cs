@@ -109,6 +109,11 @@ public class CliffPainter : MonoBehaviour
     [Tooltip("수동으로 배치한 램프입니다.")]
     public List<RampEntry> ramps = new List<RampEntry>();
 
+    [Header("벽 충돌 구간")]
+    [Label("충돌 구간 벽 폭 비율")]
+    [Tooltip("여러 벽이 한 칸에서 만날 때 벽의 깊이를 줄여 중앙의 낮은 바닥을 남깁니다.")]
+    [Range(0.1f, 0.45f)] public float junctionWallWidth = 0.35f;
+
     [Header("타일 경계 노멀")]
     [Label("타일 경계 노멀 연결")]
     [Tooltip("재생성할 때 서로 다른 타일의 맞닿는 경계 노멀을 연결합니다. 원본 메시와 충돌 형상은 변경하지 않습니다.")]
@@ -1159,62 +1164,13 @@ public class CliffPainter : MonoBehaviour
                 highest = kv.Value;
         }
 
-        try
-        {
-            CloseConflictingEdgeSlots(lowest, highest);
-            SpawnGrounds(root);
-            for (int layer = lowest; layer <= highest; layer++)
-                SpawnLayerGeometry(layer, root);
-
-            SpawnRamps(root);
-            if (connectTileNormals)
-                ConnectTileBoundaryNormals(root);
-        }
-        finally
-        {
-            // 자동 연결은 생성용 조회에만 반영하고 원래 칠 데이터는 보존한다.
-            RebuildLookup();
-        }
-    }
-
-    // 한 모듈로 표현할 수 없는 좁은 접점은 상판으로 연결한 뒤 경계를 다시 계산한다.
-    void CloseConflictingEdgeSlots(int lowest, int highest)
-    {
-        var domain = new HashSet<CellCoord>(groundSet);
-        domain.UnionWith(topMaxLayer.Keys);
-        var protectedSlots = new HashSet<CellCoord>(hillSet);
-        if (ramps != null)
-            foreach (RampEntry ramp in ramps)
-                protectedSlots.Add(Neighbor(ramp.cell, NormalizeDir(ramp.direction)));
-
+        SpawnGrounds(root);
         for (int layer = lowest; layer <= highest; layer++)
-        {
-            var candidates = new HashSet<CellCoord>(domain);
-            var fill = new List<CellCoord>();
-            while (candidates.Count > 0)
-            {
-                fill.Clear();
-                foreach (CellCoord cell in candidates)
-                {
-                    if (HasTopLayer(cell, layer) || protectedSlots.Contains(cell)) continue;
-                    if (layer > 0 && !HasTopLayer(cell, layer - 1)) continue;
-                    if (CountEdgeModules(cell, layer) > 1) fill.Add(cell);
-                }
-                candidates.Clear();
-                // 같은 단계의 후보를 함께 적용해 칠 순서에 따른 차이를 없앤다.
-                foreach (CellCoord cell in fill)
-                {
-                    topMaxLayer[cell] = layer;
-                    elevatedSet.Add(cell);
-                    for (int x = -1; x <= 1; x++)
-                        for (int z = -1; z <= 1; z++)
-                        {
-                            var adjacent = new CellCoord(cell.x + x, cell.z + z);
-                            if (domain.Contains(adjacent)) candidates.Add(adjacent);
-                        }
-                }
-            }
-        }
+            SpawnLayerGeometry(layer, root);
+
+        SpawnRamps(root);
+        if (connectTileNormals)
+            ConnectTileBoundaryNormals(root);
     }
 
     int CountEdgeModules(CellCoord cell, int layer)
@@ -1542,6 +1498,13 @@ public class CliffPainter : MonoBehaviour
         if (spawnedSlots != null && !spawnedSlots.Add(slot))
             return;
 
+        if (CountEdgeModules(slot, layer) > 1 && !HasHillOnLayer(slot, layer) &&
+            !IsVisionHillCell(slot) && (layer > 0 || HasGround(slot) || HasTop(slot)))
+        {
+            SpawnEdgeJunction(slot, layer, root);
+            return;
+        }
+
         pos.y = GetEdgeSurfaceHeight(layer);
         hillBuildLayer = layer;
 
@@ -1568,6 +1531,50 @@ public class CliffPainter : MonoBehaviour
         }
 
         SpawnEdge(kind, pos, yaw, name, root);
+    }
+
+    // 충돌 칸은 낮은 바닥을 유지하고 필요한 벽을 칸의 가장자리로 압축해 배치한다.
+    void SpawnEdgeJunction(CellCoord slot, int layer, Transform root)
+    {
+        Vector3 center = CellCenterWorldAtEdge(slot, layer);
+        var junction = new GameObject($"Junction_L{layer}_{slot.x}_{slot.z}");
+        junction.transform.SetParent(root, false);
+        junction.transform.position = center;
+        MarkGeneratedStatic(junction);
+        Spawn(tileSet.ground != null ? tileSet.ground : tileSet.top, center,
+            tileSet.groundYawOffset, tileSet.groundHeightOffset, "낮은 바닥", junction.transform);
+
+        float width = Mathf.Clamp(junctionWallWidth, 0.1f, 0.45f);
+        for (int dir = 0; dir < 4; dir++)
+        {
+            CellCoord a = Neighbor(slot, dir);
+            CellCoord b = Neighbor(slot, (dir + 1) % 4);
+            bool hasA = HasTopLayer(a, layer);
+            bool hasB = HasTopLayer(b, layer);
+            Vector3 toward = new Vector3(a.x - slot.x, 0f, a.z - slot.z);
+            if (hasA)
+                SpawnCompressedEdge(EdgeKind.Straight, (dir + 2) % 4 * 90f,
+                    toward, width, center, "벽_" + dir, junction.transform);
+            var diagonal = new CellCoord(a.x + b.x - slot.x, a.z + b.z - slot.z);
+            if (!hasA && !hasB && HasTopLayer(diagonal, layer))
+                SpawnCompressedEdge(EdgeKind.OuterCorner, (dir + 2) % 4 * 90f,
+                    new Vector3(diagonal.x - slot.x, 0f, diagonal.z - slot.z),
+                    width, center, "코너_" + dir, junction.transform);
+        }
+    }
+
+    void SpawnCompressedEdge(EdgeKind kind, float yaw, Vector3 toward, float width,
+        Vector3 center, string name, Transform root)
+    {
+        var pivot = new GameObject(name);
+        pivot.transform.SetParent(root, false);
+        pivot.transform.position = center;
+        MarkGeneratedStatic(pivot);
+        SpawnEdge(kind, center, yaw, name, pivot.transform);
+        // 프리팹의 회전 보정과 무관하게 격자의 가로·세로 축으로 폭을 줄인다.
+        pivot.transform.localScale = new Vector3(toward.x != 0f ? width : 1f,
+            1f, toward.z != 0f ? width : 1f);
+        pivot.transform.position += toward * (TileSize * (1f - width) * 0.5f);
     }
 
     int CountOrthoHillNeighbors(CellCoord cell, int layer)
