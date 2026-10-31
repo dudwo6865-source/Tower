@@ -4,9 +4,11 @@ using UnityEngine;
 [CustomEditor(typeof(CliffPainter))]
 public class CliffPainterEditor : Editor
 {
+    void OnEnable() => CliffPainterUndo.Track((CliffPainter)target);
+
     public override void OnInspectorGUI()
     {
-        DrawDefaultInspector();
+        if (DrawDefaultInspector()) CliffPainterUndo.MarkDirty((CliffPainter)target);
 
         CliffPainter painter = (CliffPainter)target;
 
@@ -14,9 +16,10 @@ public class CliffPainterEditor : Editor
 
         if (GUILayout.Button("가장자리 재생성", GUILayout.Height(28f)))
         {
-            Undo.RecordObject(painter, "Rebuild Cliffs");
+            int group = CliffPainterUndo.Begin(painter, "절벽 재생성 및 층 정리");
             painter.RebuildGeometry();
-            EditorUtility.SetDirty(painter);
+            CliffPainterUndo.MarkDirty(painter);
+            CliffPainterUndo.End(group);
         }
 
         if (GUILayout.Button("맵 생성기 열기"))

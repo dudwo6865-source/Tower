@@ -30,6 +30,8 @@ public class CliffMapEditorWindow : EditorWindow
     bool groundFillMode; // true면 클릭 한 번에 N×N 채우기
     bool painting;
     bool needsRebuild;
+    int strokeUndoGroup = -1;
+    int strokeControl;
     Vector2 scroll;
 
     // 드래그 중 브러시가 지나온 칸 — 그려질 위치 미리보기
@@ -61,7 +63,10 @@ public class CliffMapEditorWindow : EditorWindow
         Undo.undoRedoPerformed += OnUndoRedo;
         AutoFindPainter();
         if (painter != null)
+        {
             painter.EnsureLookup();
+            CliffPainterUndo.Track(painter);
+        }
     }
 
     void OnDisable()
@@ -69,8 +74,7 @@ public class CliffMapEditorWindow : EditorWindow
         SceneView.duringSceneGui -= OnSceneGUI;
         Undo.undoRedoPerformed -= OnUndoRedo;
 
-        if (needsRebuild && painter != null)
-            RebuildNow();
+        FinishStroke();
     }
 
     void OnUndoRedo()
@@ -78,10 +82,13 @@ public class CliffMapEditorWindow : EditorWindow
         if (painter == null)
             return;
 
-        painter.InvalidateLookup();
-        painter.EnsureLookup();
-        painter.RebuildGeometry();
+        painting = false;
+        strokeUndoGroup = -1;
+        ReleaseStrokeControl();
+        strokePreviewCells.Clear();
+        strokePreviewList.Clear();
         needsRebuild = false;
+        Repaint();
         SceneView.RepaintAll();
     }
 
@@ -101,16 +108,22 @@ public class CliffMapEditorWindow : EditorWindow
         EditorGUILayout.HelpBox(
             "• Paint Top: -8층~9층 선택 / Place Hill: 벽의 층 자동 감지\n" +
             "• 2층+ Top: 아랫층 가장자리 한 칸 안쪽만 (In 코너 Top 위 제외) / Hill: 해당 층 Top 가장자리\n" +
-            "• 1층 Top/Hill 칠하면 Ground 제거, 바닥/낮은 지형이 없는 칸엔 1층 벽 미생성\n" +
+            "• 새 Top은 바닥이 있는 칸에만 배치 / 기존 Top은 높이 변경 가능\n" +
+            "• 1층 Top/Hill 칠하면 Ground 대체, 실행 취소하면 원래 바닥 복구\n" +
             "• 월 슬롯은 Ground 데이터는 유지하되 Ground 메시는 Top처럼 생략\n" +
             "• 페인트 OFF(B): 창을 켠 채로 다른 오브젝트 작업",
             MessageType.Info);
 
         EditorGUI.BeginChangeCheck();
-        painter = (CliffPainter)EditorGUILayout.ObjectField("Cliff Painter", painter, typeof(CliffPainter), true);
+        CliffPainter selectedPainter = (CliffPainter)EditorGUILayout.ObjectField("맵 지형", painter, typeof(CliffPainter), true);
 
-        if (EditorGUI.EndChangeCheck() && painter != null)
-            Selection.activeGameObject = painter.gameObject;
+        if (EditorGUI.EndChangeCheck())
+        {
+            FinishStroke();
+            painter = selectedPainter;
+            CliffPainterUndo.Track(painter);
+            if (painter != null) Selection.activeGameObject = painter.gameObject;
+        }
 
         EditorGUILayout.BeginHorizontal();
         if (GUILayout.Button("씬에서 찾기"))
@@ -127,19 +140,21 @@ public class CliffMapEditorWindow : EditorWindow
         }
 
         EditorGUILayout.Space(6f);
-        Undo.RecordObject(painter, "Cliff Painter Settings");
-
-        painter.tileSet = (CliffTileSet)EditorGUILayout.ObjectField(
-            "절벽 타일 세트",
-            painter.tileSet,
-            typeof(CliffTileSet),
-            false);
-
-        painter.hillTileSet = (HillTileSet)EditorGUILayout.ObjectField(
-            "언덕 타일 세트",
-            painter.hillTileSet,
-            typeof(HillTileSet),
-            false);
+        // 창을 그릴 때마다 Undo를 예약하지 않고 실제 설정 변경만 기록한다.
+        var settings = new SerializedObject(painter);
+        settings.Update();
+        EditorGUILayout.PropertyField(settings.FindProperty("tileSet"), new GUIContent("절벽 타일 세트"));
+        EditorGUILayout.PropertyField(settings.FindProperty("hillTileSet"), new GUIContent("언덕 타일 세트"));
+        EditorGUILayout.PropertyField(settings.FindProperty("connectTileNormals"), new GUIContent("타일 경계 노멀 연결"));
+        if (settings.FindProperty("connectTileNormals").boolValue)
+        {
+            EditorGUILayout.PropertyField(settings.FindProperty("normalJoinDistance"), new GUIContent("경계 탐색 거리"));
+            EditorGUILayout.PropertyField(settings.FindProperty("normalJoinAngle"), new GUIContent("노멀 연결 최대 각도"));
+            EditorGUILayout.HelpBox("설정 후 '지금 재생성'을 누르세요. 원본 FBX의 Read/Write Enabled가 필요합니다. 타일 간격과 실제 폭을 먼저 맞추세요.", MessageType.Info);
+        }
+        EditorGUILayout.PropertyField(settings.FindProperty("gridOrigin"), new GUIContent("그리드 원점"));
+        EditorGUILayout.PropertyField(settings.FindProperty("baseHeight"), new GUIContent("저지대 높이 (Y)"));
+        if (settings.ApplyModifiedProperties()) MarkDirty();
 
         EditorGUILayout.BeginHorizontal();
         if (painter.tileSet == null && GUILayout.Button("Cliff Tile Set 생성"))
@@ -147,17 +162,6 @@ public class CliffMapEditorWindow : EditorWindow
         if (painter.hillTileSet == null && GUILayout.Button("Hill Tile Set 생성"))
             CreateDefaultHillTileSet();
         EditorGUILayout.EndHorizontal();
-
-        painter.connectTileNormals = EditorGUILayout.Toggle("타일 경계 노멀 연결", painter.connectTileNormals);
-        if (painter.connectTileNormals)
-        {
-            painter.normalJoinDistance = Mathf.Max(0.0001f, EditorGUILayout.FloatField("경계 탐색 거리", painter.normalJoinDistance));
-            painter.normalJoinAngle = EditorGUILayout.Slider("노멀 연결 최대 각도", painter.normalJoinAngle, 0f, 90f);
-            EditorGUILayout.HelpBox("설정 후 '지금 재생성'을 누르세요. 원본 FBX의 Read/Write Enabled가 필요합니다. 타일 간격과 실제 폭을 먼저 맞추세요.", MessageType.Info);
-        }
-
-        painter.gridOrigin = EditorGUILayout.Vector3Field("그리드 원점", painter.gridOrigin);
-        painter.baseHeight = EditorGUILayout.FloatField("저지대 높이 (Y)", painter.baseHeight);
 
         if (painter.tileSet != null)
         {
@@ -279,10 +283,12 @@ public class CliffMapEditorWindow : EditorWindow
                     "지우기",
                     "취소"))
             {
-                Undo.RecordObject(painter, "Clear Tops And Hills");
+                FinishStroke();
+                int group = CliffPainterUndo.Begin(painter, "고지대와 언덕 지우기");
                 painter.ClearTopsAndHills();
                 RebuildNow();
                 MarkDirty();
+                CliffPainterUndo.End(group);
             }
         }
 
@@ -290,10 +296,12 @@ public class CliffMapEditorWindow : EditorWindow
         {
             if (EditorUtility.DisplayDialog("맵 생성기", "모든 Top/바닥/언덕/램프를 지울까요?", "지우기", "취소"))
             {
-                Undo.RecordObject(painter, "Clear Cliffs");
+                FinishStroke();
+                int group = CliffPainterUndo.Begin(painter, "전체 지형 지우기");
                 painter.ClearAllTops();
                 RebuildNow();
                 MarkDirty();
+                CliffPainterUndo.End(group);
             }
         }
         EditorGUILayout.EndHorizontal();
@@ -330,11 +338,7 @@ public class CliffMapEditorWindow : EditorWindow
 
         if (!paintEnabled)
         {
-            painting = false;
-            strokePreviewCells.Clear();
-            strokePreviewList.Clear();
-            if (needsRebuild)
-                RebuildNow();
+            FinishStroke();
         }
 
         Repaint();
@@ -367,9 +371,11 @@ public class CliffMapEditorWindow : EditorWindow
 
     void CreatePainterInScene()
     {
+        FinishStroke();
         GameObject go = new GameObject("CliffPainter");
         Undo.RegisterCreatedObjectUndo(go, "Create CliffPainter");
         painter = go.AddComponent<CliffPainter>();
+        CliffPainterUndo.Track(painter);
         Selection.activeGameObject = go;
     }
 
@@ -380,16 +386,19 @@ public class CliffMapEditorWindow : EditorWindow
         CliffTileSet set = CreateInstance<CliffTileSet>();
         set.tileSize = 8f;
         set.cliffHeight = 4.8f;
-        set.top = LoadPrefab("Assets/Artasseet/Prefabs/Map/MapPrefab/Top.prefab");
+        set.top = LoadMapPrefab("Top.prefab");
         if (set.top == null)
-            set.top = LoadPrefab("Assets/Artasseet/Prefabs/Map/MapPrefab/Hill.prefab");
-        set.straight = LoadPrefab("Assets/Artasseet/Prefabs/Map/MapPrefab/Wall1.prefab");
-        set.outerCorner = LoadPrefab("Assets/Artasseet/Prefabs/Map/MapPrefab/WXW_Out.prefab");
-        set.innerCorner = LoadPrefab("Assets/Artasseet/Prefabs/Map/MapPrefab/WxW_In.prefab");
-        set.ground = LoadPrefab("Assets/Artasseet/Prefabs/Map/MapPrefab/Ground.prefab");
+            set.top = LoadMapPrefab("Hill.prefab");
+        set.straight = LoadMapPrefab("Wall.prefab") ?? LoadMapPrefab("Wall1.prefab");
+        set.outerCorner = LoadMapPrefab("WXW_Out.prefab");
+        set.innerCorner = LoadMapPrefab("WxW_In.prefab");
+        set.ground = LoadMapPrefab("Ground.prefab");
         AssetDatabase.CreateAsset(set, path);
         AssetDatabase.SaveAssets();
+        int group = CliffPainterUndo.Begin(painter, "절벽 타일 세트 연결");
         painter.tileSet = set;
+        MarkDirty();
+        CliffPainterUndo.End(group);
         EditorGUIUtility.PingObject(set);
     }
 
@@ -398,15 +407,18 @@ public class CliffMapEditorWindow : EditorWindow
         string folder = EnsureMapsFolder();
         string path = AssetDatabase.GenerateUniqueAssetPath($"{folder}/HillTileSet.asset");
         HillTileSet set = CreateInstance<HillTileSet>();
-        set.hill = LoadPrefab("Assets/Artasseet/Prefabs/Map/MapPrefab/Hill.prefab");
-        set.wxh = LoadPrefab("Assets/Artasseet/Prefabs/Map/MapPrefab/HXW_In.prefab");
-        set.hxwOuter = LoadPrefab("Assets/Artasseet/Prefabs/Map/MapPrefab/HXW_Out.prefab");
-        set.hxwInner = LoadPrefab("Assets/Artasseet/Prefabs/Map/MapPrefab/HXW_In.prefab");
-        set.toOuterCorner = LoadPrefab("Assets/Artasseet/Prefabs/Map/MapPrefab/HXH_Out.prefab");
-        set.toInnerCorner = LoadPrefab("Assets/Artasseet/Prefabs/Map/MapPrefab/HXH_In.prefab");
+        set.hill = LoadMapPrefab("Hill.prefab");
+        set.wxh = LoadMapPrefab("WXH.prefab");
+        set.hxwOuter = LoadMapPrefab("HXW_Out.prefab");
+        set.hxwInner = LoadMapPrefab("HXW_In.prefab");
+        set.toOuterCorner = LoadMapPrefab("HXH_Out.prefab");
+        set.toInnerCorner = LoadMapPrefab("HXH_In.prefab");
         AssetDatabase.CreateAsset(set, path);
         AssetDatabase.SaveAssets();
+        int group = CliffPainterUndo.Begin(painter, "언덕 타일 세트 연결");
         painter.hillTileSet = set;
+        MarkDirty();
+        CliffPainterUndo.End(group);
         EditorGUIUtility.PingObject(set);
     }
 
@@ -420,17 +432,26 @@ public class CliffMapEditorWindow : EditorWindow
         return folder;
     }
 
-    static GameObject LoadPrefab(string path)
+    static GameObject LoadMapPrefab(string name)
     {
-        return AssetDatabase.LoadAssetAtPath<GameObject>(path);
+        return AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Artasseet/Map/MapPrefab/" + name)
+            ?? AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Artasseet/Prefabs/Map/MapPrefab/" + name);
     }
 
     void OnSceneGUI(SceneView sceneView)
     {
-        if (painter == null)
+        if (painter == null || EditorApplication.isPlayingOrWillChangePlaymode)
             return;
 
         Event e = Event.current;
+        // Alt 상태나 씬 밖에서 버튼을 놓아도 진행 중인 스트로크를 마무리한다.
+        if (painting && ((e.rawType == EventType.MouseUp && e.button == 0) ||
+            (e.type == EventType.KeyDown && e.keyCode == KeyCode.Escape)))
+        {
+            FinishStroke();
+            e.Use();
+            return;
+        }
 
         // 단축키 B: 페인트 ON/OFF (꺼져 있어도 동작)
         if (e.type == EventType.KeyDown && e.keyCode == KeyCode.B && !e.control && !e.alt && !e.shift)
@@ -484,15 +505,16 @@ public class CliffMapEditorWindow : EditorWindow
             case EventType.MouseDown:
                 if (e.button == 0 && !e.control)
                 {
+                    FinishStroke();
                     painting = true;
+                    strokeControl = controlId;
+                    GUIUtility.hotControl = controlId;
                     strokePreviewCells.Clear();
                     strokePreviewList.Clear();
                     ApplyBrushAtMouse(e);
                     if (IsGroundFillBrush())
                     {
-                        painting = false;
-                        strokePreviewCells.Clear();
-                        strokePreviewList.Clear();
+                        FinishStroke();
                     }
                     e.Use();
                 }
@@ -509,11 +531,7 @@ public class CliffMapEditorWindow : EditorWindow
             case EventType.MouseUp:
                 if (e.button == 0 && painting)
                 {
-                    painting = false;
-                    strokePreviewCells.Clear();
-                    strokePreviewList.Clear();
-                    if (needsRebuild)
-                        RebuildNow();
+                    FinishStroke();
                     e.Use();
                 }
                 break;
@@ -644,7 +662,13 @@ public class CliffMapEditorWindow : EditorWindow
         hoverColor.a = Mathf.Min(0.65f, color.a + 0.25f);
 
         for (int i = 0; i < hoverPaintCells.Count; i++)
-            DrawCellPreviewAtHeight(hoverPaintCells[i], size, hoverColor, IsHillBrush() ? painter.GetEdgeSurfaceHeight(GetHillBrushLayer(hoverPaintCells[i])) + 0.2f : previewY);
+        {
+            Color cellColor = hoverColor;
+            if (brushMode == BrushMode.PaintTop && !painter.CanPlaceTop(hoverPaintCells[i], paintTopLayer) &&
+                !painter.HasTop(hoverPaintCells[i]))
+                cellColor = new Color(1f, 0.2f, 0.2f, hoverColor.a);
+            DrawCellPreviewAtHeight(hoverPaintCells[i], size, cellColor, IsHillBrush() ? painter.GetEdgeSurfaceHeight(GetHillBrushLayer(hoverPaintCells[i])) + 0.2f : previewY);
+        }
 
         if (brushMode == BrushMode.PlaceHill && !hillInvalid)
         {
@@ -751,15 +775,38 @@ public class CliffMapEditorWindow : EditorWindow
         if (!TryGetCellUnderMouse(e, out CliffPainter.CellCoord origin))
             return;
 
+        bool missingPrefab = painter.tileSet == null ||
+            (brushMode == BrushMode.PaintTop && painter.tileSet.top == null) ||
+            (brushMode == BrushMode.PaintGround && painter.tileSet.ground == null) ||
+            (brushMode == BrushMode.PaintRamp && painter.tileSet.ramp == null) ||
+            (brushMode == BrushMode.PlaceHill && (painter.hillTileSet == null || painter.hillTileSet.hill == null));
+        if (missingPrefab)
+        {
+            ShowNotification(new GUIContent("선택한 브러시에 필요한 타일 세트와 프리팹을 연결하세요."));
+            return;
+        }
+
         // 같은 스탬프 영역을 연속 드래그하면 스킵
         if (painting && IsStampAlreadyInStroke(origin))
             return;
+
+        if (brushMode == BrushMode.PaintTop)
+        {
+            bool canPaint = false;
+            int size = GetStampSize();
+            for (int dx = 0; dx < size && !canPaint; dx++)
+                for (int dz = 0; dz < size && !canPaint; dz++)
+                    canPaint = painter.CanPlaceTop(new CliffPainter.CellCoord(origin.x + dx, origin.z + dz), paintTopLayer);
+            // 빈 곳이나 이미 같은 높이인 곳을 누르면 빈 실행 취소 기록을 만들지 않는다.
+            if (!canPaint) return;
+        }
 
         hasHoverCell = true;
         lastHoverCell = origin;
         CollectStrokePreview(origin);
 
-        Undo.RecordObject(painter, "Cliff Paint");
+        if (strokeUndoGroup < 0)
+            strokeUndoGroup = CliffPainterUndo.Begin(painter, "맵 지형 칠하기");
         bool changed = false;
 
         if (brushMode == BrushMode.PaintGround || brushMode == BrushMode.EraseGround)
@@ -904,7 +951,7 @@ public class CliffMapEditorWindow : EditorWindow
         if (painter == null)
             return;
 
-        painter.RebuildGeometry();
+        painter.RebuildGeometry(false);
         needsRebuild = false;
         MarkDirty();
     }
@@ -914,9 +961,23 @@ public class CliffMapEditorWindow : EditorWindow
         if (painter == null)
             return;
 
-        EditorUtility.SetDirty(painter);
+        CliffPainterUndo.MarkDirty(painter);
+    }
 
-        if (!Application.isPlaying)
-            EditorSceneManager.MarkSceneDirty(painter.gameObject.scene);
+    void ReleaseStrokeControl()
+    {
+        if (strokeControl != 0 && GUIUtility.hotControl == strokeControl) GUIUtility.hotControl = 0;
+        strokeControl = 0;
+    }
+
+    void FinishStroke()
+    {
+        painting = false;
+        ReleaseStrokeControl();
+        strokePreviewCells.Clear();
+        strokePreviewList.Clear();
+        if (needsRebuild && painter != null) RebuildNow();
+        CliffPainterUndo.End(strokeUndoGroup);
+        strokeUndoGroup = -1;
     }
 }

@@ -390,6 +390,10 @@ public class CliffPainter : MonoBehaviour
     // 아랫층 Inner 코너를 구성하는 Top 위에는 윗층을 올리지 않습니다.
     public bool CanPlaceTop(CellCoord cell, int layer)
     {
+        EnsureLookup();
+        // 새 Top은 바닥이 있는 칸에만 칠한다. 기존 Top의 높이 편집은 허용한다.
+        if (!HasGround(cell) && !HasTop(cell))
+            return false;
         // 낮은 층은 기존 높이를 직접 바꿔 골짜기를 그린다.
         if (layer < 0)
             return !topMaxLayer.TryGetValue(cell, out int current) || current != layer;
@@ -447,7 +451,8 @@ public class CliffPainter : MonoBehaviour
     // 지정 층 이상 제거. layer가 0 이하이면 Top과 위 지형을 지우고 기본 바닥을 채운다.
     public bool TryRemoveTop(CellCoord cell, int layer)
     {
-        if (!topMaxLayer.TryGetValue(cell, out int current) || current < layer)
+        EnsureLookup();
+        if (!topMaxLayer.TryGetValue(cell, out int current) || (layer > 0 && current < layer))
         {
             // Top은 없어도 같은 칸의 Hill/Ramp는 지운다 (지우개 = 위 지형 정리).
             bool clearedExtras = ClearAboveTerrainOnCell(cell, layer);
@@ -506,6 +511,8 @@ public class CliffPainter : MonoBehaviour
         int index = FindHillIndex(cell);
         if (index >= 0)
             hills.RemoveAt(index);
+
+        if (hillLayer <= 0 && !HasTop(cell)) TryAddGround(cell);
 
         return true;
     }
@@ -698,6 +705,10 @@ public class CliffPainter : MonoBehaviour
     // 바닥(Ground)은 남기고 Top / Hill / 램프만 지웁니다.
     public void ClearTopsAndHills()
     {
+        EnsureLookup();
+        var restoreGround = new HashSet<CellCoord>(elevatedSet);
+        foreach (HillEntry entry in hills)
+            if (entry.layer <= 0) restoreGround.Add(entry.cell);
         if (tops != null)
             tops.Clear();
         if (topCells != null)
@@ -713,6 +724,8 @@ public class CliffPainter : MonoBehaviour
         hillLayerMap.Clear();
         rampLookup.Clear();
         lookupDirty = false;
+        foreach (CellCoord cell in restoreGround)
+            TryAddGround(cell);
     }
 
     public bool TryAddGround(CellCoord cell)
@@ -810,7 +823,7 @@ public class CliffPainter : MonoBehaviour
             hills.RemoveAt(index);
 
         // 1층 Hill 배치 때 제거한 Ground를 복구해, 같은 자리에 벽/코너가 다시 생기게 한다.
-        if (layer == 0 && !HasTopLayer(cell, 0) && IsEdgeSlot(cell, 0))
+        if (layer <= 0 && !HasTop(cell))
             TryAddGround(cell);
 
         return true;
@@ -952,6 +965,9 @@ public class CliffPainter : MonoBehaviour
             hillSet.Remove(entry.cell);
             hillLayerMap.Remove(entry.cell);
             hills.RemoveAt(i);
+            // 저층 언덕을 칠할 때 대체했던 바닥은 자동 정리 시에도 되돌린다.
+            if (entry.layer <= 0 && !HasTop(entry.cell))
+                TryAddGround(entry.cell);
         }
     }
 
@@ -960,22 +976,20 @@ public class CliffPainter : MonoBehaviour
 
     public bool TrySetRamp(CellCoord cell, int direction)
     {
+        EnsureLookup();
         direction = NormalizeDir(direction);
 
-        if (!elevatedSet.Contains(cell))
+        if (!HasTopLayer(cell, 0))
             return false;
 
         CellCoord neighbor = Neighbor(cell, direction);
 
-        if (elevatedSet.Contains(neighbor))
+        if (elevatedSet.Contains(neighbor) || (!HasGround(neighbor) && !HasHill(neighbor)))
             return false;
 
         if (rampLookup.TryGetValue((cell, direction), out int index))
         {
-            RampEntry existing = ramps[index];
-            existing.direction = direction;
-            ramps[index] = existing;
-            return true;
+            return false;
         }
 
         ramps.Add(new RampEntry { cell = cell, direction = direction });
@@ -1086,11 +1100,17 @@ public class CliffPainter : MonoBehaviour
     }
 
     // Top 연결에 맞춰 가장자리 모듈을 전부 다시 생성합니다.
-    public void RebuildGeometry()
+    public void RebuildGeometry(bool validateTerrain = true)
     {
+        // 생성 부모를 맵 루트나 다른 오브젝트로 잘못 연결해 지형 외 자식까지 삭제하지 않게 한다.
+        if (generatedRoot != null && (generatedRoot == transform || !generatedRoot.IsChildOf(transform)))
+        {
+            Debug.LogError("맵 생성기: 생성 부모는 이 지형 오브젝트 아래의 전용 자식이어야 합니다.", this);
+            return;
+        }
         RebuildLookup();
         // 배치 규칙이 바뀌었거나 잘못된 윗층이 있으면 정리한다.
-        RemoveInvalidUpperLayers();
+        if (validateTerrain) RemoveInvalidUpperLayers();
         RebuildLookup();
 
         if (tileSet == null)
