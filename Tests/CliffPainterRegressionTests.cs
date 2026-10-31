@@ -143,5 +143,74 @@ public static class CliffPainterRegressionTests
         otherPainter.RebuildGeometry(false);
         Check(otherPainter.generatedRoot.name == "지형" && otherPainter.generatedRoot.parent == otherPainter.transform &&
             building != null && building.transform.parent == mapRoot.transform, "잘못 연결된 맵 루트 대신 전용 부모를 만들고 본부는 보존한다");
+        VerifyEdgeCombinations(set);
+    }
+
+    static void VerifyEdgeCombinations(CliffTileSet set)
+    {
+        var painter = new GameObject("경계 조합 검증").AddComponent<CliffPainter>();
+        painter.tileSet = set;
+        var neighbors = new[] { Cell(0, 1), Cell(1, 1), Cell(1, 0), Cell(1, -1),
+            Cell(0, -1), Cell(-1, -1), Cell(-1, 0), Cell(-1, 1) };
+        for (int mask = 0; mask < 256; mask++)
+        {
+            painter.ClearTopsAndHills();
+            painter.FillGround(Cell(-3, -3), 7, false);
+            for (int i = 0; i < neighbors.Length; i++)
+                if ((mask & (1 << i)) != 0) painter.TryAddTop(neighbors[i]);
+            painter.EnsureGeneratedRoot();
+            string before = EditorJsonUtility.ToJson(painter);
+            painter.RebuildGeometry(false);
+            var slots = new HashSet<CliffPainter.CellCoord>();
+            foreach (Transform tile in painter.generatedRoot)
+            {
+                var cell = painter.WorldToCell(tile.position);
+                if (!slots.Add(cell)) throw new Exception("경계 중복: " + mask + " / " + tile.name);
+            }
+            Check(slots.Count == 49, "주변 8칸 조합의 바닥·상판·경계에 빈 칸이 없다: " + mask);
+            Check(EditorJsonUtility.ToJson(painter) == before, "자동 연결이 칠 데이터를 변경하지 않는다: " + mask);
+            if (mask == 17 || mask == 34 || mask == 255 || mask == 7)
+            {
+                var names = GeometryNames(painter);
+                painter.tops.Reverse();
+                painter.RebuildGeometry(false);
+                Check(names.SetEquals(GeometryNames(painter)), "칠 순서를 뒤집어도 같은 모듈과 방향을 생성한다: " + mask);
+            }
+            if (mask == 17)
+                Check(painter.generatedRoot.Find("Top_L0_0_0") != null && !painter.HasTop(Cell(0, 0)),
+                    "마주 보는 벽 충돌은 생성용 상판으로 메운다");
+            if (mask == 7)
+                Check(painter.generatedRoot.Find("Top_L0_0_0") == null,
+                    "정상적인 단일 안쪽 코너는 상판으로 메우지 않는다");
+        }
+        painter.ClearTopsAndHills();
+        painter.FillGround(Cell(-3, -3), 7, false);
+        painter.TryAddTop(Cell(0, 1));
+        painter.RebuildGeometry(false);
+        Check(painter.generatedRoot.Find("Top_L0_0_0") == null, "접점이 사라지면 자동 상판도 사라진다");
+        foreach (int layer in new[] { -1, 1 })
+        {
+            painter.ClearTopsAndHills();
+            painter.groundCells.Clear();
+            for (int x = -3; x <= 3; x++)
+                for (int z = -3; z <= 3; z++)
+                    painter.tops.Add(new CliffPainter.TopEntry { cell = Cell(x, z), maxLayer = layer - 1 });
+            painter.tops.Add(new CliffPainter.TopEntry { cell = Cell(0, 1), maxLayer = layer });
+            painter.tops.Add(new CliffPainter.TopEntry { cell = Cell(0, -1), maxLayer = layer });
+            painter.RebuildLookup();
+            painter.RebuildGeometry(false);
+            Check(painter.generatedRoot.Find("Top_L" + layer + "_0_0") != null,
+                "지하·윗층에서도 마주 보는 벽 접점을 연결한다: " + layer);
+            Check(painter.GetTopMaxLayer(Cell(0, 0)) == layer - 1,
+                "생성 후 원래 지하·윗층 높이 조회를 복원한다: " + layer);
+        }
+    }
+
+    static HashSet<string> GeometryNames(CliffPainter painter)
+    {
+        var result = new HashSet<string>();
+        foreach (Transform tile in painter.generatedRoot)
+            result.Add(tile.name + ":" + tile.localEulerAngles.y);
+        return result;
     }
 }

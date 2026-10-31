@@ -1150,8 +1150,6 @@ public class CliffPainter : MonoBehaviour
             }
         generatedNormalMeshes.Clear();
 
-        SpawnGrounds(root);
-
         int highest = 0;
         int lowest = 0;
         foreach (KeyValuePair<CellCoord, int> kv in topMaxLayer)
@@ -1161,12 +1159,85 @@ public class CliffPainter : MonoBehaviour
                 highest = kv.Value;
         }
 
-        for (int layer = lowest; layer <= highest; layer++)
-            SpawnLayerGeometry(layer, root);
+        try
+        {
+            CloseConflictingEdgeSlots(lowest, highest);
+            SpawnGrounds(root);
+            for (int layer = lowest; layer <= highest; layer++)
+                SpawnLayerGeometry(layer, root);
 
-        SpawnRamps(root);
-        if (connectTileNormals)
-            ConnectTileBoundaryNormals(root);
+            SpawnRamps(root);
+            if (connectTileNormals)
+                ConnectTileBoundaryNormals(root);
+        }
+        finally
+        {
+            // 자동 연결은 생성용 조회에만 반영하고 원래 칠 데이터는 보존한다.
+            RebuildLookup();
+        }
+    }
+
+    // 한 모듈로 표현할 수 없는 좁은 접점은 상판으로 연결한 뒤 경계를 다시 계산한다.
+    void CloseConflictingEdgeSlots(int lowest, int highest)
+    {
+        var domain = new HashSet<CellCoord>(groundSet);
+        domain.UnionWith(topMaxLayer.Keys);
+        var protectedSlots = new HashSet<CellCoord>(hillSet);
+        if (ramps != null)
+            foreach (RampEntry ramp in ramps)
+                protectedSlots.Add(Neighbor(ramp.cell, NormalizeDir(ramp.direction)));
+
+        for (int layer = lowest; layer <= highest; layer++)
+        {
+            var candidates = new HashSet<CellCoord>(domain);
+            var fill = new List<CellCoord>();
+            while (candidates.Count > 0)
+            {
+                fill.Clear();
+                foreach (CellCoord cell in candidates)
+                {
+                    if (HasTopLayer(cell, layer) || protectedSlots.Contains(cell)) continue;
+                    if (layer > 0 && !HasTopLayer(cell, layer - 1)) continue;
+                    if (CountEdgeModules(cell, layer) > 1) fill.Add(cell);
+                }
+                candidates.Clear();
+                // 같은 단계의 후보를 함께 적용해 칠 순서에 따른 차이를 없앤다.
+                foreach (CellCoord cell in fill)
+                {
+                    topMaxLayer[cell] = layer;
+                    elevatedSet.Add(cell);
+                    for (int x = -1; x <= 1; x++)
+                        for (int z = -1; z <= 1; z++)
+                        {
+                            var adjacent = new CellCoord(cell.x + x, cell.z + z);
+                            if (domain.Contains(adjacent)) candidates.Add(adjacent);
+                        }
+                }
+            }
+        }
+    }
+
+    int CountEdgeModules(CellCoord cell, int layer)
+    {
+        int count = 0;
+        int covered = 0;
+        for (int dir = 0; dir < 4; dir++)
+        {
+            CellCoord a = Neighbor(cell, dir);
+            CellCoord b = Neighbor(cell, (dir + 1) % 4);
+            bool hasA = HasTopLayer(a, layer);
+            bool hasB = HasTopLayer(b, layer);
+            bool diagonal = HasTopLayer(new CellCoord(a.x + b.x - cell.x, a.z + b.z - cell.z), layer);
+            if (diagonal && !hasA && !hasB) count++;
+            if (diagonal && hasA && hasB)
+            {
+                count++;
+                covered |= (1 << dir) | (1 << ((dir + 1) % 4));
+            }
+        }
+        for (int dir = 0; dir < 4; dir++)
+            if ((covered & (1 << dir)) == 0 && HasTopLayer(Neighbor(cell, dir), layer)) count++;
+        return count;
     }
 
     class NormalMeshData
@@ -1465,6 +1536,9 @@ public class CliffPainter : MonoBehaviour
         Transform root,
         HashSet<CellCoord> spawnedSlots)
     {
+        // 다른 상판의 대각선 코너 후보가 이미 채워진 상판을 덮지 않게 한다.
+        if (HasTopLayer(slot, layer))
+            return;
         if (spawnedSlots != null && !spawnedSlots.Add(slot))
             return;
 
