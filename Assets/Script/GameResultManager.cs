@@ -65,6 +65,40 @@ public class GameResultManager : MonoBehaviour
     public string CaptureError { get; private set; }
     int captureCompletedFrame = -1;
 
+    [Header("승리 조건 - 보스 처치")]
+    [Label("보스 처치 승리 사용")]
+    public bool winByDefeatingBoss;
+    [Label("보스 둥지")]
+    [Tooltip("맵 로더가 있으면 현재 맵의 활성 둥지 하나를 자동으로 연결합니다.")]
+    public BossNest bossNest;
+    public string BossError { get; private set; }
+    int bossDefeatedFrame = -1;
+
+    public void BindBossNest(BossNest nest)
+    {
+        bossNest = nest;
+        BossError = null;
+        bossDefeatedFrame = -1;
+    }
+
+    void UpdateBossObjective()
+    {
+        if (!winByDefeatingBoss || IsGameOver || Time.deltaTime <= 0f) return;
+        string error = bossNest == null || !bossNest.isActiveAndEnabled
+            ? "맵에 활성 보스 둥지를 정확히 하나 연결하세요." : bossNest.Error;
+        if (error == null && bossNest.WasSpawned && !bossNest.Defeated &&
+            (bossNest.Boss == null || !bossNest.Boss.isActiveAndEnabled))
+            error = "보스가 처치되지 않고 제거되거나 비활성화되었습니다.";
+        if (error != null && error != BossError) Debug.LogError("보스 목표: " + error, this);
+        BossError = error;
+        if (error != null || !bossNest.WasSpawned || !bossNest.Defeated) return;
+        if (bossDefeatedFrame < 0) bossDefeatedFrame = Time.frameCount;
+        // 처치 프레임 전체의 본부 피해를 처리한 뒤 승리를 확정한다.
+        TrySubscribeHq();
+        if (Time.frameCount > bossDefeatedFrame && hqHealth != null && hqHealth.IsAlive)
+            EndGame(Result.Victory);
+    }
+
     [Header("결과 창")]
     [Label("결과 창 표시 대기(초)")]
     [Tooltip("승패가 결정된 뒤 결과 창을 띄우기까지 기다리는 시간(실제 시간)입니다. 파괴 연출을 보여주기 위함입니다.")]
@@ -213,6 +247,7 @@ public class GameResultManager : MonoBehaviour
         PlayTime += Time.deltaTime;
         CheckAllSpawnersDestroyed();
         UpdateCapturePoint();
+        UpdateBossObjective();
     }
 
     public void BindCapturePoint(CapturePoint point, bool validate = true)

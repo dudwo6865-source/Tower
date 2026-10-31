@@ -1020,6 +1020,7 @@ public partial class StageEditorWindow : EditorWindow
         EditorGUI.EndDisabledGroup();
         EditorGUILayout.PropertyField(serializedObject.FindProperty("winWhenAllSpawnersDestroyed"), new GUIContent("적 스포너 전멸 시 승리"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("winByCapturingPoint"), new GUIContent("거점 점령 승리 사용"));
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("winByDefeatingBoss"), new GUIContent("보스 처치 승리 사용"));
         EditorGUI.BeginDisabledGroup(!selected.winByCapturingPoint);
         EditorGUILayout.PropertyField(serializedObject.FindProperty("captureDuration"), new GUIContent("점령 시간(초)"));
         EditorGUI.EndDisabledGroup();
@@ -1049,8 +1050,23 @@ public partial class StageEditorWindow : EditorWindow
             if (selected.winBySurvivingNights && selected.survivalNightsToWin <= 0)
                 EditorGUILayout.HelpBox("생존 목표가 0 이하입니다. 게임 시작과 거의 동시에 승리 조건이 충족됩니다.", MessageType.Warning);
 
-            if (!selected.winBySurvivingNights && !selected.winWhenAllSpawnersDestroyed && !selected.winByCapturingPoint)
+            if (!selected.winBySurvivingNights && !selected.winWhenAllSpawnersDestroyed && !selected.winByCapturingPoint && !selected.winByDefeatingBoss)
                 EditorGUILayout.HelpBox("승리 조건이 모두 꺼져 있습니다. 이 스테이지는 승리할 수 없습니다.", MessageType.Warning);
+
+            if (selected.winByDefeatingBoss)
+            {
+                EditorGUILayout.HelpBox("맵 루트 아래에 보스 둥지(BossNest)를 하나 배치하세요. 둥지에서 보스 프리팹, 첫 출격 밤, 후퇴 피해 비율과 피해 감소율을 설정합니다.", MessageType.Info);
+                if (selected.winBySurvivingNights || selected.winWhenAllSpawnersDestroyed || selected.winByCapturingPoint)
+                    EditorGUILayout.HelpBox("다른 조건으로 먼저 승리할 수 있습니다. 보스 전용 미션은 다른 승리 조건을 끄세요.", MessageType.Warning);
+                if (selected.mapRootPrefab != null)
+                {
+                    BossNest[] nests = selected.mapRootPrefab.GetComponentsInChildren<BossNest>();
+                    if (nests.Length != 1 || !nests[0].enabled)
+                        EditorGUILayout.HelpBox("맵 프리팹에 활성 보스 둥지가 정확히 하나 필요합니다.", MessageType.Warning);
+                    else if (nests[0].ValidateSetup() != null)
+                        EditorGUILayout.HelpBox(nests[0].ValidateSetup(), MessageType.Error);
+                }
+            }
 
             if (selected.winBySurvivingNights)
             {
@@ -1252,6 +1268,7 @@ public partial class StageEditorWindow : EditorWindow
             selected.winBySurvivingNights = result.winBySurvivingNights;
             selected.survivalNightsToWin = result.survivalNightsToWin;
             selected.winWhenAllSpawnersDestroyed = result.winWhenAllSpawnersDestroyed;
+            selected.winByDefeatingBoss = result.winByDefeatingBoss;
         }
 
         EnemyMutationManager mutations = UnityEngine.Object.FindFirstObjectByType<EnemyMutationManager>();
@@ -1339,6 +1356,7 @@ public partial class StageEditorWindow : EditorWindow
                 result.survivalNightsToWin = selected.survivalNightsToWin;
                 result.winWhenAllSpawnersDestroyed = selected.winWhenAllSpawnersDestroyed;
                 result.winByCapturingPoint = selected.winByCapturingPoint;
+                result.winByDefeatingBoss = selected.winByDefeatingBoss;
                 result.captureDuration = selected.captureDuration;
                 EditorUtility.SetDirty(result);
                 appliedAny = true;

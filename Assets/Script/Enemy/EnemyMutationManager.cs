@@ -137,6 +137,8 @@ public class EnemyMutationManager : MonoBehaviour
 
     public void ApplyTo(GameObject enemy)
     {
+        // 보스의 체력과 공격력은 전용 프리팹에서 조정하며 일반 적 돌연변이를 적용하지 않는다.
+        if (enemy != null && enemy.GetComponent<BossCombatAI>() != null) return;
         if (!settings.enabled || enemy == null ||
             (HealthBonus == 0f && DamageBonus == 0f && SpeedBonus == 0f && ArmorBonus == 0f)) return;
         SelectableEntity entity = enemy.GetComponent<SelectableEntity>();

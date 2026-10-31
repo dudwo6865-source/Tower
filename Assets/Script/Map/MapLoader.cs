@@ -127,6 +127,7 @@ public class MapLoader : MonoBehaviour
             spawner.ApplyCaptureRaidConfig(config);
         GameResultManager captureResult = FindFirstObjectByType<GameResultManager>();
         if (captureResult != null) captureResult.BindCapturePoint(null, false);
+        if (captureResult != null) captureResult.BindBossNest(null);
         EnemyMutationManager.EnsureInstance().Configure(config.mutations);
 
         // 재로드 대비: 이전에 만든 맵 인스턴스 제거
@@ -196,6 +197,15 @@ public class MapLoader : MonoBehaviour
                 count++;
             }
             result.BindCapturePoint(count == 1 ? point : null);
+            BossNest nest = null;
+            int nestCount = 0;
+            foreach (BossNest candidate in CurrentMap.GetComponentsInChildren<BossNest>())
+            {
+                if (!candidate.isActiveAndEnabled) continue;
+                nest = candidate;
+                nestCount++;
+            }
+            result.BindBossNest(nestCount == 1 ? nest : null);
         }
     }
 
@@ -355,6 +365,7 @@ public class MapLoader : MonoBehaviour
         result.survivalNightsToWin = config.survivalNightsToWin;
         result.winWhenAllSpawnersDestroyed = config.winWhenAllSpawnersDestroyed;
         result.winByCapturingPoint = config.winByCapturingPoint;
+        result.winByDefeatingBoss = config.winByDefeatingBoss;
         result.captureDuration = config.captureDuration;
     }
 }
