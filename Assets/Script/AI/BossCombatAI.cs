@@ -31,13 +31,15 @@ public class BossCombatAI : MobileCombatAI
     float marchUntil;
     float nextRouteCheck;
     float nextTargetCheck;
-    readonly NavMeshPath route = new NavMeshPath();
+    NavMeshPath route;
     SelectableEntity localTarget;
     SelectableEntity blocker;
 
     protected override void Awake()
     {
         base.Awake();
+        // 경로 객체는 직렬화 중 실행되는 필드 초기화 대신 Awake에서 생성한다.
+        route = new NavMeshPath();
         Health = GetComponent<EntityHealth>();
         shareAggroWithAllies = false;
         Health.OnDied += HandleDied;
