@@ -62,6 +62,22 @@ public class WorldHealthBar : MonoBehaviour
     private float visibleAlpha = 1f;
     private bool lastFogVisible = true;
     private bool validBindings;
+    private WorldHealthBarView detachedView;
+
+    public bool RegisterDetachedView(WorldHealthBarView view)
+    {
+        if (detachedView != null && detachedView != view)
+            return false;
+        detachedView = view;
+        return true;
+    }
+
+    void OnDestroy()
+    {
+        // 분리된 UI는 유닛 자식이 아니므로 유닛이 파괴될 때 함께 정리한다.
+        if (detachedView != null && detachedView.IsDetached)
+            Destroy(detachedView.gameObject);
+    }
 
     void Awake()
     {

@@ -37,30 +37,105 @@ public class WorldHealthBarView : MonoBehaviour
     private Vector3 authoredScale;
     private bool rotationLocked;
     private bool scaleLocked;
+    private Transform originalParent;
+    private WorldHealthBar owner;
+    private Vector3 authoredPosition;
+    private Vector2 authoredSizeDelta;
+    private bool detached;
+    private bool parentWasActive = true;
+
+    public bool IsDetached => detached;
 
     void Awake()
     {
         // 스폰 당시 유닛의 방향을 포함하지 않고 프리팹에 지정한 각도만 기억한다.
         authoredRotation = transform.localRotation;
         authoredScale = transform.localScale;
+        authoredPosition = transform.localPosition;
+        originalParent = transform.parent;
+        owner = GetComponentInParent<WorldHealthBar>(true);
+    }
+
+    void Start()
+    {
+        UpdateTransform();
     }
 
     void OnEnable()
     {
-        UpdateRotation();
-        UpdateScale();
+        if (!detached)
+        {
+            UpdateRotation();
+            UpdateScale();
+        }
     }
 
     void LateUpdate()
     {
-        UpdateRotation();
-        UpdateScale();
+        UpdateTransform();
     }
 
     void OnDisable()
     {
+        if (detached)
+            return;
         RestoreLocalRotation();
         RestoreLocalScale();
+    }
+
+    void UpdateTransform()
+    {
+        if (detached && (owner == null || originalParent == null))
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        if (ignoreUnitRotation && ignoreUnitScale && owner != null && originalParent != null)
+        {
+            if (!detached && owner.RegisterDetachedView(this))
+            {
+                // 기존 UI만 분리한다. 유닛 회전·스케일이 렌더링 직전에 바뀌어도 상속되지 않는다.
+                RectTransform rect = transform as RectTransform;
+                Vector2 size = rect != null ? rect.rect.size : Vector2.zero;
+                if (rect != null)
+                    authoredSizeDelta = rect.sizeDelta;
+                transform.SetParent(null, true);
+                if (rect != null)
+                    rect.sizeDelta = size;
+                transform.rotation = authoredRotation;
+                transform.localScale = authoredScale;
+                rotationLocked = false;
+                scaleLocked = false;
+                detached = true;
+            }
+            if (detached)
+            {
+                // 위치 오프셋도 유닛이 회전할 때 함께 돌지 않도록 월드 기준으로 유지한다.
+                if (owner.followAnchor == null)
+                    transform.position = originalParent.position + authoredPosition;
+                bool parentActive = originalParent.gameObject.activeInHierarchy;
+                if (!parentActive && displayGroup != null)
+                    displayGroup.alpha = 0f;
+                else if (!parentWasActive)
+                    owner.RefreshVisibility();
+                parentWasActive = parentActive;
+                return;
+            }
+        }
+        if (detached)
+        {
+            // 옵션을 끄면 원래 계층과 에디터 배치값을 복구한다.
+            transform.SetParent(originalParent, false);
+            if (transform is RectTransform rect)
+                rect.sizeDelta = authoredSizeDelta;
+            transform.localPosition = authoredPosition;
+            transform.localRotation = authoredRotation;
+            transform.localScale = authoredScale;
+            detached = false;
+        }
+        UpdateRotation();
+        UpdateScale();
     }
 
     void UpdateRotation()
