@@ -20,7 +20,7 @@ public class WorldHealthBarView : MonoBehaviour
     public TMP_Text healthText;
 
     [Label("위치 추적 기준점")]
-    [Tooltip("선택 항목입니다. 기존 발밑 위치 추적을 사용할 때만 이 프리팹 안의 기준점을 연결합니다. 비워 두면 에디터에서 정한 위치를 사용합니다.")]
+    [Tooltip("콜라이더 아래 자동 배치에서는 연결할 필요가 없습니다. 자동 배치를 끄고 수동 발밑 위치 추적을 사용할 때만 연결합니다.")]
     public Transform followAnchor;
 
     [Header("회전")]
@@ -59,6 +59,8 @@ public class WorldHealthBarView : MonoBehaviour
     void Start()
     {
         UpdateTransform();
+        if (owner != null)
+            owner.UpdateAutomaticPosition(transform);
     }
 
     void OnEnable()
@@ -73,6 +75,8 @@ public class WorldHealthBarView : MonoBehaviour
     void LateUpdate()
     {
         UpdateTransform();
+        if (owner != null)
+            owner.UpdateAutomaticPosition(transform);
     }
 
     void OnDisable()
@@ -112,7 +116,7 @@ public class WorldHealthBarView : MonoBehaviour
             if (detached)
             {
                 // 위치 오프셋도 유닛이 회전할 때 함께 돌지 않도록 월드 기준으로 유지한다.
-                if (owner.followAnchor == null)
+                if (!owner.autoPositionBelowCollider && owner.followAnchor == null)
                     transform.position = originalParent.position + authoredPosition;
                 bool parentActive = originalParent.gameObject.activeInHierarchy;
                 if (!parentActive && displayGroup != null)

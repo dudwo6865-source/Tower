@@ -19,7 +19,22 @@ public class WorldHealthBar : MonoBehaviour
     [Tooltip("선택 항목입니다. 연결하면 현재 체력 / 최대 체력을 표시합니다. 보스 체력바에 사용합니다.")]
     public TMP_Text healthText;
 
-    [Header("위치 추적 (선택)")]
+    [Header("자동 위치")]
+    [Label("콜라이더 아래 자동 배치")]
+    [Tooltip("유닛 콜라이더의 카메라 쪽 하단 가장자리에 체력바를 자동 배치합니다. 위치 추적 기준점 연결이나 유닛별 오프셋 설정이 필요하지 않습니다.")]
+    public bool autoPositionBelowCollider = true;
+
+    [Label("자동 배치 간격")]
+    [Tooltip("콜라이더 가장자리와 체력 채움 영역 사이의 월드 거리입니다. 기본값으로 바로 사용할 수 있습니다.")]
+    [Min(0f)]
+    public float autoPositionGap = 0.1f;
+
+    [Label("자동 배치 바닥 여유")]
+    [Tooltip("체력바가 지면과 겹치지 않도록 콜라이더 바닥보다 띄우는 월드 거리입니다.")]
+    [Min(0f)]
+    public float autoPositionLift = 0.05f;
+
+    [Header("수동 위치 추적 (자동 배치를 끈 경우)")]
     [Label("위치 추적 기준점")]
     [Tooltip("선택 항목입니다. 연결하면 이 기준점의 위치만 유닛 발밑을 따라갑니다. 비워 두면 프리팹에서 설정한 위치를 그대로 사용합니다. 유닛 본체나 그 부모는 연결하지 않습니다.")]
     public Transform followAnchor;
@@ -63,6 +78,8 @@ public class WorldHealthBar : MonoBehaviour
     private bool lastFogVisible = true;
     private bool validBindings;
     private WorldHealthBarView detachedView;
+    private WorldHealthBarView linkedView;
+    private readonly Vector3[] fillCorners = new Vector3[4];
 
     public bool RegisterDetachedView(WorldHealthBarView view)
     {
@@ -84,6 +101,8 @@ public class WorldHealthBar : MonoBehaviour
         entityHealth = GetComponent<EntityHealth>();
         selectableEntity = GetComponent<SelectableEntity>();
         fogVisibility = GetComponent<FogOfWarVisibility>();
+        if (fillImage != null)
+            linkedView = fillImage.GetComponentInParent<WorldHealthBarView>(true);
         if (displayGroup != null)
             visibleAlpha = displayGroup.alpha;
 
@@ -147,6 +166,14 @@ public class WorldHealthBar : MonoBehaviour
 
     void LateUpdate()
     {
+        if (autoPositionBelowCollider)
+        {
+            // 공용 체력바는 자신의 회전·크기 처리가 끝난 뒤 자동 배치를 호출한다.
+            if (linkedView == null || !linkedView.isActiveAndEnabled)
+                UpdateAutomaticPosition(linkedView != null ? linkedView.transform
+                    : displayGroup != null ? displayGroup.transform : null);
+            return;
+        }
         if (!validBindings || followAnchor == null || displayGroup.alpha <= 0f)
             return;
 
@@ -164,6 +191,49 @@ public class WorldHealthBar : MonoBehaviour
             position += towardCamera.normalized * viewDownOffset;
         }
         followAnchor.position = position;
+    }
+
+    public void UpdateAutomaticPosition(Transform barRoot)
+    {
+        if (!autoPositionBelowCollider || !isActiveAndEnabled || !validBindings
+            || barRoot == null || transform.IsChildOf(barRoot)
+            || fillImage == null || displayGroup == null || displayGroup.alpha <= 0f)
+            return;
+
+        Collider selectionCollider = selectableEntity.SelectionCollider;
+        Bounds bounds = selectionCollider != null && selectionCollider.enabled
+            && selectionCollider.gameObject.activeInHierarchy
+            ? selectionCollider.bounds : new Bounds(transform.position, Vector3.zero);
+        Camera camera = CameraVisibility.MainCamera;
+        Vector3 towardCamera = camera != null ? -camera.transform.forward : Vector3.back;
+        towardCamera.y = 0f;
+        if (Mathf.Approximately(towardCamera.sqrMagnitude, 0f))
+        {
+            // 수직으로 내려다보는 카메라도 화면 아래 방향을 구한다.
+            towardCamera = camera != null ? -camera.transform.up : Vector3.back;
+            towardCamera.y = 0f;
+        }
+        towardCamera.Normalize();
+
+        // 콜라이더의 투영 반경으로 큰 유닛일수록 가장자리 밖에 배치한다.
+        float radius = Mathf.Abs(towardCamera.x) * bounds.extents.x
+            + Mathf.Abs(towardCamera.z) * bounds.extents.z;
+        fillImage.rectTransform.GetWorldCorners(fillCorners);
+        float nearEdge = float.PositiveInfinity;
+        float bottom = float.PositiveInfinity;
+        Vector3 center = Vector3.zero;
+        for (int i = 0; i < fillCorners.Length; i++)
+        {
+            Vector3 offset = fillCorners[i] - barRoot.position;
+            center += offset / fillCorners.Length;
+            nearEdge = Mathf.Min(nearEdge, Vector3.Dot(offset, towardCamera));
+            bottom = Mathf.Min(bottom, offset.y);
+        }
+        Vector3 sideways = new Vector3(center.x, 0f, center.z);
+        sideways -= towardCamera * Vector3.Dot(sideways, towardCamera);
+        barRoot.position = new Vector3(bounds.center.x, bounds.min.y, bounds.center.z)
+            - sideways + towardCamera * (radius + Mathf.Max(0f, autoPositionGap) - nearEdge)
+            + Vector3.up * (Mathf.Max(0f, autoPositionLift) - bottom);
     }
 
     public void RefreshVisibility()
