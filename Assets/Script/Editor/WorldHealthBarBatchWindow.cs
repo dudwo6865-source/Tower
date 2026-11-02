@@ -75,6 +75,13 @@ public class WorldHealthBarBatchWindow : EditorWindow
             if (GUILayout.Button("선택한 프리팹에 체력바 적용"))
                 Apply();
         }
+        EditorGUILayout.HelpBox("일괄 제거는 목록의 유닛 본체 아래에 있는 WorldHealthBarView 공용 체력바를 제거합니다. 공용 원본 에셋은 삭제하지 않습니다. WorldHealthBar는 연결을 비우고 꺼 두며, 다시 적용하면 켜집니다. 수동 연결이 섞인 대상은 건너뜁니다.", MessageType.Info);
+        using (new EditorGUI.DisabledScope(targets.Count == 0
+            || EditorApplication.isPlayingOrWillChangePlaymode || EditorApplication.isCompiling))
+        {
+            if (GUILayout.Button("목록의 공용 체력바 일괄 제거"))
+                Apply(remove: true);
+        }
         if (!string.IsNullOrEmpty(result))
             EditorGUILayout.HelpBox(result, MessageType.Info);
     }
@@ -96,8 +103,9 @@ public class WorldHealthBarBatchWindow : EditorWindow
         Repaint();
     }
 
-    void Apply()
+    void Apply(bool remove = false)
     {
+        string operation = remove ? "제거" : "적용";
         int applied = 0;
         int skipped = 0;
         // 기반 프리팹을 먼저 저장하여 변형 프리팹에 체력바가 중복 추가되지 않게 한다.
@@ -109,19 +117,22 @@ public class WorldHealthBarBatchWindow : EditorWindow
             GameObject contents = null;
             try
             {
-                if (!WorldHealthBarBatchUtility.ValidateTargetAsset(target, barPrefab, out string reason))
+                if (!WorldHealthBarBatchUtility.ValidateTargetAsset(target, barPrefab, out string reason, remove))
                 {
                     skipped++;
-                    Debug.LogWarning($"체력바 일괄 적용: {path} — {reason}", target);
+                    Debug.LogWarning($"체력바 일괄 {operation}: {path} — {reason}", target);
                     continue;
                 }
 
                 contents = PrefabUtility.LoadPrefabContents(path);
-                if (!WorldHealthBarBatchUtility.TryApply(contents, barPrefab,
-                    setAlwaysVisible, alwaysVisible, out reason))
+                bool changed = remove
+                    ? WorldHealthBarBatchUtility.TryRemove(contents, out reason)
+                    : WorldHealthBarBatchUtility.TryApply(contents, barPrefab,
+                        setAlwaysVisible, alwaysVisible, out reason);
+                if (!changed)
                 {
                     skipped++;
-                    Debug.LogWarning($"체력바 일괄 적용: {path} — {reason}", target);
+                    Debug.LogWarning($"체력바 일괄 {operation}: {path} — {reason}", target);
                     continue;
                 }
 
@@ -133,7 +144,7 @@ public class WorldHealthBarBatchWindow : EditorWindow
             catch (Exception exception)
             {
                 skipped++;
-                Debug.LogError($"체력바 일괄 적용: {path} — {exception.Message}", target);
+                Debug.LogError($"체력바 일괄 {operation}: {path} — {exception.Message}", target);
             }
             finally
             {
@@ -141,7 +152,7 @@ public class WorldHealthBarBatchWindow : EditorWindow
                     PrefabUtility.UnloadPrefabContents(contents);
             }
         }
-        result = $"적용 {applied}개 / 건너뜀·실패 {skipped}개. 상세 사유는 Console에서 확인하세요.";
+        result = $"{operation} {applied}개 / 건너뜀·실패 {skipped}개. 상세 사유는 Console에서 확인하세요.";
     }
 }
 
@@ -168,11 +179,11 @@ public static class WorldHealthBarBatchUtility
         return false;
     }
 
-    public static bool ValidateTargetAsset(GameObject target, GameObject source, out string reason)
+    public static bool ValidateTargetAsset(GameObject target, GameObject source, out string reason, bool removing = false)
     {
         reason = null;
         string path = AssetDatabase.GetAssetPath(target);
-        if (!ValidateSource(source, out reason))
+        if (!removing && !ValidateSource(source, out reason))
             return false;
         if (target == null || !path.StartsWith("Assets/", StringComparison.Ordinal)
             || !path.EndsWith(".prefab", StringComparison.OrdinalIgnoreCase)
@@ -185,7 +196,7 @@ public static class WorldHealthBarBatchUtility
         else if (target.GetComponent<EntityHealth>() == null
             || target.GetComponent<SelectableEntity>() == null)
             reason = "프리팹 본체에 EntityHealth와 SelectableEntity가 필요합니다. 유닛·건물 본체를 선택해 주세요.";
-        else if (AssetDatabase.GetDependencies(AssetDatabase.GetAssetPath(source), true).Contains(path))
+        else if (!removing && AssetDatabase.GetDependencies(AssetDatabase.GetAssetPath(source), true).Contains(path))
             reason = "자기 자신 또는 순환 참조가 생기는 프리팹에는 적용할 수 없습니다.";
         return reason == null;
     }
@@ -241,12 +252,58 @@ public static class WorldHealthBarBatchUtility
         bar.displayGroup = view.displayGroup;
         bar.healthText = view.healthText;
         bar.followAnchor = view.followAnchor;
+        bar.enabled = true;
         if (setAlwaysVisible)
             bar.alwaysShowEnemyBar = alwaysVisible;
         if (PrefabUtility.IsPartOfPrefabInstance(bar))
             PrefabUtility.RecordPrefabInstancePropertyModifications(bar);
         EditorUtility.SetDirty(bar);
         reason = null;
+        return true;
+    }
+
+    public static bool TryRemove(GameObject root, out string reason)
+    {
+        reason = null;
+        WorldHealthBarView[] views = root.GetComponentsInChildren<WorldHealthBarView>(true)
+            .Where(view => view.transform.parent == root.transform).ToArray();
+        if (views.Length == 0)
+        {
+            reason = "제거할 공용 체력바가 없습니다. 수동 체력바는 유지했습니다.";
+            return false;
+        }
+        // 유닛이나 다른 프리팹의 일부를 잘못 지우지 않도록 제거 범위를 확인한다.
+        if (views.Any(view => view.GetComponentsInChildren<EntityHealth>(true).Length > 0
+            || PrefabUtility.GetNearestPrefabInstanceRoot(view.gameObject) != view.gameObject))
+        {
+            reason = "공용 체력바 프리팹 루트로 확인되지 않는 대상이 있어 제거하지 않았습니다.";
+            return false;
+        }
+
+        WorldHealthBar bar = root.GetComponent<WorldHealthBar>();
+        if (bar != null)
+        {
+            Transform[] references = { bar.fillImage != null ? bar.fillImage.transform : null,
+                bar.displayGroup != null ? bar.displayGroup.transform : null,
+                bar.healthText != null ? bar.healthText.transform : null, bar.followAnchor };
+            if (references.Any(reference => reference != null
+                && !views.Any(view => reference.IsChildOf(view.transform))))
+            {
+                reason = "수동 연결이 섞여 있어 기존 체력바와 연결을 유지했습니다.";
+                return false;
+            }
+            // 컴포넌트를 남겨 자동 보충 기능이 다시 추가하지 않도록 한다.
+            bar.fillImage = null;
+            bar.displayGroup = null;
+            bar.healthText = null;
+            bar.followAnchor = null;
+            bar.enabled = false;
+            if (PrefabUtility.IsPartOfPrefabInstance(bar))
+                PrefabUtility.RecordPrefabInstancePropertyModifications(bar);
+            EditorUtility.SetDirty(bar);
+        }
+        foreach (WorldHealthBarView view in views)
+            UnityEngine.Object.DestroyImmediate(view.gameObject);
         return true;
     }
 

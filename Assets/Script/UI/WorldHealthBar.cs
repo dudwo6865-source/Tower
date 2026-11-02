@@ -75,9 +75,9 @@ public class WorldHealthBar : MonoBehaviour
             && fillImage.transform.IsChildOf(displayGroup.transform)
             && (healthText == null || healthText.transform.IsChildOf(displayGroup.transform));
 
-        if (!validBindings)
+        if (!validBindings && enabled)
             Debug.LogWarning("WorldHealthBar: 채움 이미지와 표시 그룹을 연결하고, 채움 이미지와 체력 숫자를 표시 그룹 아래에 배치해 주세요. UI는 자동 생성하지 않습니다.", this);
-        else if (fillImage.type != Image.Type.Filled)
+        else if (fillImage != null && fillImage.type != Image.Type.Filled && enabled)
             Debug.LogWarning("WorldHealthBar: 채움 이미지의 Image Type을 Filled로 설정해 주세요.", this);
 
         if (followAnchor != null && transform.IsChildOf(followAnchor))
