@@ -23,6 +23,54 @@ public class WorldHealthBarView : MonoBehaviour
     [Tooltip("선택 항목입니다. 기존 발밑 위치 추적을 사용할 때만 이 프리팹 안의 기준점을 연결합니다. 비워 두면 에디터에서 정한 위치를 사용합니다.")]
     public Transform followAnchor;
 
+    [Header("회전")]
+    [Label("유닛 회전 무시")]
+    [Tooltip("켜면 프리팹에 설정한 로컬 회전을 월드 기준 각도로 유지합니다. 유닛이 돌아도 체력바 방향은 바뀌지 않습니다. 끄면 부모의 회전을 따릅니다.")]
+    public bool ignoreUnitRotation = true;
+
+    private Quaternion authoredRotation;
+    private bool rotationLocked;
+
+    void Awake()
+    {
+        // 스폰 당시 유닛의 방향을 포함하지 않고 프리팹에 지정한 각도만 기억한다.
+        authoredRotation = transform.localRotation;
+    }
+
+    void OnEnable()
+    {
+        UpdateRotation();
+    }
+
+    void LateUpdate()
+    {
+        UpdateRotation();
+    }
+
+    void OnDisable()
+    {
+        RestoreLocalRotation();
+    }
+
+    void UpdateRotation()
+    {
+        if (ignoreUnitRotation)
+        {
+            transform.rotation = authoredRotation;
+            rotationLocked = true;
+        }
+        else
+            RestoreLocalRotation();
+    }
+
+    void RestoreLocalRotation()
+    {
+        if (!rotationLocked)
+            return;
+        transform.localRotation = authoredRotation;
+        rotationLocked = false;
+    }
+
     void Reset()
     {
         // 후보가 하나뿐일 때만 연결하고 디자인 설정은 변경하지 않는다.
