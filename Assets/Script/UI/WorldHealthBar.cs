@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -6,490 +6,209 @@ using UnityEngine.UI;
 [RequireComponent(typeof(SelectableEntity))]
 public class WorldHealthBar : MonoBehaviour
 {
-    [Header("레이아웃")]
+    [Header("체력바 연결")]
+    [Label("채움 이미지")]
+    [Tooltip("에디터에서 만든 체력바의 Image를 연결합니다. 이미지 유형은 Filled, 채우기 방식은 Horizontal, 시작점은 Left로 설정합니다.")]
+    public Image fillImage;
+
+    [Label("표시 그룹")]
+    [Tooltip("체력바 전체를 감싸는 CanvasGroup을 연결합니다. 배경·채움·숫자를 모두 이 그룹 아래에 둡니다.")]
+    public CanvasGroup displayGroup;
+
+    [Label("체력 숫자")]
+    [Tooltip("선택 항목입니다. 연결하면 현재 체력 / 최대 체력을 표시합니다. 보스 체력바에 사용합니다.")]
+    public TMP_Text healthText;
+
+    [Header("위치 추적 (선택)")]
+    [Label("위치 추적 기준점")]
+    [Tooltip("선택 항목입니다. 연결하면 이 기준점의 위치만 유닛 발밑을 따라갑니다. 비워 두면 프리팹에서 설정한 위치를 그대로 사용합니다. 유닛 본체나 그 부모는 연결하지 않습니다.")]
+    public Transform followAnchor;
+
     [Label("높이 오프셋")]
-    [Tooltip("체력바가 바닥(콜라이더 아래쪽)에서 떠 있는 높이입니다. 지면과 겹쳐 Z-fighting이 나지 " +
-        "않을 정도로만 작게 두면 됩니다.")]
+    [Tooltip("위치 추적 기준점을 연결했을 때 바닥에서 띄울 높이입니다. Unit 또는 Building의 데이터가 있으면 데이터의 체력바 높이가 적용됩니다.")]
     public float heightOffset = 0.05f;
 
     [Label("화면 아래 오프셋")]
-    [Tooltip("카메라 시점 기준으로 체력바를 유닛보다 얼마나 아래쪽(화면 아래 방향)에 표시할지 " +
-        "정하는 월드 거리입니다. heightOffset(수직 높이)과 달리 카메라가 보는 방향(화면 아래쪽 " +
-        "지면 방향)으로 밀어내므로, 카메라 각도가 바뀌어도 항상 유닛보다 아래로 보이게 만들 수 " +
-        "있습니다. 0이면 유닛 발밑에 그대로 표시됩니다.")]
+    [Tooltip("위치 추적 기준점을 연결했을 때 카메라 쪽 지면 방향으로 이동할 거리입니다.")]
     public float viewDownOffset = 3f;
-
-    [Label("바 높이")]
-    [Tooltip("체력바의 월드 기준 높이입니다.")]
-    public float barHeight = 0.5f;
-
-    [Label("월드 스케일")]
-    [Tooltip("월드 스페이스 캔버스 스케일입니다.")]
-    public float worldScale = 0.07f;
-
-    [Label("칸 너비")]
-    [Tooltip("체력바 한 칸의 월드 기준 너비입니다.")]
-    public float segmentWorldWidth = 0.4f;
 
     [Header("표시")]
     [Label("로컬 플레이어 ID")]
-    [Tooltip("로컬 플레이어 소유자 ID입니다. 아군/적 체력바 표시 규칙에 사용됩니다.")]
+    [Tooltip("아군과 적을 구분하는 로컬 플레이어 소유자 ID입니다.")]
     public int localPlayerOwnerId = 1;
 
     [Label("적 체력바 항상 표시")]
-    [Tooltip("적 유닛·건물의 체력바를 항상 표시합니다.")]
-    public bool alwaysShowEnemyBar = false;
+    [Tooltip("켜면 현재 시야 안에 있는 적의 체력바를 항상 표시합니다. 보스 프리팹에 사용할 수 있습니다.")]
+    public bool alwaysShowEnemyBar;
 
     [Label("선택 시 표시")]
-    [Tooltip("아군이 선택되었을 때 체력바를 표시합니다.")]
+    [Tooltip("선택한 유닛이나 건물의 체력바를 표시합니다.")]
     public bool showWhenSelected = true;
 
     [Label("피해 후 표시 시간(초)")]
-    [Tooltip("피해를 입은 뒤 체력바를 표시하는 시간(초)입니다.")]
+    [Tooltip("피해를 입은 뒤 체력바를 표시하는 시간입니다.")]
+    [Min(0f)]
     public float showAfterDamageDuration = 3f;
 
-    [Label("모델 뒤로 숨기기")]
-    [Tooltip("켜면 유닛·건물 모델(BaseShader)이 그려진 자리에는 체력바를 그리지 않아 모델을 " +
-        "가리지 않습니다. 지면·언덕 위에는 그대로 보입니다. 끄면 모든 모델 위에 덮어 그립니다.")]
-    public bool hideBehindModels = true;
-
-    [Label("모델 스텐실 비트")]
-    [Tooltip("유닛 셰이더(BaseShader)의 _UnitStencilRef와 같은 값이어야 합니다. 보통 바꿀 필요가 없습니다.")]
-    public int modelStencilBit = HealthBarSpriteUtility.DefaultUnitStencilBit;
-
-    [Header("색상")]
-    [Label("아군 색")]
-    [Tooltip("아군 체력바 색상입니다.")]
-    public Color allyFillColor = new Color(0.2f, 0.9f, 0.3f, 1f);
-
-    [Label("적 색")]
-    [Tooltip("적군 체력바 색상입니다.")]
-    public Color enemyFillColor = new Color(0.95f, 0.2f, 0.2f, 1f);
-
-    [Label("낮은 체력 색")]
-    [Tooltip("체력이 낮을 때 바 색상입니다.")]
-    public Color lowHealthColor = new Color(0.95f, 0.55f, 0.1f, 1f);
-
-    [Label("낮은 체력 기준")]
-    [Tooltip("낮은 체력으로 판정하는 비율입니다.")]
-    [Range(0f, 1f)]
-    public float lowHealthThreshold = 0.35f;
-
-    [Header("칸")]
-    [Label("칸당 체력")]
-    [Tooltip("체력바 한 칸이 나타내는 체력량입니다. 최대 체력 ÷ 이 값 = 칸 개수입니다.")]
-    public float healthPerSegment = 10f;
-
-    [Label("칸 간격")]
-    [Tooltip("칸 사이 간격(캔버스 픽셀)입니다.")]
-    public float segmentSpacing = 3f;
-
-    [Label("줄당 최대 칸 수")]
-    [Tooltip("한 줄에 표시할 최대 칸 수입니다. 초과하면 다음 줄로 넘깁니다.")]
-    public int maxSegmentsPerRow = 15;
+    [Label("표시 전환 속도")]
+    [Tooltip("초당 투명도 변화량입니다. 0이면 즉시 전환합니다. 시야 밖·사망·비활성화 시에는 즉시 숨깁니다.")]
+    [Min(0f)]
+    public float fadeSpeed = 4f;
 
     private EntityHealth entityHealth;
     private SelectableEntity selectableEntity;
-    private RectTransform segmentsRoot;
-    private GridLayoutGroup segmentsGrid;
-    private readonly List<Image> segmentImages = new List<Image>();
-    private CanvasGroup canvasGroup;
-    private RectTransform healthBarCanvasRect;
-    private Transform barAnchor;
-    private float damageShowTimer;
-    private bool lastFogVisible = true;
     private FogOfWarVisibility fogVisibility;
-    private Color baseFillColor;
-    private Sprite defaultSprite;
-    private Material overlayMaterial;
-    private int lastSegmentCount = -1;
-
-    // 체력바를 지면과 수평으로 눕히는 고정 회전값입니다. 카메라를 따라 도는 세로 빌보드가
-    // 아니라 발밑 바닥에 놓이는 데칼 형태라, 한 번만 정하면 갱신할 필요가 없습니다.
-    // UI/Default 셰이더는 Cull Off라 위/아래 어느 쪽에서 봐도 보입니다.
-    private static readonly Quaternion FlatRotation = Quaternion.Euler(90f, 0f, 0f);
+    private float damageShowTimer;
+    private float visibleAlpha = 1f;
+    private bool lastFogVisible = true;
+    private bool validBindings;
 
     void Awake()
     {
         entityHealth = GetComponent<EntityHealth>();
         selectableEntity = GetComponent<SelectableEntity>();
         fogVisibility = GetComponent<FogOfWarVisibility>();
+        if (displayGroup != null)
+            visibleAlpha = displayGroup.alpha;
 
-        entityHealth.OnHealthChanged += HandleHealthChanged;
-        entityHealth.OnDied += HandleDied;
+        validBindings = fillImage != null && displayGroup != null
+            && fillImage.transform.IsChildOf(displayGroup.transform)
+            && (healthText == null || healthText.transform.IsChildOf(displayGroup.transform));
 
-        defaultSprite = HealthBarSpriteUtility.GetWhiteSprite();
-        overlayMaterial = HealthBarSpriteUtility.GetOverlayMaterial(
-            hideBehindModels ? modelStencilBit : 0);
-        baseFillColor = GetBaseFillColor();
+        if (!validBindings)
+            Debug.LogWarning("WorldHealthBar: 채움 이미지와 표시 그룹을 연결하고, 채움 이미지와 체력 숫자를 표시 그룹 아래에 배치해 주세요. UI는 자동 생성하지 않습니다.", this);
+        else if (fillImage.type != Image.Type.Filled)
+            Debug.LogWarning("WorldHealthBar: 채움 이미지의 Image Type을 Filled로 설정해 주세요.", this);
+
+        if (followAnchor != null && transform.IsChildOf(followAnchor))
+        {
+            Debug.LogWarning("WorldHealthBar: 위치 추적 기준점에는 유닛 본체나 그 부모를 연결할 수 없습니다. 위치 추적을 해제합니다.", this);
+            followAnchor = null;
+        }
     }
 
-    void Start()
+    void OnEnable()
     {
-        if (barAnchor == null)
-            BuildHealthBarUI();
-
+        entityHealth.OnHealthChanged += HandleHealthChanged;
+        entityHealth.OnDamaged += HandleDamaged;
+        entityHealth.OnDied += HandleDied;
         UpdateFill(entityHealth.CurrentHealth, entityHealth.MaxHealth);
         RefreshVisibility();
     }
 
-    void OnDestroy()
+    void Start()
+    {
+        // 다른 컴포넌트의 초기 데이터 적용이 끝난 값을 반영한다.
+        UpdateFill(entityHealth.CurrentHealth, entityHealth.MaxHealth);
+        RefreshVisibility();
+    }
+
+    void OnDisable()
     {
         if (entityHealth != null)
         {
             entityHealth.OnHealthChanged -= HandleHealthChanged;
+            entityHealth.OnDamaged -= HandleDamaged;
             entityHealth.OnDied -= HandleDied;
         }
-
-        if (barAnchor != null)
-            Destroy(barAnchor.gameObject);
+        damageShowTimer = 0f;
+        SetAlpha(0f);
     }
 
     void Update()
     {
-        bool shouldShow = ShouldShowBar();
-        float targetAlpha = shouldShow ? 1f : 0f;
+        damageShowTimer = Mathf.Max(0f, damageShowTimer - Time.deltaTime);
+        if (!CanDisplay())
+        {
+            SetAlpha(0f);
+            return;
+        }
 
-        canvasGroup.alpha = Mathf.MoveTowards(
-            canvasGroup.alpha,
-            targetAlpha,
-            Time.deltaTime * 4f);
-
-        if (damageShowTimer > 0f)
-            damageShowTimer -= Time.deltaTime;
+        float targetAlpha = ShouldShowBar() ? visibleAlpha : 0f;
+        SetAlpha(fadeSpeed <= 0f ? targetAlpha : Mathf.MoveTowards(
+            displayGroup.alpha, targetAlpha, Time.deltaTime * fadeSpeed));
     }
 
     void LateUpdate()
     {
-        if (barAnchor == null)
+        if (!validBindings || followAnchor == null || displayGroup.alpha <= 0f)
             return;
 
-        if (canvasGroup != null && canvasGroup.alpha <= 0.01f)
-            return;
-
-        Bounds visibilityBounds = selectableEntity != null
-            ? selectableEntity.SelectionBounds
-            : new Bounds(transform.position, Vector3.one * 4f);
-        visibilityBounds.Encapsulate(GetBarWorldPosition());
-
-        if (!CameraVisibility.IsVisible(visibilityBounds))
-            return;
-
-        // 바닥에 눕혀진 데칼이라 회전은 생성 시 한 번만 정하면 되고, 위치만 따라가면 됩니다.
-        barAnchor.position = GetBarWorldPosition();
-    }
-
-    void BuildHealthBarUI()
-    {
-        int segmentCount = GetSegmentCount(entityHealth.MaxHealth);
-
-        GameObject anchorObject = new GameObject($"{gameObject.name}_HealthBar");
-        anchorObject.transform.SetParent(WorldHealthBarRoot.Transform, false);
-
-        barAnchor = anchorObject.transform;
-        barAnchor.SetPositionAndRotation(GetBarWorldPosition(), FlatRotation);
-
-        GameObject canvasObject = new GameObject("HealthBarCanvas");
-        canvasObject.transform.SetParent(anchorObject.transform, false);
-
-        Canvas canvas = canvasObject.AddComponent<Canvas>();
-        canvas.renderMode = RenderMode.WorldSpace;
-        canvas.worldCamera = Camera.main;
-        canvas.sortingOrder = 10;
-
-        RectTransform canvasRect = canvasObject.GetComponent<RectTransform>();
-        healthBarCanvasRect = canvasRect;
-        ApplyBarSize(segmentCount);
-
-        canvasObject.transform.localScale =
-            Vector3.one * worldScale;
-
-        canvasGroup = canvasObject.AddComponent<CanvasGroup>();
-        canvasGroup.alpha = 0f;
-
-        GameObject backgroundObject = new GameObject("Background");
-        backgroundObject.transform.SetParent(canvasObject.transform, false);
-
-        RectTransform backgroundRect =
-            backgroundObject.AddComponent<RectTransform>();
-
-        backgroundRect.anchorMin = Vector2.zero;
-        backgroundRect.anchorMax = Vector2.one;
-        backgroundRect.offsetMin = Vector2.zero;
-        backgroundRect.offsetMax = Vector2.zero;
-
-        Image backgroundImage = backgroundObject.AddComponent<Image>();
-        backgroundImage.sprite = defaultSprite;
-        backgroundImage.material = overlayMaterial;
-        backgroundImage.color = new Color(0f, 0f, 0f, 0.65f);
-        backgroundImage.raycastTarget = false;
-
-        GameObject segmentsObject = new GameObject("Segments");
-        segmentsObject.transform.SetParent(backgroundObject.transform, false);
-
-        segmentsRoot = segmentsObject.AddComponent<RectTransform>();
-        segmentsRoot.anchorMin = Vector2.zero;
-        segmentsRoot.anchorMax = Vector2.one;
-        segmentsRoot.offsetMin = new Vector2(2f, 2f);
-        segmentsRoot.offsetMax = new Vector2(-2f, -2f);
-
-        segmentsGrid = segmentsObject.AddComponent<GridLayoutGroup>();
-        ConfigureSegmentsGrid();
-    }
-
-    void ConfigureSegmentsGrid()
-    {
-        if (segmentsGrid == null)
-            return;
-
-        segmentsGrid.cellSize = new Vector2(
-            GetSegmentCanvasWidth(),
-            GetSegmentCanvasHeight());
-
-        segmentsGrid.spacing = new Vector2(segmentSpacing, segmentSpacing);
-        segmentsGrid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-        segmentsGrid.constraintCount = Mathf.Max(1, maxSegmentsPerRow);
-        segmentsGrid.startCorner = GridLayoutGroup.Corner.UpperLeft;
-        segmentsGrid.startAxis = GridLayoutGroup.Axis.Horizontal;
-        segmentsGrid.childAlignment = TextAnchor.MiddleCenter;
-    }
-
-    void GetSegmentLayout(int segmentCount, out int columns, out int rows)
-    {
-        segmentCount = Mathf.Max(1, segmentCount);
-        int maxPerRow = Mathf.Max(1, maxSegmentsPerRow);
-        columns = Mathf.Min(segmentCount, maxPerRow);
-        rows = Mathf.CeilToInt(segmentCount / (float)maxPerRow);
-    }
-
-    float ResolveBarWidth(int segmentCount)
-    {
-        GetSegmentLayout(segmentCount, out int columns, out _);
-
-        float spacingWorld = segmentSpacing * worldScale;
-        float paddingWorld = 4f * worldScale;
-
-        return columns * segmentWorldWidth
-            + Mathf.Max(0, columns - 1) * spacingWorld
-            + paddingWorld;
-    }
-
-    float ResolveBarHeight(int segmentCount)
-    {
-        GetSegmentLayout(segmentCount, out _, out int rows);
-
-        float spacingWorld = segmentSpacing * worldScale;
-        float paddingWorld = 4f * worldScale;
-
-        return rows * barHeight
-            + Mathf.Max(0, rows - 1) * spacingWorld
-            + paddingWorld;
-    }
-
-    void ApplyBarSize(int segmentCount)
-    {
-        if (healthBarCanvasRect == null)
-            return;
-
-        ConfigureSegmentsGrid();
-        healthBarCanvasRect.sizeDelta = new Vector2(
-            ResolveBarWidth(segmentCount) / worldScale,
-            ResolveBarHeight(segmentCount) / worldScale);
-    }
-
-    float GetSegmentCanvasWidth()
-    {
-        return segmentWorldWidth / worldScale;
-    }
-
-    float GetSegmentCanvasHeight()
-    {
-        return barHeight / worldScale;
-    }
-
-    Vector3 GetBarWorldPosition()
-    {
-        Collider collider = selectableEntity.SelectionCollider;
-
-        Vector3 basePosition = collider == null
-            ? transform.position + Vector3.up * heightOffset
-            : new Vector3(
-                collider.bounds.center.x,
-                collider.bounds.min.y + heightOffset,
-                collider.bounds.center.z);
-
-        return basePosition + GetViewDownOffset();
-    }
-
-    // 카메라가 바라보는 방향을 지면(XZ)에 투영해, 그 반대쪽(카메라 쪽, 화면상 아래 방향)으로
-    // viewDownOffset만큼 미는 벡터입니다. 순수 수직 높이(heightOffset)와 달리 카메라 각도에
-    // 따라 방향이 달라지므로, 카메라가 회전해도 체력바가 항상 유닛보다 화면 아래쪽에 보입니다.
-    Vector3 GetViewDownOffset()
-    {
-        if (Mathf.Approximately(viewDownOffset, 0f))
-            return Vector3.zero;
+        Collider selectionCollider = selectableEntity.SelectionCollider;
+        Vector3 position = selectionCollider == null ? transform.position
+            : new Vector3(selectionCollider.bounds.center.x, selectionCollider.bounds.min.y,
+                selectionCollider.bounds.center.z);
+        position += Vector3.up * heightOffset;
 
         Camera camera = CameraVisibility.MainCamera;
-
-        if (camera == null)
-            return Vector3.zero;
-
-        Vector3 towardCamera = -camera.transform.forward;
-        towardCamera.y = 0f;
-
-        if (towardCamera.sqrMagnitude < 0.0001f)
-            return Vector3.zero;
-
-        return towardCamera.normalized * viewDownOffset;
+        if (camera != null)
+        {
+            Vector3 towardCamera = -camera.transform.forward;
+            towardCamera.y = 0f;
+            position += towardCamera.normalized * viewDownOffset;
+        }
+        followAnchor.position = position;
     }
 
     public void RefreshVisibility()
     {
-        if (canvasGroup == null)
-            return;
+        SetAlpha(CanDisplay() && ShouldShowBar() ? visibleAlpha : 0f);
+    }
 
-        canvasGroup.alpha = ShouldShowBar() ? 1f : 0f;
+    bool CanDisplay()
+    {
+        return isActiveAndEnabled && validBindings && displayGroup != null
+            && fillImage != null && entityHealth != null && entityHealth.IsAlive
+            && IsVisibleInFogOfWar();
     }
 
     bool ShouldShowBar()
     {
-        if (!IsVisibleInFogOfWar())
-            return false;
-
-        if (alwaysShowEnemyBar &&
-            selectableEntity.ownerId != localPlayerOwnerId)
-            return true;
-
-        if (showWhenSelected && selectableEntity.IsSelected)
-            return true;
-
-        if (damageShowTimer > 0f)
-            return true;
-
-        return false;
+        return (alwaysShowEnemyBar && selectableEntity.ownerId != localPlayerOwnerId)
+            || (showWhenSelected && selectableEntity.IsSelected)
+            || damageShowTimer > 0f;
     }
 
     bool IsVisibleInFogOfWar()
     {
         FogOfWarManager manager = FogOfWarManager.Instance;
-
-        if (manager == null)
+        if (manager == null || selectableEntity.ownerId == manager.LocalPlayerOwnerId)
             return true;
-
-        if (selectableEntity.ownerId == manager.LocalPlayerOwnerId)
-            return true;
-
         if (fogVisibility != null)
             return fogVisibility.IsCurrentlyVisible;
 
         lastFogVisible = manager.EvaluateEntityGameplayVisibility(
-            selectableEntity.SelectionBounds,
-            lastFogVisible);
+            selectableEntity.SelectionBounds, lastFogVisible);
         return lastFogVisible;
     }
 
     void HandleHealthChanged(float currentHealth, float maxHealth)
     {
         UpdateFill(currentHealth, maxHealth);
+    }
 
-        if (currentHealth < maxHealth)
+    void HandleDamaged(float damage, SelectableEntity attacker)
+    {
+        if (damage > 0f)
             damageShowTimer = showAfterDamageDuration;
     }
 
     void HandleDied()
     {
-        if (barAnchor != null)
-            barAnchor.gameObject.SetActive(false);
+        SetAlpha(0f);
     }
 
     void UpdateFill(float currentHealth, float maxHealth)
     {
-        if (segmentsRoot == null || maxHealth <= 0f || healthPerSegment <= 0f)
-            return;
-
-        float ratio = currentHealth / maxHealth;
-        Color fillColor =
-            ratio <= lowHealthThreshold ? lowHealthColor : baseFillColor;
-
-        int segmentCount = GetSegmentCount(maxHealth);
-
-        // 칸 개수가 바뀔 때만 그리드/크기를 다시 계산합니다. 칸 수가 그대로인 잦은 피격에는
-        // 매번 GridLayoutGroup을 다시 세팅하고 레이아웃을 강제로 재계산할 필요가 없습니다.
-        if (segmentCount != lastSegmentCount)
-        {
-            EnsureSegmentCount(segmentCount);
-            ApplyBarSize(segmentCount);
-            lastSegmentCount = segmentCount;
-        }
-
-        for (int i = 0; i < segmentCount; i++)
-        {
-            Image segment = segmentImages[i];
-            float fillAmount = GetSegmentFillAmount(i, currentHealth, maxHealth);
-
-            segment.fillAmount = fillAmount;
-            segment.color = fillColor;
-        }
+        if (fillImage != null)
+            fillImage.fillAmount = maxHealth > 0f ? Mathf.Clamp01(currentHealth / maxHealth) : 0f;
+        if (healthText != null)
+            healthText.text = $"{Mathf.Ceil(Mathf.Max(0f, currentHealth)):N0} / {Mathf.Ceil(Mathf.Max(0f, maxHealth)):N0}";
     }
 
-    int GetSegmentCount(float maxHealth)
+    void SetAlpha(float alpha)
     {
-        return Mathf.Max(1, Mathf.CeilToInt(maxHealth / healthPerSegment));
-    }
-
-    float GetSegmentFillAmount(
-        int segmentIndex,
-        float currentHealth,
-        float maxHealth)
-    {
-        float segmentStart = segmentIndex * healthPerSegment;
-
-        if (segmentStart >= maxHealth)
-            return 0f;
-
-        float segmentEnd =
-            Mathf.Min(segmentStart + healthPerSegment, maxHealth);
-
-        float segmentCapacity = segmentEnd - segmentStart;
-
-        if (segmentCapacity <= 0f)
-            return 0f;
-
-        float remaining =
-            Mathf.Clamp(currentHealth - segmentStart, 0f, segmentCapacity);
-
-        return remaining / segmentCapacity;
-    }
-
-    void EnsureSegmentCount(int count)
-    {
-        while (segmentImages.Count < count)
-        {
-            GameObject segmentObject = new GameObject(
-                $"Segment{segmentImages.Count}",
-                typeof(RectTransform));
-
-            segmentObject.transform.SetParent(segmentsRoot, false);
-
-            Image segmentImage = segmentObject.AddComponent<Image>();
-            segmentImage.sprite = defaultSprite;
-            segmentImage.material = overlayMaterial;
-            segmentImage.type = Image.Type.Filled;
-            segmentImage.fillMethod = Image.FillMethod.Horizontal;
-            segmentImage.fillOrigin = (int)Image.OriginHorizontal.Left;
-            segmentImage.raycastTarget = false;
-
-            segmentImages.Add(segmentImage);
-        }
-
-        for (int i = 0; i < segmentImages.Count; i++)
-            segmentImages[i].gameObject.SetActive(i < count);
-    }
-
-    Color GetBaseFillColor()
-    {
-        return selectableEntity.ownerId == localPlayerOwnerId
-            ? allyFillColor
-            : enemyFillColor;
+        if (displayGroup != null)
+            displayGroup.alpha = alpha;
     }
 }
