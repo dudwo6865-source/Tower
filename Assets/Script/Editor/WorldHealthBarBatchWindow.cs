@@ -21,7 +21,8 @@ public class WorldHealthBarBatchWindow : EditorWindow
     [MenuItem("Tools/UI/체력바 일괄 적용")]
     static void Open()
     {
-        GetWindow<WorldHealthBarBatchWindow>("체력바 일괄 적용");
+        WorldHealthBarBatchWindow window = GetWindow<WorldHealthBarBatchWindow>("체력바 일괄 적용");
+        window.FindHealthPrefabs();
     }
 
     void OnGUI()
@@ -36,6 +37,14 @@ public class WorldHealthBarBatchWindow : EditorWindow
         if (setAlwaysVisible)
             alwaysVisible = EditorGUILayout.Toggle("적 체력바 항상 표시", alwaysVisible);
 
+        using (new EditorGUI.DisabledScope(EditorApplication.isPlayingOrWillChangePlaymode
+            || EditorApplication.isCompiling))
+        {
+            if (GUILayout.Button("EntityHealth 프리팹 자동 선택"))
+                FindHealthPrefabs();
+        }
+        EditorGUILayout.HelpBox("Assets 전체에서 본체에 EntityHealth가 있는 프리팹을 찾습니다. 하위 유닛만 포함한 맵·스테이지 프리팹은 제외합니다. 적용하지 않을 대상은 목록의 제외 버튼으로 빼세요.", MessageType.Info);
+
         if (GUILayout.Button("Project에서 선택한 프리팹 가져오기"))
         {
             targets = Selection.objects.OfType<GameObject>()
@@ -47,10 +56,15 @@ public class WorldHealthBarBatchWindow : EditorWindow
 
         EditorGUILayout.LabelField($"적용 대상: {targets.Count}개");
         scroll = EditorGUILayout.BeginScrollView(scroll);
-        foreach (GameObject target in targets)
+        for (int i = 0; i < targets.Count; i++)
         {
-            using (new EditorGUI.DisabledScope(true))
-                EditorGUILayout.ObjectField(target, typeof(GameObject), false);
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                using (new EditorGUI.DisabledScope(true))
+                    EditorGUILayout.ObjectField(targets[i], typeof(GameObject), false);
+                if (GUILayout.Button("제외", GUILayout.Width(45f)))
+                    targets.RemoveAt(i--);
+            }
         }
         EditorGUILayout.EndScrollView();
 
@@ -63,6 +77,23 @@ public class WorldHealthBarBatchWindow : EditorWindow
         }
         if (!string.IsNullOrEmpty(result))
             EditorGUILayout.HelpBox(result, MessageType.Info);
+    }
+
+    void FindHealthPrefabs()
+    {
+        if (EditorApplication.isPlayingOrWillChangePlaymode || EditorApplication.isCompiling)
+            return;
+
+        targets = AssetDatabase.FindAssets("t:Prefab", new[] { "Assets" })
+            .Select(AssetDatabase.GUIDToAssetPath)
+            .Where(path => path.EndsWith(".prefab", StringComparison.OrdinalIgnoreCase))
+            .OrderBy(path => path, StringComparer.Ordinal)
+            .Select(AssetDatabase.LoadAssetAtPath<GameObject>)
+            .Where(prefab => prefab != null && prefab != barPrefab
+                && prefab.GetComponent<EntityHealth>() != null)
+            .Distinct().ToList();
+        result = $"EntityHealth가 있는 프리팹 {targets.Count}개를 찾았습니다. 대상 목록을 확인한 뒤 적용하세요.";
+        Repaint();
     }
 
     void Apply()
