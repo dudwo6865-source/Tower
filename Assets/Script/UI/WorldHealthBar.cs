@@ -21,7 +21,7 @@ public class WorldHealthBar : MonoBehaviour
 
     [Header("자동 위치")]
     [Label("콜라이더 아래 자동 배치")]
-    [Tooltip("유닛 콜라이더의 카메라 쪽 하단 가장자리에 체력바를 자동 배치합니다. 위치 추적 기준점 연결이나 유닛별 오프셋 설정이 필요하지 않습니다.")]
+    [Tooltip("콜라이더의 카메라 쪽 Z 가장자리를 기준으로 체력바 Z 위치만 자동 배치합니다. X와 Y는 프리팹에 설정한 위치를 따르며 콜라이더 높이는 사용하지 않습니다.")]
     public bool autoPositionBelowCollider = true;
 
     [Label("자동 배치 간격")]
@@ -29,10 +29,9 @@ public class WorldHealthBar : MonoBehaviour
     [Min(0f)]
     public float autoPositionGap = 0.1f;
 
-    [Label("자동 배치 바닥 여유")]
-    [Tooltip("체력바가 지면과 겹치지 않도록 콜라이더 바닥보다 띄우는 월드 거리입니다.")]
-    [Min(0f)]
-    public float autoPositionLift = 0.05f;
+    [Label("자동 배치 Z 오프셋")]
+    [Tooltip("콜라이더 가장자리로 자동 배치한 위치에 더할 월드 Z 거리입니다. 양수는 +Z, 음수는 -Z 방향으로 이동합니다.")]
+    public float autoPositionZOffset = 0f;
 
     [Header("수동 위치 추적 (자동 배치를 끈 경우)")]
     [Label("위치 추적 기준점")]
@@ -205,35 +204,22 @@ public class WorldHealthBar : MonoBehaviour
             && selectionCollider.gameObject.activeInHierarchy
             ? selectionCollider.bounds : new Bounds(transform.position, Vector3.zero);
         Camera camera = CameraVisibility.MainCamera;
-        Vector3 towardCamera = camera != null ? -camera.transform.forward : Vector3.back;
-        towardCamera.y = 0f;
-        if (Mathf.Approximately(towardCamera.sqrMagnitude, 0f))
-        {
-            // 수직으로 내려다보는 카메라도 화면 아래 방향을 구한다.
-            towardCamera = camera != null ? -camera.transform.up : Vector3.back;
-            towardCamera.y = 0f;
-        }
-        towardCamera.Normalize();
+        float cameraDirectionZ = camera != null ? -camera.transform.forward.z : -1f;
+        if (camera != null && Mathf.Approximately(cameraDirectionZ, 0f))
+            cameraDirectionZ = -camera.transform.up.z;
+        float directionZ = cameraDirectionZ > 0f ? 1f : -1f;
 
-        // 콜라이더의 투영 반경으로 큰 유닛일수록 가장자리 밖에 배치한다.
-        float radius = Mathf.Abs(towardCamera.x) * bounds.extents.x
-            + Mathf.Abs(towardCamera.z) * bounds.extents.z;
+        // 실제 채움 영역의 안쪽 끝이 콜라이더 Z 가장자리 밖에 오도록 맞춘다.
         fillImage.rectTransform.GetWorldCorners(fillCorners);
         float nearEdge = float.PositiveInfinity;
-        float bottom = float.PositiveInfinity;
-        Vector3 center = Vector3.zero;
         for (int i = 0; i < fillCorners.Length; i++)
-        {
-            Vector3 offset = fillCorners[i] - barRoot.position;
-            center += offset / fillCorners.Length;
-            nearEdge = Mathf.Min(nearEdge, Vector3.Dot(offset, towardCamera));
-            bottom = Mathf.Min(bottom, offset.y);
-        }
-        Vector3 sideways = new Vector3(center.x, 0f, center.z);
-        sideways -= towardCamera * Vector3.Dot(sideways, towardCamera);
-        barRoot.position = new Vector3(bounds.center.x, bounds.min.y, bounds.center.z)
-            - sideways + towardCamera * (radius + Mathf.Max(0f, autoPositionGap) - nearEdge)
-            + Vector3.up * (Mathf.Max(0f, autoPositionLift) - bottom);
+            nearEdge = Mathf.Min(nearEdge, (fillCorners[i].z - barRoot.position.z) * directionZ);
+
+        Vector3 position = barRoot.position;
+        position.z = bounds.center.z
+            + directionZ * (bounds.extents.z + Mathf.Max(0f, autoPositionGap) - nearEdge)
+            + autoPositionZOffset;
+        barRoot.position = position;
     }
 
     public void RefreshVisibility()

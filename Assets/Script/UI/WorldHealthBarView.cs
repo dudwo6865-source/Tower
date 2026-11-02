@@ -116,7 +116,7 @@ public class WorldHealthBarView : MonoBehaviour
             if (detached)
             {
                 // 위치 오프셋도 유닛이 회전할 때 함께 돌지 않도록 월드 기준으로 유지한다.
-                if (!owner.autoPositionBelowCollider && owner.followAnchor == null)
+                if (owner.autoPositionBelowCollider || owner.followAnchor == null)
                     transform.position = originalParent.position + authoredPosition;
                 bool parentActive = originalParent.gameObject.activeInHierarchy;
                 if (!parentActive && displayGroup != null)
