@@ -45,6 +45,15 @@ public class BossSkillController : MonoBehaviour
     [Label("예고 표시 머티리얼")] public Material warningMaterial;
     [Label("예고 선 굵기")][Min(0.01f)] public float warningWidth = 0.12f;
     [Label("예고 원 분할 수")][Range(16, 128)] public int warningSegments = 64;
+    [Label("예고 원 채우기")]
+    [Tooltip("스킬 클립 시작부터 타격 이벤트까지 중심에서 바깥쪽으로 원을 채웁니다.")]
+    public bool fillWarningCircle = true;
+    [Label("채우기 머티리얼")]
+    [Tooltip("비워두면 예고 표시 머티리얼을 사용합니다. 투명 머티리얼을 연결하면 바닥이 비쳐 보입니다.")]
+    public Material warningFillMaterial;
+    [Label("채우기 불투명도")]
+    [Tooltip("머티리얼 색상의 알파에 곱합니다. 투명 머티리얼에서 적용됩니다.")]
+    [Range(0f, 1f)] public float warningFillOpacity = 0.3f;
     [Label("지면 레이어")] public LayerMask groundLayers = 1;
     [Label("지면 탐색 시작 높이")][Min(0f)] public float rayStartHeight = 5f;
     [Label("지면 탐색 거리")][Min(0.01f)] public float rayDistance = 20f;
@@ -64,6 +73,12 @@ public class BossSkillController : MonoBehaviour
     UnitSound unitSound;
     UnitAnimator[] unitAnimators;
     GameObject warning;
+    Mesh warningFillMesh;
+    Vector3[] warningFillEdge;
+    Vector3[] warningFillVertices;
+    readonly List<AnimatorClipInfo> warningClips = new List<AnimatorClipInfo>();
+    AnimationClip warningClip;
+    float warningHitNormalizedTime;
     float castRadius;
     float castDamage;
 
@@ -110,6 +125,55 @@ public class BossSkillController : MonoBehaviour
     {
         if (WaitingForBasicAttack && !CanContinue()) WaitingForBasicAttack = false;
         if (IsActive && (!CanContinue() || timing.HasExpired(Time.time))) CancelSkill();
+    }
+
+    void LateUpdate()
+    {
+        if (warningFillMesh == null || timing.State != BossSkillTiming.Phase.Preparing ||
+            skillAnimator == null || !skillAnimator.isActiveAndEnabled)
+            return;
+
+        // 실제 애니메이션 진행도를 읽으므로 피치가 아닌 Animator 재생 속도와 일시정지를 따른다.
+        int stateHash = Animator.StringToHash(skillState);
+        AnimatorStateInfo state = skillAnimator.GetCurrentAnimatorStateInfo(0);
+        if (skillAnimator.IsInTransition(0) && skillAnimator.GetNextAnimatorStateInfo(0).fullPathHash == stateHash)
+        {
+            state = skillAnimator.GetNextAnimatorStateInfo(0);
+            skillAnimator.GetNextAnimatorClipInfo(0, warningClips);
+        }
+        else if (state.fullPathHash == stateHash)
+            skillAnimator.GetCurrentAnimatorClipInfo(0, warningClips);
+        else
+            return;
+
+        AnimationClip clip = null;
+        float weight = -1f;
+        foreach (AnimatorClipInfo info in warningClips)
+        {
+            if (info.weight <= weight) continue;
+            clip = info.clip;
+            weight = info.weight;
+        }
+        if (clip == null) return;
+        if (warningClip != clip)
+        {
+            warningClip = clip;
+            warningHitNormalizedTime = -1f;
+            foreach (AnimationEvent clipEvent in clip.events)
+            {
+                if (clipEvent.functionName != "보스스킬타격" && clipEvent.functionName != "OnBossSkillHit" &&
+                    clipEvent.functionName != "OnSkillHit") continue;
+                float hitTime = clip.length > 0f ? clipEvent.time / clip.length : 0f;
+                if (warningHitNormalizedTime < 0f || hitTime < warningHitNormalizedTime)
+                    warningHitNormalizedTime = hitTime;
+            }
+            if (warningHitNormalizedTime < 0f)
+                Debug.LogWarning("BossSkillController: 스킬 클립에 보스스킬타격 이벤트가 없어 예고 원을 채울 수 없습니다.", this);
+        }
+        if (warningHitNormalizedTime < 0f) return;
+        float progress = warningHitNormalizedTime > 0f
+            ? Mathf.Clamp01(state.normalizedTime / warningHitNormalizedTime) : 1f;
+        UpdateWarningFill(progress);
     }
 
     public bool TryStartSkill(SelectableEntity target)
@@ -217,8 +281,10 @@ public class BossSkillController : MonoBehaviour
 
     void ShowWarning()
     {
+        ClearWarning();
         if (warningMaterial == null) return;
         warning = new GameObject("보스 내려찍기 예고");
+        warning.transform.position = ImpactPosition;
         LineRenderer line = warning.AddComponent<LineRenderer>();
         line.sharedMaterial = warningMaterial;
         line.useWorldSpace = true;
@@ -227,17 +293,84 @@ public class BossSkillController : MonoBehaviour
         line.shadowCastingMode = ShadowCastingMode.Off;
         line.receiveShadows = false;
         line.positionCount = Mathf.Clamp(warningSegments, 16, 128);
+        warningFillEdge = new Vector3[line.positionCount + 2];
         for (int i = 0; i < line.positionCount; i++)
         {
             float angle = i * Mathf.PI * 2f / line.positionCount;
             Vector3 point = ImpactPosition + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * castRadius;
-            line.SetPosition(i, GroundPoint(point - Vector3.up * groundOffset));
+            Vector3 edge = GroundPoint(point - Vector3.up * groundOffset);
+            line.SetPosition(i, edge);
+            warningFillEdge[i + 1] = edge - ImpactPosition;
         }
+        warningFillEdge[warningFillEdge.Length - 1] = warningFillEdge[1];
+        if (fillWarningCircle) CreateWarningFill();
+    }
+
+    void CreateWarningFill()
+    {
+        GameObject fill = new GameObject("예고 원 채우기");
+        fill.transform.SetParent(warning.transform, false);
+        MeshFilter filter = fill.AddComponent<MeshFilter>();
+        MeshRenderer renderer = fill.AddComponent<MeshRenderer>();
+        Material material = warningFillMaterial != null ? warningFillMaterial : warningMaterial;
+        renderer.sharedMaterial = material;
+        renderer.shadowCastingMode = ShadowCastingMode.Off;
+        renderer.receiveShadows = false;
+        MaterialPropertyBlock properties = new MaterialPropertyBlock();
+        foreach (string colorName in new[] { "_BaseColor", "_Color" })
+        {
+            if (!material.HasProperty(colorName)) continue;
+            Color color = material.GetColor(colorName);
+            color.a *= warningFillOpacity;
+            properties.SetColor(colorName, color);
+        }
+        renderer.SetPropertyBlock(properties);
+
+        warningFillVertices = new Vector3[warningFillEdge.Length];
+        Vector3[] normals = new Vector3[warningFillEdge.Length];
+        Vector2[] uv = new Vector2[warningFillEdge.Length];
+        for (int i = 0; i < normals.Length; i++)
+        {
+            normals[i] = Vector3.up;
+            uv[i] = new Vector2(0.5f + warningFillEdge[i].x / (castRadius * 2f),
+                0.5f + warningFillEdge[i].z / (castRadius * 2f));
+        }
+        int[] triangles = new int[(warningFillEdge.Length - 2) * 3];
+        for (int i = 0; i < triangles.Length / 3; i++)
+        {
+            triangles[i * 3] = 0;
+            triangles[i * 3 + 1] = i + 2;
+            triangles[i * 3 + 2] = i + 1;
+        }
+        warningFillMesh = new Mesh { name = "보스 스킬 예고 채움" };
+        warningFillMesh.MarkDynamic();
+        warningFillMesh.vertices = warningFillVertices;
+        warningFillMesh.triangles = triangles;
+        warningFillMesh.normals = normals;
+        warningFillMesh.uv = uv;
+        filter.sharedMesh = warningFillMesh;
+        UpdateWarningFill(0f);
+    }
+
+    void UpdateWarningFill(float progress)
+    {
+        // 지면 탐색은 생성 때만 하고, 재생 중에는 저장한 가장자리 좌표로 원을 키운다.
+        for (int i = 1; i < warningFillVertices.Length; i++)
+            warningFillVertices[i] = warningFillEdge[i] * progress;
+        warningFillMesh.vertices = warningFillVertices;
+        warningFillMesh.RecalculateBounds();
     }
 
     void ClearWarning()
     {
         if (warning != null) { warning.SetActive(false); Destroy(warning); }
         warning = null;
+        if (warningFillMesh != null) Destroy(warningFillMesh);
+        warningFillMesh = null;
+        warningFillEdge = null;
+        warningFillVertices = null;
+        warningClip = null;
+        warningHitNormalizedTime = -1f;
+        warningClips.Clear();
     }
 }
