@@ -33,7 +33,7 @@ public class VictoryConditionHUD : MonoBehaviour
     public Image bossHealthFill;
 
     [Label("보스 체력 텍스트")]
-    [Tooltip("현재 체력 / 최대 체력을 표시할 텍스트를 연결합니다. 보스가 시야 밖이면 마지막으로 확인한 체력을 표시합니다.")]
+    [Tooltip("시야와 관계없이 현재 체력 / 최대 체력을 표시합니다. 보스가 체력을 회복하는 동안 뒤에 (회복중)을 표시합니다.")]
     public TMP_Text bossHealthText;
 
     // 이전 씬의 개별 텍스트가 중복 표시되지 않도록 참조만 보존한다.
@@ -66,10 +66,6 @@ public class VictoryConditionHUD : MonoBehaviour
     bool templateWasActive;
     bool initialized;
     bool layoutWarningShown;
-    BossNest observedBossNest;
-    bool bossDiscovered;
-    float lastBossHealth;
-    float lastBossMaxHealth;
 
     void Start()
     {
@@ -253,14 +249,6 @@ public class VictoryConditionHUD : MonoBehaviour
     {
         bool bossOn = resultManager != null && resultManager.winByDefeatingBoss;
         BossNest nest = bossOn ? resultManager.bossNest : null;
-        if (observedBossNest != nest || !bossOn)
-        {
-            observedBossNest = nest;
-            bossDiscovered = false;
-            lastBossHealth = 0f;
-            lastBossMaxHealth = 0f;
-        }
-
         if (bossHealthFill != null) bossHealthFill.enabled = bossOn;
         if (bossHealthText != null) bossHealthText.enabled = bossOn;
         if (!bossOn)
@@ -272,25 +260,17 @@ public class VictoryConditionHUD : MonoBehaviour
 
         BossCombatAI boss = nest != null ? nest.Boss : null;
         EntityHealth health = boss != null ? boss.Health : null;
-        FogOfWarVisibility fog = boss != null ? boss.GetComponent<FogOfWarVisibility>() : null;
-        bool visible = health != null && (fog == null || fog.IsCurrentlyVisible);
-        if (visible)
-        {
-            bossDiscovered = true;
-            lastBossHealth = health.CurrentHealth;
-            lastBossMaxHealth = health.MaxHealth;
-        }
-
         bool defeated = nest != null && nest.Defeated;
-        if (defeated) lastBossHealth = 0f;
+        float currentHealth = !defeated && health != null ? health.CurrentHealth : 0f;
+        float maxHealth = health != null ? health.MaxHealth : 0f;
         if (bossHealthFill != null)
-            bossHealthFill.fillAmount = bossDiscovered && lastBossMaxHealth > 0f
-                ? Mathf.Clamp01(lastBossHealth / lastBossMaxHealth) : 0f;
+            bossHealthFill.fillAmount = maxHealth > 0f
+                ? Mathf.Clamp01(currentHealth / maxHealth) : 0f;
         if (bossHealthText != null)
             bossHealthText.text = !string.IsNullOrEmpty(resultManager.BossError) || nest == null || !string.IsNullOrEmpty(nest.Error)
                 ? "보스 목표 설정을 확인하세요."
                 : defeated ? "처치 완료"
-                : !bossDiscovered ? "보스를 발견하면 체력이 표시됩니다."
-                : $"{lastBossHealth:0} / {lastBossMaxHealth:0}" + (visible ? "" : " · 마지막 확인");
+                : health == null ? "보스 준비 중"
+                : $"{currentHealth:0} / {maxHealth:0}" + (boss.IsRegenerating ? " (회복중)" : "");
     }
 }
