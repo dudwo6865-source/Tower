@@ -1,5 +1,7 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.Audio;
 
 [DisallowMultipleComponent]
 [AddComponentMenu("게임/미션/BossNest")]
@@ -16,6 +18,19 @@ public class BossNest : MonoBehaviour
     public Transform restingPoint;
     [Label("낮밤 사이클")]
     public DayNightCycle cycle;
+
+    [Header("보스 등장 사운드")]
+    [Label("등장 사운드")]
+    [Tooltip("보스 생성 성공 후 한 번 재생할 로어입니다. 거리와 시야에 관계없이 들리며, 비워두면 재생하지 않습니다.")]
+    public AudioClip introSound;
+    [Label("등장 사운드 볼륨")]
+    [Range(0f, 1f)] public float introSoundVolume = 1f;
+    [Label("재생 지연 시간(초)")]
+    [Tooltip("보스 생성 후 재생까지 기다릴 게임 시간입니다. 0이면 바로 재생하며, 일시정지 중에는 대기 시간도 멈춥니다.")]
+    [Min(0f)] public float introSoundDelay = 0f;
+    [Label("등장 사운드 출력 믹서")]
+    [Tooltip("효과음 볼륨을 관리하는 Audio Mixer Group을 연결합니다. 비워두면 기본 오디오 출력으로 재생합니다.")]
+    public AudioMixerGroup introSoundMixer;
 
     [Header("둥지와 출격")]
     [Label("둥지 반경")]
@@ -37,6 +52,8 @@ public class BossNest : MonoBehaviour
     public bool WasSpawned { get; private set; }
     public bool Defeated { get; private set; }
     public string Error { get; private set; }
+    Coroutine introSoundRoutine;
+    GameObject introSoundObject;
     public Vector3 RestPosition => restingPoint != null ? restingPoint.position : transform.position;
     public bool Contains(Vector3 position)
     {
@@ -79,6 +96,46 @@ public class BossNest : MonoBehaviour
         Boss = Instantiate(bossPrefab, hit.position, transform.rotation, transform);
         Boss.Initialize(this, hit.position);
         WasSpawned = true;
+        if (introSound != null && introSoundVolume > 0f)
+            introSoundRoutine = StartCoroutine(PlayIntroSound());
+    }
+
+    IEnumerator PlayIntroSound()
+    {
+        if (introSoundDelay > 0f)
+            yield return new WaitForSeconds(introSoundDelay);
+
+        // 대기 중 보스가 사라졌거나 결과 화면으로 넘어갔다면 뒤늦게 울리지 않는다.
+        if (!isActiveAndEnabled || !WasSpawned || Defeated || Boss == null || introSound == null ||
+            (GameResultManager.Instance != null && GameResultManager.Instance.IsGameOver))
+            yield break;
+
+        introSoundObject = new GameObject("보스 등장 사운드");
+        introSoundObject.transform.SetParent(transform, false);
+        AudioSource source = introSoundObject.AddComponent<AudioSource>();
+        source.playOnAwake = false;
+        source.loop = false;
+        source.spatialBlend = 0f;
+        source.outputAudioMixerGroup = introSoundMixer;
+        source.volume = Mathf.Clamp01(introSoundVolume);
+        source.clip = introSound;
+        source.Play();
+
+        // 실제 재생 종료를 기다려 오디오 일시정지 중에 소리를 제거하지 않는다.
+        while (source != null && (source.isPlaying || AudioListener.pause))
+            yield return null;
+        if (introSoundObject != null) Destroy(introSoundObject);
+        introSoundObject = null;
+        introSoundRoutine = null;
+    }
+
+    void OnDisable()
+    {
+        // 둥지가 꺼지거나 스테이지를 나가면 예약과 재생을 정리한다. 다시 켜도 재생하지 않는다.
+        if (introSoundRoutine != null) StopCoroutine(introSoundRoutine);
+        introSoundRoutine = null;
+        if (introSoundObject != null) Destroy(introSoundObject);
+        introSoundObject = null;
     }
 
     public void NotifyDefeated(BossCombatAI boss)
