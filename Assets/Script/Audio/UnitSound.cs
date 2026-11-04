@@ -123,7 +123,7 @@ public class UnitSound : MonoBehaviour, ISerializationCallbackReceiver
     public bool voiceIgnoreAttenuation = true;
 
     [Label("선택·명령 사운드 쿨타임(초)")]
-    [Tooltip("선택 사운드나 명령 사운드가 한 번 나면, 이 시간(초) 동안은 선택·명령 사운드가 둘 다 나지 않습니다. 모든 유닛이 함께 씁니다. 생산 완료 사운드는 이 쿨타임과 상관없이 항상 납니다.")]
+    [Tooltip("선택 사운드나 명령 사운드가 한 번 나면, 이 시간(초) 동안은 선택·명령 사운드가 둘 다 나지 않습니다. 모든 유닛이 함께 씁니다. 생산 완료 사운드는 별도로 관리하며, 이미 재생 중이면 추가 알림을 생략합니다.")]
     [Min(0f)]
     [FormerlySerializedAs("selectSoundCooldown")]
     public float voiceCooldown = 1f;
@@ -225,6 +225,9 @@ public class UnitSound : MonoBehaviour, ISerializationCallbackReceiver
 
     // 음성·알림 사운드는 유닛이 달라도 서로 겹치지 않게 마지막 재생 시각을 함께 쓴다.
     static float lastVoiceTime = float.NegativeInfinity;
+
+    // 모든 생산 건물이 공유한다. 재생 중 들어온 완료 알림은 대기열에 넣지 않고 생략한다.
+    static AudioSource productionCompleteSource;
 
     // 적 발각 사운드는 플레이어 음성과 쿨타임을 따로 쓴다.
     static float lastDetectedTime = float.NegativeInfinity;
@@ -631,8 +634,12 @@ public class UnitSound : MonoBehaviour, ISerializationCallbackReceiver
         if (sounds == null || sounds.Length == 0)
             return false;
 
-        // 생산 완료는 알림이라 항상 낸다. 선택·명령만 쿨타임을 함께 쓴다.
+        // 선택·명령은 쿨타임을 공유하고, 생산 완료는 실제 재생이 끝날 때까지 겹침을 막는다.
         bool usesCooldown = voice != UnitSoundVoice.ProductionComplete;
+
+        if (!usesCooldown && (AudioListener.pause ||
+            (productionCompleteSource != null && productionCompleteSource.isPlaying)))
+            return false;
 
         if (usesCooldown && Time.unscaledTime < lastVoiceTime + voiceCooldown)
             return false;
@@ -652,6 +659,13 @@ public class UnitSound : MonoBehaviour, ISerializationCallbackReceiver
 
         if (usesCooldown)
             lastVoiceTime = Time.unscaledTime;
+
+        if (!usesCooldown)
+        {
+            // 다른 음성과 섞인 소스의 재생 상태가 완료 알림의 종료 판정을 늦추지 않게 분리한다.
+            productionCompleteSource = PlayDetached(sound.clip, playVolume, audioSource.pitch);
+            return true;
+        }
 
         audioSource.PlayOneShot(sound.clip, playVolume);
         return true;
@@ -793,7 +807,7 @@ public class UnitSound : MonoBehaviour, ISerializationCallbackReceiver
 
     // 이 오브젝트가 사라져도 끝까지 재생되도록, 같은 설정의 AudioSource를 가진 임시
     // 오브젝트를 만들어 재생하고 클립 길이만큼 지난 뒤 지운다.
-    void PlayDetached(AudioClip clip, float playVolume, float pitch)
+    AudioSource PlayDetached(AudioClip clip, float playVolume, float pitch)
     {
         GameObject soundObject = new GameObject("UnitSound_OneShot");
         soundObject.transform.position = transform.position;
@@ -814,6 +828,7 @@ public class UnitSound : MonoBehaviour, ISerializationCallbackReceiver
         source.Play();
 
         Destroy(soundObject, clip.length / Mathf.Max(MinPitchForLength, Mathf.Abs(pitch)) + DetachedSoundTailTime);
+        return source;
     }
 
     float GetEffectiveVolume()
