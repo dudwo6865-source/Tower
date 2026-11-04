@@ -38,6 +38,30 @@ public class UnitAnimator : MonoBehaviour
     [Tooltip("이동 애니메이션이 없는 유닛(타워 등)은 끄세요.")]
     public bool useMoveAnimation = true;
 
+    [Header("공격 재생")]
+    [Label("공격 상태 이름")]
+    [Tooltip("기본 레이어의 공격 상태 이름입니다. 이벤트 공격 중에는 이 상태가 끝날 때까지 이동 애니메이션 전환과 재공격을 막습니다.")]
+    public string attackStateName = "Attack";
+
+    public bool IsAttackAnimationPlaying
+    {
+        get
+        {
+            if (animator == null || !animator.isActiveAndEnabled || animator.layerCount == 0)
+                return false;
+
+            if (animator.IsInTransition(0))
+            {
+                AnimatorStateInfo next = animator.GetNextAnimatorStateInfo(0);
+                if (next.IsName(attackStateName))
+                    return next.normalizedTime < 1f;
+            }
+
+            AnimatorStateInfo current = animator.GetCurrentAnimatorStateInfo(0);
+            return current.IsName(attackStateName) && current.normalizedTime < 1f;
+        }
+    }
+
     private NavMeshAgent agent;
     private EntityHealth health;
     private Vector3 lastAnimatedPosition;
@@ -143,7 +167,9 @@ public class UnitAnimator : MonoBehaviour
             hasAnimatedPosition = true;
         }
 
-        animator.SetFloat(speedHash, speed);
+        UnitAttacker attacker = ResolveAttacker();
+        bool keepAttack = attacker != null && attacker.useAttackAnimationEvent && IsAttackAnimationPlaying;
+        animator.SetFloat(speedHash, keepAttack ? 0f : speed);
     }
 
     // attackCooldown: 다음 공격까지의 간격. 그동안 '공격 중 Bool'을 유지한다.

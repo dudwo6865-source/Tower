@@ -388,6 +388,10 @@ public class UnitAttacker : MonoBehaviour
 
     public bool TryAttack(SelectableEntity target, EntityHealth targetHealth)
     {
+        // 타격 이벤트가 지났거나 대상이 바뀌어도 진행 중인 클립을 재시작하지 않는다.
+        if (ShouldUseAttackAnimationEvent() && unitAnimator.IsAttackAnimationPlaying)
+            return false;
+
         if (BuildingConstructionGate.IsFeatureLockedOn(this))
             return false;
 
