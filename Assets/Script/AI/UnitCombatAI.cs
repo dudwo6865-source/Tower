@@ -85,8 +85,50 @@ public partial class UnitCombatAI : MobileCombatAI
     Vector3 patrolEnd;
     bool patrolTowardEnd = true;
 
+    BossSkillController skills;
+
+    protected override void Awake()
+    {
+        base.Awake();
+        skills = GetComponent<BossSkillController>();
+    }
+
+    // 시전 중에는 추격과 비켜주기를 멈추고 스킬의 준비·후딜 시간을 기다린다.
+    bool TryUseSkill()
+    {
+        if (skills == null || !skills.isActiveAndEnabled || !HasValidTarget())
+            return false;
+        if (!skills.TryStartSkill(currentTarget) && !skills.WaitingForBasicAttack)
+            return false;
+
+        CancelYieldMovement();
+        StopAgentMovement();
+        ResetMoveStuckState();
+        attackMovePathIssued = false;
+        return true;
+    }
+
+    void UpdateUnitCombat()
+    {
+        if (!TryUseSkill()) UpdateCombat();
+    }
+
+    // 새 플레이어 명령은 시전을 취소하지만 이미 소비한 쿨타임은 유지한다.
+    void CancelUnitSkill()
+    {
+        if (skills == null) return;
+        if (skills.IsActive || skills.WaitingForBasicAttack)
+            attacker?.CancelPendingAttack();
+        skills.CancelSkill();
+    }
+
     void Update()
     {
+        if (skills != null && skills.IsActive)
+        {
+            StopAgentMovement();
+            return;
+        }
         if (UpdateYieldMovement())
             return;
         TryRequestAllyYield();
@@ -123,7 +165,7 @@ public partial class UnitCombatAI : MobileCombatAI
         if (!HasValidTarget())
             return;
 
-        UpdateCombat();
+        UpdateUnitCombat();
     }
 
     // 지정 공격·피격 반격 표적을 유지한다. 표적이 죽으면 지정을 풀고,
@@ -389,6 +431,9 @@ public partial class UnitCombatAI : MobileCombatAI
         if (!HasValidTarget())
             return;
 
+        if (TryUseSkill())
+            return;
+
         if (!attacker.IsInRange(currentTarget))
             return;
 
@@ -405,7 +450,7 @@ public partial class UnitCombatAI : MobileCombatAI
 
         if (HasValidTarget())
         {
-            UpdateCombat();
+            UpdateUnitCombat();
             return;
         }
 
@@ -518,6 +563,7 @@ public partial class UnitCombatAI : MobileCombatAI
 
     void BeginManualMove(bool knownDestination, Vector3 destination)
     {
+        CancelUnitSkill();
         // 명령 처리기가 이미 설정한 새 경로는 유지한다.
         CancelYieldMovement(false);
         UnitCommandDebugLog.Log(this, "명령: 수동 이동 시작 (Free)");
@@ -545,6 +591,7 @@ public partial class UnitCombatAI : MobileCombatAI
         if (target == null || target == selfEntity)
             return;
 
+        CancelUnitSkill();
         CancelYieldMovement();
 
         UnitCommandDebugLog.Log(this, $"명령: 공격 대상 지정 (target={DescribeTarget(target)})");
@@ -562,6 +609,7 @@ public partial class UnitCombatAI : MobileCombatAI
 
     public bool BeginAttackMove(Vector3 destination)
     {
+        CancelUnitSkill();
         CancelYieldMovement();
         if (!GridMovement.TrySetAgentDestination(agent, destination, immediate: true))
             return false;
@@ -587,6 +635,7 @@ public partial class UnitCombatAI : MobileCombatAI
 
     public void IssueStop()
     {
+        CancelUnitSkill();
         CancelYieldMovement();
         UnitCommandDebugLog.Log(this, "명령: 정지 (Stopped)");
 
@@ -604,6 +653,7 @@ public partial class UnitCombatAI : MobileCombatAI
 
     public void IssueHold()
     {
+        CancelUnitSkill();
         CancelYieldMovement();
         UnitCommandDebugLog.Log(this, $"명령: 홀드 (Hold @ {FormatVector(transform.position)})");
 
@@ -622,6 +672,7 @@ public partial class UnitCombatAI : MobileCombatAI
 
     public bool IssuePatrol(Vector3 patrolDestination)
     {
+        CancelUnitSkill();
         CancelYieldMovement();
         if (!GridMovement.TrySetAgentDestination(agent, patrolDestination, immediate: true))
             return false;

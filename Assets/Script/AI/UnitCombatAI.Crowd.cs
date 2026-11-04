@@ -33,6 +33,7 @@ public partial class UnitCombatAI
     protected override bool IsApproachingAttackRange => attackMoveActive && HasValidTarget();
 
     bool CanYield => allowIdleYield && !yielding && Time.time >= nextYieldAllowed &&
+        (skills == null || (!skills.IsActive && !skills.WaitingForBasicAttack)) &&
         orderState == UnitOrderState.Free && !manualMoveActive && !manualFocusTarget &&
         !damageFocusTarget && !HasValidTarget() && agent != null && agent.enabled &&
         agent.isOnNavMesh && !agent.hasPath && !agent.pathPending && !HasCachedPath;
@@ -119,6 +120,7 @@ public partial class UnitCombatAI
 
     protected override void OnDisable()
     {
+        CancelUnitSkill();
         CancelYieldMovement();
         nextYieldCheck = 0f;
         nextYieldAllowed = 0f;

@@ -64,6 +64,7 @@ public class UnitAnimator : MonoBehaviour
 
     private NavMeshAgent agent;
     private EntityHealth health;
+    private BossSkillController bossSkills;
     private Vector3 lastAnimatedPosition;
     private bool hasAnimatedPosition;
 
@@ -88,6 +89,7 @@ public class UnitAnimator : MonoBehaviour
 
         agent = GetComponent<NavMeshAgent>();
         health = GetComponent<EntityHealth>();
+        bossSkills = GetComponentInParent<BossSkillController>();
 
         speedHash = Animator.StringToHash(speedParameter);
         attackHash = Animator.StringToHash(attackTrigger);
@@ -138,6 +140,11 @@ public class UnitAnimator : MonoBehaviour
 
     void Update()
     {
+        if (bossSkills != null && bossSkills.IsActive)
+        {
+            PrepareForSkill();
+            return;
+        }
         // 경로를 따라 이동을 시작했으면(이동 명령·추격) 유지 시간을 기다리지 않고 바로 끈다.
         // 공격 중엔 경로가 비어 있으므로 회피로 밀리는 것은 여기에 걸리지 않는다.
         if (isAttacking && (Time.time >= attackingUntil || IsFollowingPath()))
@@ -172,9 +179,21 @@ public class UnitAnimator : MonoBehaviour
         animator.SetFloat(speedHash, keepAttack ? 0f : speed);
     }
 
+    // 시전 시작 프레임에도 이동·일반 공격 전환이 스킬 상태를 덮어쓰지 않게 한다.
+    public void PrepareForSkill()
+    {
+        SetAttacking(false);
+        ResetAttackTrigger();
+        hasAnimatedPosition = false;
+        if (animator != null && HasParameter(speedParameter, AnimatorControllerParameterType.Float))
+            animator.SetFloat(speedHash, 0f);
+    }
+
     // attackCooldown: 다음 공격까지의 간격. 그동안 '공격 중 Bool'을 유지한다.
     public void PlayAttack(float attackCooldown = 0f)
     {
+        if (bossSkills != null && bossSkills.IsActive)
+            return;
         if (isDead || animator == null)
             return;
 

@@ -222,6 +222,7 @@ public class UnitAttacker : MonoBehaviour
     private UnitAnimator unitAnimator;
     private UnitSound unitSound;
     private SelectableEntity selfEntity;
+    private BossSkillController bossSkills;
     private AttackRecoilFX recoilFX;
 
     private SelectableEntity pendingTarget;
@@ -245,8 +246,11 @@ public class UnitAttacker : MonoBehaviour
     void Awake()
     {
         unitAnimator = GetComponent<UnitAnimator>();
+        if (unitAnimator == null)
+            unitAnimator = GetComponentInChildren<UnitAnimator>(true);
         unitSound = GetComponent<UnitSound>();
         selfEntity = GetComponent<SelectableEntity>();
+        bossSkills = GetComponent<BossSkillController>();
 
         // 반동 연출은 타워 포탑용이다. 유닛은 몸 전체가 밀려 이동 판정까지 흔들리므로
         // 건물에만 자동으로 붙이고, 유닛은 프리팹에 직접 붙인 경우에만 쓴다.
@@ -388,6 +392,8 @@ public class UnitAttacker : MonoBehaviour
 
     public bool TryAttack(SelectableEntity target, EntityHealth targetHealth)
     {
+        if (bossSkills != null && bossSkills.IsActive)
+            return false;
         // 타격 이벤트가 지났거나 대상이 바뀌어도 진행 중인 클립을 재시작하지 않는다.
         if (ShouldUseAttackAnimationEvent() && unitAnimator.IsAttackAnimationPlaying)
             return false;
@@ -502,6 +508,8 @@ public class UnitAttacker : MonoBehaviour
 
     public void ApplyAttackImpact()
     {
+        if (bossSkills != null && bossSkills.IsActive)
+            return;
         if (!pendingAttackActive)
             return;
 
