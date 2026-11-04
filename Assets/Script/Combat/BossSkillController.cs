@@ -33,6 +33,14 @@ public class BossSkillController : MonoBehaviour
     [Label("폭발 이펙트 프리팹")] public GameObject explosionPrefab;
     [Label("폭발 크기 배율")][Min(0.01f)] public float explosionScale = 1.5f;
 
+    [Header("스킬 타격 사운드")]
+    [Label("타격 사운드")]
+    [Tooltip("스킬 타격 이벤트에서 한 번 재생합니다. 같은 오브젝트의 UnitSound에 설정한 볼륨과 거리 감쇠를 사용합니다.")]
+    public AudioClip hitSound;
+    [Label("타격 사운드 볼륨")]
+    [Tooltip("UnitSound의 전체 볼륨에 곱하는 배율입니다.")]
+    [Range(0f, 2f)] public float hitSoundVolume = 1f;
+
     [Header("바닥 예고 표시")]
     [Label("예고 표시 머티리얼")] public Material warningMaterial;
     [Label("예고 선 굵기")][Min(0.01f)] public float warningWidth = 0.12f;
@@ -53,6 +61,7 @@ public class BossSkillController : MonoBehaviour
     SelectableEntity owner;
     BossCombatAI boss;
     UnitCombatAI unit;
+    UnitSound unitSound;
     UnitAnimator[] unitAnimators;
     GameObject warning;
     float castRadius;
@@ -65,6 +74,7 @@ public class BossSkillController : MonoBehaviour
         owner = GetComponent<SelectableEntity>();
         boss = GetComponent<BossCombatAI>();
         unit = GetComponent<UnitCombatAI>();
+        unitSound = GetComponent<UnitSound>();
         unitAnimators = GetComponentsInChildren<UnitAnimator>(true);
         if (skillAnimator == null) skillAnimator = GetComponentInChildren<Animator>();
     }
@@ -158,6 +168,7 @@ public class BossSkillController : MonoBehaviour
             animationEvent.animatorStateInfo.fullPathHash != Animator.StringToHash(skillState) ||
             !timing.TryHit(Time.time, recoveryTime)) return;
         ClearWarning();
+        if (unitSound != null) unitSound.PlaySkillHit(hitSound, hitSoundVolume);
         if (explosionPrefab != null)
             CombatEffectSpawner.Spawn(explosionPrefab, ImpactPosition,
                 explosionPrefab.transform.rotation, null, Mathf.Max(0.01f, explosionScale));

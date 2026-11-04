@@ -608,6 +608,20 @@ public class UnitSound : MonoBehaviour, ISerializationCallbackReceiver
             sound.PlayAttackHit();
     }
 
+    // 스킬 타격은 일반 공격 명중 쿨타임과 분리하고, 시전자 사망 후에도 끝까지 재생한다.
+    public void PlaySkillHit(AudioClip clip, float volumeMultiplier)
+    {
+        if (isDead || clip == null || audioSource == null || !audioSource.enabled ||
+            !gameObject.activeInHierarchy)
+            return;
+
+        float playVolume = GetEffectiveVolume() * Mathf.Max(0f, volumeMultiplier);
+        if (playVolume <= 0.001f)
+            return;
+
+        PlayDetached(clip, playVolume, Random.Range(pitchRange.x, pitchRange.y));
+    }
+
     public void PlayDeath()
     {
         if (isDead)
