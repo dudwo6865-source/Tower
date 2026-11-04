@@ -1,5 +1,6 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 // 게임 중 승리 조건과 진행 상황을 텍스트로 표시합니다.
 // 조건 값(버틸 밤 수, 조건 사용 여부)은 GameResultManager에서 읽으므로
@@ -25,6 +26,15 @@ public class VictoryConditionHUD : MonoBehaviour
     [Label("조건 목록 부모")]
     [Tooltip("생성한 텍스트를 넣을 부모입니다. 비워두면 기준 텍스트의 부모를 사용합니다. 배치는 부모의 Layout Group에서 설정하세요.")]
     public Transform conditionContainer;
+
+    [Header("보스 체력")]
+    [Label("보스 체력 채움 이미지")]
+    [Tooltip("직접 만든 Image를 연결합니다. Image Type은 Filled로 설정하세요. 보스 처치 조건이 켜져 있을 때만 표시합니다.")]
+    public Image bossHealthFill;
+
+    [Label("보스 체력 텍스트")]
+    [Tooltip("현재 체력 / 최대 체력을 표시할 텍스트를 연결합니다. 보스가 시야 밖이면 마지막으로 확인한 체력을 표시합니다.")]
+    public TMP_Text bossHealthText;
 
     // 이전 씬의 개별 텍스트가 중복 표시되지 않도록 참조만 보존한다.
     [SerializeField, HideInInspector] TMP_Text spawnerText;
@@ -56,6 +66,10 @@ public class VictoryConditionHUD : MonoBehaviour
     bool templateWasActive;
     bool initialized;
     bool layoutWarningShown;
+    BossNest observedBossNest;
+    bool bossDiscovered;
+    float lastBossHealth;
+    float lastBossMaxHealth;
 
     void Start()
     {
@@ -146,6 +160,8 @@ public class VictoryConditionHUD : MonoBehaviour
     // 활성 조건만 생성하고 이미 만든 항목은 재사용한다.
     public void Refresh()
     {
+        // 조건 목록의 기준 텍스트를 연결하지 않아도 보스 체력은 갱신한다.
+        RefreshBossHealth();
         if (resultManager == null || !initialized) return;
 
         bool survivalOn = resultManager.winBySurvivingNights;
@@ -233,4 +249,48 @@ public class VictoryConditionHUD : MonoBehaviour
         }
     }
 
+    void RefreshBossHealth()
+    {
+        bool bossOn = resultManager != null && resultManager.winByDefeatingBoss;
+        BossNest nest = bossOn ? resultManager.bossNest : null;
+        if (observedBossNest != nest || !bossOn)
+        {
+            observedBossNest = nest;
+            bossDiscovered = false;
+            lastBossHealth = 0f;
+            lastBossMaxHealth = 0f;
+        }
+
+        if (bossHealthFill != null) bossHealthFill.enabled = bossOn;
+        if (bossHealthText != null) bossHealthText.enabled = bossOn;
+        if (!bossOn)
+        {
+            if (bossHealthFill != null) bossHealthFill.fillAmount = 0f;
+            if (bossHealthText != null) bossHealthText.text = string.Empty;
+            return;
+        }
+
+        BossCombatAI boss = nest != null ? nest.Boss : null;
+        EntityHealth health = boss != null ? boss.Health : null;
+        FogOfWarVisibility fog = boss != null ? boss.GetComponent<FogOfWarVisibility>() : null;
+        bool visible = health != null && (fog == null || fog.IsCurrentlyVisible);
+        if (visible)
+        {
+            bossDiscovered = true;
+            lastBossHealth = health.CurrentHealth;
+            lastBossMaxHealth = health.MaxHealth;
+        }
+
+        bool defeated = nest != null && nest.Defeated;
+        if (defeated) lastBossHealth = 0f;
+        if (bossHealthFill != null)
+            bossHealthFill.fillAmount = bossDiscovered && lastBossMaxHealth > 0f
+                ? Mathf.Clamp01(lastBossHealth / lastBossMaxHealth) : 0f;
+        if (bossHealthText != null)
+            bossHealthText.text = !string.IsNullOrEmpty(resultManager.BossError) || nest == null || !string.IsNullOrEmpty(nest.Error)
+                ? "보스 목표 설정을 확인하세요."
+                : defeated ? "처치 완료"
+                : !bossDiscovered ? "보스를 발견하면 체력이 표시됩니다."
+                : $"{lastBossHealth:0} / {lastBossMaxHealth:0}" + (visible ? "" : " · 마지막 확인");
+    }
 }
