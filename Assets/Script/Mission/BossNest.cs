@@ -26,7 +26,7 @@ public class BossNest : MonoBehaviour
     [Label("등장 사운드 볼륨")]
     [Range(0f, 1f)] public float introSoundVolume = 1f;
     [Label("재생 지연 시간(초)")]
-    [Tooltip("보스 생성 후 재생까지 기다릴 게임 시간입니다. 0이면 바로 재생하며, 일시정지 중에는 대기 시간도 멈춥니다.")]
+    [Tooltip("시작 연출이 있으면 화면 공개 완료 후 실제 시간으로 기다립니다. 연출이 없으면 보스 생성 후 게임 시간으로 기다립니다. 0이면 대기 없이 재생합니다.")]
     [Min(0f)] public float introSoundDelay = 0f;
     [Label("등장 사운드 출력 믹서")]
     [Tooltip("효과음 볼륨을 관리하는 Audio Mixer Group을 연결합니다. 비워두면 기본 오디오 출력으로 재생합니다.")]
@@ -102,8 +102,20 @@ public class BossNest : MonoBehaviour
 
     IEnumerator PlayIntroSound()
     {
+        StageIntroController intro = StageIntroController.Instance;
+        bool waitForReveal = StageIntroController.IsPlaying;
+        if (waitForReveal)
+        {
+            while (intro != null && StageIntroController.IsPlaying && !intro.HasRevealed)
+                yield return null;
+            // 연출이 공개 전에 취소됐으면 로딩 중 로어가 새어 나오지 않게 한다.
+            if (intro == null || !intro.HasRevealed) yield break;
+        }
         if (introSoundDelay > 0f)
-            yield return new WaitForSeconds(introSoundDelay);
+        {
+            if (waitForReveal) yield return new WaitForSecondsRealtime(introSoundDelay);
+            else yield return new WaitForSeconds(introSoundDelay);
+        }
 
         // 대기 중 보스가 사라졌거나 결과 화면으로 넘어갔다면 뒤늦게 울리지 않는다.
         if (!isActiveAndEnabled || !WasSpawned || Defeated || Boss == null || introSound == null ||

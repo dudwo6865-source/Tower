@@ -148,6 +148,8 @@ public class InitialEnemyPlacer : MonoBehaviour
     /// <summary>설정상 배치하려던 총 마리 수입니다.</summary>
     public int RequestedCount => GetRequestedCount();
 
+    public bool HasCompletedPlacement => placed;
+
     bool placed;
 
     void Awake()

@@ -261,6 +261,13 @@ public class RTSCameraPivotController : MonoBehaviour
         startupHeadquartersMarker = null;
     }
 
+    // 시작 연출 중에는 게임 시간이 멈춰 있으므로 보간 없이 본부로 맞춘다.
+    public void FocusStageStart()
+    {
+        if (!ResolveStartupHeadquarters() && startFocusTarget != null)
+            ApplyInstantFocus(startFocusTarget.position);
+    }
+
     void ApplyInstantFocus(Vector3 worldPosition)
     {
         FocusOnPosition(worldPosition);
@@ -326,6 +333,7 @@ public class RTSCameraPivotController : MonoBehaviour
 
     void Update()
     {
+        if (StageIntroController.IsPlaying) return;
         if (!mapBoundsValid)
             return;
 

@@ -67,6 +67,7 @@ public class BuildingCommandPanelUI : MonoBehaviour
 
     void Update()
     {
+        if (StageIntroController.IsPlaying) return;
         RefreshVisibility();
 
         if (!enableHotkeys || !IsPanelVisible())

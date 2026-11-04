@@ -73,6 +73,7 @@ public class UnitCommandController : MonoBehaviour
 
     void Update()
     {
+        if (StageIntroController.IsPlaying) return;
         if (Input.GetMouseButtonUp(0))
             suppressSelectionClick = false;
 

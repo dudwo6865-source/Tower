@@ -191,6 +191,7 @@ public class TowerPlacementController : MonoBehaviour
 
     void Update()
     {
+        if (StageIntroController.IsPlaying) return;
         if (!IsPlacing)
             return;
 

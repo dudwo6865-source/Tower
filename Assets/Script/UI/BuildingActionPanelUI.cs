@@ -193,6 +193,7 @@ public class BuildingActionPanelUI : MonoBehaviour
 
     void Update()
     {
+        if (StageIntroController.IsPlaying) return;
         RefreshVisibility();
 
         if (!enableHotkeys || !panelVisible || IsTextInputFocused())

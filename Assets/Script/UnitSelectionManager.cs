@@ -112,6 +112,7 @@ public class UnitSelectionManager : MonoBehaviour
 
     void Update()
     {
+        if (StageIntroController.IsPlaying) return;
         if (removedNotifyPending)
         {
             removedNotifyPending = false;

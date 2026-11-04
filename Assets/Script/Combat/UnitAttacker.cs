@@ -392,6 +392,7 @@ public class UnitAttacker : MonoBehaviour
 
     public bool TryAttack(SelectableEntity target, EntityHealth targetHealth)
     {
+        if (StageIntroController.IsPlaying) return false;
         if (bossSkills != null && bossSkills.IsActive)
             return false;
         // 타격 이벤트가 지났거나 대상이 바뀌어도 진행 중인 클립을 재시작하지 않는다.

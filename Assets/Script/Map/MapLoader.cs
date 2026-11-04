@@ -64,6 +64,7 @@ public class MapLoader : MonoBehaviour
 
     public MapConfig LoadedConfig { get; private set; }
     public MapRoot CurrentMap { get; private set; }
+    public bool IsMapReady { get; private set; }
 
     void Awake()
     {
@@ -113,6 +114,7 @@ public class MapLoader : MonoBehaviour
         if (config == null)
             return;
 
+        IsMapReady = false;
         LoadedConfig = config;
 
         // 매니저들이 자신의 Awake/Start에서 읽도록, 먼저 설정값을 주입한다.
@@ -207,6 +209,7 @@ public class MapLoader : MonoBehaviour
             }
             result.BindBossNest(nestCount == 1 ? nest : null);
         }
+        IsMapReady = true;
     }
 
     /// <summary>

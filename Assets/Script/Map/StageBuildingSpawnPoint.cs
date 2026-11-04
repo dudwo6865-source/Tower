@@ -92,6 +92,7 @@ public class StageBuildingSpawnPoint : MonoBehaviour
     public static event Action<GameObject> OnAnyBuildingSpawned;
 
     public GameObject SpawnedBuilding { get; private set; }
+    public bool HasFinishedSpawn => spawned || buildingPrefab == null;
 
     bool counted;
     bool countedAsHeadquarters;
@@ -179,8 +180,13 @@ public class StageBuildingSpawnPoint : MonoBehaviour
         // 맵 인스턴스화, NavMesh 등록, 격자 갱신이 끝난 다음 프레임에 짓는다.
         yield return null;
 
-        if (spawnDelay > 0f)
-            yield return new WaitForSeconds(spawnDelay);
+        // 시작 연출은 게임 시간을 멈추므로 초기 배치 지연만 실제 시간으로 진행한다.
+        float elapsed = 0f;
+        while (elapsed < spawnDelay)
+        {
+            elapsed += StageIntroController.IsPlaying ? Time.unscaledDeltaTime : Time.deltaTime;
+            yield return null;
+        }
 
         Spawn();
     }
@@ -286,7 +292,8 @@ public class StageBuildingSpawnPoint : MonoBehaviour
             }
         }
 
-        if (playConstructionEffect)
+        // 시작 연출의 암전 중 배치한 건물은 완성 상태로 보여준다. 정지된 건설 연출을 노출하지 않는다.
+        if (playConstructionEffect && !StageIntroController.IsPlaying)
             BeginConstructionPresentation(building);
 
         if (disableMarkerVisionAfterSpawn)

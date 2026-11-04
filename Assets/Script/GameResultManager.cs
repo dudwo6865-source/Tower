@@ -169,7 +169,7 @@ public class GameResultManager : MonoBehaviour
         Instance = this;
 
         // 결과 창에서 일시정지된 채로 씬을 다시 불러온 경우를 대비한다.
-        Time.timeScale = 1f;
+        if (!StageIntroController.IsPlaying) Time.timeScale = 1f;
 
         if (dayNightCycle == null)
             dayNightCycle = FindObjectOfType<DayNightCycle>();
@@ -234,6 +234,7 @@ public class GameResultManager : MonoBehaviour
 
     void Update()
     {
+        if (StageIntroController.IsPlaying) return;
         if (IsGameOver)
             return;
 
