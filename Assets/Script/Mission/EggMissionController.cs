@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 
 [DisallowMultipleComponent]
-[AddComponentMenu("게임/미션/알 파괴 미션")]
+[AddComponentMenu("게임/미션/EggMissionController")]
 public class EggMissionController : MonoBehaviour
 {
     public EggMissionRules Rules { get; private set; }

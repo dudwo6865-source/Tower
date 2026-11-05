@@ -4,7 +4,7 @@ using UnityEngine.AI;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(EntityHealth))]
-[AddComponentMenu("게임/미션/몬스터 알")]
+[AddComponentMenu("게임/미션/MonsterEgg")]
 public class MonsterEgg : MonoBehaviour
 {
     [Label("목표 이름")]
