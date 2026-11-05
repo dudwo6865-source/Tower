@@ -30,6 +30,18 @@ public class MonsterEgg : MonoBehaviour
     [Label("부화 이펙트 프리팹")]
     public GameObject hatchEffectPrefab;
 
+    [Label("알 애니메이션")]
+    [Tooltip("자식 모델의 MonsterEggAnimation을 연결합니다. 비워두면 자식에서 찾으며, 없으면 기존처럼 즉시 부화합니다.")]
+    public MonsterEggAnimation eggAnimation;
+
+    bool hatching;
+    bool usesHatchAnimation;
+    Action<EntityHealth> onSpawned;
+    Action<string> onHatchFailed;
+    Func<bool> canHatch;
+    public bool HatchPlaybackMissing => hatching && usesHatchAnimation &&
+        (eggAnimation == null || !eggAnimation.PlaybackAvailable);
+
     public EntityHealth Health { get; private set; }
     public bool Resolved { get; private set; }
     public event Action<MonsterEgg> DestroyedByDamage;
@@ -38,6 +50,8 @@ public class MonsterEgg : MonoBehaviour
     {
         Health = GetComponent<EntityHealth>();
         Health.OnDied += HandleDeath;
+        if (eggAnimation == null) eggAnimation = GetComponentInChildren<MonsterEggAnimation>(true);
+        if (eggAnimation != null) eggAnimation.Bind(this);
         SetNextHatch(false);
     }
 
@@ -74,7 +88,39 @@ public class MonsterEgg : MonoBehaviour
             return "부화 몬스터 배율은 0보다 큰 유한한 값이어야 합니다.";
         if (nextHatchIndicator != null && (!nextHatchIndicator.transform.IsChildOf(transform) || nextHatchIndicator == gameObject))
             return "다음 부화 표시는 알의 자식 오브젝트로 연결하세요.";
+        MonsterEggAnimation animation = eggAnimation != null ? eggAnimation : GetComponentInChildren<MonsterEggAnimation>(true);
+        if (animation != null) return animation.ValidateSetup(this);
         return null;
+    }
+
+    public void SetUrgency(float value)
+    {
+        if (eggAnimation != null) eggAnimation.SetUrgency(value);
+    }
+
+    public void BeginHatch(Action<EntityHealth> spawned, Action<string> failed, Func<bool> allowed)
+    {
+        if (Resolved || hatching) return;
+        hatching = true;
+        onSpawned = spawned;
+        onHatchFailed = failed;
+        canHatch = allowed;
+        usesHatchAnimation = eggAnimation != null;
+        if (eggAnimation != null) eggAnimation.BeginHatch();
+        else SpawnFromAnimation();
+    }
+
+    public void SpawnFromAnimation()
+    {
+        if (!hatching || Resolved || !isActiveAndEnabled || canHatch == null || !canHatch()) return;
+        if (!TryHatch(onSpawned, out string error)) ReportHatchFailure(error ?? "부화에 실패했습니다.");
+    }
+
+    public void ReportHatchFailure(string error)
+    {
+        if (!hatching || Resolved) return;
+        hatching = false;
+        onHatchFailed?.Invoke(error);
     }
 
     static bool Positive(float value) => value > 0f && !float.IsNaN(value) && !float.IsInfinity(value);
@@ -114,6 +160,7 @@ public class MonsterEgg : MonoBehaviour
         Resolved = true;
         SetNextHatch(false);
         if (hatchEffectPrefab != null) CombatEffectSpawner.Spawn(hatchEffectPrefab, point.position, point.rotation);
+        if (eggAnimation != null) eggAnimation.DetachShell();
         // 파괴 이벤트와 처치 통계를 발생시키지 않고 껍질만 제거한다.
         gameObject.SetActive(false);
         Destroy(gameObject);

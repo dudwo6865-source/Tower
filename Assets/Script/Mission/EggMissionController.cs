@@ -62,27 +62,34 @@ public class EggMissionController : MonoBehaviour
         if (Rules == null || Error != null || owner == null || owner.IsGameOver || StageIntroController.IsPlaying || deltaTime <= 0f) return;
         for (int i = 0; i < eggs.Length; i++)
         {
-            if (Rules.GetState(i) == EggMissionRules.EggState.Waiting &&
+            if ((Rules.GetState(i) == EggMissionRules.EggState.Waiting || Rules.GetState(i) == EggMissionRules.EggState.Hatching) &&
                 (eggs[i] == null || !eggs[i].isActiveAndEnabled || eggs[i].Health == null || !eggs[i].Health.IsAlive))
             { Fail("알이 정상적인 파괴 처리 없이 제거되거나 비활성화되었습니다."); return; }
+            if (Rules.GetState(i) == EggMissionRules.EggState.Hatching && eggs[i].HatchPlaybackMissing)
+            { Fail("부화 중인 알의 애니메이션 컴포넌트 또는 Animator가 제거되거나 비활성화되었습니다."); return; }
             if (Rules.GetState(i) == EggMissionRules.EggState.Hatched &&
                 (monsters[i] == null || !monsters[i].isActiveAndEnabled))
             { Fail("부화 몬스터가 처치되지 않고 제거되거나 비활성화되었습니다."); return; }
         }
+        float urgency = Rules.StageSeconds > 0f ? 1f - Rules.RemainingSeconds / Rules.StageSeconds : 0f;
+        foreach (MonsterEgg egg in eggs)
+            if (egg != null) egg.SetUrgency(egg == NextEgg ? urgency : 0f);
         // 같은 프레임의 여러 알 파괴는 각각 단계에 반영하되 새 타이머를 즉시 깎지 않는다.
         if (transitionFrame == Time.frameCount || !Rules.Tick(deltaTime, false)) return;
         if (NextEgg == null) { Fail("다음 부화 대상이 없습니다."); return; }
         int index = Array.IndexOf(eggs, NextEgg);
-        if (!NextEgg.TryHatch(health =>
+        MonsterEgg hatchingEgg = NextEgg;
+        if (!Rules.BeginHatch(index)) return;
+        transitionFrame = Time.frameCount;
+        UpdateNextEgg();
+        hatchingEgg.BeginHatch(health =>
         {
+            if (!Rules.ResolveEgg(index, true)) return;
             monsters[index] = health;
             monsterDeaths[index] = () => Rules.DefeatMonster(index);
             health.OnDied += monsterDeaths[index];
-        }, out string error))
-        { Fail(error ?? "알을 부화할 수 없습니다."); return; }
-        Rules.ResolveEgg(index, true);
-        transitionFrame = Time.frameCount;
-        UpdateNextEgg();
+        }, Fail, () => this != null && isActiveAndEnabled && Error == null && owner != null &&
+            !owner.IsGameOver && !StageIntroController.IsPlaying && Time.timeScale > 0f);
     }
 
     void Fail(string message)
@@ -115,11 +122,11 @@ public class EggMissionController : MonoBehaviour
             if (Error != null) return "알 미션 설정을 확인하세요.";
             if (Rules == null) return "알 미션 준비 중";
             if (Complete) return "알과 부화 몬스터 제거 완료";
-            if (Rules.RemainingEggs == 0) return $"남은 부화 몬스터 처치 · {Rules.LivingMonsters}마리";
+            if (Rules.RemainingEggs == 0) return $"부화 중 {Rules.HatchingEggs}개 · 남은 부화 몬스터 처치 {Rules.LivingMonsters}마리";
             int seconds = Mathf.CeilToInt(Rules.RemainingSeconds);
             string target = NextEgg != null ? NextEgg.displayName : "몬스터 알";
             return $"남은 알 {Rules.RemainingEggs}/{Rules.TotalEggs} · 다음 부화 {seconds / 60:00}:{seconds % 60:00}\n" +
-                $"부화 대상: {target} · 부화 몬스터 {Rules.LivingMonsters}마리";
+                $"부화 대상: {target} · 부화 중 {Rules.HatchingEggs}개 · 부화 몬스터 {Rules.LivingMonsters}마리";
         }
     }
 }

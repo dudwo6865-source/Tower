@@ -51,4 +51,29 @@ $copy = [EggMissionRules]::new(2, $durations)
 $durations[1] = 1
 $null = $copy.ResolveEgg(0, $false)
 Check ($copy.RemainingSeconds -eq 240) '시작 후 외부 배열 수정이 진행 중 시간에 영향을 주지 않는다'
+$animated = [EggMissionRules]::new(2, [float[]](10, 5))
+$null = $animated.Tick(10, $false)
+Check ($animated.BeginHatch(0)) '시간 만료 시 소환을 기다리는 부화 상태로 진입한다'
+Check ($animated.HatchingEggs -eq 1 -and $animated.LivingMonsters -eq 0 -and $animated.RemainingSeconds -eq 5) '부화 연출 시작 때 다음 타이머가 시작되며 아직 몬스터는 없다'
+Check (-not $animated.BeginHatch(0)) '부화 시작을 중복 처리하지 않는다'
+$null = $animated.Tick(2, $false)
+Check ($animated.ResolveEgg(0, $true)) '소환 이벤트 때 몬스터로 전환한다'
+Check ($animated.RemainingSeconds -eq 3 -and $animated.HatchingEggs -eq 0 -and $animated.LivingMonsters -eq 1) '소환 이벤트는 다음 타이머를 다시 늘리지 않는다'
+Check (-not $animated.ResolveEgg(0, $true)) '중복 소환 이벤트는 무시한다'
+$null = $animated.BeginHatch(1)
+$animated.DefeatMonster(0)
+Check (-not $animated.Complete) '마지막 알이 부화 애니메이션 중이면 먼저 승리하지 않는다'
+$null = $animated.ResolveEgg(1, $false)
+Check ($animated.Complete -and $animated.HatchingEggs -eq 0) '소환 전 마지막 알을 파괴하면 부화가 취소되고 완료한다'
+Check (-not $animated.ResolveEgg(1, $true)) '파괴된 알의 뒤늦은 소환 이벤트는 무시한다'
+$overlap = [EggMissionRules]::new(2, [float[]](10, 5))
+$null = $overlap.BeginHatch(0)
+$null = $overlap.BeginHatch(1)
+Check ($overlap.HatchingEggs -eq 2 -and -not $overlap.Complete) '시간이 짧아 부화 연출이 겹쳐도 각각 추적한다'
+$null = $overlap.ResolveEgg(1, $true)
+$null = $overlap.ResolveEgg(0, $true)
+Check ($overlap.LivingMonsters -eq 2 -and $overlap.HatchingEggs -eq 0) '역순으로 도착한 소환 이벤트도 정확히 처리한다'
+$overlap.DefeatMonster(1)
+$overlap.DefeatMonster(0)
+Check ($overlap.Complete) '부화 몬스터가 모두 죽어야 최종 완료한다'
 Write-Output "알 미션 규칙 검사 $script:checks 개 통과"

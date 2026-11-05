@@ -3,16 +3,17 @@ using System;
 // 유니티 오브젝트 수명과 분리해 알의 중복 처리 및 단계별 시간을 관리한다.
 public sealed class EggMissionRules
 {
-    public enum EggState { Waiting, Destroyed, Hatched, Defeated }
+    public enum EggState { Waiting, Destroyed, Hatched, Defeated, Hatching }
     readonly EggState[] states;
     readonly float[] durations;
     public int TotalEggs => states.Length;
     public int ResolvedEggs { get; private set; }
     public int RemainingEggs => TotalEggs - ResolvedEggs;
     public int LivingMonsters { get; private set; }
+    public int HatchingEggs { get; private set; }
     public float RemainingSeconds { get; private set; }
     public float StageSeconds => durations[Math.Min(ResolvedEggs, durations.Length - 1)];
-    public bool Complete => RemainingEggs == 0 && LivingMonsters == 0;
+    public bool Complete => RemainingEggs == 0 && LivingMonsters == 0 && HatchingEggs == 0;
 
     public static string ValidateDurations(float[] values, int eggCount)
     {
@@ -41,10 +42,27 @@ public sealed class EggMissionRules
 
     public bool ResolveEgg(int index, bool hatched)
     {
+        if (index >= 0 && index < states.Length && states[index] == EggState.Hatching)
+        {
+            states[index] = hatched ? EggState.Hatched : EggState.Destroyed;
+            HatchingEggs--;
+            if (hatched) LivingMonsters++;
+            return true;
+        }
         if (index < 0 || index >= states.Length || states[index] != EggState.Waiting) return false;
         states[index] = hatched ? EggState.Hatched : EggState.Destroyed;
         ResolvedEggs++;
         if (hatched) LivingMonsters++;
+        RemainingSeconds = RemainingEggs > 0 ? StageSeconds : 0f;
+        return true;
+    }
+
+    public bool BeginHatch(int index)
+    {
+        if (index < 0 || index >= states.Length || states[index] != EggState.Waiting) return false;
+        states[index] = EggState.Hatching;
+        HatchingEggs++;
+        ResolvedEggs++;
         RemainingSeconds = RemainingEggs > 0 ? StageSeconds : 0f;
         return true;
     }
