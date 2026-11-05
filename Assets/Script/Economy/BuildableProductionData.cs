@@ -49,6 +49,17 @@ public class BuildableProductionData : ScriptableObject, IUpgradableBuildableDat
     [Min(0)]
     public int defaultRecipeIndex;
 
+    [Label("생산 속도 배율")]
+    [Tooltip("이 건물의 유닛 생산 속도 배율입니다. 1.5면 생산 시간이 1/1.5로 줄어듭니다(8초 → 약 5.3초). " +
+        "업그레이드 단계 데이터마다 값을 높여 두면 업그레이드할수록 더 빨리 생산합니다.")]
+    [Min(0.1f)]
+    public float productionSpeedMultiplier = 1f;
+
+    [Label("유닛당 Watt 비용 유지")]
+    [Tooltip("켜면 빨라진 만큼 초당 Watt 소모도 늘려 유닛 한 기에 드는 Watt는 그대로 둡니다. " +
+        "끄면 초당 소모가 그대로라 빨라진 만큼 유닛당 Watt도 줄어듭니다.")]
+    public bool keepWattCostPerUnit = true;
+
     [Header("업그레이드")]
     [Label("업그레이드 분기")]
     [Tooltip("업그레이드 분기 목록입니다. 여러 개를 넣으면 플레이어가 갈래를 고를 수 있습니다. " +

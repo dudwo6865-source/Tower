@@ -215,5 +215,54 @@ public static class CliffPainterRegressionTests
             painter.GetTopMaxLayer(Cell(2, 0)) == 1, "윗층 중심·주변만 낮추고 아랫층과 바깥 윗층을 보존한다");
         painter.RebuildGeometry(false);
         Check(painter.generatedRoot.Find("Top_L0_0_0") != null, "윗층을 지운 중앙에 아랫층 상판이 보인다");
+        Check(painter.TryRemoveTop(Cell(3, 0), 1), "윗층 벽 칸 지우기 적용");
+        Check(painter.GetTopMaxLayer(Cell(3, 0)) == 0 && painter.GetTopMaxLayer(Cell(2, 0)) == 0 &&
+            painter.GetTopMaxLayer(Cell(1, 2)) == 1, "윗층 벽을 지우면 벽을 세우던 윗층만 낮추고 아랫층을 보존한다");
+
+        VerifyWallErase(painter);
+    }
+
+    static void VerifyWallErase(CliffPainter painter)
+    {
+        painter.ClearAllTops();
+        painter.FillGround(Cell(-5, -5), 11, false);
+        for (int x = -2; x <= 2; x++)
+            for (int z = -2; z <= 2; z++) painter.TryAddTop(Cell(x, z));
+
+        Check(painter.TryRemoveTop(Cell(3, 0)) && painter.TopCount == 22, "직선 벽 칸을 지우면 맞닿은 Top 세 칸을 전환한다");
+        Check(painter.HasGround(Cell(3, 0)) && painter.HasGround(Cell(2, 0)) && !painter.HasTop(Cell(2, 1)) &&
+            painter.HasTop(Cell(1, 0)), "벽 칸 지우기는 경계를 한 칸만 물린다");
+        Check(!painter.TryRemoveTop(Cell(3, 0)) && painter.TopCount == 22, "물러난 뒤의 바닥을 반복 클릭해도 더 깎지 않는다");
+        Check(painter.TryRemoveTop(Cell(3, 3)) && painter.TopCount == 21 && !painter.HasTop(Cell(2, 2)),
+            "바깥 코너 칸도 벽과 같이 지운다");
+
+        painter.RebuildGeometry(false);
+        Check(painter.generatedRoot.Find("Top_L0_1_0") != null && painter.generatedRoot.Find("Ground_3_0") != null,
+            "벽 칸을 지운 뒤 남은 Top과 바닥을 다시 생성한다");
+
+        Check(painter.TryAddHill(Cell(0, 3)), "언덕 칸 지우기 준비");
+        Check(painter.TryRemoveTop(Cell(0, 3)) && !painter.HasHill(Cell(0, 3)) && painter.HasGround(Cell(0, 3)) &&
+            !painter.HasTop(Cell(0, 2)), "언덕 칸을 지우면 벽처럼 바닥을 복구하고 맞닿은 Top을 전환한다");
+
+        Check(painter.TryAddHill(Cell(0, -3)), "언덕 칸 칠하기 준비");
+        Check(painter.TryAddTop(Cell(0, -3)) && painter.HasTop(Cell(0, -3)) && !painter.HasHill(Cell(0, -3)) &&
+            !painter.HasGround(Cell(0, -3)), "언덕 칸에 Top을 칠하면 언덕을 대체한다");
+
+        painter.TryEraseGroundStack(Cell(-3, 0));
+        Check(!painter.TryRemoveTop(Cell(-3, 0)) && painter.HasTop(Cell(-2, 0)), "바닥 없는 빈 칸은 벽이 아니므로 Top을 유지한다");
+
+        painter.TryAddTop(Cell(4, 4), -2);
+        Check(!painter.TryRemoveTop(Cell(4, 3)) && painter.GetTopMaxLayer(Cell(4, 4)) == -2,
+            "지하 Top 옆의 바닥은 벽 칸으로 취급하지 않는다");
+
+        painter.ClearAllTops();
+        painter.FillGround(Cell(-5, -5), 11, false);
+        for (int x = -4; x <= 4; x++)
+            for (int z = -4; z <= 4; z++) painter.TryAddTop(Cell(x, z));
+        for (int x = -2; x <= 2; x++)
+            for (int z = -2; z <= 2; z++) painter.TryAddTop(Cell(x, z), 1);
+        Check(painter.TryAddHill(Cell(3, 0), 1), "윗층 언덕 준비");
+        Check(painter.TryAddTop(Cell(3, 0), 1) && painter.GetTopMaxLayer(Cell(3, 0)) == 1 && !painter.HasHill(Cell(3, 0)),
+            "윗층 언덕 칸에 Top을 칠하면 언덕을 대체한다");
     }
 }

@@ -21,6 +21,10 @@ public abstract partial class MobileCombatAI : CombatAIBase
     [Tooltip("대상이 이 거리(m) 이상 이동했을 때만 추격 목적지를 갱신합니다.")]
     public float destinationMoveThreshold = 1f;
 
+    [Label("경로 갱신 시 속도 유지")]
+    [Tooltip("추격 중 새 경로를 받을 때 직전 이동 속도를 이어받습니다. 끄면 새 경로마다 정지 상태에서 다시 가속합니다.")]
+    public bool keepSpeedOnRepath = true;
+
     [Label("경로 막힘 대기(초)")]
     [Tooltip("사거리 밖에서 진행이 없을 때 경로를 다시 계산하기까지 대기 시간(초)입니다.")]
     public float pathStuckTimeout = 0.75f;
@@ -71,6 +75,11 @@ public abstract partial class MobileCombatAI : CombatAIBase
     // 추격 중인 유닛이 매 프레임 이걸 읽으면 유닛 수만큼 쓰레기가 쌓여 GC가 주기적으로
     // 프레임을 잡아먹으므로, 이 주기마다만 다시 읽는다.
     const float PathCacheRefreshInterval = 0.5f;
+    const float MinCarrySpeed = 0.1f;
+    float carrySpeedPending;
+    float recentChaseSpeed;
+    Vector3 lastChasePosition;
+    int lastChaseFrame = -1;
     float pathCacheTimer;
     float appliedStoppingDistance = -1f;
     float directChaseCheckTimer;
@@ -142,6 +151,8 @@ public abstract partial class MobileCombatAI : CombatAIBase
         if (agent.autoRepath)
             agent.autoRepath = false;
 
+        TrackChaseSpeed();
+        ApplyPendingCarrySpeed();
         RefreshCachedPath();
         RefreshDirectChaseMode();
 
@@ -164,8 +175,20 @@ public abstract partial class MobileCombatAI : CombatAIBase
         if (hasCompletePath && !stuck && !needsPath && !targetRelocated && !chaseModeChanged)
             return;
 
+        // 대상이 움직였으면 갱신 간격이 지날 때마다 새 목적지를 잡는다.
+        // 그 전까지는 기존 경로나 코너 캐시로 계속 걷는다.
+        bool relocationDue = false;
+        if (targetRelocated)
+        {
+            destinationTimer -= Time.deltaTime;
+            relocationDue = destinationTimer <= 0f;
+        }
+
         // carve 때 Unity가 pathPending으로 전원 재계산한다. 캐시가 있으면 취소하고 걷는다.
-        if (!stuck && HasCachedPath && !chaseModeChanged)
+        // 갱신할 때가 된 이동 대상이면 캐시(옛 목적지)를 따르지 않는다.
+        // 완성된 경로가 살아 있으면 지우지 않고 에이전트가 계속 걷게 둔다. 지우고 손으로 옮기면
+        // 에이전트 이동(회피·가속)과 수동 이동이 번갈아 속도가 출렁인다.
+        if (!stuck && HasCachedPath && !chaseModeChanged && !relocationDue && !hasCompletePath)
         {
             CancelUnityRepath();
             if (TryFollowCachedPath())
@@ -178,18 +201,14 @@ public abstract partial class MobileCombatAI : CombatAIBase
             return;
         }
 
-        if (!stuck && HasCachedPath && !chaseModeChanged)
+        if (!stuck && HasCachedPath && !chaseModeChanged && !relocationDue)
             return;
 
         if (!stuck && !needsPath && !targetRelocated && !chaseModeChanged)
             return;
 
-        if (!chaseModeChanged && targetRelocated && hasCompletePath && !stuck)
-        {
-            destinationTimer -= Time.deltaTime;
-            if (destinationTimer > 0f)
-                return;
-        }
+        if (!chaseModeChanged && targetRelocated && hasCompletePath && !stuck && !relocationDue)
+            return;
 
         // GetChaseDestination()은 건물 주변 접근점을 찾느라 NavMesh.CalculatePath를 여러 번
         // 돌 수 있는 무거운 작업이다. 예산은 SetDestination이 아니라 '이 계산 전에' 잡아야
@@ -200,12 +219,20 @@ public abstract partial class MobileCombatAI : CombatAIBase
             immediatePathOnce || PreferImmediatePath();
 
         if (!immediate && !AiPathBudget.TryAcquireHeavy())
+        {
+            // 예산을 못 받은 프레임에도 캐시가 있으면 멈추지 않고 걷는다. 다음 프레임에 다시 시도한다.
+            if (!stuck && HasCachedPath)
+                TryFollowCachedPath();
             return;
+        }
 
         // 플레이어 명령(공격 대상 지정 등)으로 요청된 첫 경로는 대기열을 거치지 않는다.
         bool playerRequested = ConsumeImmediatePath();
 
         destinationTimer = Mathf.Max(0.05f, destinationRefreshInterval);
+
+        // 경로를 바꾸면 에이전트가 정지 상태에서 다시 가속하므로, 바꾸기 전 속도를 기억해 둔다.
+        float carrySpeed = keepSpeedOnRepath ? Mathf.Min(recentChaseSpeed, agent.speed) : 0f;
 
         Vector3 destination;
 
@@ -224,6 +251,12 @@ public abstract partial class MobileCombatAI : CombatAIBase
         if (hasDestination)
         {
             ResetPathStuck();
+
+            if (carrySpeed > MinCarrySpeed)
+            {
+                carrySpeedPending = carrySpeed;
+                ApplyPendingCarrySpeed();
+            }
 
             // 새 경로를 받았으니 다음 프레임에 코너 캐시를 바로 갱신한다.
             pathCacheTimer = 0f;
@@ -324,6 +357,59 @@ public abstract partial class MobileCombatAI : CombatAIBase
         hasPathProgressSample = true;
         lastProgressRemaining = remaining;
         lastProgressPosition = position;
+    }
+
+    // 추격 중 실제 수평 이동 속도를 잰다. 캐시 경로를 손으로 따라갈 땐 에이전트 velocity가 0이라 위치 변화로 잰다.
+    void TrackChaseSpeed()
+    {
+        Vector3 position = transform.position;
+        int frame = Time.frameCount;
+
+        if (lastChaseFrame == frame - 1 && Time.deltaTime > 0.0001f)
+        {
+            Vector3 delta = position - lastChasePosition;
+            delta.y = 0f;
+            Vector3 velocity = agent.velocity;
+            velocity.y = 0f;
+            recentChaseSpeed = Mathf.Max(delta.magnitude / Time.deltaTime, velocity.magnitude);
+        }
+        else
+        {
+            // 추격을 막 다시 시작했으면 이어받을 속도가 없다.
+            recentChaseSpeed = 0f;
+        }
+
+        lastChasePosition = position;
+        lastChaseFrame = frame;
+    }
+
+    // 새 경로가 준비되면 첫 진행 방향으로 기억해 둔 속도를 넣어 가속 구간을 없앤다.
+    // 비동기 경로는 계산이 끝난 다음 프레임에 적용한다.
+    void ApplyPendingCarrySpeed()
+    {
+        if (carrySpeedPending <= 0f || agent == null || !agent.isOnNavMesh)
+            return;
+
+        if (agent.pathPending)
+            return;
+
+        float carry = carrySpeedPending;
+        carrySpeedPending = 0f;
+
+        if (!agent.hasPath || agent.isStopped)
+            return;
+
+        Vector3 direction = agent.steeringTarget - transform.position;
+        direction.y = 0f;
+        if (direction.sqrMagnitude < 0.0001f)
+            return;
+
+        Vector3 current = agent.velocity;
+        current.y = 0f;
+        if (current.magnitude >= carry)
+            return;
+
+        agent.velocity = direction.normalized * carry;
     }
 
     void CancelUnityRepath()

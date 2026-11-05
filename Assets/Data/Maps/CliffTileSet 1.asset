@@ -20,8 +20,9 @@ MonoBehaviour:
   outerCorner: {fileID: 2631841845138031280, guid: a81b53819a4684343a3a154c49d7038a, type: 3}
   innerCorner: {fileID: 2699405105762726840, guid: 14f30b825e3d6044fa3636cbb5b1bec0, type: 3}
   ramp: {fileID: 0}
-  tileSize: 7.9
+  tileSize: 8
   cliffHeight: 0
+  layerStepHeight: 0
   topHeightOffset: -1.2
   edgeHeightOffset: -6
   straightYawOffset: 90

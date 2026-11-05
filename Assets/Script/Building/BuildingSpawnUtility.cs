@@ -162,6 +162,7 @@ public static class BuildingSpawnUtility
                 producer = buildingObject.AddComponent<ProductionBuilding>();
 
             producer.SetMaxPopulation(productionData.maxPopulation);
+            producer.SetProductionSpeed(productionData.productionSpeedMultiplier, productionData.keepWattCostPerUnit);
             producer.SetRecipeOptions(productionData.Recipes, productionData.GetDefaultRecipe());
             producer.BeginProduction();
             return;

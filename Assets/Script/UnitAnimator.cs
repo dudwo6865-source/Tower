@@ -38,6 +38,13 @@ public class UnitAnimator : MonoBehaviour
     [Tooltip("이동 애니메이션이 없는 유닛(타워 등)은 끄세요.")]
     public bool useMoveAnimation = true;
 
+    [Label("이동 유지 시간")]
+    [Tooltip("속도가 잠깐 '이동 판정 속도' 아래로 떨어져도 이 시간(초) 동안은 직전 이동 속도를 유지합니다. " +
+        "추격 중 목적지를 갱신할 때 한 프레임 멈칫해서 Move 애니메이션이 처음부터 다시 재생되는 것을 막습니다. " +
+        "멈출 때 Idle 전환이 늦게 느껴지면 줄이세요.")]
+    [Min(0f)]
+    public float moveHoldTime = 0.2f;
+
     [Header("공격 재생")]
     [Label("공격 상태 이름")]
     [Tooltip("기본 레이어의 공격 상태 이름입니다. 이벤트 공격 중에는 이 상태가 끝날 때까지 이동 애니메이션 전환과 재공격을 막습니다.")]
@@ -77,6 +84,8 @@ public class UnitAnimator : MonoBehaviour
     private float attackingUntil;
 
     private bool isDead;
+    private float lastMovingSpeed;
+    private float lastMovingTime = float.NegativeInfinity;
 
     public bool IsDead => isDead;
 
@@ -143,6 +152,7 @@ public class UnitAnimator : MonoBehaviour
         if (bossSkills != null && bossSkills.IsActive)
         {
             PrepareForSkill();
+            lastMovingTime = float.NegativeInfinity;
             return;
         }
         // 경로를 따라 이동을 시작했으면(이동 명령·추격) 유지 시간을 기다리지 않고 바로 끈다.
@@ -172,6 +182,17 @@ public class UnitAnimator : MonoBehaviour
 
             lastAnimatedPosition = transform.position;
             hasAnimatedPosition = true;
+        }
+
+        // 경로 갱신 순간의 짧은 정지는 무시하고 직전 이동 속도를 유지한다.
+        if (speed >= moveSpeedThreshold)
+        {
+            lastMovingSpeed = speed;
+            lastMovingTime = Time.time;
+        }
+        else if (Time.time - lastMovingTime < moveHoldTime)
+        {
+            speed = lastMovingSpeed;
         }
 
         UnitAttacker attacker = ResolveAttacker();
@@ -248,6 +269,21 @@ public class UnitAnimator : MonoBehaviour
     public void OnAttackFire()
     {
         OnAttackHit();
+    }
+
+    // 애니메이션 클립 이벤트(한글 이름): 타격 프레임에 피해/투사체를 적용한다. OnAttackHit과 같다.
+    public void 공격()
+    {
+        OnAttackHit();
+    }
+
+    // 애니메이션 클립 이벤트(한글 이름): 공격 사운드를 낸다. '애니메이션 이벤트로 공격 사운드'가 켜져 있을 때만 동작한다.
+    public void 공격사운드()
+    {
+        if (isDead)
+            return;
+
+        ResolveAttacker()?.PlayAttackSoundFromEvent();
     }
 
     // Animator가 자식 모델에 있으면 공격 애니메이션 이벤트가 이 컴포넌트에 닿지 않으므로

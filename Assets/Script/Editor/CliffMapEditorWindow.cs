@@ -12,8 +12,6 @@ public class CliffMapEditorWindow : EditorWindow
     {
         PaintTop,
         EraseTop,
-        PaintRamp,
-        EraseRamp,
         PlaceHill,
         EraseHill,
         PaintGround,
@@ -22,7 +20,6 @@ public class CliffMapEditorWindow : EditorWindow
 
     CliffPainter painter;
     BrushMode brushMode = BrushMode.PaintTop;
-    int rampDirection = 0;
     int brushSize = 1;
     int groundFillSize = 5;
     float hillPickHeight = float.NaN;
@@ -46,8 +43,6 @@ public class CliffMapEditorWindow : EditorWindow
     // false면 씬 뷰 클릭/드래그를 가로채지 않아 다른 오브젝트 작업 가능
     bool paintEnabled = true;
 
-    static readonly string[] RampDirectionLabels = { "북 (+Z)", "동 (+X)", "남 (-Z)", "서 (-X)" };
-
     [MenuItem("Tools/맵/맵 생성기")]
     static void Open()
     {
@@ -61,6 +56,7 @@ public class CliffMapEditorWindow : EditorWindow
         titleContent = new GUIContent("맵 생성기");
         SceneView.duringSceneGui += OnSceneGUI;
         Undo.undoRedoPerformed += OnUndoRedo;
+        EditorApplication.hierarchyChanged += OnHierarchyChanged;
         AutoFindPainter();
         if (painter != null)
         {
@@ -73,8 +69,26 @@ public class CliffMapEditorWindow : EditorWindow
     {
         SceneView.duringSceneGui -= OnSceneGUI;
         Undo.undoRedoPerformed -= OnUndoRedo;
+        EditorApplication.hierarchyChanged -= OnHierarchyChanged;
 
         FinishStroke();
+    }
+
+    // 스테이지 에디터로 맵을 치우고 다시 꺼내면 예전 맵 지형이 사라져 연결이 끊긴다.
+    // 창을 다시 열지 않아도 새로 꺼낸 맵의 지형을 자동으로 잡는다.
+    void OnHierarchyChanged()
+    {
+        if (painter != null)
+            return;
+
+        painting = false;
+        strokeUndoGroup = -1;
+        ReleaseStrokeControl();
+        AutoFindPainter();
+        if (painter != null)
+            CliffPainterUndo.Track(painter);
+        Repaint();
+        SceneView.RepaintAll();
     }
 
     void OnUndoRedo()
@@ -108,7 +122,7 @@ public class CliffMapEditorWindow : EditorWindow
         EditorGUILayout.HelpBox(
             "• Paint Top: -8층~9층 선택 / Place Hill: 벽의 층 자동 감지\n" +
             "• 2층+ Top: 아랫층 가장자리 한 칸 안쪽만 (In 코너 Top 위 제외) / Hill: 해당 층 Top 가장자리\n" +
-            "• 새 Top은 바닥이 있는 칸에만 배치 / 기존 Top은 높이 변경 가능\n" +
+            "• 새 Top은 바닥이나 언덕이 있는 칸에 배치 / 기존 Top은 높이 변경 가능\n" +
             "• 1층 Top/Hill 칠하면 Ground 대체, 실행 취소하면 원래 바닥 복구\n" +
             "• 월 슬롯은 Ground 데이터는 유지하되 Ground 메시는 Top처럼 생략\n" +
             "• 페인트 OFF(B): 창을 켠 채로 다른 오브젝트 작업",
@@ -232,7 +246,7 @@ public class CliffMapEditorWindow : EditorWindow
             if (brushMode == BrushMode.EraseGround)
             {
                 EditorGUILayout.HelpBox(
-                    "Ground 지우개: 해당 칸의 Top / Hill / Ramp / Ground를 모두 지웁니다.",
+                    "Ground 지우개: 해당 칸의 Top / Hill / Ground를 모두 지웁니다.",
                     MessageType.Info);
             }
         }
@@ -241,13 +255,10 @@ public class CliffMapEditorWindow : EditorWindow
         {
             EditorGUILayout.HelpBox(
                 paintTopLayer <= 0
-                    ? "Top 지우개: 선택 칸을 바닥으로 바꾸고 주변 8칸의 Top을 벽·코너 자리로 바꿉니다. 기존 바닥은 유지하며 타일 크기는 변경하지 않습니다."
-                    : $"Top 지우개: {paintTopLayer + 1}층 이상을 지우고 주변 8칸의 같은 층 Top을 벽·코너 자리로 바꿉니다. 아랫층은 유지합니다.",
+                    ? "Top 지우개: 선택 칸을 바닥으로 바꾸고 주변 8칸의 Top을 벽·코너 자리로 바꿉니다. 벽·코너·언덕을 찍어도 같은 규칙으로 경계가 물러납니다. 기존 바닥은 유지하며 타일 크기는 변경하지 않습니다."
+                    : $"Top 지우개: {paintTopLayer + 1}층 이상을 지우고 주변 8칸의 같은 층 Top을 벽·코너 자리로 바꿉니다. 벽·코너·언덕을 찍어도 같은 규칙으로 경계가 물러납니다. 아랫층은 유지합니다.",
                 MessageType.Info);
         }
-
-        if (brushMode == BrushMode.PaintRamp || brushMode == BrushMode.EraseRamp)
-            rampDirection = EditorGUILayout.Popup("램프 방향", rampDirection, RampDirectionLabels);
 
         if (brushMode == BrushMode.PlaceHill || brushMode == BrushMode.EraseHill)
         {
@@ -267,11 +278,14 @@ public class CliffMapEditorWindow : EditorWindow
         EditorGUILayout.LabelField($"Top 셀: {painter.TopCount}");
         EditorGUILayout.LabelField($"바닥: {(painter.groundCells != null ? painter.groundCells.Count : 0)}");
         EditorGUILayout.LabelField($"언덕: {(painter.hills != null ? painter.hills.Count : 0)}");
-        EditorGUILayout.LabelField($"램프: {(painter.ramps != null ? painter.ramps.Count : 0)}");
 
         EditorGUILayout.BeginHorizontal();
         if (GUILayout.Button("지금 재생성", GUILayout.Height(28f)))
             RebuildNow();
+        if (GUILayout.Button(new GUIContent("맵 중심을 원점으로",
+                "칠한 칸이 그리드 원점을 중심으로 오도록 칸 좌표를 옮기고, 그리드 원점을 (0, 높이, 0)·맵 루트를 원점으로 맞춘 뒤 다시 생성합니다. 맵 루트 아래 다른 오브젝트도 지형과 함께 옮깁니다."),
+                GUILayout.Height(28f)))
+            CenterMapOnOrigin();
         EditorGUILayout.EndHorizontal();
 
         EditorGUILayout.BeginHorizontal();
@@ -279,7 +293,7 @@ public class CliffMapEditorWindow : EditorWindow
         {
             if (EditorUtility.DisplayDialog(
                     "맵 생성기",
-                    "바닥(Ground)은 남기고 Top / Hill / 램프만 지울까요?",
+                    "바닥(Ground)은 남기고 Top / Hill만 지울까요?",
                     "지우기",
                     "취소"))
             {
@@ -294,7 +308,7 @@ public class CliffMapEditorWindow : EditorWindow
 
         if (GUILayout.Button("전부 지우기", GUILayout.Height(28f)))
         {
-            if (EditorUtility.DisplayDialog("맵 생성기", "모든 Top/바닥/언덕/램프를 지울까요?", "지우기", "취소"))
+            if (EditorUtility.DisplayDialog("맵 생성기", "모든 Top/바닥/언덕을 지울까요?", "지우기", "취소"))
             {
                 FinishStroke();
                 int group = CliffPainterUndo.Begin(painter, "전체 지형 지우기");
@@ -348,25 +362,25 @@ public class CliffMapEditorWindow : EditorWindow
     void DrawBrushModeToolbars()
     {
         int row1 = GUILayout.Toolbar(
-            (int)brushMode <= 3 ? (int)brushMode : -1,
-            new[] { "Top 칠하기", "Top 지우기", "램프", "램프 지우기" });
+            (int)brushMode <= 1 ? (int)brushMode : -1,
+            new[] { "Top 칠하기", "Top 지우기" });
 
         if (row1 >= 0)
             brushMode = (BrushMode)row1;
 
         int row2 = GUILayout.Toolbar(
-            (int)brushMode >= 4 && (int)brushMode <= 5 ? (int)brushMode - 4 : -1,
+            (int)brushMode >= 2 && (int)brushMode <= 3 ? (int)brushMode - 2 : -1,
             new[] { "언덕 배치", "언덕 지우기" });
 
         if (row2 >= 0)
-            brushMode = (BrushMode)(row2 + 4);
+            brushMode = (BrushMode)(row2 + 2);
 
         int row3 = GUILayout.Toolbar(
-            (int)brushMode >= 6 ? (int)brushMode - 6 : -1,
+            (int)brushMode >= 4 ? (int)brushMode - 4 : -1,
             new[] { "바닥 칠하기", "바닥 지우기" });
 
         if (row3 >= 0)
-            brushMode = (BrushMode)(row3 + 6);
+            brushMode = (BrushMode)(row3 + 4);
     }
 
     void CreatePainterInScene()
@@ -535,16 +549,6 @@ public class CliffMapEditorWindow : EditorWindow
                     e.Use();
                 }
                 break;
-
-            case EventType.KeyDown:
-                if (e.keyCode == KeyCode.R &&
-                    (brushMode == BrushMode.PaintRamp || brushMode == BrushMode.EraseRamp))
-                {
-                    rampDirection = (rampDirection + 1) % 4;
-                    Repaint();
-                    e.Use();
-                }
-                break;
         }
     }
 
@@ -577,8 +581,6 @@ public class CliffMapEditorWindow : EditorWindow
         {
             BrushMode.PaintTop => new Color(0.2f, 1f, 0.4f, 0.35f),
             BrushMode.EraseTop => new Color(1f, 0.3f, 0.2f, 0.35f),
-            BrushMode.PaintRamp => new Color(1f, 0.85f, 0.2f, 0.4f),
-            BrushMode.EraseRamp => new Color(1f, 0.5f, 0.1f, 0.35f),
             BrushMode.PlaceHill => new Color(0.3f, 0.75f, 1f, 0.4f),
             BrushMode.EraseHill => new Color(1f, 0.4f, 0.7f, 0.35f),
             BrushMode.PaintGround => new Color(0.7f, 0.5f, 0.25f, 0.4f),
@@ -589,9 +591,7 @@ public class CliffMapEditorWindow : EditorWindow
         bool useEdgeHeight = IsHillBrush() || IsGroundBrush();
         float previewY = useEdgeHeight
             ? painter.GetEdgeSurfaceHeight(IsHillBrush() ? paintTopLayer : 0) + 0.2f
-            : brushMode == BrushMode.PaintTop || brushMode == BrushMode.EraseTop
-                ? painter.GetTopSurfaceHeight(paintTopLayer) + 0.2f
-                : painter.GetTopSurfaceHeight(0) + 0.2f;
+            : painter.GetTopSurfaceHeight(paintTopLayer) + 0.2f;
 
         if (painting && strokePreviewList.Count > 0)
         {
@@ -701,38 +701,19 @@ public class CliffMapEditorWindow : EditorWindow
             return true;
         }
 
-        if (brushMode == BrushMode.PaintTop || brushMode == BrushMode.EraseTop ||
-            brushMode == BrushMode.PlaceHill || brushMode == BrushMode.EraseHill)
-        {
-            int next = Mathf.Clamp(brushSize + delta, 1, 5);
-            if (next == brushSize)
-                return false;
+        int resized = Mathf.Clamp(brushSize + delta, 1, IsGroundBrush() ? 16 : 5);
+        if (resized == brushSize)
+            return false;
 
-            brushSize = next;
-            return true;
-        }
-
-        if (IsGroundBrush())
-        {
-            int next = Mathf.Clamp(brushSize + delta, 1, 16);
-            if (next == brushSize)
-                return false;
-
-            brushSize = next;
-            return true;
-        }
-
-        return false;
+        brushSize = resized;
+        return true;
     }
 
     int GetStampSize()
     {
         if (IsGroundFillBrush())
             return Mathf.Max(1, groundFillSize);
-        if (IsGroundBrush() || brushMode == BrushMode.PaintTop || brushMode == BrushMode.EraseTop ||
-            brushMode == BrushMode.PlaceHill || brushMode == BrushMode.EraseHill)
-            return Mathf.Max(1, brushSize);
-        return 1;
+        return Mathf.Max(1, brushSize);
     }
 
     void DrawCellPreview(
@@ -778,7 +759,6 @@ public class CliffMapEditorWindow : EditorWindow
         bool missingPrefab = painter.tileSet == null ||
             (brushMode == BrushMode.PaintTop && painter.tileSet.top == null) ||
             (brushMode == BrushMode.PaintGround && painter.tileSet.ground == null) ||
-            (brushMode == BrushMode.PaintRamp && painter.tileSet.ramp == null) ||
             (brushMode == BrushMode.PlaceHill && (painter.hillTileSet == null || painter.hillTileSet.hill == null));
         if (missingPrefab)
         {
@@ -897,10 +877,6 @@ public class CliffMapEditorWindow : EditorWindow
                 return painter.TryAddTop(cell, paintTopLayer);
             case BrushMode.EraseTop:
                 return painter.TryRemoveTop(cell, paintTopLayer);
-            case BrushMode.PaintRamp:
-                return painter.TrySetRamp(cell, rampDirection);
-            case BrushMode.EraseRamp:
-                return painter.TryRemoveRamp(cell, rampDirection);
             case BrushMode.PlaceHill:
                 return painter.TryFindHillLayer(cell, hillPickHeight, out int layer) && painter.TryAddHill(cell, layer);
             case BrushMode.EraseHill:
@@ -924,7 +900,9 @@ public class CliffMapEditorWindow : EditorWindow
         cell = default;
         Ray ray = HandleUtility.GUIPointToWorldRay(e.mousePosition);
         hillPickHeight = float.NaN;
-        if (IsHillBrush() && painter.generatedRoot != null)
+        // 높이 있는 벽·언덕은 저지대 평면으로 찍으면 뒤쪽 칸이 잡히므로 Top 브러시도 표면을 찍는다.
+        if ((IsHillBrush() || brushMode == BrushMode.PaintTop || brushMode == BrushMode.EraseTop) &&
+            painter.generatedRoot != null)
         {
             // 다른 씬 오브젝트는 제외하고 생성된 절벽의 실제 표면을 찾는다.
             RaycastHit[] hits = Physics.RaycastAll(ray);
@@ -953,6 +931,146 @@ public class CliffMapEditorWindow : EditorWindow
         Vector3 hit = ray.origin + ray.direction * t;
         cell = painter.WorldToCell(hit);
         return true;
+    }
+
+    // 칠한 칸을 그리드 원점 중심으로 옮기고 그리드 원점과 맵 루트를 월드 원점에 맞춘다.
+    // 다른 오브젝트는 실제 타일이 옮겨진 양만큼 함께 옮겨 지형과의 상대 위치를 유지한다.
+    void CenterMapOnOrigin()
+    {
+        FinishStroke();
+        if (!painter.TryGetPaintedCellBounds(out CliffPainter.CellCoord min, out CliffPainter.CellCoord max))
+        {
+            EditorUtility.DisplayDialog("맵 생성기", "칠한 칸이 없습니다.", "확인");
+            return;
+        }
+
+        int width = max.x - min.x + 1;
+        int depth = max.z - min.z + 1;
+        int dx = -(min.x + width / 2);
+        int dz = -(min.z + depth / 2);
+        string oddNote = width % 2 == 1 || depth % 2 == 1
+            ? $"\n\n칸 수가 홀수인 방향({(width % 2 == 1 ? "X" : "")}{(depth % 2 == 1 ? "Z" : "")})은 정중앙이 타일 가운데라 중심이 반 칸({painter.TileSize * 0.5f:0.##}m) 어긋납니다."
+            : "";
+
+        if (!EditorUtility.DisplayDialog(
+                "맵 생성기",
+                $"칠한 범위 {width}×{depth}칸의 중심을 그리드 원점으로 옮기고, 그리드 원점을 (0, {painter.gridOrigin.y:0.##}, 0)으로 맞춥니다.\n\n" +
+                "맵 루트는 원점으로 옮기고, 루트 아래 다른 오브젝트(본부 마커·둥지 등)는 지형과 같은 양만큼 함께 옮깁니다. " +
+                "프리팹 인스턴스에서 실행했다면 원본 프리팹의 루트 위치도 원점으로 바로 저장합니다(이 부분은 실행 취소되지 않습니다). " +
+                "나머지 변경은 끝난 뒤 Apply하세요." + oddNote,
+                "옮기기",
+                "취소"))
+        {
+            return;
+        }
+
+        Transform root = FindMapRoot();
+        Transform terrain = painter.EnsureGeneratedRoot();
+        bool hadTerrain = TryGetRendererBounds(terrain, out Bounds before);
+        List<Transform> others = CollectMapObjects(root, terrain);
+
+        int group = CliffPainterUndo.Begin(painter, "맵 중심을 원점으로");
+        Undo.RecordObject(root, "맵 중심을 원점으로");
+        Undo.RecordObject(terrain, "맵 중심을 원점으로");
+        foreach (Transform other in others)
+            Undo.RecordObject(other, "맵 중심을 원점으로");
+
+        // 루트와 생성 부모를 원점에 두어야 MapLoader가 원점에 만들 때도 위치가 그대로 유지된다.
+        var positions = new Vector3[others.Count];
+        var rotations = new Quaternion[others.Count];
+        for (int i = 0; i < others.Count; i++)
+        {
+            positions[i] = others[i].position;
+            rotations[i] = others[i].rotation;
+        }
+        root.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+        terrain.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+
+        painter.ShiftCells(dx, dz);
+        painter.gridOrigin = new Vector3(0f, painter.gridOrigin.y, 0f);
+        RebuildNow();
+
+        Vector3 delta = hadTerrain && TryGetRendererBounds(terrain, out Bounds after)
+            ? after.center - before.center : Vector3.zero;
+        for (int i = 0; i < others.Count; i++)
+            others[i].SetPositionAndRotation(positions[i] + delta, rotations[i]);
+
+        MarkDirty();
+        CliffPainterUndo.End(group);
+        bool assetRootFixed = ResetPrefabAssetRoot(root);
+        SceneView.RepaintAll();
+        ShowNotification(new GUIContent(assetRootFixed
+            ? "맵 중심을 원점으로 옮겼습니다. 원본 프리팹 루트도 원점으로 저장했습니다. 나머지는 Apply하세요."
+            : "맵 중심을 원점으로 옮겼습니다."));
+    }
+
+    // 프리팹 인스턴스 루트의 위치·회전은 Apply되지 않으므로 원본 프리팹의 루트만 직접 원점으로 저장한다.
+    // 자식의 로컬 위치는 건드리지 않아 씬에서 맞춘 배치가 Apply 후 그대로 원점 기준이 된다.
+    static bool ResetPrefabAssetRoot(Transform root)
+    {
+        if (!PrefabUtility.IsOutermostPrefabInstanceRoot(root.gameObject))
+            return false;
+
+        string path = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(root.gameObject);
+        if (string.IsNullOrEmpty(path))
+            return false;
+
+        GameObject contents = PrefabUtility.LoadPrefabContents(path);
+        try
+        {
+            Transform assetRoot = contents.transform;
+            if (assetRoot.localPosition == Vector3.zero && assetRoot.localRotation == Quaternion.identity)
+                return false;
+
+            assetRoot.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
+            PrefabUtility.SaveAsPrefabAsset(contents, path, out bool saved);
+            return saved;
+        }
+        finally
+        {
+            PrefabUtility.UnloadPrefabContents(contents);
+        }
+    }
+
+    Transform FindMapRoot()
+    {
+        MapRoot mapRoot = painter.GetComponentInParent<MapRoot>(true);
+        return mapRoot != null ? mapRoot.transform : painter.transform;
+    }
+
+    // 맵 루트 아래에서 지형 폴더와 맵 생성기 오브젝트 자신을 뺀 나머지 최상위 오브젝트를 모은다.
+    List<Transform> CollectMapObjects(Transform root, Transform terrain)
+    {
+        var result = new List<Transform>();
+        var queue = new Queue<Transform>();
+        queue.Enqueue(root);
+        while (queue.Count > 0)
+        {
+            Transform parent = queue.Dequeue();
+            foreach (Transform child in parent)
+            {
+                if (child == terrain)
+                    continue;
+                // 맵 생성기가 붙은 오브젝트(또는 그 조상)는 옮기지 않고 그 아래 오브젝트만 옮긴다.
+                if (painter.transform == child || painter.transform.IsChildOf(child))
+                    queue.Enqueue(child);
+                else
+                    result.Add(child);
+            }
+        }
+        return result;
+    }
+
+    static bool TryGetRendererBounds(Transform parent, out Bounds bounds)
+    {
+        bounds = default;
+        bool found = false;
+        foreach (Renderer renderer in parent.GetComponentsInChildren<Renderer>(true))
+        {
+            if (!found) { bounds = renderer.bounds; found = true; }
+            else bounds.Encapsulate(renderer.bounds);
+        }
+        return found;
     }
 
     void RebuildNow()

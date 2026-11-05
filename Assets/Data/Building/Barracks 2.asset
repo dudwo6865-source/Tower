@@ -25,6 +25,8 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 23b4c6212115de34b9e4e729285cc21e, type: 2}
   - {fileID: 11400000, guid: 54f95678114ede84ebc9339c1832aea4, type: 2}
   defaultRecipeIndex: 0
+  productionSpeedMultiplier: 1.1
+  keepWattCostPerUnit: 1
   upgradeOptions:
   - tier: {fileID: 11400000, guid: d1682e307c4b5cd49b9d5e57a2b8c705, type: 2}
     wattCost: 150

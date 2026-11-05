@@ -31,6 +31,18 @@ public class AnimationEventRelay : MonoBehaviour
         ResolveTarget()?.OnAttackHit();
     }
 
+    // 애니메이션 클립 이벤트(한글 이름): 타격 프레임에 피해/투사체를 적용한다.
+    public void 공격()
+    {
+        ResolveTarget()?.공격();
+    }
+
+    // 애니메이션 클립 이벤트(한글 이름): 공격 사운드를 낸다.
+    public void 공격사운드()
+    {
+        ResolveTarget()?.공격사운드();
+    }
+
     UnitAnimator ResolveTarget()
     {
         if (target == null)

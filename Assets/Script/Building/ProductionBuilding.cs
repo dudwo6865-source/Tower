@@ -23,6 +23,15 @@ public class ProductionBuilding : MonoBehaviour
     [Tooltip("생산 중에 레시피를 바꿨을 때 진행 비율을 유지합니다. 끄면 진행도가 0부터 다시 시작합니다(이미 쓴 Watt는 돌려받지 않음).")]
     public bool keepProgressOnRecipeChange;
 
+    [Label("생산 속도 배율")]
+    [Tooltip("유닛 생산 속도 배율입니다. 1.5면 생산 시간이 1/1.5로 줄어듭니다. 배치 데이터로 지은 건물은 데이터 값으로 덮어씁니다.")]
+    [Min(0.1f)]
+    public float productionSpeedMultiplier = 1f;
+
+    [Label("유닛당 Watt 비용 유지")]
+    [Tooltip("켜면 빨라진 만큼 초당 Watt 소모도 늘려 유닛 한 기에 드는 Watt는 그대로 둡니다. 배치 데이터로 지은 건물은 데이터 값으로 덮어씁니다.")]
+    public bool keepWattCostPerUnit = true;
+
     [Label("생산 일시정지")]
     [Tooltip("켜져 있으면 생산 진행과 Watt 소모를 멈춥니다. 진행도는 그대로 유지됩니다. 생산 패널의 일시정지 버튼으로도 바꿀 수 있습니다.")]
     public bool isPaused;
@@ -81,10 +90,16 @@ public class ProductionBuilding : MonoBehaviour
         }
     }
 
+    float GetEffectiveSpawnInterval() => GetEffectiveSpawnInterval(recipe);
+
+    // 건물 생산 속도 배율을 먼저 적용하고, 그 위에 유물 보너스를 얹는다.
     // U04 자동 생산 모듈: 생산 간격(시간)이 아니라 초당 생산 횟수(rate) 기준으로 적용한다.
-    float GetEffectiveSpawnInterval()
+    public float GetEffectiveSpawnInterval(ProductionRecipe target)
     {
-        float interval = recipe.spawnInterval;
+        if (target == null)
+            return 0f;
+
+        float interval = target.spawnInterval / SpeedMultiplier;
 
         if (RelicManager.Instance == null || selectableEntity == null || interval <= 0f)
             return interval;
@@ -234,7 +249,7 @@ public class ProductionBuilding : MonoBehaviour
 
     // 생산 중일 때 초당 소모하는 Watt입니다. 소모 대상이 아니면 0입니다.
     public float WattCostPerSecond =>
-        recipe != null && ConsumesWatt() ? Mathf.Max(0f, recipe.wattCostPerSecond) : 0f;
+        recipe != null && ConsumesWatt() ? GetWattCostPerSecond(recipe) : 0f;
 
     // 지금 실제로 소모 중인 초당 Watt입니다. 생산 중이 아니면 0입니다.
     public float CurrentWattDrainPerSecond => IsProducing ? WattCostPerSecond : 0f;
@@ -395,6 +410,7 @@ public class ProductionBuilding : MonoBehaviour
             target.SetRallyPoint(rallyPointWorld);
 
         target.SetPaused(isPaused);
+        target.tierBasePopulation = BaseMaxPopulation;
 
         if (recipe != null && target.HasRecipeOption(recipe) && target.IsRecipeUnlocked(recipe))
             target.SetRecipe(recipe);
@@ -420,6 +436,42 @@ public class ProductionBuilding : MonoBehaviour
     public void SetMaxPopulation(int value)
     {
         maxPopulation = Mathf.Max(0, value);
+    }
+
+    // 진행 중인 주기에는 다음 주기부터 반영된다.
+    public void SetProductionSpeed(float multiplier, bool keepWattPerUnit)
+    {
+        productionSpeedMultiplier = Mathf.Max(0.1f, multiplier);
+        keepWattCostPerUnit = keepWattPerUnit;
+    }
+
+    float SpeedMultiplier => Mathf.Max(0.1f, productionSpeedMultiplier);
+
+    // 건물 업그레이드로 교체되기 전 첫 단계의 최대 인구수입니다. 음수면 업그레이드된 적이 없다.
+    int tierBasePopulation = -1;
+
+    // 건물 단계·연구·유물 보너스를 빼기 전의 최대 인구수입니다. 0이면 무제한입니다.
+    // 업그레이드로 교체된 건물은 첫 단계 건물의 값을 기본으로 본다.
+    public int BaseMaxPopulation => tierBasePopulation > 0 ? tierBasePopulation : Mathf.Max(0, maxPopulation);
+
+    // 레시피 기본 생산 속도 대비 증가율(%)입니다. 건물 생산 속도 배율과 유물 보너스를 합친 값입니다.
+    public float GetProductionSpeedBonusPercent(ProductionRecipe target)
+    {
+        if (target == null || target.spawnInterval <= 0f)
+            return 0f;
+
+        float interval = GetEffectiveSpawnInterval(target);
+        return interval > 0f ? (target.spawnInterval / interval - 1f) * 100f : 0f;
+    }
+
+    // 건물 생산 속도 배율을 반영한 레시피의 초당 Watt 소모량입니다.
+    public float GetWattCostPerSecond(ProductionRecipe target)
+    {
+        if (target == null)
+            return 0f;
+
+        float cost = Mathf.Max(0f, target.wattCostPerSecond);
+        return keepWattCostPerUnit ? cost * SpeedMultiplier : cost;
     }
 
     public void SetPaused(bool paused)

@@ -410,7 +410,27 @@ public partial class StageEditorWindow : EditorWindow
 
         EditorGUILayout.EndHorizontal();
 
+        DrawMapRootOffsetWarning();
         DrawSceneMapStatus(sceneMaps);
+    }
+
+    // 루트가 원점이 아니면 원점에 만들 때 지형이 맵 생성기 격자와 어긋난다.
+    void DrawMapRootOffsetWarning()
+    {
+        if (selected.mapRootPrefab == null)
+            return;
+
+        Transform root = selected.mapRootPrefab.transform;
+        if (root.localPosition == Vector3.zero && root.localRotation == Quaternion.identity)
+            return;
+
+        Vector3 p = root.localPosition;
+        EditorGUILayout.HelpBox(
+            $"맵 프리팹 루트가 원점이 아닌 ({p.x:0.##}, {p.y:0.##}, {p.z:0.##})에 저장돼 있습니다. " +
+            "씬에 꺼내거나 플레이하면 루트가 원점에 만들어져 지형이 맵 생성기 격자와 어긋납니다. " +
+            "루트 위치는 씬에서 바꿔도 프리팹에 Apply되지 않습니다. " +
+            "씬에서 맞춘 배치를 Apply한 뒤, 프리팹을 열어 루트의 Position·Rotation을 0으로 바꿔 저장하세요.",
+            MessageType.Warning);
     }
 
     void DrawSceneMapStatus(MapRoot[] sceneMaps)
@@ -1081,7 +1101,7 @@ public partial class StageEditorWindow : EditorWindow
 
             if (selected.winByDefeatingBoss)
             {
-                EditorGUILayout.HelpBox("맵 루트 아래에 보스 둥지(BossNest)를 하나 배치하세요. 둥지에서 보스 프리팹, 첫 출격 밤, 후퇴 피해 비율과 피해 감소율을 설정합니다.", MessageType.Info);
+                EditorGUILayout.HelpBox("맵 루트 아래에 보스 둥지(BossNest)를 하나 배치하세요. 둥지에서 보스 프리팹, 첫 출격 밤, 후퇴 피해 비율과 둥지 체력 회복을 설정합니다.", MessageType.Info);
                 if (selected.winBySurvivingNights || selected.winWhenAllSpawnersDestroyed || selected.winByCapturingPoint)
                     EditorGUILayout.HelpBox("다른 조건으로 먼저 승리할 수 있습니다. 보스 전용 미션은 다른 승리 조건을 끄세요.", MessageType.Warning);
                 if (selected.mapRootPrefab != null)

@@ -5,6 +5,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 // 등록한 스테이지마다 미션 항목을 만들고 선택한 스테이지로 출발한다.
+// 미션 이름은 스테이지 데이터(MapConfig)의 표시 이름을 그대로 쓴다.
 [DisallowMultipleComponent]
 public class MissionSelectionUI : MonoBehaviour
 {
@@ -15,9 +16,6 @@ public class MissionSelectionUI : MonoBehaviour
         [Label("미션 번호")]
         [Tooltip("비워두면 등록 순서대로 01, 02처럼 표시합니다.")]
         public string number;
-        [Label("표시 이름")]
-        [Tooltip("비워두면 스테이지 데이터의 표시 이름을 사용합니다.")]
-        public string displayName;
     }
 
     [Header("미션 등록")]
@@ -107,7 +105,7 @@ public class MissionSelectionUI : MonoBehaviour
                 visibleMissions.Add(mission);
                 bool unlocked = IsMissionUnlocked(index);
                 item.Bind(string.IsNullOrWhiteSpace(mission.number) ? (i + 1).ToString("00") : mission.number,
-                    string.IsNullOrWhiteSpace(mission.displayName) ? mission.stage.displayName : mission.displayName,
+                    mission.stage.displayName,
                     CreditWallet.GetBestStars(mission.stage.StageId), () => SelectMission(index), unlocked);
                 item.gameObject.SetActive(true);
                 if (unlocked && mission.stage == previous && selectedIndex < 0) selectedIndex = index;

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.UI;
@@ -105,6 +106,25 @@ public class FogOfWarManager : MonoBehaviour
     [Label("고지대 지형 안내 거리")]
     [Tooltip("시야 방향을 따라 고지대 가장자리 안쪽과, 밝혀진 경사면 주변의 고지대 지형을 보여줄 거리입니다. 유닛의 시야 반경 안에서만 적용하며 적·건물 발견 범위는 늘리지 않습니다. 0이면 표시하지 않습니다.")]
     [Min(0f)] public float highGroundTerrainRevealDistance = 4f;
+
+    [Label("경사면에서 고지대 시야")]
+    [Tooltip("켜면 경사를 오르는 중인 유닛은 그 경사가 이어지는 꼭대기 높이 쪽으로 올라선 것처럼 시야를 계산해 언덕 위를 봅니다. 경사 여부와 꼭대기는 유닛 발밑의 NavMesh를 따라 찾으므로 맵 타일 종류와 상관없이 동작합니다. 절벽 밑 평지처럼 NavMesh가 끊긴 곳에서는 적용하지 않습니다.")]
+    public bool raiseVisionOnHill = true;
+    [Label("경사면 시야 올림 비율")]
+    [Tooltip("경사면 위 유닛의 시야 높이를 꼭대기 쪽으로 올리는 비율입니다. 1이면 경사면에 발을 딛자마자 꼭대기에 선 것처럼 보고, 0.5면 남은 높이의 절반만큼 올립니다. 0이면 올리지 않습니다.")]
+    [Range(0f, 1f)] public float hillVisionRaiseRatio = 1f;
+    [Label("경사면 꼭대기 탐색 거리")]
+    [Tooltip("유닛 주변에서 NavMesh를 따라 끊김 없이 올라갈 수 있는 가장 높은 지면을 이 거리(미터) 안에서 찾습니다. 경사면 길이 정도로 잡으세요.")]
+    [Min(0.5f)] public float hillTopSearchDistance = 10f;
+    [Label("경사면 탐색 간격")]
+    [Tooltip("경사 판정과 꼭대기 탐색에서 NavMesh를 확인하는 간격(미터)입니다. 작을수록 정확하지만 계산이 늘어납니다.")]
+    [Min(0.1f)] public float hillProbeStep = 1.5f;
+    [Label("경사 판정 최소 기울기")]
+    [Tooltip("발밑 앞뒤의 높이 차가 '탐색 간격 × 이 값' 이상이면 경사에 있다고 봅니다(높이/거리). 평지의 작은 굴곡에 반응하면 올리세요.")]
+    [Min(0.01f)] public float hillMinGrade = 0.15f;
+    [Label("경사면 시야 디버그 로그")]
+    [Tooltip("켜면 플레이어 시야 주인의 지면 높이와 올린 시야 높이가 바뀔 때마다 콘솔에 남깁니다. 확인이 끝나면 끕니다.")]
+    public bool logHillVision;
 
     [Label("시야 주인 지면 탐색 거리")]
     [Tooltip("유닛·건물이 서 있는 지면 높이를 찾을 때, 실제 위치에서 가장 가까운 NavMesh를 이 거리(미터) 안에서 찾습니다. 못 찾으면 그 자리의 가장 높은 표면을 씁니다. 너무 크게 잡을 필요는 없습니다.")]
@@ -1198,6 +1218,101 @@ public class FogOfWarManager : MonoBehaviour
         }
     }
 
+    static readonly Vector3[] HillProbeDirections =
+    {
+        new Vector3(1f, 0f, 0f), new Vector3(0.7071f, 0f, 0.7071f),
+        new Vector3(0f, 0f, 1f), new Vector3(-0.7071f, 0f, 0.7071f),
+        new Vector3(-1f, 0f, 0f), new Vector3(-0.7071f, 0f, -0.7071f),
+        new Vector3(0f, 0f, -1f), new Vector3(0.7071f, 0f, -0.7071f),
+    };
+
+    // from에서 direction으로 step만큼 떨어진 NavMesh 지면을 찾는다. 그 사이 NavMesh가 끊기면(절벽 등) 실패한다.
+    bool TryProbeHillGround(Vector3 from, Vector3 direction, float step, out Vector3 point)
+    {
+        point = from;
+        Vector3 target = from + direction * step;
+
+        if (!NavMesh.SamplePosition(target, out NavMeshHit hit, step * 1.5f, NavMesh.AllAreas))
+            return false;
+
+        float offsetX = hit.position.x - target.x;
+        float offsetZ = hit.position.z - target.z;
+        if (offsetX * offsetX + offsetZ * offsetZ > step * step * 0.25f)
+            return false;
+
+        if (NavMesh.Raycast(from, hit.position, out _, NavMesh.AllAreas))
+            return false;
+
+        point = hit.position;
+        return true;
+    }
+
+    // 발밑 앞뒤로 한쪽은 높고 반대쪽은 낮으면 경사 위로 본다. 경사 아래 평지·꼭대기 평지에서는 올리지 않는다.
+    bool IsOnHillSlope(Vector3 ground, float step)
+    {
+        float minRise = step * hillMinGrade;
+
+        for (int i = 0; i < HillProbeDirections.Length; i++)
+        {
+            if (!TryProbeHillGround(ground, HillProbeDirections[i], step, out Vector3 up) ||
+                up.y - ground.y < minRise)
+                continue;
+
+            if (TryProbeHillGround(ground, -HillProbeDirections[i], step, out Vector3 down) &&
+                ground.y - down.y >= minRise)
+                return true;
+        }
+
+        return false;
+    }
+
+    // 경사에 선 시야 주인은 NavMesh를 따라 이어진 꼭대기 쪽으로 높이를 올려 고지대 가림과 지평선을 판정한다.
+    Vector3 RaiseVisionOnHill(Vector3 groundPosition)
+    {
+        if (!raiseVisionOnHill || !enableElevationVision || hillVisionRaiseRatio <= 0f)
+            return groundPosition;
+
+        float step = Mathf.Max(0.1f, hillProbeStep);
+        if (!IsOnHillSlope(groundPosition, step))
+            return groundPosition;
+
+        float top = groundPosition.y;
+        int steps = Mathf.Max(1, Mathf.FloorToInt(hillTopSearchDistance / step));
+
+        for (int i = 0; i < HillProbeDirections.Length; i++)
+        {
+            Vector3 previous = groundPosition;
+
+            for (int s = 0; s < steps; s++)
+            {
+                if (!TryProbeHillGround(previous, HillProbeDirections[i], step, out Vector3 next))
+                    break;
+
+                top = Mathf.Max(top, next.y);
+                previous = next;
+            }
+        }
+
+        groundPosition.y = Mathf.Lerp(groundPosition.y, top, hillVisionRaiseRatio);
+        return groundPosition;
+    }
+
+    readonly Dictionary<FogOfWarVisionSource, string> hillVisionLogState = new Dictionary<FogOfWarVisionSource, string>();
+
+    // 같은 내용이면 다시 남기지 않아 로그가 쌓이지 않게 한다.
+    void LogHillVision(FogOfWarVisionSource source, Vector3 ground, Vector3 raised)
+    {
+        int x = WorldToGridX(ground.x);
+        int z = WorldToGridZ(ground.z);
+        string state = raised.y > ground.y + 0.05f
+            ? $"경사 ({x},{z}): 지면 {ground.y:0.0} → 시야 높이 {raised.y:0.0}"
+            : $"평지 ({x},{z}): 지면 {ground.y:0.0} / 높이맵 {SampleTerrainHeightAtCell(x, z):0.0}";
+        if (hillVisionLogState.TryGetValue(source, out string previous) && previous == state)
+            return;
+        hillVisionLogState[source] = state;
+        Debug.Log($"FogOfWarManager 경사면 시야: {source.name} — {state}", source);
+    }
+
     // 시야를 한 프레임에 모두 계산해 바로 반영한다(시작 시·RefreshVisionNow용).
     void UpdateFogTexture()
     {
@@ -1310,7 +1425,10 @@ public class FogOfWarManager : MonoBehaviour
         stamp.cells.Clear();
         stamp.terrainCells.Clear();
 
-        Vector3 groundPosition = source.GroundPosition;
+        Vector3 snappedGround = source.GroundPosition;
+        Vector3 groundPosition = RaiseVisionOnHill(snappedGround);
+        if (logHillVision)
+            LogHillVision(source, snappedGround, groundPosition);
         StampVision(groundPosition, radius, edgeSoftness, eyeHeight);
         StampTerrainAroundVisibleHills(groundPosition, radius, edgeSoftness);
 

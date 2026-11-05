@@ -13,6 +13,7 @@ public class UnitAttackerEditor : Editor
 
     SerializedProperty useAttackAnimationEvent;
     SerializedProperty restartAttackOnRetarget;
+    SerializedProperty useAttackSoundEvent;
 
     SerializedProperty projectileSpeed;
     SerializedProperty firePoint;
@@ -22,6 +23,11 @@ public class UnitAttackerEditor : Editor
     SerializedProperty flameMaxPitchAngle;
 
     SerializedProperty beamWidth;
+
+    SerializedProperty meleeAreaShape;
+    SerializedProperty meleeConeRange;
+    SerializedProperty meleeConeAngle;
+    SerializedProperty meleeConeMinDamageRatio;
 
     SerializedProperty minAttackRange;
     SerializedProperty useBallisticArc;
@@ -66,6 +72,7 @@ public class UnitAttackerEditor : Editor
 
         useAttackAnimationEvent = serializedObject.FindProperty("useAttackAnimationEvent");
         restartAttackOnRetarget = serializedObject.FindProperty("restartAttackOnRetarget");
+        useAttackSoundEvent = serializedObject.FindProperty("useAttackSoundEvent");
 
         projectileSpeed = serializedObject.FindProperty("projectileSpeed");
         firePoint = serializedObject.FindProperty("firePoint");
@@ -75,6 +82,11 @@ public class UnitAttackerEditor : Editor
         flameMaxPitchAngle = serializedObject.FindProperty("flameMaxPitchAngle");
 
         beamWidth = serializedObject.FindProperty("beamWidth");
+
+        meleeAreaShape = serializedObject.FindProperty("meleeAreaShape");
+        meleeConeRange = serializedObject.FindProperty("meleeConeRange");
+        meleeConeAngle = serializedObject.FindProperty("meleeConeAngle");
+        meleeConeMinDamageRatio = serializedObject.FindProperty("meleeConeMinDamageRatio");
 
         minAttackRange = serializedObject.FindProperty("minAttackRange");
         useBallisticArc = serializedObject.FindProperty("useBallisticArc");
@@ -130,11 +142,13 @@ public class UnitAttackerEditor : Editor
         bool showCannon = mixedType || type == AttackType.Cannon;
         bool showHitscan = mixedType || type == AttackType.Hitscan || type == AttackType.PiercingBeam;
         bool showBeam = mixedType || type == AttackType.PiercingBeam;
+        bool showMelee = mixedType || type == AttackType.Melee;
 
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("애니메이션", EditorStyles.boldLabel);
         EditorGUILayout.PropertyField(useAttackAnimationEvent);
         EditorGUILayout.PropertyField(restartAttackOnRetarget);
+        EditorGUILayout.PropertyField(useAttackSoundEvent);
 
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("발사 위치", EditorStyles.boldLabel);
@@ -156,6 +170,20 @@ public class UnitAttackerEditor : Editor
 
             if (flameAimPitch.hasMultipleDifferentValues || flameAimPitch.boolValue)
                 EditorGUILayout.PropertyField(flameMaxPitchAngle);
+        }
+
+        if (showMelee)
+        {
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("근접 범위", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(meleeAreaShape);
+
+            if (meleeAreaShape.hasMultipleDifferentValues || (MeleeAreaShape)meleeAreaShape.enumValueIndex == MeleeAreaShape.Cone)
+            {
+                EditorGUILayout.PropertyField(meleeConeRange);
+                EditorGUILayout.PropertyField(meleeConeAngle);
+                EditorGUILayout.PropertyField(meleeConeMinDamageRatio);
+            }
         }
 
         if (showBeam)

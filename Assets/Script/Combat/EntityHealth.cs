@@ -55,14 +55,12 @@ public class EntityHealth : MonoBehaviour
 
     private SelectableEntity selectableEntity;
     private bool isDying;
-    private BossCombatAI boss;
     private float upgradeMaxHealthBonus;
     private float upgradeArmorBonus;
 
     void Awake()
     {
         selectableEntity = GetComponent<SelectableEntity>();
-        boss = GetComponent<BossCombatAI>();
         CurrentHealth = maxHealth;
 
         if (selectableEntity.entityType == SelectableEntityType.Building)
@@ -90,7 +88,7 @@ public class EntityHealth : MonoBehaviour
             return 0f;
 
         float minimum = Mathf.Min(damage, Mathf.Max(damage * minDamageRatio, minDamage));
-        return Mathf.Max(minimum, damage - Armor) * (boss != null ? boss.IncomingDamageMultiplier : 1f);
+        return Mathf.Max(minimum, damage - Armor);
     }
 
     public void TakeDamage(float damage, SelectableEntity attacker = null)

@@ -391,8 +391,8 @@ public class CliffPainter : MonoBehaviour
     public bool CanPlaceTop(CellCoord cell, int layer)
     {
         EnsureLookup();
-        // 새 Top은 바닥이 있는 칸에만 칠한다. 기존 Top의 높이 편집은 허용한다.
-        if (!HasGround(cell) && !HasTop(cell))
+        // 새 Top은 바닥이나 언덕이 있는 칸에만 칠한다. 기존 Top의 높이 편집은 허용한다.
+        if (!HasGround(cell) && !HasTop(cell) && !HasHill(cell))
             return false;
         // 낮은 층은 기존 높이를 직접 바꿔 골짜기를 그린다.
         if (layer < 0)
@@ -443,6 +443,7 @@ public class CliffPainter : MonoBehaviour
         // 윗층: 기존 max를 올리기만 함 (아래 층은 유지)
         int current = GetTopMaxLayer(cell);
         SetTopMaxLayer(cell, Mathf.Max(current, layer));
+        RemoveInvalidHills();
         return true;
     }
 
@@ -451,6 +452,7 @@ public class CliffPainter : MonoBehaviour
     public bool TryRemoveTop(CellCoord cell, int layer) => TryRemoveTops(new[] { cell }, layer);
 
     // 지운 칸 주변의 Top도 한 칸 폭으로 낮춰 원래 크기의 벽·코너 자리를 확보한다.
+    // 벽·코너·언덕 칸을 지우면 그 벽을 세우는 주변 Top만 같은 규칙으로 낮춰 경계를 한 칸 물린다.
     public bool TryRemoveTops(IEnumerable<CellCoord> cells, int layer)
     {
         EnsureLookup();
@@ -458,17 +460,22 @@ public class CliffPainter : MonoBehaviour
         bool changed = false;
         foreach (CellCoord cell in cells)
         {
-            if (!topMaxLayer.TryGetValue(cell, out int current) || (layer > 0 && current < layer))
+            bool selected = topMaxLayer.TryGetValue(cell, out int current) && (layer <= 0 || current >= layer);
+            if (!selected)
             {
+                // 언덕도 벽 칸이므로 지운 뒤 경계를 함께 물린다. 바닥 없는 칸에는 낮은 층 벽이 없다.
                 changed |= ClearAboveTerrainOnCell(cell, layer);
-                continue;
+                if (layer <= 0 && !HasGround(cell))
+                    continue;
             }
+            // 지하 Top 옆 바닥은 벽 칸이 아니므로 지상 이상의 Top만 벽의 주인으로 본다.
+            int lowest = selected && layer <= 0 ? int.MinValue : Mathf.Max(layer, 0);
             // 변경 전 상태로 모아 큰 브러시에서도 처리 순서에 따라 범위가 달라지지 않게 한다.
             for (int x = -1; x <= 1; x++)
                 for (int z = -1; z <= 1; z++)
                 {
                     var neighbor = new CellCoord(cell.x + x, cell.z + z);
-                    if (topMaxLayer.TryGetValue(neighbor, out int height) && (layer <= 0 || height >= layer))
+                    if (topMaxLayer.TryGetValue(neighbor, out int height) && height >= lowest)
                         targets.Add(neighbor);
                 }
         }
@@ -1093,6 +1100,60 @@ public class CliffPainter : MonoBehaviour
         int x = Mathf.FloorToInt((world.x - gridOrigin.x) / size);
         int z = Mathf.FloorToInt((world.z - gridOrigin.z) / size);
         return new CellCoord(x, z);
+    }
+
+    // 칠한 칸 전체(Top·언덕·바닥·램프, 구버전 목록 포함)의 범위를 구한다.
+    public bool TryGetPaintedCellBounds(out CellCoord min, out CellCoord max)
+    {
+        bool found = false;
+        int minX = 0, minZ = 0, maxX = 0, maxZ = 0;
+
+        void Add(CellCoord cell)
+        {
+            if (!found)
+            {
+                minX = maxX = cell.x;
+                minZ = maxZ = cell.z;
+                found = true;
+                return;
+            }
+            minX = Mathf.Min(minX, cell.x);
+            maxX = Mathf.Max(maxX, cell.x);
+            minZ = Mathf.Min(minZ, cell.z);
+            maxZ = Mathf.Max(maxZ, cell.z);
+        }
+
+        if (tops != null) foreach (TopEntry entry in tops) Add(entry.cell);
+        if (topCells != null) foreach (CellCoord cell in topCells) Add(cell);
+        if (hills != null) foreach (HillEntry entry in hills) Add(entry.cell);
+        if (hillCells != null) foreach (CellCoord cell in hillCells) Add(cell);
+        if (groundCells != null) foreach (CellCoord cell in groundCells) Add(cell);
+        if (ramps != null) foreach (RampEntry entry in ramps) Add(entry.cell);
+
+        min = new CellCoord(minX, minZ);
+        max = new CellCoord(maxX, maxZ);
+        return found;
+    }
+
+    // 칠한 칸 좌표를 모두 같은 양만큼 옮긴다. 타일은 RebuildGeometry로 다시 만들어야 반영된다.
+    public void ShiftCells(int dx, int dz)
+    {
+        CellCoord Shift(CellCoord cell) => new CellCoord(cell.x + dx, cell.z + dz);
+
+        if (tops != null)
+            for (int i = 0; i < tops.Count; i++) { TopEntry e = tops[i]; e.cell = Shift(e.cell); tops[i] = e; }
+        if (topCells != null)
+            for (int i = 0; i < topCells.Count; i++) topCells[i] = Shift(topCells[i]);
+        if (hills != null)
+            for (int i = 0; i < hills.Count; i++) { HillEntry e = hills[i]; e.cell = Shift(e.cell); hills[i] = e; }
+        if (hillCells != null)
+            for (int i = 0; i < hillCells.Count; i++) hillCells[i] = Shift(hillCells[i]);
+        if (groundCells != null)
+            for (int i = 0; i < groundCells.Count; i++) groundCells[i] = Shift(groundCells[i]);
+        if (ramps != null)
+            for (int i = 0; i < ramps.Count; i++) { RampEntry e = ramps[i]; e.cell = Shift(e.cell); ramps[i] = e; }
+
+        lookupDirty = true;
     }
 
     public Transform EnsureGeneratedRoot()

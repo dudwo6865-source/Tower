@@ -19,8 +19,7 @@ public class BossCombatAI : MobileCombatAI
     public BossNest Nest { get; private set; }
     public EntityHealth Health { get; private set; }
     public BossSortieRules.Phase State => rules.State;
-    public float IncomingDamageMultiplier => isActiveAndEnabled && Nest != null && Nest.isActiveAndEnabled && Nest.Contains(transform.position)
-        ? 1f - Mathf.Clamp01(Nest.damageReduction) : 1f;
+    public bool IsRegenerating { get; private set; }
     public string StateLabel => State == BossSortieRules.Phase.Retreat ? "둥지로 후퇴 중" :
         State == BossSortieRules.Phase.Assault ? "본부 습격 중" : HasValidTarget() ? "둥지에서 교전 중" : "둥지에서 대기 중";
 
@@ -31,9 +30,11 @@ public class BossCombatAI : MobileCombatAI
     float marchUntil;
     float nextRouteCheck;
     float nextTargetCheck;
+    float lastDamagedTime = float.NegativeInfinity;
     NavMeshPath route;
     SelectableEntity localTarget;
     SelectableEntity blocker;
+    BossSkillController skills;
 
     protected override void Awake()
     {
@@ -41,6 +42,7 @@ public class BossCombatAI : MobileCombatAI
         // 경로 객체는 직렬화 중 실행되는 필드 초기화 대신 Awake에서 생성한다.
         route = new NavMeshPath();
         Health = GetComponent<EntityHealth>();
+        skills = GetComponent<BossSkillController>();
         shareAggroWithAllies = false;
         Health.OnDied += HandleDied;
         Health.OnDamaged += HandleDamaged;
@@ -58,15 +60,17 @@ public class BossCombatAI : MobileCombatAI
         if (Health != null) Health.OnDamaged -= HandleDamaged;
     }
 
-    void HandleDied() { Nest?.NotifyDefeated(this); }
+    void HandleDied() { skills?.CancelSkill(); Nest?.NotifyDefeated(this); }
     protected override void OnDisable()
     {
         base.OnDisable();
+        skills?.CancelSkill();
         attacker?.CancelPendingAttack();
         if (agent != null && agent.enabled) StopAgentMovement();
     }
     void HandleDamaged(float damage, SelectableEntity source)
     {
+        lastDamagedTime = Time.time;
         if (Nest == null || Nest.cycle == null || State != BossSortieRules.Phase.Assault) return;
         var previous = State;
         rules.Tick(Nest.cycle.IsNight, Nest.cycle.CurrentNightNumber, Nest.firstAssaultNight,
@@ -76,6 +80,7 @@ public class BossCombatAI : MobileCombatAI
 
     void ResetMovementForState()
     {
+        skills?.CancelSkill();
         SetTarget(null);
         attacker.CancelPendingAttack();
         StopAgentMovement();
@@ -94,6 +99,8 @@ public class BossCombatAI : MobileCombatAI
         if (Nest == null || !Nest.isActiveAndEnabled || Health == null || !Health.IsAlive ||
             (GameResultManager.Instance != null && GameResultManager.Instance.IsGameOver))
         {
+            IsRegenerating = false;
+            skills?.CancelSkill();
             attacker.CancelPendingAttack();
             StopAgentMovement();
             return;
@@ -114,6 +121,14 @@ public class BossCombatAI : MobileCombatAI
         if (State != previous)
         {
             ResetMovementForState();
+        }
+        UpdateRegeneration(!atBoundary);
+
+        // 스킬 준비부터 후딜까지 일반 공격과 추격을 멈춘다. 후퇴 판정은 위에서 계속 처리한다.
+        if (skills != null && skills.IsActive)
+        {
+            StopAgentMovement();
+            return;
         }
 
         if (State == BossSortieRules.Phase.Retreat)
@@ -150,6 +165,15 @@ public class BossCombatAI : MobileCombatAI
         else MoveAlongRoute(hq.transform.position);
     }
 
+    // 둥지 범위 안에서 습격 중이 아니고 한동안 맞지 않았으면 최대 체력 비율로 회복한다.
+    void UpdateRegeneration(bool insideNest)
+    {
+        IsRegenerating = insideNest && State != BossSortieRules.Phase.Assault &&
+            Nest.regenPerSecond > 0f && Health.CurrentHealth < Health.MaxHealth &&
+            Time.time - lastDamagedTime >= Nest.regenDelay;
+        if (IsRegenerating) Health.Heal(Health.MaxHealth * Nest.regenPerSecond * Time.deltaTime);
+    }
+
     SelectableEntity FindLocalTarget(bool atRest)
     {
         if (State == BossSortieRules.Phase.Retreat && !atRest) return null;
@@ -173,6 +197,11 @@ public class BossCombatAI : MobileCombatAI
     void Engage(SelectableEntity target)
     {
         SetTarget(target);
+        if (skills != null && (skills.TryStartSkill(target) || skills.WaitingForBasicAttack))
+        {
+            StopAgentMovement();
+            return;
+        }
         UpdateCombat();
     }
 

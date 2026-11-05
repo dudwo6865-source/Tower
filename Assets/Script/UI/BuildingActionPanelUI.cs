@@ -420,6 +420,14 @@ public class BuildingActionPanelUI : MonoBehaviour
         slot.button.gameObject.SetActive(true);
         slot.button.interactable = recipe.unitPrefab != null && unlocked;
 
+        // 건물의 생산 속도 배율·유물 보너스를 반영한 실제 생산 시간과 소모량을 보여준다.
+        float interval = primaryBuilding != null
+            ? primaryBuilding.GetEffectiveSpawnInterval(recipe)
+            : recipe.spawnInterval;
+        float wattPerSecond = primaryBuilding != null
+            ? primaryBuilding.GetWattCostPerSecond(recipe)
+            : recipe.wattCostPerSecond;
+
         if (slot.label != null)
         {
             slot.label.text = unlocked
@@ -427,9 +435,9 @@ public class BuildingActionPanelUI : MonoBehaviour
                     "레시피 라벨 형식",
                     recipeLabelFormat,
                     recipe.GetDisplayName(),
-                    recipe.spawnInterval,
-                    Mathf.RoundToInt(recipe.TotalWattCost),
-                    recipe.wattCostPerSecond,
+                    interval,
+                    Mathf.RoundToInt(wattPerSecond * interval),
+                    wattPerSecond,
                     recipe.population)
                 : FormatLabel(
                     "잠긴 레시피 라벨 형식",

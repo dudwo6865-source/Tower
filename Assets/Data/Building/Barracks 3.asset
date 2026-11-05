@@ -25,5 +25,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 23b4c6212115de34b9e4e729285cc21e, type: 2}
   - {fileID: 11400000, guid: 54f95678114ede84ebc9339c1832aea4, type: 2}
   defaultRecipeIndex: 0
+  productionSpeedMultiplier: 1.2
+  keepWattCostPerUnit: 1
   upgradeOptions: []
   recipe: {fileID: 0}

@@ -38,11 +38,16 @@ public class BossNest : MonoBehaviour
     [Label("첫 출격 밤")]
     [Min(1)] public int firstAssaultNight = 1;
     [Label("후퇴 피해 비율")]
-    [Tooltip("한 번의 출격에서 최대 체력의 이 비율만큼 피해를 받으면 후퇴합니다. 체력은 회복하지 않습니다.")]
+    [Tooltip("한 번의 출격에서 최대 체력의 이 비율만큼 피해를 받으면 후퇴합니다. 둥지에서 회복한 체력은 이 판정에 영향을 주지 않습니다.")]
     [Range(0.01f, 1f)] public float retreatHealthFraction = 0.2f;
-    [Label("둥지 피해 감소율")]
-    [Tooltip("보스가 실제 둥지 범위 안에 있으면 방어력 계산 후 피해를 이 비율만큼 줄입니다.")]
-    [Range(0f, 0.95f)] public float damageReduction = 0.3f;
+
+    [Header("둥지 체력 회복")]
+    [Label("초당 회복 비율")]
+    [Tooltip("보스가 둥지 범위 안에 있고 습격 중이 아닐 때 초마다 최대 체력의 이 비율만큼 회복합니다. 0.01은 초당 1%입니다. 0이면 회복하지 않습니다.")]
+    [Range(0f, 0.2f)] public float regenPerSecond = 0.01f;
+    [Label("피격 후 회복 대기 시간")]
+    [Tooltip("마지막으로 피해를 받은 뒤 이 시간(초)이 지나야 회복을 시작합니다. 둥지에서 교전 중일 때는 회복하지 않게 합니다.")]
+    [Min(0f)] public float regenDelay = 5f;
     [Label("복귀 도착 거리")]
     [Min(0.1f)] public float arrivalDistance = 1f;
     [Label("생성 위치 보정 거리")]
@@ -72,9 +77,10 @@ public class BossNest : MonoBehaviour
         if (radius <= 0f || float.IsNaN(radius) || float.IsInfinity(radius) || !Contains(RestPosition))
             return "둥지 반경과 범위 안의 대기 위치를 확인하세요.";
         if (firstAssaultNight < 1 || retreatHealthFraction <= 0f || retreatHealthFraction > 1f ||
-            float.IsNaN(retreatHealthFraction) || damageReduction < 0f || damageReduction >= 1f || float.IsNaN(damageReduction) ||
+            float.IsNaN(retreatHealthFraction) || regenPerSecond < 0f || float.IsNaN(regenPerSecond) ||
+            regenDelay < 0f || float.IsNaN(regenDelay) ||
             arrivalDistance <= 0f || arrivalDistance >= radius || spawnSampleDistance <= 0f)
-            return "출격 밤, 후퇴 비율, 피해 감소율, 도착 거리와 위치 보정 거리를 확인하세요.";
+            return "출격 밤, 후퇴 비율, 체력 회복, 도착 거리와 위치 보정 거리를 확인하세요.";
         return null;
     }
 

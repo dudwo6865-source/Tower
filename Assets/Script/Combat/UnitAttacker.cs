@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 
 public enum AttackType
 {
@@ -9,6 +10,15 @@ public enum AttackType
     Hitscan,
     // 기존 값들의 저장된 정수값이 바뀌지 않도록 항상 마지막에 추가합니다.
     PiercingBeam
+}
+
+// 근접 공격의 범위 모양입니다. 저장된 정수값이 바뀌지 않도록 항상 마지막에 추가합니다.
+public enum MeleeAreaShape
+{
+    [InspectorName("없음 (단일 대상)")]
+    None,
+    [InspectorName("전방 부채꼴")]
+    Cone
 }
 
 [DisallowMultipleComponent]
@@ -49,8 +59,14 @@ public class UnitAttacker : MonoBehaviour
 
     [Header("애니메이션")]
     [Label("애니메이션 이벤트로 공격")]
-    [Tooltip("켜면 공격 애니메이션 이벤트(OnAttackHit)에서 피해/투사체를 적용합니다.")]
+    [Tooltip("켜면 공격 애니메이션 이벤트(공격 또는 OnAttackHit)에서 피해/투사체를 적용합니다.")]
     public bool useAttackAnimationEvent = true;
+
+    [Label("애니메이션 이벤트로 공격 사운드")]
+    [Tooltip("켜면 공격 사운드를 피해 시점이 아니라 공격 클립의 '공격사운드' 이벤트에서 재생합니다. " +
+        "휘두르기 시작 같은 타격 전 프레임에 소리를 맞출 때 씁니다. 클립에 이벤트가 없으면 공격 사운드가 나지 않습니다. " +
+        "명중 사운드는 그대로 피해 시점에 재생됩니다.")]
+    public bool useAttackSoundEvent = false;
 
     [Label("대상 변경 시 공격 다시 시작")]
     [Tooltip("공격 모션 도중(피해가 들어가기 전)에 대상이 바뀌면, 그 모션은 피해 없이 끝나고 공격 간격만 소모됩니다. " +
@@ -84,6 +100,27 @@ public class UnitAttacker : MonoBehaviour
     [Label("빔 너비")]
     [Tooltip("관통 빔의 폭(두께)입니다. 발사 지점에서 사거리 끝까지 그은 선을 기준으로, 이 폭 안에 있는 모든 적이 즉시 관통 피해를 입습니다. 빔의 시각 효과(빛줄기)는 아래 Hitscan 항목의 트레일 설정을 그대로 사용합니다. 관통 빔 공격일 때만 사용됩니다.")]
     public float beamWidth = 1f;
+
+    [Header("근접 범위")]
+    [Label("범위 모양")]
+    [Tooltip("근접 공격의 범위입니다. '전방 부채꼴'이면 공격 대상 쪽으로 펼친 부채꼴 안의 적(아군 제외)이 모두 피해를 입습니다. " +
+        "공격 대상은 항상 원래 피해를 입습니다. 근접 공격일 때만 사용됩니다.")]
+    public MeleeAreaShape meleeAreaShape = MeleeAreaShape.None;
+
+    [Label("부채꼴 거리")]
+    [Tooltip("부채꼴이 닿는 거리(m)입니다. 사거리처럼 두 유닛 외곽 사이 간격으로 잽니다. 0이면 공격 사거리를 씁니다. 근접 공격일 때만 사용됩니다.")]
+    [Min(0f)]
+    public float meleeConeRange = 0f;
+
+    [Label("부채꼴 각도")]
+    [Tooltip("부채꼴 전체 각도(도)입니다. 공격 대상 방향을 가운데로 양쪽 절반씩 펼칩니다. 근접 공격일 때만 사용됩니다.")]
+    [Range(1f, 360f)]
+    public float meleeConeAngle = 90f;
+
+    [Label("부채꼴 최소 피해 비율")]
+    [Tooltip("부채꼴 끝에 있는 적이 받는 피해 비율(0~1)입니다. 가까울수록 100%에 가깝습니다. 1이면 거리와 관계없이 같은 피해입니다. 근접 공격일 때만 사용됩니다.")]
+    [Range(0f, 1f)]
+    public float meleeConeMinDamageRatio = 1f;
 
     [Header("포")]
     [Label("최소 사거리")]
@@ -245,6 +282,7 @@ public class UnitAttacker : MonoBehaviour
 
     void Awake()
     {
+        // UnitAnimator를 Animator가 있는 자식 모델에 붙인 프리팹도 있으므로 자식까지 찾는다.
         unitAnimator = GetComponent<UnitAnimator>();
         if (unitAnimator == null)
             unitAnimator = GetComponentInChildren<UnitAnimator>(true);
@@ -373,7 +411,70 @@ public class UnitAttacker : MonoBehaviour
         return target != null ? GetHorizontalBoundsGap(target) : float.PositiveInfinity;
     }
 
-    float GetHorizontalBoundsGap(SelectableEntity target)
+    // 전방 부채꼴 근접 범위 피해. 공격 대상은 이미 맞았으므로 제외하고, 대상 방향 기준
+    // 부채꼴 안의 다른 적에게 거리에 따라 줄어드는 피해를 준다. 아군(같은 소유자)은 제외한다.
+    void ApplyMeleeConeDamage(SelectableEntity primaryTarget, float damage)
+    {
+        float reach = meleeConeRange > 0f ? meleeConeRange : attackRange;
+        if (reach <= 0f || damage <= 0f)
+            return;
+
+        Vector3 origin = transform.position;
+        Vector3 forward = primaryTarget.SelectionBounds.center - origin;
+        forward.y = 0f;
+        if (forward.sqrMagnitude < 0.0001f)
+            forward = transform.forward;
+        forward.y = 0f;
+        forward.Normalize();
+
+        float cosHalfAngle = Mathf.Cos(meleeConeAngle * 0.5f * Mathf.Deg2Rad);
+        IReadOnlyList<SelectableEntity> entities = SelectableRegistry.Entities;
+
+        for (int i = 0; i < entities.Count; i++)
+        {
+            SelectableEntity entity = entities[i];
+
+            if (entity == null || entity == selfEntity || entity == primaryTarget)
+                continue;
+
+            if (selfEntity != null && entity.ownerId == selfEntity.ownerId)
+                continue;
+
+            EntityHealth health = entity.CachedHealth;
+            if (health == null || !health.IsAlive)
+                continue;
+
+            float gap = GetHorizontalBoundsGap(entity);
+            if (gap > reach)
+                continue;
+
+            if (meleeConeAngle < 360f && !IsInsideCone(entity.SelectionBounds, origin, forward, cosHalfAngle))
+                continue;
+
+            float damageRatio = Mathf.Lerp(1f, meleeConeMinDamageRatio, gap / reach);
+            health.TakeDamage(damage * damageRatio, selfEntity);
+        }
+    }
+
+    // 큰 건물은 중심이 부채꼴 밖이어도 몸체가 걸칠 수 있으므로, 중심과 공격자에 가장 가까운 점 중
+    // 하나라도 각도 안에 들어오면 맞은 것으로 본다.
+    static bool IsInsideCone(Bounds bounds, Vector3 origin, Vector3 forward, float cosHalfAngle)
+    {
+        return IsDirectionInsideCone(bounds.center - origin, forward, cosHalfAngle)
+            || IsDirectionInsideCone(bounds.ClosestPoint(origin) - origin, forward, cosHalfAngle);
+    }
+
+    static bool IsDirectionInsideCone(Vector3 direction, Vector3 forward, float cosHalfAngle)
+    {
+        direction.y = 0f;
+        if (direction.sqrMagnitude < 0.0001f)
+            return true;
+
+        return Vector3.Dot(direction.normalized, forward) >= cosHalfAngle;
+    }
+
+    // 일반 공격과 보스 스킬이 같은 몸체 간 수평 거리를 사용한다.
+    public float GetHorizontalBoundsGap(SelectableEntity target)
     {
         Bounds targetBounds = target.SelectionBounds;
         Bounds selfBounds = selfEntity != null
@@ -393,12 +494,12 @@ public class UnitAttacker : MonoBehaviour
     public bool TryAttack(SelectableEntity target, EntityHealth targetHealth)
     {
         if (StageIntroController.IsPlaying) return false;
-        if (bossSkills != null && bossSkills.IsActive)
-            return false;
         // 타격 이벤트가 지났거나 대상이 바뀌어도 진행 중인 클립을 재시작하지 않는다.
         if (ShouldUseAttackAnimationEvent() && unitAnimator.IsAttackAnimationPlaying)
             return false;
 
+        if (bossSkills != null && bossSkills.IsActive)
+            return false;
         if (BuildingConstructionGate.IsFeatureLockedOn(this))
             return false;
 
@@ -657,7 +758,11 @@ public class UnitAttacker : MonoBehaviour
         }
         else // Melee
         {
-            targetHealth.TakeDamage(GetEffectiveDamage(), selfEntity);
+            float meleeDamage = GetEffectiveDamage();
+            targetHealth.TakeDamage(meleeDamage, selfEntity);
+
+            if (meleeAreaShape == MeleeAreaShape.Cone)
+                ApplyMeleeConeDamage(target, meleeDamage);
 
             PlayAttackHitSound();
 
@@ -685,7 +790,20 @@ public class UnitAttacker : MonoBehaviour
         if (!ShouldUseAttackAnimationEvent() && unitAnimator != null)
             unitAnimator.PlayAttack(GetEffectiveCooldown());
 
-        PlayAttackSound();
+        if (!ShouldUseAttackSoundEvent())
+            PlayAttackSound();
+    }
+
+    // 애니메이션 이벤트('공격사운드')에서 공격 사운드를 낸다.
+    public void PlayAttackSoundFromEvent()
+    {
+        if (ShouldUseAttackSoundEvent())
+            PlayAttackSound();
+    }
+
+    bool ShouldUseAttackSoundEvent()
+    {
+        return useAttackSoundEvent && unitAnimator != null;
     }
 
     // 업그레이드 + 유물 보너스를 반영한 실제 공격력입니다.
@@ -794,6 +912,12 @@ public class UnitAttacker : MonoBehaviour
         Gizmos.color = new Color(1f, 0.92f, 0.16f, 0.4f);
         Gizmos.DrawWireSphere(origin, attackRange);
 
+        if (attackType == AttackType.Melee && meleeAreaShape == MeleeAreaShape.Cone)
+        {
+            DrawMeleeConeGizmo(origin);
+            return;
+        }
+
         if (attackType != AttackType.Cannon && attackType != AttackType.Flamethrower && attackType != AttackType.PiercingBeam)
             return;
 
@@ -831,5 +955,39 @@ public class UnitAttacker : MonoBehaviour
             Gizmos.DrawLine(aimOrigin + side, endPoint + side);
             Gizmos.DrawLine(aimOrigin - side, endPoint - side);
         }
+    }
+
+    // 근접 부채꼴 범위(빨강)를 유닛 정면 기준으로 그린다. 실제 공격은 대상 방향으로 펼친다.
+    // 거리는 외곽 간격 기준이라 유닛 반경만큼 더해 대략적인 크기를 보여준다.
+    void DrawMeleeConeGizmo(Vector3 origin)
+    {
+        float reach = meleeConeRange > 0f ? meleeConeRange : attackRange;
+        Bounds selfBounds = selfEntity != null ? selfEntity.SelectionBounds : new Bounds(origin, Vector3.one);
+        float radius = reach + Mathf.Max(selfBounds.extents.x, selfBounds.extents.z);
+
+        Vector3 forward = transform.forward;
+        forward.y = 0f;
+        if (forward.sqrMagnitude < 0.0001f)
+            forward = Vector3.forward;
+        forward.Normalize();
+
+        const int Segments = 24;
+        float halfAngle = meleeConeAngle * 0.5f;
+        Vector3 previous = origin + Quaternion.Euler(0f, -halfAngle, 0f) * forward * radius;
+
+        Gizmos.color = new Color(1f, 0.25f, 0.2f, 0.7f);
+        if (meleeConeAngle < 360f)
+            Gizmos.DrawLine(origin, previous);
+
+        for (int i = 1; i <= Segments; i++)
+        {
+            float angle = Mathf.Lerp(-halfAngle, halfAngle, (float)i / Segments);
+            Vector3 point = origin + Quaternion.Euler(0f, angle, 0f) * forward * radius;
+            Gizmos.DrawLine(previous, point);
+            previous = point;
+        }
+
+        if (meleeConeAngle < 360f)
+            Gizmos.DrawLine(origin, previous);
     }
 }

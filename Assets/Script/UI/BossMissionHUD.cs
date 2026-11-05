@@ -20,7 +20,8 @@ public class BossMissionHUD : MonoBehaviour
     [Label("체력 채움 이미지")]
     [Tooltip("에디터에서 Image Type을 Filled로 설정한 이미지를 연결합니다.")]
     public Image healthFill;
-    [Label("둥지 버프 표시")]
+    [Label("둥지 회복 표시")]
+    [Tooltip("시야 안 보스가 둥지에서 체력을 회복하는 동안 켜 둘 오브젝트입니다.")]
     public GameObject buffIndicator;
 
     BossNest observedNest;
@@ -52,7 +53,7 @@ public class BossMissionHUD : MonoBehaviour
             healthText.text = defeated ? "처치 완료" : !discovered ? "보스를 발견하면 체력이 표시됩니다."
                 : $"{lastHealth:0} / {lastMax:0}" + (visible ? "" : " · 마지막 확인");
         if (healthFill != null) healthFill.fillAmount = discovered && lastMax > 0f ? lastHealth / lastMax : 0f;
-        if (buffIndicator != null) buffIndicator.SetActive(visible && !defeated && boss.IncomingDamageMultiplier < 1f);
+        if (buffIndicator != null) buffIndicator.SetActive(visible && !defeated && boss.IsRegenerating);
         if (stateText != null)
             stateText.text = !string.IsNullOrEmpty(resultManager.BossError) || nest == null || !string.IsNullOrEmpty(nest.Error)
                 ? "보스 둥지 설정을 확인하세요." : defeated ? "보스 처치 완료"

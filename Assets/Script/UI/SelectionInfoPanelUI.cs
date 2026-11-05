@@ -19,6 +19,9 @@ public partial class SelectionInfoPanelUI : MonoBehaviour
     [Label("패널 루트")]
     [Tooltip("선택 정보 패널 전체 루트입니다. 선택이 없으면 숨깁니다.")]
     public GameObject panelRoot;
+    [Label("역할 없는 자식 숨기기")]
+    [Tooltip("켜면 각 영역이 열릴 때, 영역 바로 아래 자식 중 이 패널의 인스펙터 칸에 연결되지 않은(연결된 오브젝트를 품지도 않은) 오브젝트를 끕니다.")]
+    public bool hideUnassignedSectionChildren = true;
 
     [Header("기본 정보")]
     [Label("기본 정보 영역")]
@@ -75,6 +78,9 @@ public partial class SelectionInfoPanelUI : MonoBehaviour
     [Label("초당 Watt 소모량 텍스트")]
     [Tooltip("생산 중 초당 Watt 소모량을 표시할 텍스트입니다. 레시피의 소모량이 0이면 비웁니다.")]
     public TextMeshProUGUI productionWattCostText;
+    [Label("생산 속도 텍스트")]
+    [Tooltip("생산 속도를 표시할 텍스트입니다. 건물 업그레이드·유물로 빨라진 만큼 보너스 색으로 +n%를 붙입니다.")]
+    public TextMeshProUGUI productionSpeedText;
 
     [Header("업그레이드 연구")]
     [Label("연구 영역")]
@@ -146,7 +152,7 @@ public partial class SelectionInfoPanelUI : MonoBehaviour
     [Tooltip("유닛과 건물을 함께 선택했을 때 제목 형식입니다. {0}=유닛 수, {1}=건물 수")]
     public string multiMixedFormat = "유닛 {0} / 건물 {1}";
     [Label("인구 형식")]
-    [Tooltip("생산 건물의 인구 표시 형식입니다. {0}=사용 중인 인구, {1}=최대 인구, {2}=생산한 유닛 수")]
+    [Tooltip("생산 건물의 인구 표시 형식입니다. {0}=사용 중인 인구, {1}=최대 인구, {2}=생산한 유닛 수. 첫 업그레이드 단계 대비 단계·연구·유물로 늘어난 인구는 뒤에 괄호로 붙습니다.")]
     public string productionCountFormat = "인구 {0} / {1}";
     [Label("생산 중 문구")]
     [Tooltip("유닛을 생산 중일 때 표시할 문구입니다. {0}=남은 초")]
@@ -172,6 +178,18 @@ public partial class SelectionInfoPanelUI : MonoBehaviour
     [Label("초당 Watt 소모량 형식")]
     [Tooltip("초당 Watt 소모량 텍스트 형식입니다. {0}=현재 초당 소모량(생산 중이 아니면 0), {1}=레시피 기준 초당 소모량")]
     public string productionWattCostFormat = "Watt -{0:0.#}/s";
+    [Label("생산 속도 형식")]
+    [Tooltip("생산 속도 텍스트 형식입니다. {0}=최종 생산 속도(%, 기본 100), {1}=실제 생산 시간(초). 보너스는 뒤에 따로 붙습니다.")]
+    public string productionSpeedFormat = "생산 속도 {0:0}%";
+    [Label("보너스 형식")]
+    [Tooltip("유물·업그레이드로 늘어난 수치를 최종값 뒤에 붙이는 형식입니다. {0}=증가량. 체력·전투·인구·생산 속도에 씁니다.")]
+    public string bonusSuffixFormat = " (+{0})";
+    [Label("보너스 색상")]
+    [Tooltip("유물·업그레이드로 늘어난 수치의 글자 색입니다.")]
+    public Color bonusColor = new Color(0.36f, 0.86f, 0.36f);
+    [Label("생산 한도 색상")]
+    [Tooltip("생산 한도(최대 인구)에 도달했을 때 인구 보유 수 글자 색입니다.")]
+    public Color capacityFullColor = new Color(1f, 0.32f, 0.32f);
     [Label("연구 중 문구")]
     [Tooltip("업그레이드 연구 중일 때 표시할 문구입니다. {0}=남은 초")]
     public string upgradeResearchProgressFormat = "연구 중  {0:0.0}s";
@@ -179,6 +197,8 @@ public partial class SelectionInfoPanelUI : MonoBehaviour
     [Tooltip("업그레이드 연구가 없을 때 표시할 문구입니다.")]
     public string upgradeResearchIdleFormat = "대기 중";
 
+    // 인스펙터 칸에 연결된 오브젝트들(영역의 역할 없는 자식 판정용)
+    readonly List<Transform> roleTransforms = new List<Transform>();
     // 단일 선택 시 생산 진행률 갱신 대상
     SelectableEntity trackedEntity;
     // 체력 변경 이벤트 구독 대상
@@ -554,7 +574,10 @@ public partial class SelectionInfoPanelUI : MonoBehaviour
 
     void RefreshHealth(float currentHealth, float maxHealth)
     {
-        SetText(healthText, string.Format(healthFormat, currentHealth, maxHealth));
+        float baseMax = trackedHealth != null ? Mathf.Max(1f, trackedHealth.maxHealth) : maxHealth;
+        SetText(healthText, NoBreak(
+            string.Format(healthFormat, currentHealth, maxHealth) +
+            FormatBonus(maxHealth - baseMax, GetNumberFormat(healthFormat, 1))));
     }
 
     void RefreshCombat(SelectableEntity entity, UnitData data)
@@ -573,31 +596,37 @@ public partial class SelectionInfoPanelUI : MonoBehaviour
         if (!hasCombatData)
             return;
 
+        // 기본값은 컴포넌트/데이터 원래 값, 실제 값은 업그레이드·유물이 반영된 값이다.
+        float baseAttack = attacker != null ? attacker.attackDamage : data.attackDamage;
         float attackDamage = attacker != null ? attacker.EffectiveAttackDamage : data.attackDamage;
+        float baseRange = attacker != null ? attacker.attackRange : data.attackRange;
         float attackRange = attacker != null ? attacker.AttackRange : data.attackRange;
-        float moveSpeed = data != null ? data.moveSpeed : 0f;
+        UnityEngine.AI.NavMeshAgent agent = entity.GetComponent<UnityEngine.AI.NavMeshAgent>();
+        float baseMoveSpeed = data != null ? data.moveSpeed : (agent != null ? agent.speed : 0f);
+        float moveSpeed = agent != null ? agent.speed : baseMoveSpeed;
         float visionRange = data != null ? data.visionRange : 0f;
 
         SetText(attackText, attackDamage > 0f
-            ? string.Format(attackFormat, attackDamage)
+            ? FormatStat(attackFormat, baseAttack, attackDamage)
             : string.Empty);
 
         EntityHealth health = entity.GetComponent<EntityHealth>();
-        float armor = health != null ? health.Armor : (data != null ? data.armor : 0f);
+        float baseArmor = health != null ? Mathf.Max(0f, health.armor) : (data != null ? data.armor : 0f);
+        float armor = health != null ? health.Armor : baseArmor;
 
         // 방어력은 0이어도 표시한다(체력이 있는 대상이면 항상 의미가 있는 값이다).
         SetText(armorText, health != null || data != null
-            ? string.Format(armorFormat, armor)
+            ? FormatStat(armorFormat, baseArmor, armor)
             : string.Empty);
 
         SetText(rangeText, attackRange > 0f
-            ? string.Format(rangeFormat, attackRange)
+            ? FormatStat(rangeFormat, baseRange, attackRange)
             : string.Empty);
 
         if (entity.entityType == SelectableEntityType.Unit)
         {
             SetText(moveSpeedText, moveSpeed > 0f
-                ? string.Format(moveSpeedFormat, moveSpeed)
+                ? FormatStat(moveSpeedFormat, baseMoveSpeed, moveSpeed)
                 : string.Empty);
         }
         else
@@ -638,17 +667,31 @@ public partial class SelectionInfoPanelUI : MonoBehaviour
                 ? recipe.displayName
                 : SelectionInfoUtility.GetDisplayName(recipe.unitPrefab, unitData));
 
+        // 최종 최대 인구 뒤에 첫 업그레이드 단계 대비 단계·연구·유물로 늘어난 만큼을 붙인다.
         int maxPopulation = production.MaxPopulation;
-        string countText = maxPopulation > 0
-            ? string.Format(
+        int basePopulation = production.BaseMaxPopulation;
+        string countText = string.Empty;
+
+        if (maxPopulation > 0)
+        {
+            countText = string.Format(
                 productionCountFormat,
                 production.UsedPopulation,
                 maxPopulation,
-                production.AliveCount)
-            : string.Empty;
+                production.AliveCount);
+
+            // 생산 한도에 도달하면 보유 수를 한도 색으로 칠한다. 보너스는 보너스 색을 유지한다.
+            if (production.UsedPopulation >= maxPopulation)
+                countText = $"<color=#{ColorUtility.ToHtmlStringRGBA(capacityFullColor)}>{countText}</color>";
+
+            countText = NoBreak(
+                countText +
+                FormatBonus(maxPopulation - basePopulation, GetNumberFormat(productionCountFormat, 1)));
+        }
 
         string statusText;
         float sliderValue;
+        bool preparing = false;
 
         if (production.IsPaused)
         {
@@ -678,6 +721,7 @@ public partial class SelectionInfoPanelUI : MonoBehaviour
                 productionInitialDelayFormat,
                 production.ProductionRemainingTime);
             sliderValue = 0f;
+            preparing = true;
         }
         else if (production.IsProducing)
         {
@@ -692,9 +736,16 @@ public partial class SelectionInfoPanelUI : MonoBehaviour
             sliderValue = 0f;
         }
 
+        // 첫 생산 준비 중에는 준비 문구만 남기고 나머지 생산 정보를 숨긴다.
+        SetProductionRoleVisible(productionIconImage, !preparing);
+        SetProductionRoleVisible(productionTitleText, !preparing);
+        SetProductionRoleVisible(productionSlider, !preparing);
+        SetProductionRoleVisible(productionWattCostText, !preparing);
+        SetProductionRoleVisible(productionSpeedText, !preparing);
+
         SetText(
             productionDetailText,
-            string.IsNullOrEmpty(countText)
+            preparing || string.IsNullOrEmpty(countText)
                 ? statusText
                 : $"{statusText}  {countText}");
 
@@ -707,6 +758,12 @@ public partial class SelectionInfoPanelUI : MonoBehaviour
                     production.CurrentWattDrainPerSecond,
                     wattCost)
                 : string.Empty);
+
+        float speedBonus = production.GetProductionSpeedBonusPercent(recipe);
+        SetText(
+            productionSpeedText,
+            NoBreak(string.Format(productionSpeedFormat, 100f + speedBonus, production.GetEffectiveSpawnInterval(recipe)) +
+                FormatBonus(speedBonus, GetNumberFormat(productionSpeedFormat, 0), "%")));
 
         if (productionSlider != null)
         {
@@ -803,10 +860,129 @@ public partial class SelectionInfoPanelUI : MonoBehaviour
         ClearPortraitGrid();
     }
 
-    static void SetSectionActive(GameObject section, bool active)
+    // 최종값을 형식대로 쓰고, 기본값보다 늘어난 만큼을 보너스 색으로 뒤에 붙인다.
+    // 감소한 경우에는 FormatBonus가 비워 최종값만 남는다.
+    string FormatStat(string format, float baseValue, float value)
     {
-        if (section != null)
-            section.SetActive(active);
+        return NoBreak(string.Format(format, value) + FormatBonus(value - baseValue, GetNumberFormat(format, 0)));
+    }
+
+    // 텍스트 칸이 좁아도 수치와 보너스가 다음 줄로 넘어가지 않게 한 덩어리로 묶는다.
+    static string NoBreak(string text) =>
+        string.IsNullOrEmpty(text) ? text : "<nobr>" + text + "</nobr>";
+
+    // 수치 형식으로 반올림했을 때 0이 아닌 증가량만 보너스 색으로 붙인다.
+    string FormatBonus(float amount, string numberFormat, string suffix = "")
+    {
+        if (amount <= 0f)
+            return string.Empty;
+
+        string number = string.IsNullOrEmpty(numberFormat) ? amount.ToString("0.#") : amount.ToString(numberFormat);
+        bool nonZero = false;
+        foreach (char c in number)
+            if (c >= '1' && c <= '9') { nonZero = true; break; }
+        if (!nonZero)
+            return string.Empty;
+
+        string color = ColorUtility.ToHtmlStringRGBA(bonusColor);
+        return $"<color=#{color}>{string.Format(bonusSuffixFormat, number + suffix)}</color>";
+    }
+
+    // 형식 문자열에서 {index:형식}의 숫자 형식 부분을 꺼낸다. 없으면 빈 문자열을 돌려준다.
+    static string GetNumberFormat(string format, int index)
+    {
+        if (string.IsNullOrEmpty(format))
+            return string.Empty;
+
+        string token = "{" + index;
+        int start = format.IndexOf(token, System.StringComparison.Ordinal);
+        if (start < 0)
+            return string.Empty;
+
+        int cursor = start + token.Length;
+        if (cursor >= format.Length || format[cursor] != ':')
+            return string.Empty;
+
+        int end = format.IndexOf('}', cursor);
+        return end > cursor ? format.Substring(cursor + 1, end - cursor - 1) : string.Empty;
+    }
+
+    // 생산 영역 자체나 상태 텍스트를 품은 오브젝트는 끄지 않는다.
+    void SetProductionRoleVisible(Component role, bool visible)
+    {
+        if (role == null || role.gameObject == productionSection)
+            return;
+        if (productionDetailText != null && productionDetailText.transform.IsChildOf(role.transform))
+            return;
+        if (role.gameObject.activeSelf != visible)
+            role.gameObject.SetActive(visible);
+    }
+
+    void SetSectionActive(GameObject section, bool active)
+    {
+        if (section == null)
+            return;
+
+        bool opening = active && !section.activeSelf;
+        section.SetActive(active);
+
+        if (opening && hideUnassignedSectionChildren)
+            HideUnassignedChildren(section.transform);
+    }
+
+    // 영역의 바로 아래 자식 중 인스펙터 칸에 연결된 오브젝트가 아니고 그런 오브젝트를 품지도 않은 것은 끈다.
+    void HideUnassignedChildren(Transform section)
+    {
+        CollectRoleTransforms();
+
+        for (int i = 0; i < section.childCount; i++)
+        {
+            Transform child = section.GetChild(i);
+            if (!child.gameObject.activeSelf || ContainsRole(child))
+                continue;
+            child.gameObject.SetActive(false);
+        }
+    }
+
+    bool ContainsRole(Transform child)
+    {
+        foreach (Transform role in roleTransforms)
+            if (role != null && role.IsChildOf(child))
+                return true;
+        return false;
+    }
+
+    void CollectRoleTransforms()
+    {
+        roleTransforms.Clear();
+        AddRole(nameText);
+        AddRole(portraitImage);
+        AddRole(healthText);
+        AddRole(attackText);
+        AddRole(armorText);
+        AddRole(rangeText);
+        AddRole(moveSpeedText);
+        AddRole(visionText);
+        AddRole(productionIconImage);
+        AddRole(productionTitleText);
+        AddRole(productionDetailText);
+        AddRole(productionSlider);
+        AddRole(productionWattCostText);
+        AddRole(productionSpeedText);
+        AddRole(upgradeResearchIconImage);
+        AddRole(upgradeResearchTitleText);
+        AddRole(upgradeResearchDetailText);
+        AddRole(upgradeResearchSlider);
+        AddRole(portraitGridParent);
+        AddRole(portraitScroll);
+        AddRole(portraitScrollbar);
+        AddRole(portraitCountText);
+    }
+
+    void AddRole(Component role)
+    {
+        if (role != null)
+            roleTransforms.Add(role.transform);
     }
 
     static void SetText(TextMeshProUGUI text, string value)
