@@ -16,30 +16,17 @@ public class StageIntroController : MonoBehaviour
     [Label("암전 패널")]
     [Tooltip("화면 전체를 덮는 검은 Image에 붙인 CanvasGroup입니다. 씬에서 직접 만들고 활성 상태로 연결합니다.")]
     public CanvasGroup blackout;
-    [Label("안내 문구 그룹")]
-    [Tooltip("스테이지 이름과 안내 텍스트의 CanvasGroup입니다. 암전 패널과 서로 부모·자식이 아닌 별도 그룹으로 연결합니다.")]
-    public CanvasGroup captions;
-    [Label("스테이지 이름 텍스트")] public TMP_Text stageNameText;
-    [Label("목표 텍스트")] public TMP_Text objectiveText;
-    [Label("로어 안내 텍스트")] public TMP_Text announcementText;
+    // 기존 씬에 연결했던 안내 텍스트는 숨기고, 인스펙터에서는 더 이상 노출하지 않는다.
+    [SerializeField, HideInInspector] TMP_Text stageNameText;
+    [SerializeField, HideInInspector] TMP_Text objectiveText;
+    [SerializeField, HideInInspector] TMP_Text announcementText;
 
     [Header("연출 시간")]
     [Label("화면 공개 시간(초)")]
     [Min(0f)] public float revealDuration = 1f;
-    [Label("공개 후 안내 유지 시간(초)")]
-    [Tooltip("화면 공개 후 이 시간이 지나면 문구를 지우고 조작을 시작합니다. 로어 재생이 끝날 때까지 기다리지는 않습니다.")]
-    [Min(0f)] public float announcementDuration = 1f;
-    [Label("문구 사라짐 시간(초)")]
-    [Min(0f)] public float dismissDuration = 0.3f;
     [Label("로딩 대기 제한(초)")]
     [Tooltip("초기 배치에 실패해도 암전에 갇히지 않도록 제한 시간이 지나면 연출을 취소합니다. 실제 시간 기준입니다.")]
     [Min(1f)] public float loadingTimeout = 30f;
-
-    [Header("문구")]
-    [Label("기본 스테이지 이름")] public string fallbackStageName = "전투 시작";
-    [Label("일반 목표 안내")] public string standardObjective = "승리 조건을 달성하세요";
-    [Label("보스 목표 안내")] public string bossObjective = "보스를 처치하세요";
-    [Label("로어 안내")] public string roarAnnouncement = "멀리서 포효가 들려옵니다";
 
     StageIntroTiming timing;
     bool running;
@@ -51,13 +38,12 @@ public class StageIntroController : MonoBehaviour
 
     void Awake()
     {
+        HideLegacyText();
         if (!enabled) { HideVisuals(); return; }
         if (Instance != null && Instance != this) { Destroy(this); return; }
-        if (blackout == null || captions == null || !blackout.gameObject.activeInHierarchy ||
-            !captions.gameObject.activeInHierarchy || blackout.transform.IsChildOf(captions.transform) ||
-            captions.transform.IsChildOf(blackout.transform))
+        if (blackout == null || !blackout.gameObject.activeInHierarchy)
         {
-            Debug.LogWarning("StageIntroController: 활성 상태의 암전 패널과 안내 문구 그룹을 별도로 연결하세요. 시작 연출을 생략합니다.", this);
+            Debug.LogWarning("StageIntroController: 활성 상태의 암전 패널을 연결하세요. 시작 연출을 생략합니다.", this);
             HideVisuals();
             return;
         }
@@ -67,10 +53,7 @@ public class StageIntroController : MonoBehaviour
         Time.timeScale = 0f;
         blackout.alpha = 1f;
         blackout.blocksRaycasts = true;
-        captions.alpha = 0f;
-        captions.blocksRaycasts = false;
-        if (announcementText != null) announcementText.text = string.Empty;
-        timing = new StageIntroTiming(revealDuration, announcementDuration, dismissDuration);
+        timing = new StageIntroTiming(revealDuration);
         loadingStarted = Time.realtimeSinceStartup;
         LockUIInput();
     }
@@ -105,35 +88,18 @@ public class StageIntroController : MonoBehaviour
         timing.Tick(Time.unscaledDeltaTime, IsReady());
         if (previous == StageIntroTiming.Phase.Loading && timing.State == StageIntroTiming.Phase.Revealing)
         {
-            PrepareCaptions();
             FogOfWarManager.Instance?.RefreshVisionNow();
             RTSCameraPivotController cameraController = FindFirstObjectByType<RTSCameraPivotController>();
             if (cameraController != null) cameraController.FocusStageStart();
         }
-        if (previous == StageIntroTiming.Phase.Revealing && timing.State == StageIntroTiming.Phase.Announcement)
+        if (previous == StageIntroTiming.Phase.Revealing && timing.State == StageIntroTiming.Phase.Finished)
         {
+            // 문구 없이 화면 공개 완료와 동시에 로어 대기를 풀고 조작을 시작한다.
             HasRevealed = true;
-            BossNest nest = GetBossNest();
-            if (announcementText != null)
-                announcementText.text = nest != null && nest.introSound != null ? roarAnnouncement : string.Empty;
+            Finish();
         }
-        switch (timing.State)
-        {
-            case StageIntroTiming.Phase.Revealing:
-                blackout.alpha = 1f - timing.Progress;
-                captions.alpha = timing.Progress;
-                break;
-            case StageIntroTiming.Phase.Announcement:
-                blackout.alpha = 0f;
-                captions.alpha = 1f;
-                break;
-            case StageIntroTiming.Phase.Dismissing:
-                captions.alpha = 1f - timing.Progress;
-                break;
-            case StageIntroTiming.Phase.Finished:
-                Finish();
-                break;
-        }
+        else if (timing.State == StageIntroTiming.Phase.Revealing)
+            blackout.alpha = 1f - timing.Progress;
     }
 
     bool IsReady()
@@ -157,19 +123,6 @@ public class StageIntroController : MonoBehaviour
             if (nest == null || !nest.isActiveAndEnabled || !nest.WasSpawned) return false;
         }
         return true;
-    }
-
-    BossNest GetBossNest()
-    {
-        GameResultManager result = GameResultManager.Instance;
-        return result != null && result.winByDefeatingBoss ? result.bossNest : null;
-    }
-
-    void PrepareCaptions()
-    {
-        MapConfig config = MapLoader.Instance != null ? MapLoader.Instance.LoadedConfig : null;
-        if (stageNameText != null) stageNameText.text = config != null ? config.displayName : fallbackStageName;
-        if (objectiveText != null) objectiveText.text = GetBossNest() != null ? bossObjective : standardObjective;
     }
 
     void LockUIInput()
@@ -197,7 +150,13 @@ public class StageIntroController : MonoBehaviour
     void HideVisuals()
     {
         if (blackout != null) { blackout.alpha = 0f; blackout.blocksRaycasts = false; }
-        if (captions != null) { captions.alpha = 0f; captions.blocksRaycasts = false; }
+    }
+
+    void HideLegacyText()
+    {
+        if (stageNameText != null) stageNameText.enabled = false;
+        if (objectiveText != null) objectiveText.enabled = false;
+        if (announcementText != null) announcementText.enabled = false;
     }
 
     void OnDisable() { Finish(); }
