@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.AI;
 
 [DisallowMultipleComponent]
 public class ProductionBuilding : MonoBehaviour
@@ -40,28 +39,6 @@ public class ProductionBuilding : MonoBehaviour
     [Tooltip("건물 둘레 한 링에 배치할 슬롯 수입니다. 슬롯이 가득 차면 바깥 링으로 확장합니다.")]
     [Min(3)]
     public int spawnRingSlots = 8;
-
-    [Label("스폰 경로 검사")]
-    [Tooltip("집결지 또는 건물 바깥쪽까지 완전한 이동 경로가 있는 위치에만 생성합니다. 막히면 완료 상태로 대기하며 Watt를 추가 소모하지 않습니다.")]
-    public bool checkSpawnPath = true;
-
-    [Label("스폰 후보 검사 수")]
-    [Tooltip("생산 시 한 번에 검사할 건물 둘레 후보 수입니다.")]
-    [Range(1, 16)] public int spawnPathAttempts = 8;
-
-    [Label("스폰 표면 탐색 반경")]
-    [Tooltip("후보 위치 주변에서 NavMesh를 찾는 거리입니다. 너무 크면 벽 너머나 다른 층을 고를 수 있습니다.")]
-    [Min(0.1f)] public float spawnSurfaceRadius = 1f;
-
-    [Label("스폰 탈출 확인 거리")]
-    [Tooltip("집결지가 없을 때 스폰 링에서 바깥쪽으로 이 거리만큼 떨어진 지점까지 경로를 확인합니다. 넓게 둘러싸인 구역에서는 집결지를 구역 밖에 지정합니다.")]
-    [Min(1f)] public float spawnEscapeDistance = 6f;
-
-    [Label("스폰 재시도 간격")]
-    [Tooltip("완료된 유닛의 출구가 막혔을 때 다시 확인할 간격(초)입니다.")]
-    [Min(0.1f)] public float spawnRetryInterval = 1f;
-
-    NavMeshPath spawnPath;
 
     [Label("자동 생산 시작")]
     [Tooltip("건물이 준비되면 자동으로 생산을 시작합니다.")]
@@ -572,19 +549,7 @@ public class ProductionBuilding : MonoBehaviour
             if (recipeChangePending)
                 continue;
 
-            // 완성된 유닛은 출구가 열릴 때까지 비용과 진행도를 유지한다.
-            while (!recipeChangePending)
-            {
-                if (buildingHealth != null && !buildingHealth.IsAlive)
-                    yield break;
-
-                if (!IsProductionHeld() && TrySpawnUnit())
-                    break;
-
-                yield return new WaitForSeconds(Mathf.Max(0.1f, spawnRetryInterval));
-            }
-
-            yield return null;
+            TrySpawnUnit();
         }
     }
 
@@ -704,69 +669,6 @@ public class ProductionBuilding : MonoBehaviour
         BeginProduction();
     }
 
-    bool TryFindSpawnPosition(Vector3 origin, out Vector3 position)
-    {
-        position = origin;
-        Vector3 initialOffset = GetRingOffset(producedUnits.Count);
-        NavMeshAgent prefabAgent = recipe.unitPrefab.GetComponent<NavMeshAgent>();
-        if (!checkSpawnPath || prefabAgent == null)
-            return UnitSpawnUtility.TryResolveSpawnPosition(origin + initialOffset, origin, out position);
-
-        var filter = new NavMeshQueryFilter
-        {
-            agentTypeID = prefabAgent.agentTypeID,
-            areaMask = prefabAgent.areaMask
-        };
-        if (spawnPath == null)
-            spawnPath = new NavMeshPath();
-
-        float sampleRadius = Mathf.Max(0.1f, spawnSurfaceRadius);
-        Vector3 rally = rallyPointWorld;
-        if (hasRallyPoint && !TrySampleSpawnPoint(rally, sampleRadius, filter, out rally))
-            return false;
-
-        int attempts = Mathf.Clamp(spawnPathAttempts, 1, 16);
-        float radius = initialOffset.magnitude;
-        Vector3 direction = radius > 0f ? initialOffset / radius : transform.forward;
-        for (int i = 0; i < attempts; i++)
-        {
-            Vector3 outward = Quaternion.Euler(0f, i * 360f / attempts, 0f) * direction;
-            Vector3 hint = origin + outward * radius;
-            if (!TrySampleSpawnPoint(hint, sampleRadius, filter, out Vector3 candidate))
-                continue;
-
-            Vector3 destination = rally;
-            if (!hasRallyPoint)
-            {
-                float distance = Mathf.Max(spawnEscapeDistance, sampleRadius * 2f + prefabAgent.radius);
-                Vector3 exitHint = origin + outward * (radius + distance);
-                if (!TrySampleSpawnPoint(exitHint, sampleRadius, filter, out destination))
-                    continue;
-            }
-
-            if (NavMesh.CalculatePath(candidate, destination, filter, spawnPath) &&
-                spawnPath.status == NavMeshPathStatus.PathComplete)
-            {
-                position = candidate;
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    static bool TrySampleSpawnPoint(
-        Vector3 hint, float radius, NavMeshQueryFilter filter, out Vector3 position)
-    {
-        position = hint;
-        if (!NavMesh.SamplePosition(hint, out NavMeshHit hit, radius, filter) ||
-            Mathf.Abs(hit.position.y - hint.y) > UnitSpawnUtility.DefaultMaxVerticalDelta)
-            return false;
-
-        position = hit.position;
-        return true;
-    }
-
     bool TrySpawnUnit()
     {
         if (recipe == null || recipe.unitPrefab == null)
@@ -780,8 +682,16 @@ public class ProductionBuilding : MonoBehaviour
             ? spawnPoint.position
             : transform.position;
 
-        if (!TryFindSpawnPosition(basePosition, out Vector3 spawnPosition))
-            return false;
+        // 건물 둘레 각도 슬롯에 배치. 층 밖이면 건물 쪽으로 되돌린다.
+        Vector3 scatterHint = basePosition + GetRingOffset(producedUnits.Count);
+
+        if (!UnitSpawnUtility.TryResolveSpawnPosition(
+                scatterHint,
+                basePosition,
+                out Vector3 spawnPosition))
+        {
+            spawnPosition = basePosition;
+        }
 
         Quaternion spawnRotation = spawnPoint != null
             ? spawnPoint.rotation
