@@ -88,7 +88,11 @@ public class MonsterEggAnimation : MonoBehaviour
     {
         if (transform == owner.transform || !transform.IsChildOf(owner.transform))
             return "MonsterEggAnimation은 알 본체 아래 별도 자식 모델의 Animator에 붙이세요.";
-        if (!isActiveAndEnabled) return "알 애니메이션 모델과 컴포넌트를 활성화하세요.";
+        // 프리팹 에셋은 실행 중인 씬 오브젝트가 아니므로 저장된 활성 설정을 검사한다.
+        if (!enabled) return "알 모델의 MonsterEggAnimation 컴포넌트를 활성화하세요.";
+        for (Transform current = transform; current != null; current = current.parent)
+            if (!current.gameObject.activeSelf)
+                return $"알 애니메이션 계층의 '{current.name}' 오브젝트를 활성화하세요.";
         Animator targetAnimator = GetComponent<Animator>();
         if (targetAnimator == null || !targetAnimator.enabled || targetAnimator.runtimeAnimatorController == null)
             return "알 모델의 Animator에 컨트롤러를 연결하고 활성화하세요.";
