@@ -105,6 +105,7 @@ public class BossMissionSetupWindow : EditorWindow
             config.winWhenAllSpawnersDestroyed = false;
             config.winByCapturingPoint = false;
             config.winByDefeatingBoss = true;
+            config.winByDestroyingEggs = false;
             config.overrideInitialEnemies = true;
             config.initialEnemies.Clear();
             config.mutations.enabled = false;

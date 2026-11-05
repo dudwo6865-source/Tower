@@ -209,6 +209,8 @@ public partial class StageEditorWindow
                 win.Add($"거점 점령 {selected.captureDuration:0.#}초");
             if (selected.winByDefeatingBoss)
                 win.Add("보스 처치");
+            if (selected.winByDestroyingEggs)
+                win.Add("알과 부화 몬스터 제거");
 
             Add(win.Count > 0 ? "승리: " + string.Join(" / ", win) : "승리 조건 없음",
                 win.Count > 0 ? WinConditionColor : ChipErrorColor);

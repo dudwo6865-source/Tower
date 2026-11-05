@@ -1021,6 +1021,32 @@ public partial class StageEditorWindow : EditorWindow
         EditorGUILayout.PropertyField(serializedObject.FindProperty("winWhenAllSpawnersDestroyed"), new GUIContent("적 스포너 전멸 시 승리"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("winByCapturingPoint"), new GUIContent("거점 점령 승리 사용"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("winByDefeatingBoss"), new GUIContent("보스 처치 승리 사용"));
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("winByDestroyingEggs"), new GUIContent("알 파괴 미션 사용"));
+        if (selected.winByDestroyingEggs)
+        {
+            SerializedProperty times = serializedObject.FindProperty("eggStageDurations");
+            EditorGUILayout.PropertyField(times, new GUIContent("단계별 제한 시간(초)", times.tooltip), true);
+            EditorGUILayout.HelpBox("맵 루트에 EggMissionController를 붙이고 자식으로 MonsterEgg를 배치하세요. 알 파괴 또는 부화 시 다음 제한 시간이 시작됩니다. 부화 몬스터까지 모두 처치해야 승리합니다.", MessageType.Info);
+            if (selected.winBySurvivingNights || selected.winWhenAllSpawnersDestroyed || selected.winByCapturingPoint || selected.winByDefeatingBoss)
+                EditorGUILayout.HelpBox("다른 조건으로 먼저 승리할 수 있습니다. 알 전용 미션에서는 다른 승리 조건을 끄세요.", MessageType.Warning);
+            if (selected.mapRootPrefab != null)
+            {
+                EggMissionController[] missions = selected.mapRootPrefab.GetComponentsInChildren<EggMissionController>();
+                if (missions.Length != 1 || !missions[0].enabled)
+                    EditorGUILayout.HelpBox("맵 프리팹에 활성 EggMissionController가 정확히 하나 필요합니다.", MessageType.Warning);
+                else
+                {
+                    MonsterEgg[] eggs = missions[0].GetComponentsInChildren<MonsterEgg>();
+                    string error = EggMissionRules.ValidateDurations(selected.eggStageDurations, eggs.Length);
+                    if (error != null) EditorGUILayout.HelpBox(error, MessageType.Error);
+                    foreach (MonsterEgg egg in eggs)
+                    {
+                        error = egg.enabled ? egg.ValidateSetup() : "몬스터 알 컴포넌트를 활성화하세요.";
+                        if (error != null) EditorGUILayout.HelpBox(egg.name + ": " + error, MessageType.Error);
+                    }
+                }
+            }
+        }
         EditorGUI.BeginDisabledGroup(!selected.winByCapturingPoint);
         EditorGUILayout.PropertyField(serializedObject.FindProperty("captureDuration"), new GUIContent("점령 시간(초)"));
         EditorGUI.EndDisabledGroup();
@@ -1050,7 +1076,7 @@ public partial class StageEditorWindow : EditorWindow
             if (selected.winBySurvivingNights && selected.survivalNightsToWin <= 0)
                 EditorGUILayout.HelpBox("생존 목표가 0 이하입니다. 게임 시작과 거의 동시에 승리 조건이 충족됩니다.", MessageType.Warning);
 
-            if (!selected.winBySurvivingNights && !selected.winWhenAllSpawnersDestroyed && !selected.winByCapturingPoint && !selected.winByDefeatingBoss)
+            if (!selected.winBySurvivingNights && !selected.winWhenAllSpawnersDestroyed && !selected.winByCapturingPoint && !selected.winByDefeatingBoss && !selected.winByDestroyingEggs)
                 EditorGUILayout.HelpBox("승리 조건이 모두 꺼져 있습니다. 이 스테이지는 승리할 수 없습니다.", MessageType.Warning);
 
             if (selected.winByDefeatingBoss)
@@ -1269,6 +1295,8 @@ public partial class StageEditorWindow : EditorWindow
             selected.survivalNightsToWin = result.survivalNightsToWin;
             selected.winWhenAllSpawnersDestroyed = result.winWhenAllSpawnersDestroyed;
             selected.winByDefeatingBoss = result.winByDefeatingBoss;
+            selected.winByDestroyingEggs = result.winByDestroyingEggs;
+            selected.eggStageDurations = result.eggStageDurations != null ? (float[])result.eggStageDurations.Clone() : null;
         }
 
         EnemyMutationManager mutations = UnityEngine.Object.FindFirstObjectByType<EnemyMutationManager>();
@@ -1357,6 +1385,8 @@ public partial class StageEditorWindow : EditorWindow
                 result.winWhenAllSpawnersDestroyed = selected.winWhenAllSpawnersDestroyed;
                 result.winByCapturingPoint = selected.winByCapturingPoint;
                 result.winByDefeatingBoss = selected.winByDefeatingBoss;
+                result.winByDestroyingEggs = selected.winByDestroyingEggs;
+                result.eggStageDurations = selected.eggStageDurations != null ? (float[])selected.eggStageDurations.Clone() : null;
                 result.captureDuration = selected.captureDuration;
                 EditorUtility.SetDirty(result);
                 appliedAny = true;

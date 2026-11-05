@@ -62,7 +62,7 @@ public class VictoryConditionHUD : MonoBehaviour
     public float refreshInterval = 0.25f;
 
     float nextRefreshTime;
-    readonly TMP_Text[] rows = new TMP_Text[4];
+    readonly TMP_Text[] rows = new TMP_Text[5];
     bool templateWasActive;
     bool initialized;
     bool layoutWarningShown;
@@ -164,10 +164,15 @@ public class VictoryConditionHUD : MonoBehaviour
         bool spawnerOn = resultManager.winWhenAllSpawnersDestroyed;
         bool captureOn = resultManager.winByCapturingPoint;
         bool bossOn = resultManager.winByDefeatingBoss;
+        bool eggsOn = resultManager.winByDestroyingEggs;
         TMP_Text survivalText = GetRow(0, survivalOn, "생존 조건");
         TMP_Text spawnerText = GetRow(1, spawnerOn, "스포너 조건");
         TMP_Text captureText = GetRow(2, captureOn, "점령 조건");
         TMP_Text bossText = GetRow(3, bossOn, "보스 처치 조건");
+        TMP_Text eggText = GetRow(4, eggsOn, "알 파괴 조건");
+        if (eggText != null && eggsOn)
+            eggText.text = resultManager.EggError != null || resultManager.eggMission == null
+                ? "알 미션 설정을 확인하세요." : resultManager.eggMission.ProgressText;
         if (bossText != null && bossOn)
         {
             BossNest nest = resultManager.bossNest;
@@ -178,12 +183,12 @@ public class VictoryConditionHUD : MonoBehaviour
                 : $"{nest.displayName} 처치 · {nest.Boss.StateLabel}";
         }
 
-        bool any = survivalOn || spawnerOn || captureOn || bossOn;
+        bool any = survivalOn || spawnerOn || captureOn || bossOn || eggsOn;
         // 자기 자신을 꺼서 조건 변경 후 다시 켜지지 않는 상황을 막는다.
         if (panelRoot != null && !transform.IsChildOf(panelRoot.transform))
             panelRoot.SetActive(any);
 
-        int activeCount = (survivalOn ? 1 : 0) + (spawnerOn ? 1 : 0) + (captureOn ? 1 : 0) + (bossOn ? 1 : 0);
+        int activeCount = (survivalOn ? 1 : 0) + (spawnerOn ? 1 : 0) + (captureOn ? 1 : 0) + (bossOn ? 1 : 0) + (eggsOn ? 1 : 0);
         if (activeCount > 1 && !layoutWarningShown && conditionContainer.GetComponent<UnityEngine.UI.LayoutGroup>() == null)
         {
             layoutWarningShown = true;

@@ -130,6 +130,7 @@ public class MapLoader : MonoBehaviour
         GameResultManager captureResult = FindFirstObjectByType<GameResultManager>();
         if (captureResult != null) captureResult.BindCapturePoint(null, false);
         if (captureResult != null) captureResult.BindBossNest(null);
+        if (captureResult != null) captureResult.BindEggMission(null);
         EnemyMutationManager.EnsureInstance().Configure(config.mutations);
 
         // 재로드 대비: 이전에 만든 맵 인스턴스 제거
@@ -208,6 +209,15 @@ public class MapLoader : MonoBehaviour
                 nestCount++;
             }
             result.BindBossNest(nestCount == 1 ? nest : null);
+            EggMissionController mission = null;
+            int missionCount = 0;
+            foreach (EggMissionController candidate in CurrentMap.GetComponentsInChildren<EggMissionController>())
+            {
+                if (!candidate.isActiveAndEnabled) continue;
+                mission = candidate;
+                missionCount++;
+            }
+            result.BindEggMission(missionCount == 1 ? mission : null);
         }
         IsMapReady = true;
     }
@@ -369,6 +379,8 @@ public class MapLoader : MonoBehaviour
         result.winWhenAllSpawnersDestroyed = config.winWhenAllSpawnersDestroyed;
         result.winByCapturingPoint = config.winByCapturingPoint;
         result.winByDefeatingBoss = config.winByDefeatingBoss;
+        result.winByDestroyingEggs = config.winByDestroyingEggs;
+        result.eggStageDurations = config.eggStageDurations != null ? (float[])config.eggStageDurations.Clone() : null;
         result.captureDuration = config.captureDuration;
     }
 }

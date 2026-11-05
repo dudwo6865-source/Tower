@@ -74,6 +74,46 @@ public class GameResultManager : MonoBehaviour
     public string BossError { get; private set; }
     int bossDefeatedFrame = -1;
 
+    [Header("승리 조건 - 알과 부화 몬스터 제거")]
+    [Label("알 파괴 미션 사용")]
+    public bool winByDestroyingEggs;
+    [Label("알 미션")]
+    [Tooltip("맵 루트에 붙인 EggMissionController를 연결합니다. 맵 로더가 있으면 자동으로 연결합니다.")]
+    public EggMissionController eggMission;
+    [Label("단계별 제한 시간(초)")]
+    [Tooltip("알 개수 이상 입력합니다. 알이 파괴되거나 부화할 때 다음 시간으로 새로 시작합니다. 뒤로 갈수록 짧아야 합니다.")]
+    public float[] eggStageDurations = { 300f, 240f, 180f, 120f };
+    public string EggError { get; private set; }
+    int eggsCompletedFrame = -1;
+
+    public void BindEggMission(EggMissionController mission)
+    {
+        eggMission = mission;
+        EggError = null;
+        eggsCompletedFrame = -1;
+    }
+
+    void LateUpdate()
+    {
+        if (!winByDestroyingEggs || IsGameOver || StageIntroController.IsPlaying || Time.deltaTime <= 0f) return;
+        string error = eggMission == null || !eggMission.isActiveAndEnabled
+            ? "맵 루트에 활성 알 미션 컴포넌트를 정확히 하나 연결하세요." : null;
+        if (error == null)
+        {
+            eggMission.Initialize(this, eggStageDurations);
+            eggMission.Tick(Time.deltaTime);
+            error = eggMission.Error;
+        }
+        if (error != null && error != EggError) Debug.LogError("알 미션: " + error, this);
+        EggError = error;
+        if (error != null || !eggMission.Complete) { eggsCompletedFrame = -1; return; }
+        if (eggsCompletedFrame < 0) eggsCompletedFrame = Time.frameCount;
+        // 마지막 처치와 같은 프레임의 본부 파괴는 패배로 처리한다.
+        TrySubscribeHq();
+        if (Time.frameCount > eggsCompletedFrame && hqHealth != null && hqHealth.IsAlive)
+            EndGame(Result.Victory);
+    }
+
     public void BindBossNest(BossNest nest)
     {
         bossNest = nest;
@@ -205,6 +245,8 @@ public class GameResultManager : MonoBehaviour
 
     void Start()
     {
+        if (winByDestroyingEggs && eggMission != null)
+            eggMission.Initialize(this, eggStageDurations);
         if (winByCapturingPoint)
         {
             ValidateCapturePoint();
