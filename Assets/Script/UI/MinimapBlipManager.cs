@@ -21,6 +21,11 @@ public partial class MinimapBlipManager : MonoBehaviour
     [Tooltip("비워두면(-1) FogOfWarManager 또는 UnitSelectionManager의 로컬 플레이어 ID를 사용합니다.")]
     public int localPlayerOwnerId = -1;
 
+    [Header("미션 목표")]
+    [Label("미션 목표 항상 표시")]
+    [Tooltip("알 파괴 미션의 남은 알과 보스 미션의 보스를 미발견 지역과 시야 밖에서도 표시합니다. 일반 적의 시야 규칙은 유지합니다.")]
+    public bool alwaysShowMissionObjectives = true;
+
     [Header("아군 색")]
     [Label("아군 유닛 색")]
     [Tooltip("아군 유닛 블립 색입니다.")]
@@ -232,6 +237,20 @@ public partial class MinimapBlipManager : MonoBehaviour
             return true;
         }
 
+        // 미션 목표는 발견 여부와 관계없이 기존 블립으로 위치를 알린다.
+        if (alwaysShowMissionObjectives && IsMissionObjective(entity))
+        {
+            display.isAlly = false;
+            display.currentlyVisible = currentlyVisible;
+            display.color = entity.entityType == SelectableEntityType.Building
+                ? enemyBuildingColor
+                : enemyUnitColor;
+            display.size = entity.entityType == SelectableEntityType.Building
+                ? GetBuildingBlipSize(entity)
+                : new Vector2(enemyUnitSize, enemyUnitSize);
+            return true;
+        }
+
         if (fogManager == null)
             return false;
 
@@ -260,6 +279,27 @@ public partial class MinimapBlipManager : MonoBehaviour
             : seenEnemyBuildingColor;
         display.size = GetBuildingBlipSize(entity);
         return true;
+    }
+
+    bool IsMissionObjective(SelectableEntity entity)
+    {
+        GameResultManager result = GameResultManager.Instance;
+        if (result == null)
+            return false;
+
+        if (result.winByDefeatingBoss && result.bossNest != null)
+        {
+            BossCombatAI boss = result.bossNest.Boss;
+            if (boss != null && boss.isActiveAndEnabled && boss.gameObject == entity.gameObject)
+                return true;
+        }
+
+        if (result.winByDestroyingEggs && result.eggMission != null &&
+            entity.transform.IsChildOf(result.eggMission.transform) &&
+            entity.TryGetComponent(out MonsterEgg egg))
+            return egg.isActiveAndEnabled && !egg.Resolved;
+
+        return false;
     }
 
     Vector2 GetBuildingBlipSize(SelectableEntity entity)
