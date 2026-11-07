@@ -406,6 +406,32 @@ public class MapGrid : MonoBehaviour
         return true;
     }
 
+    // 빌드존 칸에 걸친 벽·코너를 지형 데이터로 판별한다. 타일 회전에는 영향받지 않는다.
+    public bool IsCellOnCliffWall(Vector2Int cell)
+    {
+        CliffPainter painter = GetCliffPainter();
+        if (painter == null)
+            return false;
+
+        painter.EnsureLookup();
+        Vector3 corner = CellCornerToWorld(cell);
+        float inset = cellSize * 0.001f;
+        var min = painter.WorldToCell(corner + new Vector3(inset, 0f, inset));
+        var max = painter.WorldToCell(corner + new Vector3(cellSize - inset, 0f, cellSize - inset));
+        for (int x = min.x; x <= max.x; x++)
+        {
+            for (int z = min.z; z <= max.z; z++)
+            {
+                var tile = new CliffPainter.CellCoord(x, z);
+                int layer = painter.HasTop(tile) ? painter.GetTopMaxLayer(tile) + 1 : 0;
+                if (painter.IsEdgeSlot(tile, layer) && !painter.IsVisionHillCell(tile))
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
     public bool IsCellOnHill(Vector2Int cell)
     {
         CliffPainter painter = GetCliffPainter();

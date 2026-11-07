@@ -25,7 +25,7 @@ public class GridVisualizer : MonoBehaviour
 
     [Header("건설 가능 구역")]
     [Label("전체 빌드존 표시")]
-    [Tooltip("건물 크기나 설치 가능한 지형 조건으로 줄이지 않고 내 빌드존 전체를 표시합니다. 이미 건물이 점유한 칸은 제외합니다. 실제 설치 가능 여부는 배치 미리보기 색상으로 확인합니다.")]
+    [Tooltip("건물 크기나 설치 가능한 지형 조건으로 줄이지 않고 내 빌드존 전체를 표시합니다. 벽 타일과 이미 건물이 점유한 칸은 제외합니다. 실제 설치 가능 여부는 배치 미리보기 색상으로 확인합니다.")]
     public bool showFullBuildZones = true;
 
     [Label("구역 색")]
@@ -332,6 +332,8 @@ public class GridVisualizer : MonoBehaviour
                         continue;
 
                     Vector2Int cell = new Vector2Int(originCell.x + x, originCell.y + z);
+                    if (grid.IsCellOnCliffWall(cell))
+                        continue;
                     AddCellTile(vertices, triangles, grid, cell, worldHeight);
                 }
             }
@@ -803,18 +805,40 @@ public class GridVisualizer : MonoBehaviour
 
     bool TryGetZoneSurfaceHeight(MapGrid grid, Vector2Int cell, out float surfaceY)
     {
+        surfaceY = 0f;
+        if (grid.IsCellOnCliffWall(cell))
+            return false;
+
         if (!showFullBuildZones)
-            return TryGetBuildableSurfaceHeight(grid, cell, out surfaceY);
+        {
+            if (!TryGetBuildableSurfaceHeight(grid, cell, out surfaceY))
+                return false;
+        }
+        else
+        {
+            Vector3 center = grid.GetCellCenterWorld(cell);
+            if (!FogGroundUtility.TrySampleSurfaceHeight(
+                    center.x, center.z, FogSurfaceSampleMode.VisualGeometry, out surfaceY) &&
+                !(grid.UsesNavMesh && grid.TryGetTopmostNavMeshHeight(cell, out surfaceY)))
+                surfaceY = grid.SampleGroundHeight(center);
+        }
 
-        // 전체 표시에서는 설치 가능 판정 대신 표면 높이만 구한다.
-        Vector3 center = grid.GetCellCenterWorld(cell);
-        if (FogGroundUtility.TrySampleSurfaceHeight(
-                center.x, center.z, FogSurfaceSampleMode.VisualGeometry, out surfaceY))
-            return true;
-        if (grid.UsesNavMesh && grid.TryGetTopmostNavMeshHeight(cell, out surfaceY))
-            return true;
+        // 중심만 읽으면 회전한 바닥의 높은 부분에 평평한 그리드가 묻힌다.
+        // 실제 표시 범위의 모서리와 변 중앙까지 검사하고 가장 높은 표면 위에 그린다.
+        Vector3 corner = grid.CellCornerToWorld(cell);
+        float inset = Mathf.Clamp(cellInset, 0f, grid.cellSize * 0.5f - 0.01f);
+        for (int x = 0; x < 3; x++)
+        {
+            for (int z = 0; z < 3; z++)
+            {
+                float worldX = corner.x + Mathf.Lerp(inset, grid.cellSize - inset, x * 0.5f);
+                float worldZ = corner.z + Mathf.Lerp(inset, grid.cellSize - inset, z * 0.5f);
+                if (FogGroundUtility.TrySampleSurfaceHeight(
+                        worldX, worldZ, FogSurfaceSampleMode.VisualGeometry, out float sampleY))
+                    surfaceY = Mathf.Max(surfaceY, sampleY);
+            }
+        }
 
-        surfaceY = grid.SampleGroundHeight(center);
         return true;
     }
 
