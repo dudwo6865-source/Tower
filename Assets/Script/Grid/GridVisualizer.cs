@@ -25,7 +25,7 @@ public class GridVisualizer : MonoBehaviour
 
     [Header("건설 가능 구역")]
     [Label("전체 빌드존 표시")]
-    [Tooltip("건물 크기나 설치 가능한 지형 조건으로 줄이지 않고 내 빌드존 전체를 표시합니다. 이미 건물이 점유한 칸은 제외합니다. 실제 설치 가능 여부는 배치 미리보기 색상으로 확인합니다.")]
+    [Tooltip("맵 그리드가 있는 칸에서 건물 크기로 줄이지 않고 내 빌드존 전체를 표시합니다. 맵 그리드가 없는 칸과 이미 건물이 점유한 칸은 제외합니다. 실제 설치 가능 여부는 배치 미리보기 색상으로 확인합니다.")]
     public bool showFullBuildZones = true;
 
     [Label("구역 색")]
@@ -803,10 +803,15 @@ public class GridVisualizer : MonoBehaviour
 
     bool TryGetZoneSurfaceHeight(MapGrid grid, Vector2Int cell, out float surfaceY)
     {
-        if (!showFullBuildZones)
-            return TryGetBuildableSurfaceHeight(grid, cell, out surfaceY);
+        // 전체 표시도 맵 그리드가 존재하는 칸 안에서만 허용한다.
+        // 건물 크기와 배치 가능 여부에 따른 구역 축소는 별도로 처리한다.
+        if (!TryGetBuildableSurfaceHeight(grid, cell, out surfaceY))
+            return false;
 
-        // 전체 표시에서는 설치 가능 판정 대신 표면 높이만 구한다.
+        if (!showFullBuildZones)
+            return true;
+
+        // 맵 그리드 검사를 통과한 칸의 표시 높이는 기존처럼 실제 표면을 따른다.
         Vector3 center = grid.GetCellCenterWorld(cell);
         if (FogGroundUtility.TrySampleSurfaceHeight(
                 center.x, center.z, FogSurfaceSampleMode.VisualGeometry, out surfaceY))
