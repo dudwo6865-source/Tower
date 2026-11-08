@@ -4,48 +4,6 @@
     "m_ObjectId": "2f05c5da3e18475a9bb48e7899b66b83",
     "m_Properties": [
         {
-            "m_Id": "4b8003c3c3024c6fab4a0b72d1839bd5"
-        },
-        {
-            "m_Id": "8b4a574ddf604e57a7f4217c43a62848"
-        },
-        {
-            "m_Id": "6fa4590202ce4770afedea7f693010cd"
-        },
-        {
-            "m_Id": "3a4994970c1342e692629cbb5b15db33"
-        },
-        {
-            "m_Id": "3ad136c126344e9d937d3049a86bd2f7"
-        },
-        {
-            "m_Id": "0393d13c1c3c4630b98eb9a352fa33af"
-        },
-        {
-            "m_Id": "41cbbe4035cd461ca09bc62163a32b37"
-        },
-        {
-            "m_Id": "bbbe55fec9ba44fba05bad94b4e9bf7b"
-        },
-        {
-            "m_Id": "8e68e1bd0b8346c094c47ca593e0b5b5"
-        },
-        {
-            "m_Id": "f485b02d760d407b9119c638f9a2724c"
-        },
-        {
-            "m_Id": "8eaa18acb36b44f89fb70829c019b6c1"
-        },
-        {
-            "m_Id": "eded5ddad1f64a7fae3a5278234bffb4"
-        },
-        {
-            "m_Id": "1ff43a8d671544f08da143f3d966cb55"
-        },
-        {
-            "m_Id": "b7828c1250da4454994540148e0e2e14"
-        },
-        {
             "m_Id": "eba368241dd1484b81c5ef766276671d"
         },
         {
@@ -56,6 +14,54 @@
         },
         {
             "m_Id": "4c373595853f4bcdbca7d4ec2fa0fc96"
+        },
+        {
+            "m_Id": "4b8003c3c3024c6fab4a0b72d1839bd5"
+        },
+        {
+            "m_Id": "3ad136c126344e9d937d3049a86bd2f7"
+        },
+        {
+            "m_Id": "8b4a574ddf604e57a7f4217c43a62848"
+        },
+        {
+            "m_Id": "eded5ddad1f64a7fae3a5278234bffb4"
+        },
+        {
+            "m_Id": "e105f06f6816416c96603de8baa870e9"
+        },
+        {
+            "m_Id": "0393d13c1c3c4630b98eb9a352fa33af"
+        },
+        {
+            "m_Id": "41cbbe4035cd461ca09bc62163a32b37"
+        },
+        {
+            "m_Id": "f485b02d760d407b9119c638f9a2724c"
+        },
+        {
+            "m_Id": "1ff43a8d671544f08da143f3d966cb55"
+        },
+        {
+            "m_Id": "66043add84e24a6d9015c8c6678eb6cd"
+        },
+        {
+            "m_Id": "bbbe55fec9ba44fba05bad94b4e9bf7b"
+        },
+        {
+            "m_Id": "8e68e1bd0b8346c094c47ca593e0b5b5"
+        },
+        {
+            "m_Id": "6fa4590202ce4770afedea7f693010cd"
+        },
+        {
+            "m_Id": "b7828c1250da4454994540148e0e2e14"
+        },
+        {
+            "m_Id": "661a4a5a383747428212c7b58ce3363c"
+        },
+        {
+            "m_Id": "3a4994970c1342e692629cbb5b15db33"
         }
     ],
     "m_Keywords": [],
@@ -172,18 +178,6 @@
             "m_Id": "37aa9d4d2b7f4660af7c5d9968d67ea3"
         },
         {
-            "m_Id": "8a20160edc364ab799ea0a539b3a46ac"
-        },
-        {
-            "m_Id": "3ca74830bb504236b323893c2202d4e0"
-        },
-        {
-            "m_Id": "390b7eb0a09442dc82470f938f4df1ff"
-        },
-        {
-            "m_Id": "554cc634ce7b41ed8d0249141eda6058"
-        },
-        {
             "m_Id": "8c76c8d42544488eacee715cdf7dbb38"
         },
         {
@@ -221,6 +215,15 @@
         },
         {
             "m_Id": "b54be0c5a3974a74beaf926a5b4001dc"
+        },
+        {
+            "m_Id": "0d00fc71eb8746aaa5155eb228f8234c"
+        },
+        {
+            "m_Id": "d8bdc3d64873401a8e6b8349406bae81"
+        },
+        {
+            "m_Id": "faffcf47f37d4d49a5c032a78e043cd7"
         }
     ],
     "m_GroupDatas": [
@@ -312,20 +315,6 @@
         {
             "m_OutputSlot": {
                 "m_Node": {
-                    "m_Id": "390b7eb0a09442dc82470f938f4df1ff"
-                },
-                "m_SlotId": 1
-            },
-            "m_InputSlot": {
-                "m_Node": {
-                    "m_Id": "554cc634ce7b41ed8d0249141eda6058"
-                },
-                "m_SlotId": 0
-            }
-        },
-        {
-            "m_OutputSlot": {
-                "m_Node": {
                     "m_Id": "3bf65af2841d4b2a9152fee9549d73bc"
                 },
                 "m_SlotId": 0
@@ -335,20 +324,6 @@
                     "m_Id": "541af39041ec4ca0a19e34ddd67c66c7"
                 },
                 "m_SlotId": 0
-            }
-        },
-        {
-            "m_OutputSlot": {
-                "m_Node": {
-                    "m_Id": "3ca74830bb504236b323893c2202d4e0"
-                },
-                "m_SlotId": 0
-            },
-            "m_InputSlot": {
-                "m_Node": {
-                    "m_Id": "8a20160edc364ab799ea0a539b3a46ac"
-                },
-                "m_SlotId": 1
             }
         },
         {
@@ -405,20 +380,6 @@
                     "m_Id": "b54be0c5a3974a74beaf926a5b4001dc"
                 },
                 "m_SlotId": 9
-            }
-        },
-        {
-            "m_OutputSlot": {
-                "m_Node": {
-                    "m_Id": "554cc634ce7b41ed8d0249141eda6058"
-                },
-                "m_SlotId": 1
-            },
-            "m_InputSlot": {
-                "m_Node": {
-                    "m_Id": "1f5a3cfbab7b45e19783b3a840507f24"
-                },
-                "m_SlotId": 0
             }
         },
         {
@@ -585,20 +546,6 @@
             "m_InputSlot": {
                 "m_Node": {
                     "m_Id": "b54be0c5a3974a74beaf926a5b4001dc"
-                },
-                "m_SlotId": 0
-            }
-        },
-        {
-            "m_OutputSlot": {
-                "m_Node": {
-                    "m_Id": "8a20160edc364ab799ea0a539b3a46ac"
-                },
-                "m_SlotId": 4
-            },
-            "m_InputSlot": {
-                "m_Node": {
-                    "m_Id": "390b7eb0a09442dc82470f938f4df1ff"
                 },
                 "m_SlotId": 0
             }
@@ -1022,12 +969,68 @@
                 },
                 "m_SlotId": 4
             }
+        },
+        {
+            "m_OutputSlot": {
+                "m_Node": {
+                    "m_Id": "0d00fc71eb8746aaa5155eb228f8234c"
+                },
+                "m_SlotId": 0
+            },
+            "m_InputSlot": {
+                "m_Node": {
+                    "m_Id": "b54be0c5a3974a74beaf926a5b4001dc"
+                },
+                "m_SlotId": 14
+            }
+        },
+        {
+            "m_OutputSlot": {
+                "m_Node": {
+                    "m_Id": "d8bdc3d64873401a8e6b8349406bae81"
+                },
+                "m_SlotId": 0
+            },
+            "m_InputSlot": {
+                "m_Node": {
+                    "m_Id": "b54be0c5a3974a74beaf926a5b4001dc"
+                },
+                "m_SlotId": 15
+            }
+        },
+        {
+            "m_OutputSlot": {
+                "m_Node": {
+                    "m_Id": "faffcf47f37d4d49a5c032a78e043cd7"
+                },
+                "m_SlotId": 0
+            },
+            "m_InputSlot": {
+                "m_Node": {
+                    "m_Id": "b54be0c5a3974a74beaf926a5b4001dc"
+                },
+                "m_SlotId": 16
+            }
+        },
+        {
+            "m_OutputSlot": {
+                "m_Node": {
+                    "m_Id": "b54be0c5a3974a74beaf926a5b4001dc"
+                },
+                "m_SlotId": 17
+            },
+            "m_InputSlot": {
+                "m_Node": {
+                    "m_Id": "1f5a3cfbab7b45e19783b3a840507f24"
+                },
+                "m_SlotId": 0
+            }
         }
     ],
     "m_VertexContext": {
         "m_Position": {
             "x": 3253.999755859375,
-            "y": -140.99993896484376
+            "y": -140.99993896484375
         },
         "m_Blocks": [
             {
@@ -1144,9 +1147,9 @@
     "m_Guid": {
         "m_GuidSerialized": "3b8cce7f-5254-461a-aee1-1f59a100b054"
     },
-    "m_Name": "G 보조 재질 색상",
+    "m_Name": "G 모래 색상",
     "m_DefaultRefNameVersion": 1,
-    "m_RefNameGeneratedByDisplayName": "Grass Albedo",
+    "m_RefNameGeneratedByDisplayName": "G 모래 색상",
     "m_DefaultReferenceName": "_Grass_Albedo",
     "m_OverrideReferenceName": "_Grass_Albedo",
     "m_GeneratePropertyBlock": true,
@@ -1276,30 +1279,6 @@
 
 {
     "m_SGVersion": 0,
-    "m_Type": "UnityEditor.ShaderGraph.DynamicVectorMaterialSlot",
-    "m_ObjectId": "0ac50577c95b4788b9ecfcb178b5fa67",
-    "m_Id": 0,
-    "m_DisplayName": "",
-    "m_SlotType": 0,
-    "m_Hidden": false,
-    "m_ShaderOutputName": "",
-    "m_StageCapability": 3,
-    "m_Value": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": 0.0,
-        "w": 0.0
-    },
-    "m_DefaultValue": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": 0.0,
-        "w": 0.0
-    }
-}
-
-{
-    "m_SGVersion": 0,
     "m_Type": "UnityEditor.ShaderGraph.Vector1MaterialSlot",
     "m_ObjectId": "0fbfe8b39bcc4b9da2afdf58d18df5ad",
     "m_Id": 1,
@@ -1394,30 +1373,6 @@
 
 {
     "m_SGVersion": 0,
-    "m_Type": "UnityEditor.ShaderGraph.DynamicVectorMaterialSlot",
-    "m_ObjectId": "1a00ab66d48c4a768e17e3013e536c8d",
-    "m_Id": 1,
-    "m_DisplayName": "",
-    "m_SlotType": 1,
-    "m_Hidden": false,
-    "m_ShaderOutputName": "",
-    "m_StageCapability": 3,
-    "m_Value": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": 0.0,
-        "w": 0.0
-    },
-    "m_DefaultValue": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": 0.0,
-        "w": 0.0
-    }
-}
-
-{
-    "m_SGVersion": 0,
     "m_Type": "UnityEditor.ShaderGraph.NormalMaterialSlot",
     "m_ObjectId": "1bd3ada1eedb4548971c073cdeb9ee27",
     "m_Id": 4,
@@ -1481,9 +1436,9 @@
     "m_Guid": {
         "m_GuidSerialized": "832753dc-681b-4569-8df8-a87ab880d1f4"
     },
-    "m_Name": "G 보조 재질 노멀 강도",
+    "m_Name": "G 모래 노멀 강도",
     "m_DefaultRefNameVersion": 1,
-    "m_RefNameGeneratedByDisplayName": "보조 지면 노멀 강도",
+    "m_RefNameGeneratedByDisplayName": "G 모래 노멀 강도",
     "m_DefaultReferenceName": "_Grass_Normal_Strength",
     "m_OverrideReferenceName": "_Grass_Normal_Strength",
     "m_GeneratePropertyBlock": true,
@@ -1889,7 +1844,7 @@
         "m_Expanded": true,
         "m_Position": {
             "serializedVersion": "2",
-            "x": 239.10000610351563,
+            "x": 239.10000610351562,
             "y": 275.5,
             "width": 0.0,
             "height": 0.0
@@ -1927,46 +1882,6 @@
 }
 
 {
-    "m_SGVersion": 0,
-    "m_Type": "UnityEditor.ShaderGraph.OneMinusNode",
-    "m_ObjectId": "390b7eb0a09442dc82470f938f4df1ff",
-    "m_Group": {
-        "m_Id": ""
-    },
-    "m_Name": "One Minus",
-    "m_DrawState": {
-        "m_Expanded": true,
-        "m_Position": {
-            "serializedVersion": "2",
-            "x": 2729.0,
-            "y": 1017.0,
-            "width": 208.000244140625,
-            "height": 278.0
-        }
-    },
-    "m_Slots": [
-        {
-            "m_Id": "824b3db3342e49abb613fb46eea727eb"
-        },
-        {
-            "m_Id": "a7ab5e203f454213a7223751af8b0ac0"
-        }
-    ],
-    "synonyms": [
-        "complement",
-        "invert",
-        "opposite"
-    ],
-    "m_Precision": 0,
-    "m_PreviewExpanded": true,
-    "m_DismissedVersion": 0,
-    "m_PreviewMode": 0,
-    "m_CustomColors": {
-        "m_SerializableColors": []
-    }
-}
-
-{
     "m_SGVersion": 1,
     "m_Type": "UnityEditor.ShaderGraph.Internal.Vector1ShaderProperty",
     "m_ObjectId": "3a4994970c1342e692629cbb5b15db33",
@@ -2001,9 +1916,9 @@
     "m_Guid": {
         "m_GuidSerialized": "21a3ec90-8fcf-4bb5-8906-9ca3b0b2e36f"
     },
-    "m_Name": "R 기본 재질 노멀",
+    "m_Name": "R 기본 흙 노멀",
     "m_DefaultRefNameVersion": 1,
-    "m_RefNameGeneratedByDisplayName": "Main Normal",
+    "m_RefNameGeneratedByDisplayName": "R 기본 흙 노멀",
     "m_DefaultReferenceName": "_Main_Normal",
     "m_OverrideReferenceName": "_Main_Normal",
     "m_GeneratePropertyBlock": true,
@@ -2037,9 +1952,9 @@
         "m_Position": {
             "serializedVersion": "2",
             "x": 550.0,
-            "y": 582.0000610351563,
+            "y": 582.0000610351562,
             "width": 208.0,
-            "height": 432.99993896484377
+            "height": 432.99993896484375
         }
     },
     "m_Slots": [
@@ -2082,42 +1997,6 @@
 
 {
     "m_SGVersion": 0,
-    "m_Type": "UnityEditor.ShaderGraph.PropertyNode",
-    "m_ObjectId": "3ca74830bb504236b323893c2202d4e0",
-    "m_Group": {
-        "m_Id": ""
-    },
-    "m_Name": "Property",
-    "m_DrawState": {
-        "m_Expanded": true,
-        "m_Position": {
-            "serializedVersion": "2",
-            "x": 2209.0,
-            "y": 1051.0,
-            "width": 164.0,
-            "height": 34.0
-        }
-    },
-    "m_Slots": [
-        {
-            "m_Id": "e8e7d5e98928480cafd222eceb8b6376"
-        }
-    ],
-    "synonyms": [],
-    "m_Precision": 0,
-    "m_PreviewExpanded": true,
-    "m_DismissedVersion": 0,
-    "m_PreviewMode": 0,
-    "m_CustomColors": {
-        "m_SerializableColors": []
-    },
-    "m_Property": {
-        "m_Id": "8eaa18acb36b44f89fb70829c019b6c1"
-    }
-}
-
-{
-    "m_SGVersion": 0,
     "m_Type": "UnityEditor.ShaderGraph.Texture2DInputMaterialSlot",
     "m_ObjectId": "3f00bae7b18e4100aaff05c3910f95f0",
     "m_Id": 0,
@@ -2141,9 +2020,9 @@
     "m_Guid": {
         "m_GuidSerialized": "801d1f06-6142-483b-8f6c-55da918b57bf"
     },
-    "m_Name": "G 보조 재질 노멀",
+    "m_Name": "G 모래 노멀",
     "m_DefaultRefNameVersion": 1,
-    "m_RefNameGeneratedByDisplayName": "Grass Normal",
+    "m_RefNameGeneratedByDisplayName": "G 모래 노멀",
     "m_DefaultReferenceName": "_Grass_Normal",
     "m_OverrideReferenceName": "_Grass_Normal",
     "m_GeneratePropertyBlock": true,
@@ -2263,7 +2142,7 @@
             "x": 550.0,
             "y": -538.0,
             "width": 140.0,
-            "height": 34.000030517578128
+            "height": 34.000030517578125
         }
     },
     "m_Slots": [
@@ -2306,9 +2185,9 @@
     "m_Guid": {
         "m_GuidSerialized": "f79cf9c8-dc00-44ee-a0cc-d896dac82d9e"
     },
-    "m_Name": "R 기본 재질 색상",
+    "m_Name": "R 기본 흙 색상",
     "m_DefaultRefNameVersion": 1,
-    "m_RefNameGeneratedByDisplayName": "Main Albedo",
+    "m_RefNameGeneratedByDisplayName": "R 기본 흙 색상",
     "m_DefaultReferenceName": "_Main_Albedo",
     "m_OverrideReferenceName": "_Main_Albedo",
     "m_GeneratePropertyBlock": true,
@@ -2327,31 +2206,6 @@
     "useTilingAndOffset": false,
     "m_Modifiable": true,
     "m_DefaultType": 0
-}
-
-{
-    "m_SGVersion": 0,
-    "m_Type": "UnityEditor.ShaderGraph.Vector4MaterialSlot",
-    "m_ObjectId": "4c2968ddf1334a008ba2627926c47243",
-    "m_Id": 0,
-    "m_DisplayName": "RGBA",
-    "m_SlotType": 1,
-    "m_Hidden": false,
-    "m_ShaderOutputName": "RGBA",
-    "m_StageCapability": 2,
-    "m_Value": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": 0.0,
-        "w": 0.0
-    },
-    "m_DefaultValue": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": 0.0,
-        "w": 0.0
-    },
-    "m_Labels": []
 }
 
 {
@@ -2584,55 +2438,6 @@
 
 {
     "m_SGVersion": 0,
-    "m_Type": "UnityEditor.ShaderGraph.SamplerStateMaterialSlot",
-    "m_ObjectId": "552efe5698494549b04dbe21f0e759d2",
-    "m_Id": 3,
-    "m_DisplayName": "Sampler",
-    "m_SlotType": 0,
-    "m_Hidden": false,
-    "m_ShaderOutputName": "Sampler",
-    "m_StageCapability": 3,
-    "m_BareResource": false
-}
-
-{
-    "m_SGVersion": 0,
-    "m_Type": "UnityEditor.ShaderGraph.RedirectNodeData",
-    "m_ObjectId": "554cc634ce7b41ed8d0249141eda6058",
-    "m_Group": {
-        "m_Id": ""
-    },
-    "m_Name": "Redirect Node",
-    "m_DrawState": {
-        "m_Expanded": true,
-        "m_Position": {
-            "serializedVersion": "2",
-            "x": 3093.0,
-            "y": 1044.0,
-            "width": 56.0,
-            "height": 24.0
-        }
-    },
-    "m_Slots": [
-        {
-            "m_Id": "0ac50577c95b4788b9ecfcb178b5fa67"
-        },
-        {
-            "m_Id": "1a00ab66d48c4a768e17e3013e536c8d"
-        }
-    ],
-    "synonyms": [],
-    "m_Precision": 0,
-    "m_PreviewExpanded": true,
-    "m_DismissedVersion": 0,
-    "m_PreviewMode": 0,
-    "m_CustomColors": {
-        "m_SerializableColors": []
-    }
-}
-
-{
-    "m_SGVersion": 0,
     "m_Type": "UnityEditor.ShaderGraph.PropertyNode",
     "m_ObjectId": "558f42db1cc140fa92988bd05a39fd4c",
     "m_Group": {
@@ -2643,9 +2448,9 @@
         "m_Expanded": true,
         "m_Position": {
             "serializedVersion": "2",
-            "x": 224.00001525878907,
+            "x": 224.00001525878906,
             "y": 1349.0,
-            "width": 153.99998474121095,
+            "width": 153.99998474121094,
             "height": 34.0
         }
     },
@@ -3222,9 +3027,9 @@
         "m_Expanded": true,
         "m_Position": {
             "serializedVersion": "2",
-            "x": 513.0000610351563,
-            "y": 232.99998474121095,
-            "width": 148.99993896484376,
+            "x": 513.0000610351562,
+            "y": 232.99998474121094,
+            "width": 148.99993896484375,
             "height": 34.00004577636719
         }
     },
@@ -3300,9 +3105,9 @@
     "m_Guid": {
         "m_GuidSerialized": "936d7008-9ade-47bd-8215-42f8060f46a2"
     },
-    "m_Name": "B 보조 재질 타일링",
+    "m_Name": "B 퇴적층 타일링 (월드 단위당 반복)",
     "m_DefaultRefNameVersion": 1,
-    "m_RefNameGeneratedByDisplayName": "Hill Scale",
+    "m_RefNameGeneratedByDisplayName": "B 퇴적층 타일링 (월드 단위당 반복)",
     "m_DefaultReferenceName": "_Hill_Scale",
     "m_OverrideReferenceName": "_Hill_Scale",
     "m_GeneratePropertyBlock": true,
@@ -3338,21 +3143,6 @@
 
 {
     "m_SGVersion": 0,
-    "m_Type": "UnityEditor.ShaderGraph.Vector1MaterialSlot",
-    "m_ObjectId": "7089c8b17e0248fb8eb47f9038053aa5",
-    "m_Id": 6,
-    "m_DisplayName": "B",
-    "m_SlotType": 1,
-    "m_Hidden": false,
-    "m_ShaderOutputName": "B",
-    "m_StageCapability": 2,
-    "m_Value": 0.0,
-    "m_DefaultValue": 0.0,
-    "m_Labels": []
-}
-
-{
-    "m_SGVersion": 0,
     "m_Type": "UnityEditor.ShaderGraph.PropertyNode",
     "m_ObjectId": "715788a8ed1349e79333417287f2b82c",
     "m_Group": {
@@ -3363,9 +3153,9 @@
         "m_Expanded": true,
         "m_Position": {
             "serializedVersion": "2",
-            "x": 151.99998474121095,
+            "x": 151.99998474121094,
             "y": 748.9999389648438,
-            "width": 173.00001525878907,
+            "width": 173.00001525878906,
             "height": 34.0
         }
     },
@@ -3553,50 +3343,8 @@
     "m_SGVersion": 0,
     "m_Type": "UnityEditor.ShaderGraph.CategoryData",
     "m_ObjectId": "7e2ec8ecfcd544ddbabb77f57696e2af",
-    "m_Name": "",
+    "m_Name": "평지 RGB 마스크",
     "m_ChildObjectList": [
-        {
-            "m_Id": "4b8003c3c3024c6fab4a0b72d1839bd5"
-        },
-        {
-            "m_Id": "6fa4590202ce4770afedea7f693010cd"
-        },
-        {
-            "m_Id": "8b4a574ddf604e57a7f4217c43a62848"
-        },
-        {
-            "m_Id": "3a4994970c1342e692629cbb5b15db33"
-        },
-        {
-            "m_Id": "3ad136c126344e9d937d3049a86bd2f7"
-        },
-        {
-            "m_Id": "f485b02d760d407b9119c638f9a2724c"
-        },
-        {
-            "m_Id": "0393d13c1c3c4630b98eb9a352fa33af"
-        },
-        {
-            "m_Id": "41cbbe4035cd461ca09bc62163a32b37"
-        },
-        {
-            "m_Id": "bbbe55fec9ba44fba05bad94b4e9bf7b"
-        },
-        {
-            "m_Id": "8e68e1bd0b8346c094c47ca593e0b5b5"
-        },
-        {
-            "m_Id": "8eaa18acb36b44f89fb70829c019b6c1"
-        },
-        {
-            "m_Id": "eded5ddad1f64a7fae3a5278234bffb4"
-        },
-        {
-            "m_Id": "1ff43a8d671544f08da143f3d966cb55"
-        },
-        {
-            "m_Id": "b7828c1250da4454994540148e0e2e14"
-        },
         {
             "m_Id": "eba368241dd1484b81c5ef766276671d"
         },
@@ -3608,6 +3356,54 @@
         },
         {
             "m_Id": "4c373595853f4bcdbca7d4ec2fa0fc96"
+        },
+        {
+            "m_Id": "4b8003c3c3024c6fab4a0b72d1839bd5"
+        },
+        {
+            "m_Id": "3ad136c126344e9d937d3049a86bd2f7"
+        },
+        {
+            "m_Id": "8b4a574ddf604e57a7f4217c43a62848"
+        },
+        {
+            "m_Id": "eded5ddad1f64a7fae3a5278234bffb4"
+        },
+        {
+            "m_Id": "e105f06f6816416c96603de8baa870e9"
+        },
+        {
+            "m_Id": "0393d13c1c3c4630b98eb9a352fa33af"
+        },
+        {
+            "m_Id": "41cbbe4035cd461ca09bc62163a32b37"
+        },
+        {
+            "m_Id": "f485b02d760d407b9119c638f9a2724c"
+        },
+        {
+            "m_Id": "1ff43a8d671544f08da143f3d966cb55"
+        },
+        {
+            "m_Id": "66043add84e24a6d9015c8c6678eb6cd"
+        },
+        {
+            "m_Id": "bbbe55fec9ba44fba05bad94b4e9bf7b"
+        },
+        {
+            "m_Id": "8e68e1bd0b8346c094c47ca593e0b5b5"
+        },
+        {
+            "m_Id": "6fa4590202ce4770afedea7f693010cd"
+        },
+        {
+            "m_Id": "b7828c1250da4454994540148e0e2e14"
+        },
+        {
+            "m_Id": "661a4a5a383747428212c7b58ce3363c"
+        },
+        {
+            "m_Id": "3a4994970c1342e692629cbb5b15db33"
         }
     ]
 }
@@ -3649,30 +3445,6 @@
     "m_Value": 1.0,
     "m_DefaultValue": 1.0,
     "m_Labels": []
-}
-
-{
-    "m_SGVersion": 0,
-    "m_Type": "UnityEditor.ShaderGraph.DynamicVectorMaterialSlot",
-    "m_ObjectId": "824b3db3342e49abb613fb46eea727eb",
-    "m_Id": 0,
-    "m_DisplayName": "In",
-    "m_SlotType": 0,
-    "m_Hidden": false,
-    "m_ShaderOutputName": "In",
-    "m_StageCapability": 3,
-    "m_Value": {
-        "x": 1.0,
-        "y": 1.0,
-        "z": 1.0,
-        "w": 1.0
-    },
-    "m_DefaultValue": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": 0.0,
-        "w": 0.0
-    }
 }
 
 {
@@ -3760,66 +3532,6 @@
 
 {
     "m_SGVersion": 0,
-    "m_Type": "UnityEditor.ShaderGraph.SampleTexture2DNode",
-    "m_ObjectId": "8a20160edc364ab799ea0a539b3a46ac",
-    "m_Group": {
-        "m_Id": ""
-    },
-    "m_Name": "Sample Texture 2D",
-    "m_DrawState": {
-        "m_Expanded": true,
-        "m_Position": {
-            "serializedVersion": "2",
-            "x": 2436.0,
-            "y": 1017.0,
-            "width": 208.0,
-            "height": 435.0
-        }
-    },
-    "m_Slots": [
-        {
-            "m_Id": "4c2968ddf1334a008ba2627926c47243"
-        },
-        {
-            "m_Id": "ec55bf0449ba49cda5db07c7cf586fee"
-        },
-        {
-            "m_Id": "a97d09d5c9314d81aedfb88ffa9acda3"
-        },
-        {
-            "m_Id": "7089c8b17e0248fb8eb47f9038053aa5"
-        },
-        {
-            "m_Id": "dbba2de64bb044249bddc04c709c7959"
-        },
-        {
-            "m_Id": "f37cf92cd5bd4b3c96dcc4b721114e82"
-        },
-        {
-            "m_Id": "ce8b44ca79cf4130b9cefaeef385149c"
-        },
-        {
-            "m_Id": "552efe5698494549b04dbe21f0e759d2"
-        }
-    ],
-    "synonyms": [
-        "tex2d"
-    ],
-    "m_Precision": 0,
-    "m_PreviewExpanded": true,
-    "m_DismissedVersion": 0,
-    "m_PreviewMode": 0,
-    "m_CustomColors": {
-        "m_SerializableColors": []
-    },
-    "m_TextureType": 0,
-    "m_NormalMapSpace": 0,
-    "m_EnableGlobalMipBias": true,
-    "m_MipSamplingMode": 0
-}
-
-{
-    "m_SGVersion": 0,
     "m_Type": "UnityEditor.ShaderGraph.PositionMaterialSlot",
     "m_ObjectId": "8a2141836f244af985e76e18c96150f3",
     "m_Id": 3,
@@ -3888,9 +3600,9 @@
     "m_Guid": {
         "m_GuidSerialized": "f39f8b3a-b9ca-4437-bbb9-ad9260386f5c"
     },
-    "m_Name": "R 기본 재질 타일링",
+    "m_Name": "R 기본 흙 타일링 (월드 단위당 반복)",
     "m_DefaultRefNameVersion": 1,
-    "m_RefNameGeneratedByDisplayName": "Main Scale",
+    "m_RefNameGeneratedByDisplayName": "R 기본 흙 타일링 (월드 단위당 반복)",
     "m_DefaultReferenceName": "_Main_Scale",
     "m_OverrideReferenceName": "_Main_Scale",
     "m_GeneratePropertyBlock": true,
@@ -4015,9 +3727,9 @@
     "m_Guid": {
         "m_GuidSerialized": "28e3de0b-0070-4002-bd84-af7f42e67542"
     },
-    "m_Name": "B 보조 재질 노멀",
+    "m_Name": "B 퇴적층 노멀",
     "m_DefaultRefNameVersion": 1,
-    "m_RefNameGeneratedByDisplayName": "Hill Normal",
+    "m_RefNameGeneratedByDisplayName": "B 퇴적층 노멀",
     "m_DefaultReferenceName": "_Hill_Normal",
     "m_OverrideReferenceName": "_Hill_Normal",
     "m_GeneratePropertyBlock": true,
@@ -4036,36 +3748,6 @@
     "useTilingAndOffset": false,
     "m_Modifiable": true,
     "m_DefaultType": 3
-}
-
-{
-    "m_SGVersion": 0,
-    "m_Type": "UnityEditor.ShaderGraph.Internal.Texture2DShaderProperty",
-    "m_ObjectId": "8eaa18acb36b44f89fb70829c019b6c1",
-    "m_Guid": {
-        "m_GuidSerialized": "dc1aae50-1a76-4f64-82b1-19fb81bd9bb5"
-    },
-    "m_Name": "공통 거칠기 (UV0, 흰색은 거침)",
-    "m_DefaultRefNameVersion": 1,
-    "m_RefNameGeneratedByDisplayName": "RoughnessMap",
-    "m_DefaultReferenceName": "_RoughnessMap",
-    "m_OverrideReferenceName": "_RoughnessMap",
-    "m_GeneratePropertyBlock": true,
-    "m_UseCustomSlotLabel": false,
-    "m_CustomSlotLabel": "",
-    "m_DismissedVersion": 0,
-    "m_Precision": 0,
-    "overrideHLSLDeclaration": false,
-    "hlslDeclarationOverride": 0,
-    "m_Hidden": false,
-    "m_Value": {
-        "m_SerializedTexture": "{\"texture\":{\"instanceID\":0}}",
-        "m_Guid": ""
-    },
-    "isMainTexture": false,
-    "useTilingAndOffset": false,
-    "m_Modifiable": true,
-    "m_DefaultType": 0
 }
 
 {
@@ -4418,7 +4100,7 @@
             "serializedVersion": "2",
             "x": 240.0,
             "y": 1400.0,
-            "width": 55.999969482421878,
+            "width": 55.999969482421875,
             "height": 24.0
         }
     },
@@ -4499,45 +4181,6 @@
         "z": 0.0,
         "w": 0.0
     },
-    "m_Labels": []
-}
-
-{
-    "m_SGVersion": 0,
-    "m_Type": "UnityEditor.ShaderGraph.DynamicVectorMaterialSlot",
-    "m_ObjectId": "a7ab5e203f454213a7223751af8b0ac0",
-    "m_Id": 1,
-    "m_DisplayName": "Out",
-    "m_SlotType": 1,
-    "m_Hidden": false,
-    "m_ShaderOutputName": "Out",
-    "m_StageCapability": 3,
-    "m_Value": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": 0.0,
-        "w": 0.0
-    },
-    "m_DefaultValue": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": 0.0,
-        "w": 0.0
-    }
-}
-
-{
-    "m_SGVersion": 0,
-    "m_Type": "UnityEditor.ShaderGraph.Vector1MaterialSlot",
-    "m_ObjectId": "a97d09d5c9314d81aedfb88ffa9acda3",
-    "m_Id": 5,
-    "m_DisplayName": "G",
-    "m_SlotType": 1,
-    "m_Hidden": false,
-    "m_ShaderOutputName": "G",
-    "m_StageCapability": 2,
-    "m_Value": 0.0,
-    "m_DefaultValue": 0.0,
     "m_Labels": []
 }
 
@@ -4792,10 +4435,22 @@
             "m_Id": "e608549ad04d47c98d9ef1a2456d6495"
         },
         {
+            "m_Id": "0dcc4acd1cb64e69a2dc7f9975d25a22"
+        },
+        {
+            "m_Id": "2c2c217d12b4462f9b79356e80fdac04"
+        },
+        {
+            "m_Id": "70cfb8499384491191b9c32be038cfa9"
+        },
+        {
             "m_Id": "b94d8bade2dd44e2ae72636eabefca1d"
         },
         {
             "m_Id": "8f98bf72e9964bfeb0f8cd14086eee7b"
+        },
+        {
+            "m_Id": "1f250e04f9eb45eb877dfa7e8030e4f2"
         }
     ],
     "synonyms": [],
@@ -4832,9 +4487,9 @@
     "m_Guid": {
         "m_GuidSerialized": "cea10d06-071f-4b7e-8576-de72cd9a8406"
     },
-    "m_Name": "B 보조 재질 노멀 강도",
+    "m_Name": "B 퇴적층 노멀 강도",
     "m_DefaultRefNameVersion": 1,
-    "m_RefNameGeneratedByDisplayName": "절벽 노멀 강도",
+    "m_RefNameGeneratedByDisplayName": "B 퇴적층 노멀 강도",
     "m_DefaultReferenceName": "_Hill_Normal_Strength",
     "m_OverrideReferenceName": "_Hill_Normal_Strength",
     "m_GeneratePropertyBlock": true,
@@ -4950,9 +4605,9 @@
     "m_Guid": {
         "m_GuidSerialized": "7d374c95-7624-4f38-bfd1-8c7501ca545b"
     },
-    "m_Name": "B 보조 재질 색상",
+    "m_Name": "B 퇴적층 색상",
     "m_DefaultRefNameVersion": 1,
-    "m_RefNameGeneratedByDisplayName": "Hill Albedo",
+    "m_RefNameGeneratedByDisplayName": "B 퇴적층 색상",
     "m_DefaultReferenceName": "_Hill_Albedo",
     "m_OverrideReferenceName": "_Hill_Albedo",
     "m_GeneratePropertyBlock": true,
@@ -5237,28 +4892,6 @@
 
 {
     "m_SGVersion": 0,
-    "m_Type": "UnityEditor.ShaderGraph.UVMaterialSlot",
-    "m_ObjectId": "ce8b44ca79cf4130b9cefaeef385149c",
-    "m_Id": 2,
-    "m_DisplayName": "UV",
-    "m_SlotType": 0,
-    "m_Hidden": false,
-    "m_ShaderOutputName": "UV",
-    "m_StageCapability": 3,
-    "m_Value": {
-        "x": 0.0,
-        "y": 0.0
-    },
-    "m_DefaultValue": {
-        "x": 0.0,
-        "y": 0.0
-    },
-    "m_Labels": [],
-    "m_Channel": 0
-}
-
-{
-    "m_SGVersion": 0,
     "m_Type": "UnityEditor.ShaderGraph.Vector1MaterialSlot",
     "m_ObjectId": "cf4b0e3ab4344a02b3095e30ab07dcd2",
     "m_Id": 6,
@@ -5399,9 +5032,9 @@
         "m_Position": {
             "serializedVersion": "2",
             "x": 766.9999389648438,
-            "y": 189.99998474121095,
+            "y": 189.99998474121094,
             "width": 208.0,
-            "height": 432.99993896484377
+            "height": 432.99993896484375
         }
     },
     "m_Slots": [
@@ -5453,21 +5086,6 @@
     "m_ShaderOutputName": "Out",
     "m_StageCapability": 3,
     "m_BareResource": false
-}
-
-{
-    "m_SGVersion": 0,
-    "m_Type": "UnityEditor.ShaderGraph.Vector1MaterialSlot",
-    "m_ObjectId": "dbba2de64bb044249bddc04c709c7959",
-    "m_Id": 7,
-    "m_DisplayName": "A",
-    "m_SlotType": 1,
-    "m_Hidden": false,
-    "m_ShaderOutputName": "A",
-    "m_StageCapability": 2,
-    "m_Value": 0.0,
-    "m_DefaultValue": 0.0,
-    "m_Labels": []
 }
 
 {
@@ -5677,19 +5295,6 @@
 
 {
     "m_SGVersion": 0,
-    "m_Type": "UnityEditor.ShaderGraph.Texture2DMaterialSlot",
-    "m_ObjectId": "e8e7d5e98928480cafd222eceb8b6376",
-    "m_Id": 0,
-    "m_DisplayName": "공통 거칠기 (UV0, 흰색은 거침)",
-    "m_SlotType": 1,
-    "m_Hidden": false,
-    "m_ShaderOutputName": "Out",
-    "m_StageCapability": 3,
-    "m_BareResource": false
-}
-
-{
-    "m_SGVersion": 0,
     "m_Type": "UnityEditor.ShaderGraph.PropertyNode",
     "m_ObjectId": "e9131e87dfe3455cb2f8e80d1ee0c531",
     "m_Group": {
@@ -5700,7 +5305,7 @@
         "m_Expanded": true,
         "m_Position": {
             "serializedVersion": "2",
-            "x": 444.99993896484377,
+            "x": 444.99993896484375,
             "y": 1901.0,
             "width": 155.0,
             "height": 34.0
@@ -5780,21 +5385,6 @@
 
 {
     "m_SGVersion": 0,
-    "m_Type": "UnityEditor.ShaderGraph.Vector1MaterialSlot",
-    "m_ObjectId": "ec55bf0449ba49cda5db07c7cf586fee",
-    "m_Id": 4,
-    "m_DisplayName": "R",
-    "m_SlotType": 1,
-    "m_Hidden": false,
-    "m_ShaderOutputName": "R",
-    "m_StageCapability": 2,
-    "m_Value": 0.0,
-    "m_DefaultValue": 0.0,
-    "m_Labels": []
-}
-
-{
-    "m_SGVersion": 0,
     "m_Type": "UnityEditor.ShaderGraph.PositionMaterialSlot",
     "m_ObjectId": "ec83c3c601a94d8ea7c182c2db18528d",
     "m_Id": 3,
@@ -5824,9 +5414,9 @@
     "m_Guid": {
         "m_GuidSerialized": "d2fcdd3d-6c88-413f-9c05-35046d70bc84"
     },
-    "m_Name": "R 기본 재질 노멀 강도",
+    "m_Name": "R 기본 흙 노멀 강도",
     "m_DefaultRefNameVersion": 1,
-    "m_RefNameGeneratedByDisplayName": "기본 지면 노멀 강도",
+    "m_RefNameGeneratedByDisplayName": "R 기본 흙 노멀 강도",
     "m_DefaultReferenceName": "_Main_Normal_Strength",
     "m_OverrideReferenceName": "_Main_Normal_Strength",
     "m_GeneratePropertyBlock": true,
@@ -5924,7 +5514,7 @@
             "serializedVersion": "2",
             "x": 284.9999694824219,
             "y": 624.9999389648438,
-            "width": 150.00003051757813,
+            "width": 150.00003051757812,
             "height": 34.00006103515625
         }
     },
@@ -5972,24 +5562,6 @@
 
 {
     "m_SGVersion": 0,
-    "m_Type": "UnityEditor.ShaderGraph.Texture2DInputMaterialSlot",
-    "m_ObjectId": "f37cf92cd5bd4b3c96dcc4b721114e82",
-    "m_Id": 1,
-    "m_DisplayName": "Texture",
-    "m_SlotType": 0,
-    "m_Hidden": false,
-    "m_ShaderOutputName": "Texture",
-    "m_StageCapability": 3,
-    "m_BareResource": false,
-    "m_Texture": {
-        "m_SerializedTexture": "{\"texture\":{\"instanceID\":0}}",
-        "m_Guid": ""
-    },
-    "m_DefaultType": 0
-}
-
-{
-    "m_SGVersion": 0,
     "m_Type": "UnityEditor.ShaderGraph.BlockNode",
     "m_ObjectId": "f3cabcb97175458fa3aabff6b0b3823b",
     "m_Group": {
@@ -6029,9 +5601,9 @@
     "m_Guid": {
         "m_GuidSerialized": "ba589331-5fef-4f63-a86e-6055b3f16549"
     },
-    "m_Name": "G 보조 재질 타일링",
+    "m_Name": "G 모래 타일링 (월드 단위당 반복)",
     "m_DefaultRefNameVersion": 1,
-    "m_RefNameGeneratedByDisplayName": "Grass Scale",
+    "m_RefNameGeneratedByDisplayName": "G 모래 타일링 (월드 단위당 반복)",
     "m_DefaultReferenceName": "_Grass_Scale",
     "m_OverrideReferenceName": "_Grass_Scale",
     "m_GeneratePropertyBlock": true,
@@ -6289,3 +5861,299 @@
     "m_Labels": []
 }
 
+{
+    "m_SGVersion": 1,
+    "m_Type": "UnityEditor.ShaderGraph.Internal.Vector1ShaderProperty",
+    "m_ObjectId": "e105f06f6816416c96603de8baa870e9",
+    "m_Guid": {
+        "m_GuidSerialized": "10917c8b-3b6e-4bde-ae55-50c10cbd52ab"
+    },
+    "m_Name": "R 기본 흙 매끄러움",
+    "m_DefaultRefNameVersion": 1,
+    "m_RefNameGeneratedByDisplayName": "R 기본 흙 매끄러움",
+    "m_DefaultReferenceName": "_SoilSmoothness",
+    "m_OverrideReferenceName": "_SoilSmoothness",
+    "m_GeneratePropertyBlock": true,
+    "m_UseCustomSlotLabel": false,
+    "m_CustomSlotLabel": "",
+    "m_DismissedVersion": 0,
+    "m_Precision": 0,
+    "overrideHLSLDeclaration": false,
+    "hlslDeclarationOverride": 0,
+    "m_Hidden": false,
+    "m_Value": 0.1,
+    "m_FloatType": 1,
+    "m_RangeValues": {
+        "x": 0,
+        "y": 1
+    }
+}
+
+{
+    "m_SGVersion": 0,
+    "m_Type": "UnityEditor.ShaderGraph.Vector1MaterialSlot",
+    "m_ObjectId": "0dcc4acd1cb64e69a2dc7f9975d25a22",
+    "m_Id": 14,
+    "m_DisplayName": "SoilSmoothness",
+    "m_SlotType": 0,
+    "m_Hidden": false,
+    "m_ShaderOutputName": "SoilSmoothness",
+    "m_StageCapability": 2,
+    "m_Value": 0.1,
+    "m_DefaultValue": 0.1,
+    "m_Labels": []
+}
+
+{
+    "m_SGVersion": 0,
+    "m_Type": "UnityEditor.ShaderGraph.PropertyNode",
+    "m_ObjectId": "0d00fc71eb8746aaa5155eb228f8234c",
+    "m_Group": {
+        "m_Id": ""
+    },
+    "m_Name": "Property",
+    "m_DrawState": {
+        "m_Expanded": true,
+        "m_Position": {
+            "serializedVersion": "2",
+            "x": 2200,
+            "y": 600,
+            "width": 210.0,
+            "height": 160.0
+        }
+    },
+    "m_Slots": [
+        {
+            "m_Id": "e3026c9866bd4027b4261f1be6abe3a6"
+        }
+    ],
+    "synonyms": [],
+    "m_Precision": 0,
+    "m_PreviewExpanded": false,
+    "m_DismissedVersion": 0,
+    "m_PreviewMode": 0,
+    "m_CustomColors": {
+        "m_SerializableColors": []
+    },
+    "m_Property": {
+        "m_Id": "e105f06f6816416c96603de8baa870e9"
+    }
+}
+
+{
+    "m_SGVersion": 0,
+    "m_Type": "UnityEditor.ShaderGraph.Vector1MaterialSlot",
+    "m_ObjectId": "e3026c9866bd4027b4261f1be6abe3a6",
+    "m_Id": 0,
+    "m_DisplayName": "Out",
+    "m_SlotType": 1,
+    "m_Hidden": false,
+    "m_ShaderOutputName": "Out",
+    "m_StageCapability": 2,
+    "m_Value": 0.1,
+    "m_DefaultValue": 0.1,
+    "m_Labels": []
+}
+
+{
+    "m_SGVersion": 1,
+    "m_Type": "UnityEditor.ShaderGraph.Internal.Vector1ShaderProperty",
+    "m_ObjectId": "66043add84e24a6d9015c8c6678eb6cd",
+    "m_Guid": {
+        "m_GuidSerialized": "34fbb4f0-958f-416d-998b-aa16b0b022ad"
+    },
+    "m_Name": "G 모래 매끄러움",
+    "m_DefaultRefNameVersion": 1,
+    "m_RefNameGeneratedByDisplayName": "G 모래 매끄러움",
+    "m_DefaultReferenceName": "_SandSmoothness",
+    "m_OverrideReferenceName": "_SandSmoothness",
+    "m_GeneratePropertyBlock": true,
+    "m_UseCustomSlotLabel": false,
+    "m_CustomSlotLabel": "",
+    "m_DismissedVersion": 0,
+    "m_Precision": 0,
+    "overrideHLSLDeclaration": false,
+    "hlslDeclarationOverride": 0,
+    "m_Hidden": false,
+    "m_Value": 0.1,
+    "m_FloatType": 1,
+    "m_RangeValues": {
+        "x": 0,
+        "y": 1
+    }
+}
+
+{
+    "m_SGVersion": 0,
+    "m_Type": "UnityEditor.ShaderGraph.Vector1MaterialSlot",
+    "m_ObjectId": "2c2c217d12b4462f9b79356e80fdac04",
+    "m_Id": 15,
+    "m_DisplayName": "SandSmoothness",
+    "m_SlotType": 0,
+    "m_Hidden": false,
+    "m_ShaderOutputName": "SandSmoothness",
+    "m_StageCapability": 2,
+    "m_Value": 0.1,
+    "m_DefaultValue": 0.1,
+    "m_Labels": []
+}
+
+{
+    "m_SGVersion": 0,
+    "m_Type": "UnityEditor.ShaderGraph.PropertyNode",
+    "m_ObjectId": "d8bdc3d64873401a8e6b8349406bae81",
+    "m_Group": {
+        "m_Id": ""
+    },
+    "m_Name": "Property",
+    "m_DrawState": {
+        "m_Expanded": true,
+        "m_Position": {
+            "serializedVersion": "2",
+            "x": 2200,
+            "y": 760,
+            "width": 210.0,
+            "height": 160.0
+        }
+    },
+    "m_Slots": [
+        {
+            "m_Id": "c5572563235c43249845ed8b20425b20"
+        }
+    ],
+    "synonyms": [],
+    "m_Precision": 0,
+    "m_PreviewExpanded": false,
+    "m_DismissedVersion": 0,
+    "m_PreviewMode": 0,
+    "m_CustomColors": {
+        "m_SerializableColors": []
+    },
+    "m_Property": {
+        "m_Id": "66043add84e24a6d9015c8c6678eb6cd"
+    }
+}
+
+{
+    "m_SGVersion": 0,
+    "m_Type": "UnityEditor.ShaderGraph.Vector1MaterialSlot",
+    "m_ObjectId": "c5572563235c43249845ed8b20425b20",
+    "m_Id": 0,
+    "m_DisplayName": "Out",
+    "m_SlotType": 1,
+    "m_Hidden": false,
+    "m_ShaderOutputName": "Out",
+    "m_StageCapability": 2,
+    "m_Value": 0.1,
+    "m_DefaultValue": 0.1,
+    "m_Labels": []
+}
+
+{
+    "m_SGVersion": 1,
+    "m_Type": "UnityEditor.ShaderGraph.Internal.Vector1ShaderProperty",
+    "m_ObjectId": "661a4a5a383747428212c7b58ce3363c",
+    "m_Guid": {
+        "m_GuidSerialized": "40f8f270-afae-493f-944d-3532505ee91a"
+    },
+    "m_Name": "B 퇴적층 매끄러움",
+    "m_DefaultRefNameVersion": 1,
+    "m_RefNameGeneratedByDisplayName": "B 퇴적층 매끄러움",
+    "m_DefaultReferenceName": "_SedimentSmoothness",
+    "m_OverrideReferenceName": "_SedimentSmoothness",
+    "m_GeneratePropertyBlock": true,
+    "m_UseCustomSlotLabel": false,
+    "m_CustomSlotLabel": "",
+    "m_DismissedVersion": 0,
+    "m_Precision": 0,
+    "overrideHLSLDeclaration": false,
+    "hlslDeclarationOverride": 0,
+    "m_Hidden": false,
+    "m_Value": 0.1,
+    "m_FloatType": 1,
+    "m_RangeValues": {
+        "x": 0,
+        "y": 1
+    }
+}
+
+{
+    "m_SGVersion": 0,
+    "m_Type": "UnityEditor.ShaderGraph.Vector1MaterialSlot",
+    "m_ObjectId": "70cfb8499384491191b9c32be038cfa9",
+    "m_Id": 16,
+    "m_DisplayName": "SedimentSmoothness",
+    "m_SlotType": 0,
+    "m_Hidden": false,
+    "m_ShaderOutputName": "SedimentSmoothness",
+    "m_StageCapability": 2,
+    "m_Value": 0.1,
+    "m_DefaultValue": 0.1,
+    "m_Labels": []
+}
+
+{
+    "m_SGVersion": 0,
+    "m_Type": "UnityEditor.ShaderGraph.PropertyNode",
+    "m_ObjectId": "faffcf47f37d4d49a5c032a78e043cd7",
+    "m_Group": {
+        "m_Id": ""
+    },
+    "m_Name": "Property",
+    "m_DrawState": {
+        "m_Expanded": true,
+        "m_Position": {
+            "serializedVersion": "2",
+            "x": 2200,
+            "y": 920,
+            "width": 210.0,
+            "height": 160.0
+        }
+    },
+    "m_Slots": [
+        {
+            "m_Id": "caa9758b6cd74310874abf33d75b918a"
+        }
+    ],
+    "synonyms": [],
+    "m_Precision": 0,
+    "m_PreviewExpanded": false,
+    "m_DismissedVersion": 0,
+    "m_PreviewMode": 0,
+    "m_CustomColors": {
+        "m_SerializableColors": []
+    },
+    "m_Property": {
+        "m_Id": "661a4a5a383747428212c7b58ce3363c"
+    }
+}
+
+{
+    "m_SGVersion": 0,
+    "m_Type": "UnityEditor.ShaderGraph.Vector1MaterialSlot",
+    "m_ObjectId": "caa9758b6cd74310874abf33d75b918a",
+    "m_Id": 0,
+    "m_DisplayName": "Out",
+    "m_SlotType": 1,
+    "m_Hidden": false,
+    "m_ShaderOutputName": "Out",
+    "m_StageCapability": 2,
+    "m_Value": 0.1,
+    "m_DefaultValue": 0.1,
+    "m_Labels": []
+}
+
+{
+    "m_SGVersion": 0,
+    "m_Type": "UnityEditor.ShaderGraph.Vector1MaterialSlot",
+    "m_ObjectId": "1f250e04f9eb45eb877dfa7e8030e4f2",
+    "m_Id": 17,
+    "m_DisplayName": "Smoothness",
+    "m_SlotType": 1,
+    "m_Hidden": false,
+    "m_ShaderOutputName": "Smoothness",
+    "m_StageCapability": 2,
+    "m_Value": 0.5,
+    "m_DefaultValue": 0.5,
+    "m_Labels": []
+}
