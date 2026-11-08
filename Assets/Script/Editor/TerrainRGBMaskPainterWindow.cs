@@ -30,6 +30,14 @@ public sealed class TerrainRGBMaskPainterWindow : EditorWindow
     [SerializeField] float planeHeight;
     [SerializeField] bool usePlaneFallback;
     [SerializeField] int channel;
+    [Label("X 좌표 대칭")]
+    [SerializeField] bool mirrorX;
+    [Label("Z 좌표 대칭")]
+    [SerializeField] bool mirrorZ;
+    [Label("마스크 중앙을 대칭 중심으로 사용")]
+    [SerializeField] bool useMaskCenter = true;
+    [Label("대칭 중심 (X,Z)")]
+    [SerializeField] Vector2 symmetryCenter;
 
     sealed class PreviewTarget
     {
@@ -184,6 +192,7 @@ public sealed class TerrainRGBMaskPainterWindow : EditorWindow
         strength = EditorGUILayout.Slider("칠하기 강도", strength, 0.01f, 1f);
         usePressure = EditorGUILayout.Toggle(new GUIContent("필압으로 강도 조절", "펜 입력의 필압을 칠하기 강도에 곱합니다. 마우스는 설정한 강도를 그대로 사용합니다."), usePressure);
         hardness = EditorGUILayout.Slider(new GUIContent("경계 단단함", "0은 부드러운 경계, 1은 단단한 경계입니다."), hardness, 0f, 1f);
+        DrawSymmetryGUI();
         usePlaneFallback = EditorGUILayout.Toggle(new GUIContent("Collider 없으면 기준 평면 사용", "높이가 다른 지형은 Collider를 사용하는 편이 정확합니다."), usePlaneFallback);
         if (usePlaneFallback)
             planeHeight = EditorGUILayout.FloatField("기준 평면 높이", planeHeight);
@@ -459,8 +468,7 @@ public sealed class TerrainRGBMaskPainterWindow : EditorWindow
         if (hasPoint && e.type == EventType.Repaint)
         {
             Handles.color = TerrainRGBMaskBrushMath.ChannelColor(e.shift ? 0 : channel);
-            Handles.DrawWireDisc(point + Vector3.up * 0.03f, Vector3.up, radius);
-            Handles.DrawWireDisc(point + Vector3.up * 0.03f, Vector3.up, radius * hardness);
+            DrawSymmetryPreview(point);
         }
         if (e.type == EventType.MouseMove) sceneView.Repaint();
         if (!hasPoint)
@@ -559,15 +567,88 @@ public sealed class TerrainRGBMaskPainterWindow : EditorWindow
         Vector2 next = new Vector2(point.x, point.z);
         Event input = Event.current;
         float pressure = usePressure && input.pointerType == PointerType.Pen ? Mathf.Clamp01(input.pressure) : 1f;
-        bool changed = TerrainRGBMaskBrushMath.PaintSegment(data.pixels, strokeStart, coverage,
-            data.resolution, data.origin, data.size, hasLastPoint ? lastPoint : next, next,
-            radius, strength * pressure, hardness, strokeChannel);
+        bool changed = false;
+        Vector2 from = hasLastPoint ? lastPoint : next;
+        Vector2 center = SymmetryCenter;
+        int axes = SymmetryAxes;
+        for (int reflection = 0; reflection <= axes; reflection++)
+        {
+            if ((reflection & axes) != reflection) continue;
+            // 적용량을 공유하여 대칭 브러시가 겹쳐도 더 진해지지 않게 한다.
+            changed |= TerrainRGBMaskBrushMath.PaintSegment(data.pixels, strokeStart, coverage,
+                data.resolution, data.origin, data.size,
+                ReflectPoint(from, center, reflection), ReflectPoint(next, center, reflection),
+                radius, strength * pressure, hardness, strokeChannel);
+        }
         lastPoint = next;
         hasLastPoint = true;
         if (!changed) return;
         strokeChanged = true;
         EditorUtility.SetDirty(data);
         RefreshPreview();
+    }
+
+    int SymmetryAxes => (mirrorX ? 1 : 0) | (mirrorZ ? 2 : 0);
+
+    Vector2 SymmetryCenter => useMaskCenter ? data.origin + data.size * 0.5f : symmetryCenter;
+
+    static Vector2 ReflectPoint(Vector2 point, Vector2 center, int reflection)
+    {
+        if ((reflection & 1) != 0) point.x = 2f * center.x - point.x;
+        if ((reflection & 2) != 0) point.y = 2f * center.y - point.y;
+        return point;
+    }
+
+    void DrawSymmetryGUI()
+    {
+        EditorGUI.BeginChangeCheck();
+        using (new EditorGUI.DisabledScope(strokeActive))
+        {
+            mirrorX = EditorGUILayout.Toggle(new GUIContent("X 좌표 대칭", "중심 X 좌표를 기준으로 반대쪽도 함께 칠합니다."), mirrorX);
+            mirrorZ = EditorGUILayout.Toggle(new GUIContent("Z 좌표 대칭", "중심 Z 좌표를 기준으로 반대쪽도 함께 칠합니다. 두 옵션을 켜면 최대 네 곳을 칠합니다."), mirrorZ);
+            if (mirrorX || mirrorZ)
+            {
+                bool nextUseMaskCenter = EditorGUILayout.Toggle("마스크 중앙을 대칭 중심으로 사용", useMaskCenter);
+                if (useMaskCenter && !nextUseMaskCenter)
+                    symmetryCenter = SymmetryCenter;
+                useMaskCenter = nextUseMaskCenter;
+                using (new EditorGUI.DisabledScope(useMaskCenter))
+                {
+                    Vector2 edited = EditorGUILayout.Vector2Field("대칭 중심 (X,Z)", SymmetryCenter);
+                    if (!useMaskCenter) symmetryCenter = edited;
+                }
+            }
+        }
+        if (EditorGUI.EndChangeCheck())
+        {
+            hasLastPoint = false;
+            SceneView.RepaintAll();
+        }
+    }
+
+    void DrawSymmetryPreview(Vector3 point)
+    {
+        Vector2 center = SymmetryCenter;
+        int axes = SymmetryAxes;
+        float height = point.y + 0.03f;
+        for (int reflection = 0; reflection <= axes; reflection++)
+        {
+            if ((reflection & axes) != reflection) continue;
+            Vector2 reflected = ReflectPoint(new Vector2(point.x, point.z), center, reflection);
+            if (reflected.x + radius < data.origin.x || reflected.x - radius > data.origin.x + data.size.x ||
+                reflected.y + radius < data.origin.y || reflected.y - radius > data.origin.y + data.size.y)
+                continue;
+            Vector3 cursor = new Vector3(reflected.x, height, reflected.y);
+            Handles.DrawWireDisc(cursor, Vector3.up, radius);
+            Handles.DrawWireDisc(cursor, Vector3.up, radius * hardness);
+        }
+        // 대칭 기준선은 현재 커서 높이에서 마스크 영역에 맞춰 표시한다.
+        if (mirrorX && center.x >= data.origin.x && center.x <= data.origin.x + data.size.x)
+            Handles.DrawDottedLine(new Vector3(center.x, height, data.origin.y),
+                new Vector3(center.x, height, data.origin.y + data.size.y), 4f);
+        if (mirrorZ && center.y >= data.origin.y && center.y <= data.origin.y + data.size.y)
+            Handles.DrawDottedLine(new Vector3(data.origin.x, height, center.y),
+                new Vector3(data.origin.x + data.size.x, height, center.y), 4f);
     }
 
     void EndStroke()
