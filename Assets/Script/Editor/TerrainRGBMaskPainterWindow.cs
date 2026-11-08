@@ -198,6 +198,7 @@ public sealed class TerrainRGBMaskPainterWindow : EditorWindow
         }
         EditorGUILayout.HelpBox("Scene 뷰에서 왼쪽 드래그: 칠하기 / Shift: 기본(R)으로 복원\n" +
             "B: 시작·종료 / [·]: 반경 축소·확대 (Scene 뷰)\n" +
+            ",: 이전 재질 / .: 다음 재질 (RGB 순환)\n" +
             "Ctrl+Z: 실행 취소 / Esc: 종료 / Alt·오른쪽 버튼: 카메라 조작\n" +
             "다른 지형·Polybrush 도구의 칠하기 모드는 꺼주세요.", MessageType.None);
         using (new EditorGUI.DisabledScope(strokeActive))
@@ -509,6 +510,19 @@ public sealed class TerrainRGBMaskPainterWindow : EditorWindow
                 if (paintEnabled) StopPainting();
                 else StartPainting();
             }
+        }
+        else if (paintEnabled && (e.keyCode == KeyCode.Comma || e.keyCode == KeyCode.Period))
+        {
+            int direction = e.keyCode == KeyCode.Comma ? -1 : 1;
+            channel = (channel + direction + ChannelNames.Length) % ChannelNames.Length;
+            // 드래그 중 전환하면 이전 재질의 칠하기를 확정하고 새 재질로 이어간다.
+            if (strokeActive)
+            {
+                int control = strokeControl;
+                EndStroke();
+                BeginStroke(control, channel);
+            }
+            hasLastPoint = false;
         }
         else if (paintEnabled && (e.keyCode == KeyCode.LeftBracket || e.keyCode == KeyCode.RightBracket))
         {
