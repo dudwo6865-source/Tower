@@ -5,6 +5,22 @@ using UnityEngine;
 [AddComponentMenu("게임/미션/EggMissionController")]
 public class EggMissionController : MonoBehaviour
 {
+    // 미니맵에는 부화 대기 또는 연출 중인 알의 실제 타이머만 전달한다.
+    public bool TryGetMinimapHatchTime(MonsterEgg egg, out float remaining, out bool hatching)
+    {
+        remaining = 0f;
+        hatching = false;
+        if (egg == null || Rules == null || Error != null || eggs == null) return false;
+        int index = Array.IndexOf(eggs, egg);
+        if (index < 0) return false;
+        EggMissionRules.EggState state = Rules.GetState(index);
+        hatching = state == EggMissionRules.EggState.Hatching;
+        if (hatching) return true;
+        if (state != EggMissionRules.EggState.Waiting || egg != NextEgg) return false;
+        remaining = Rules.RemainingSeconds;
+        return true;
+    }
+
     public EggMissionRules Rules { get; private set; }
     public string Error { get; private set; }
     public MonsterEgg NextEgg { get; private set; }

@@ -26,14 +26,12 @@ public partial class MinimapBlipManager
         if (visible)
         {
             // 미션의 실제 남은 시간을 사용하므로 일시 정지와 게임 속도를 그대로 따른다.
-            MonsterEgg.HatchStatus status = egg.GetHatchStatus(out float remaining, out _, out _);
-            if (status == MonsterEgg.HatchStatus.NextHatch)
+            EggMissionController mission = egg.GetComponentInParent<EggMissionController>();
+            if (mission != null && mission.TryGetMinimapHatchTime(egg, out float remaining, out bool hatching))
             {
                 int seconds = Mathf.Max(0, Mathf.CeilToInt(remaining));
-                label = $"{seconds / 60:00}:{seconds % 60:00}";
+                label = hatching ? "부화 중" : $"{seconds / 60:00}:{seconds % 60:00}";
             }
-            else if (status == MonsterEgg.HatchStatus.Hatching)
-                label = "부화 중";
         }
 
         if (label == null)
