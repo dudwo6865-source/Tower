@@ -209,7 +209,7 @@ public class GameResultManager : MonoBehaviour
         Instance = this;
 
         // 결과 창에서 일시정지된 채로 씬을 다시 불러온 경우를 대비한다.
-        if (!StageIntroController.IsPlaying) Time.timeScale = 1f;
+        if (!GamePause.IsPaused) GamePause.ResetForScene();
 
         if (dayNightCycle == null)
             dayNightCycle = FindObjectOfType<DayNightCycle>();
@@ -270,6 +270,7 @@ public class GameResultManager : MonoBehaviour
 
     void OnDestroy()
     {
+        GamePause.Release(this);
         if (Instance == this)
             Instance = null;
     }
@@ -537,7 +538,7 @@ public class GameResultManager : MonoBehaviour
     void ShowResultScreen()
     {
         if (pauseOnResult)
-            Time.timeScale = 0f;
+            GamePause.Acquire(this);
 
         OnResultScreenShown?.Invoke(CurrentResult);
     }
@@ -567,7 +568,7 @@ public class GameResultManager : MonoBehaviour
     public void RestartMission()
     {
         if (!TrySaveClearReward()) return;
-        Time.timeScale = 1f;
+        GamePause.ResetForScene();
         Scene current = SceneManager.GetActiveScene();
 
         if (current.buildIndex >= 0)
@@ -602,7 +603,7 @@ public class GameResultManager : MonoBehaviour
             return;
         }
 
-        Time.timeScale = 1f;
+        GamePause.ResetForScene();
         SceneManager.LoadScene(lobbySceneName);
     }
 }

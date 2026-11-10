@@ -56,7 +56,6 @@ public class EscapeMenuUI : MonoBehaviour
     readonly List<KeyValuePair<Button, UnityAction>> bindings = new List<KeyValuePair<Button, UnityAction>>();
     GameObject currentPanel;
     UnityAction pendingAction;
-    float previousTimeScale;
 
     void Awake()
     {
@@ -168,6 +167,7 @@ public class EscapeMenuUI : MonoBehaviour
 
     void Update()
     {
+        if (TutorialController.BlocksGameplay) return;
         if (!Input.GetKeyDown(KeyCode.Escape)) return;
         if (IsOpen) { Back(); return; }
         // 기존 입력보다 먼저 검사해 취소와 메뉴 열림이 같은 프레임에 발생하지 않게 한다.
@@ -178,13 +178,13 @@ public class EscapeMenuUI : MonoBehaviour
 
     public void Open()
     {
-        if (!enabled || IsOpen || Time.timeScale <= 0f ||
+        if (!enabled || IsOpen || TutorialController.BlocksGameplay || Time.timeScale <= 0f ||
             (GameResultManager.Instance != null && GameResultManager.Instance.IsGameOver)) return;
         if (UnitCommandController.Instance != null) UnitCommandController.Instance.CancelMode();
         if (TowerPlacementController.Instance != null) TowerPlacementController.Instance.CancelPlacement();
-        previousTimeScale = Time.timeScale;
+        GamePause.Acquire(this);
         IsOpen = true;
-        Time.timeScale = 0f;
+
         Suspend(UnitSelectionManager.Instance);
         Suspend(UnitCommandController.Instance);
         Suspend(TowerPlacementController.Instance);
@@ -216,8 +216,7 @@ public class EscapeMenuUI : MonoBehaviour
         foreach (var entry in inputStates)
             if (entry.Key != null) entry.Key.enabled = entry.Value;
         inputStates.Clear();
-        if (GameResultManager.Instance == null || !GameResultManager.Instance.IsGameOver)
-            Time.timeScale = previousTimeScale;
+        GamePause.Release(this);
     }
 
     public void OpenPage(GameObject panel)
@@ -285,7 +284,7 @@ public class EscapeMenuUI : MonoBehaviour
             return;
         }
         Resume();
-        Time.timeScale = 1f;
+        GamePause.ResetForScene();
         SceneManager.LoadScene(lobbySceneName);
     }
 

@@ -117,7 +117,6 @@ public class RelicPanelUI : MonoBehaviour
     bool candidateOpen;
     bool replaceOpen;
     bool pausedByPanel;
-    float timeScaleBeforePause = 1f;
 
     void Start()
     {
@@ -385,8 +384,7 @@ public class RelicPanelUI : MonoBehaviour
 
         if (shouldPause && !pausedByPanel)
         {
-            timeScaleBeforePause = Time.timeScale > 0f ? Time.timeScale : 1f;
-            Time.timeScale = 0f;
+            GamePause.Acquire(this);
             pausedByPanel = true;
         }
         else if (!shouldPause)
@@ -402,7 +400,7 @@ public class RelicPanelUI : MonoBehaviour
             return;
 
         pausedByPanel = false;
-        Time.timeScale = timeScaleBeforePause;
+        GamePause.Release(this);
     }
 
     static void SetPanelVisible(GameObject panelRoot, bool visible)

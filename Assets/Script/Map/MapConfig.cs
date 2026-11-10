@@ -28,6 +28,10 @@ public class MapConfig : ScriptableObject
     }
 #endif
 
+    [Header("튜토리얼")]
+    [Label("튜토리얼 이벤트 목록")]
+    public TutorialBinding[] tutorials = System.Array.Empty<TutorialBinding>();
+
     [Header("기본 정보")]
     [Label("표시 이름")]
     [Tooltip("맵 선택 UI 등에 표시할 이름입니다.")]

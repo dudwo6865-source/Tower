@@ -112,6 +112,13 @@ public class UnitSelectionManager : MonoBehaviour
 
     void Update()
     {
+        if (TutorialController.BlocksGameplay)
+        {
+            isDragging = false;
+            isBoxDragging = false;
+            if (selectionBoxUI != null) selectionBoxUI.Hide();
+            return;
+        }
         if (StageIntroController.IsPlaying) return;
         if (removedNotifyPending)
         {

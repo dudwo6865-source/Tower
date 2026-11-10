@@ -60,7 +60,7 @@ public class UnitCommandPanelUI : MonoBehaviour
 
     void Update()
     {
-        if (StageIntroController.IsPlaying) return;
+        if (StageIntroController.IsPlaying || TutorialController.BlocksGameplay) return;
         RefreshVisibility();
 
         if (!enableHotkeys || !IsPanelVisible())

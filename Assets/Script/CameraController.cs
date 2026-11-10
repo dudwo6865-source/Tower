@@ -333,7 +333,7 @@ public class RTSCameraPivotController : MonoBehaviour
 
     void Update()
     {
-        if (StageIntroController.IsPlaying) return;
+        if (StageIntroController.IsPlaying || TutorialController.BlocksGameplay) return;
         if (!mapBoundsValid)
             return;
 

@@ -116,6 +116,8 @@ public class MapLoader : MonoBehaviour
 
         IsMapReady = false;
         LoadedConfig = config;
+        TutorialController tutorial = FindFirstObjectByType<TutorialController>();
+        if (tutorial != null) tutorial.Configure(config.tutorials);
 
         // 매니저들이 자신의 Awake/Start에서 읽도록, 먼저 설정값을 주입한다.
         // (MapLoader가 가장 이른 실행 순서이므로 매니저 Awake보다 앞선다.)

@@ -191,7 +191,7 @@ public class TowerPlacementController : MonoBehaviour
 
     void Update()
     {
-        if (StageIntroController.IsPlaying) return;
+        if (StageIntroController.IsPlaying || TutorialController.BlocksGameplay) return;
         if (!IsPlacing)
             return;
 
@@ -327,6 +327,7 @@ public class TowerPlacementController : MonoBehaviour
             return;
 
         PlayPlacementSound(position);
+        TutorialController.Instance?.WatchConstruction(buildingObject);
     }
 
     public void PlayFailedPlacementFeedback()

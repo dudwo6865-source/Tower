@@ -107,7 +107,7 @@ public class BuildShopUI : MonoBehaviour
 
     void Update()
     {
-        if (StageIntroController.IsPlaying) return;
+        if (StageIntroController.IsPlaying || TutorialController.BlocksGameplay) return;
         RefreshSelectionStates();
 
         if (!enableHotkeys || entries == null || entries.Length == 0 || buildHotkeys == null)

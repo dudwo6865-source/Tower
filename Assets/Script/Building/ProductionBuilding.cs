@@ -777,6 +777,7 @@ public class ProductionBuilding : MonoBehaviour
 
         if (ownerId == localPlayerOwnerId)
         {
+            TutorialController.Instance?.Notify(TutorialEvent.UnitProduced);
             UnitSound unitSound = unitObject.GetComponent<UnitSound>();
 
             if (unitSound != null)

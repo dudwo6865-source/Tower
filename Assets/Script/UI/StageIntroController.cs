@@ -30,7 +30,6 @@ public class StageIntroController : MonoBehaviour
 
     StageIntroTiming timing;
     bool running;
-    float restoreTimeScale;
     float loadingStarted;
     int startFrame;
     StageBuildingSpawnPoint[] initialMarkers;
@@ -49,8 +48,7 @@ public class StageIntroController : MonoBehaviour
         }
         Instance = this;
         running = true;
-        restoreTimeScale = Time.timeScale > 0f ? Time.timeScale : 1f;
-        Time.timeScale = 0f;
+        GamePause.Acquire(this);
         blackout.alpha = 1f;
         blackout.blocksRaycasts = true;
         timing = new StageIntroTiming(revealDuration);
@@ -74,7 +72,7 @@ public class StageIntroController : MonoBehaviour
             Finish();
             return;
         }
-        Time.timeScale = 0f;
+        GamePause.Acquire(this);
         if (Time.frameCount <= startFrame) return;
         if (timing.State == StageIntroTiming.Phase.Loading &&
             Time.realtimeSinceStartup - loadingStarted >= Mathf.Max(1f, loadingTimeout))
@@ -143,8 +141,7 @@ public class StageIntroController : MonoBehaviour
         foreach (BaseInputModule module in lockedInputModules)
             if (module != null) module.enabled = true;
         lockedInputModules.Clear();
-        if (Time.timeScale == 0f && (GameResultManager.Instance == null || !GameResultManager.Instance.IsGameOver))
-            Time.timeScale = restoreTimeScale;
+        GamePause.Release(this);
     }
 
     void HideVisuals()

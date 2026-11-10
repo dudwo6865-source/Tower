@@ -141,7 +141,7 @@ public class MissionSelectionUI : MonoBehaviour
         else MapLoader.PendingConfig = stage;
         loading = true;
         if (launchButton != null) launchButton.interactable = false;
-        Time.timeScale = 1f;
+        GamePause.ResetForScene();
         SceneManager.LoadSceneAsync(battleSceneName);
     }
 

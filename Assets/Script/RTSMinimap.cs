@@ -513,12 +513,14 @@ public partial class RTSMinimap : MonoBehaviour, IPointerClickHandler, IDragHand
 
     public void OnPointerClick(PointerEventData eventData)
     {
+        if (TutorialController.BlocksGameplay) return;
         if (eventData.button == PointerEventData.InputButton.Left)
             FocusFromPointer(eventData);
     }
 
     public void OnDrag(PointerEventData eventData)
     {
+        if (TutorialController.BlocksGameplay) return;
         if (!allowDragToPan || eventData.button != PointerEventData.InputButton.Left)
             return;
 

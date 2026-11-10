@@ -239,6 +239,7 @@ public partial class StageEditorWindow : EditorWindow
         // 웨이브는 표·그래프가 들어가므로 전체 폭을 쓴다.
         DrawWaveSection();
         DrawMutationSection();
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("tutorials"), new GUIContent("튜토리얼 이벤트 목록"), true);
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("크레딧 / 클리어 등급", EditorStyles.boldLabel);
         EditorGUILayout.HelpBox("게임 시간(초), 파괴한 적 스포너 수, 누적 마석 획득량에 항목별 배율을 곱해 점수로 합산합니다. " +
