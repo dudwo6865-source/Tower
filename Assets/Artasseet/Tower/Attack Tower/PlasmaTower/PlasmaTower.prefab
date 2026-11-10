@@ -167,7 +167,7 @@ MonoBehaviour:
   armor: 0
   minDamageRatio: 0.1
   minDamage: 0.5
-  deathEffectPrefab: {fileID: 304414178702807373, guid: 45d6ec100fd5e4242a690c9cb7b4bbe5, type: 3}
+  deathEffectPrefab: {fileID: 5358781338148553577, guid: 2b37e0c6627ab3b4b93cd55743b5d4b1, type: 3}
 --- !u!114 &1435759923663919092
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -218,15 +218,18 @@ MonoBehaviour:
   attackSounds:
   - clip: {fileID: 8300000, guid: 7ffc80e972d2c7141a60a751d3e6f030, type: 3}
     volume: 1
+    allowOverlap: 0
     initialized: 1
   attackHitSounds: []
   deathSounds:
   - clip: {fileID: 8300000, guid: 6a01f91b3a0304547b8fe8eb3ae0820b, type: 3}
     volume: 1
+    allowOverlap: 0
     initialized: 1
   attackLoopSound:
     clip: {fileID: 0}
     volume: 1
+    allowOverlap: 0
     initialized: 1
   attackLoopHoldTime: 0.15
   attackLoopFadeIn: 0.05

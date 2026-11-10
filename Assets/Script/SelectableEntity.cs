@@ -226,9 +226,8 @@ public class SelectableEntity : MonoBehaviour
 
         UpdateAttackRangeRings(selected);
 
-        WorldHealthBar healthBar = GetComponent<WorldHealthBar>();
-
-        if (healthBar != null)
+        // TryGetComponent는 없을 때 에디터에서 오류 메시지 객체를 만들지 않는다.
+        if (TryGetComponent(out WorldHealthBar healthBar))
             healthBar.RefreshVisibility();
     }
 

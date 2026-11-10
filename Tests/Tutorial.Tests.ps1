@@ -4,7 +4,7 @@ $stubs = @'
 using System;
 using System.Collections;
 namespace UnityEngine {
- public class Object { public static void Destroy(object o) {} }
+ public class Object { public string name; public static void Destroy(object o) {} }
  public class ScriptableObject : Object {}
  public class GameObject { public bool activeInHierarchy = true; }
  public class MonoBehaviour : Object {
@@ -44,6 +44,7 @@ public class TutorialPanel {
  public event Action NextRequested;
  public int shown;
  public bool CanShow(TutorialSequence s) { return s.pages != null && s.pages.Length > 0; }
+ public string GetValidationError(TutorialSequence s) { return CanShow(s) && !(s.waitForEvent && (s.pauseGame || s.blockGameplay)) ? null : "설정 오류"; }
  public void Show(TutorialPage p, bool block, bool advance) { shown++; panelRoot.activeInHierarchy = true; }
  public void Hide() { panelRoot.activeInHierarchy = false; }
  public void Click() { if (NextRequested != null) NextRequested(); }
@@ -124,9 +125,9 @@ $binding.prerequisite = $practice; $binding.sequence = $follow
 $c.Configure(@($binding)); $c.Play($practice); Tick $c
 Tick $c; $c.NextPage()
 Check ($c.panel.panelRoot.activeInHierarchy -and [UnityEngine.Time]::timeScale -eq 1) '실습은 시간을 흐르게 하고 클릭으로 닫히지 않는다'
-$c.Notify([TutorialTestCode.TutorialEvent]::UnitProduced, $null, 0)
+$c.Notify([TutorialTestCode.TutorialEvent]::UnitProduced, $null, 0, 0)
 Check ($c.panel.panelRoot.activeInHierarchy) '다른 이벤트는 실습을 완료하지 않는다'
-$c.Notify([TutorialTestCode.TutorialEvent]::BuildingCompleted, $null, 0)
+$c.Notify([TutorialTestCode.TutorialEvent]::BuildingCompleted, $null, 0, 0)
 Check (-not $c.panel.panelRoot.activeInHierarchy) '지정 이벤트로 실습을 완료한다'
 Tick $c
 Check ([UnityEngine.Time]::timeScale -eq 0) '실습 완료 이벤트로 후속 안내를 연결한다'
@@ -137,6 +138,19 @@ Check ([UnityEngine.Time]::timeScale -eq 0) '안내 취소가 다른 화면의 �
 Check ([UnityEngine.Time]::timeScale -eq 1) '모든 화면이 닫히면 재개한다'
 $c.Configure(@()); $c.Play($first); Tick $c
 Check ($c.panel.panelRoot.activeInHierarchy) '스테이지 재설정 시 표시 이력을 초기화한다'
+$c.CancelAll()
+$eggNotice = New-Sequence
+$binding = [TutorialTestCode.TutorialBinding]::new()
+$binding.trigger = [TutorialTestCode.TutorialEvent]::EggSpawnCountChanged
+$binding.eggSpawnCount = 3; $binding.sequence = $eggNotice
+$c.Configure(@($binding))
+$c.Notify([TutorialTestCode.TutorialEvent]::EggSpawnCountChanged, $null, 0, 2); Tick $c
+Check (-not $c.panel.panelRoot.activeInHierarchy) '다른 알 리젠 수에는 안내를 표시하지 않는다'
+$c.Notify([TutorialTestCode.TutorialEvent]::EggSpawnCountChanged, $null, 0, 3); Tick $c
+Check ($c.panel.panelRoot.activeInHierarchy) '지정한 알 리젠 수로 바뀌면 안내를 표시한다'
+$c.CancelAll(); $binding.eggSpawnCount = 0; $c.Configure(@($binding))
+$c.Notify([TutorialTestCode.TutorialEvent]::EggSpawnCountChanged, $null, 0, 2); Tick $c
+Check ($c.panel.panelRoot.activeInHierarchy) '알 리젠 수 조건 0은 모든 변화에 반응한다'
 Invoke-Hidden $c 'OnDisable'
 Check ([UnityEngine.Time]::timeScale -eq 1 -and -not $c.panel.panelRoot.activeInHierarchy) '비활성화 시 패널과 시간 정지를 정리한다'
 Write-Output "튜토리얼 진행·일시정지 $script:checks 개 검증 통과"

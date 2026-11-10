@@ -37,7 +37,7 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _RGBMask:
-        m_Texture: {fileID: 2800000, guid: fe2cd78d292daef46ada3bbd9f6dd2e1, type: 3}
+        m_Texture: {fileID: 2800000, guid: 7900f7c98afde44478f614bb71485563, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _SandAlbedo:
@@ -91,6 +91,6 @@ Material:
     - _SoilStrength: 0.88
     - _SoilTiling: 0.09
     m_Colors:
-    - _MaskOrigin: {r: -8, g: -8, b: 0, a: 0}
-    - _MaskSize: {r: 264, g: 160, b: 0, a: 0}
+    - _MaskOrigin: {r: -144, g: -144, b: 0, a: 0}
+    - _MaskSize: {r: 288, g: 288, b: 0, a: 0}
   m_BuildTextureStacks: []

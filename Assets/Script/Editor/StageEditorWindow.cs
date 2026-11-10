@@ -240,6 +240,7 @@ public partial class StageEditorWindow : EditorWindow
         DrawWaveSection();
         DrawMutationSection();
         EditorGUILayout.PropertyField(serializedObject.FindProperty("tutorials"), new GUIContent("튜토리얼 이벤트 목록"), true);
+        if (GUILayout.Button("튜토리얼 에디터에서 관리")) TutorialEditorWindow.Open(selected);
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("크레딧 / 클리어 등급", EditorStyles.boldLabel);
         EditorGUILayout.HelpBox("게임 시간(초), 파괴한 적 스포너 수, 누적 마석 획득량에 항목별 배율을 곱해 점수로 합산합니다. " +
@@ -1045,9 +1046,29 @@ public partial class StageEditorWindow : EditorWindow
         EditorGUILayout.PropertyField(serializedObject.FindProperty("winByDestroyingEggs"), new GUIContent("알 파괴 미션 사용"));
         if (selected.winByDestroyingEggs)
         {
-            SerializedProperty times = serializedObject.FindProperty("eggStageDurations");
-            EditorGUILayout.PropertyField(times, new GUIContent("단계별 제한 시간(초)", times.tooltip), true);
-            EditorGUILayout.HelpBox("맵 루트에 EggMissionController를 붙이고 자식으로 MonsterEgg를 배치하세요. 알 파괴 또는 부화 시 다음 제한 시간이 시작됩니다. 부화 몬스터까지 모두 처치해야 승리합니다.", MessageType.Info);
+            SerializedProperty eggSettings = serializedObject.FindProperty("eggSettings");
+            // 리스트 제목은 [Label]로 바뀌지 않으므로 자식을 직접 돌며 한글 라벨을 넘긴다.
+            eggSettings.isExpanded = EditorGUILayout.Foldout(eggSettings.isExpanded, new GUIContent("알 미션 설정", eggSettings.tooltip), true);
+            if (eggSettings.isExpanded)
+            {
+                EditorGUI.indentLevel++;
+                SerializedProperty eggChild = eggSettings.Copy();
+                SerializedProperty eggEnd = eggSettings.GetEndProperty();
+                bool enterEggChildren = true;
+                while (eggChild.NextVisible(enterEggChildren) && !SerializedProperty.EqualContents(eggChild, eggEnd))
+                {
+                    enterEggChildren = false;
+                    if (eggChild.name == nameof(EggMissionSettings.eggsPerSpawnByDestroyed))
+                        EditorGUILayout.PropertyField(eggChild, new GUIContent("파괴 수별 출현 수", eggChild.tooltip), true);
+                    else
+                        EditorGUILayout.PropertyField(eggChild, true);
+                }
+                EditorGUI.indentLevel--;
+            }
+            if (selected.eggSettings != null && selected.eggSettings.eggsPerSpawnByDestroyed != null &&
+                selected.eggSettings.eggsPerSpawnByDestroyed.Count > 0)
+                EditorGUILayout.HelpBox("'파괴 수별 출현 수'를 사용 중입니다. 파괴 수 이하인 구간 중 기준이 가장 큰 구간의 수만큼 한 번에 나오고, 맞는 구간이 없으면 '한 번에 나오는 수'를 씁니다.", MessageType.None);
+            EditorGUILayout.HelpBox("맵 루트에 EggMissionController를 붙이세요. 시간이 지나면 '알 프리팹'이 맵에 무작위로 나오고, 알마다 따로 부화 시간이 흐릅니다. '목표 파괴 수'만큼 알을 파괴하면 승리합니다. 맵 루트 아래 미리 놓은 알도 함께 쓰입니다.", MessageType.Info);
             if (selected.winBySurvivingNights || selected.winWhenAllSpawnersDestroyed || selected.winByCapturingPoint || selected.winByDefeatingBoss)
                 EditorGUILayout.HelpBox("다른 조건으로 먼저 승리할 수 있습니다. 알 전용 미션에서는 다른 승리 조건을 끄세요.", MessageType.Warning);
             if (selected.mapRootPrefab != null)
@@ -1058,7 +1079,7 @@ public partial class StageEditorWindow : EditorWindow
                 else
                 {
                     MonsterEgg[] eggs = missions[0].GetComponentsInChildren<MonsterEgg>();
-                    string error = EggMissionRules.ValidateDurations(selected.eggStageDurations, eggs.Length);
+                    string error = selected.eggSettings != null ? selected.eggSettings.Validate(eggs.Length) : "알 미션 설정이 없습니다.";
                     if (error != null) EditorGUILayout.HelpBox(error, MessageType.Error);
                     foreach (MonsterEgg egg in eggs)
                     {
@@ -1317,7 +1338,7 @@ public partial class StageEditorWindow : EditorWindow
             selected.winWhenAllSpawnersDestroyed = result.winWhenAllSpawnersDestroyed;
             selected.winByDefeatingBoss = result.winByDefeatingBoss;
             selected.winByDestroyingEggs = result.winByDestroyingEggs;
-            selected.eggStageDurations = result.eggStageDurations != null ? (float[])result.eggStageDurations.Clone() : null;
+            selected.eggSettings = result.eggSettings != null ? result.eggSettings.Clone() : new EggMissionSettings();
         }
 
         EnemyMutationManager mutations = UnityEngine.Object.FindFirstObjectByType<EnemyMutationManager>();
@@ -1407,7 +1428,7 @@ public partial class StageEditorWindow : EditorWindow
                 result.winByCapturingPoint = selected.winByCapturingPoint;
                 result.winByDefeatingBoss = selected.winByDefeatingBoss;
                 result.winByDestroyingEggs = selected.winByDestroyingEggs;
-                result.eggStageDurations = selected.eggStageDurations != null ? (float[])selected.eggStageDurations.Clone() : null;
+                result.eggSettings = selected.eggSettings != null ? selected.eggSettings.Clone() : new EggMissionSettings();
                 result.captureDuration = selected.captureDuration;
                 EditorUtility.SetDirty(result);
                 appliedAny = true;

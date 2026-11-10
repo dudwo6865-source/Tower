@@ -136,6 +136,7 @@ MonoBehaviour:
   attackLoopSound:
     clip: {fileID: 0}
     volume: 1
+    allowOverlap: 0
     initialized: 1
   attackLoopHoldTime: 0.15
   attackLoopFadeIn: 0.05

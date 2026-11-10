@@ -179,12 +179,11 @@ public class MapConfig : ScriptableObject
     public bool winByDefeatingBoss;
 
     [Label("알 파괴 미션 사용")]
-    [Tooltip("모든 알을 파괴하거나 부화시키고, 부화한 몬스터까지 모두 처치하면 승리합니다.")]
+    [Tooltip("시간이 지나면 맵에 무작위로 알이 나오고, 알마다 따로 부화 시간이 흐릅니다. 정해진 수의 알을 파괴하면 승리합니다.")]
     public bool winByDestroyingEggs;
 
-    [Label("단계별 제한 시간(초)")]
-    [Tooltip("알 개수 이상 입력합니다. 알이 파괴되거나 부화할 때마다 다음 시간으로 새로 시작합니다. 뒤로 갈수록 짧아야 합니다.")]
-    public float[] eggStageDurations = { 300f, 240f, 180f, 120f };
+    [Label("알 미션 설정")]
+    public EggMissionSettings eggSettings = new EggMissionSettings();
 
     [Label("점령 시간(초)")]
     [Tooltip("아군 유닛이 있고 적이 없는 상태로 유지해야 하는 시간입니다. 0보다 커야 합니다.")]

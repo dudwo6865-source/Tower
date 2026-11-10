@@ -1156,6 +1156,60 @@ public class CliffPainter : MonoBehaviour
         lookupDirty = true;
     }
 
+    // 대칭선 한쪽(원본 쪽)의 칠 데이터를 반대편으로 반전 복사한다. 반대편의 기존 데이터는 지운다.
+    // alongX면 X를 반전(좌우), 아니면 Z를 반전(앞뒤)한다. axisTimes2는 대칭선 격자 좌표의 2배이다.
+    // 대칭선 위에 걸친 칸(홀수 폭 중앙 줄)은 원본으로 보고 그대로 둔다.
+    public void MirrorCells(bool alongX, int axisTimes2, bool fromHighSide)
+    {
+        EnsureLookup();
+
+        int Coord(CellCoord c) => alongX ? c.x : c.z;
+        bool IsSource(CellCoord c)
+        {
+            int side = 2 * Coord(c) + 1 - axisTimes2;
+            return fromHighSide ? side >= 0 : side <= 0;
+        }
+        CellCoord Flip(CellCoord c) => alongX
+            ? new CellCoord(axisTimes2 - c.x - 1, c.z)
+            : new CellCoord(c.x, axisTimes2 - c.z - 1);
+        int FlipDir(int dir)
+        {
+            dir = NormalizeDir(dir);
+            // 0=N, 1=E, 2=S, 3=W. 좌우 반전은 E/W, 앞뒤 반전은 N/S를 바꾼다.
+            if (alongX) return dir == 1 ? 3 : dir == 3 ? 1 : dir;
+            return dir == 0 ? 2 : dir == 2 ? 0 : dir;
+        }
+
+        void MirrorList<T>(List<T> list, Func<T, CellCoord> getCell, Func<T, T> flip)
+        {
+            if (list == null)
+                return;
+            var kept = new List<T>(list.Count * 2);
+            var seen = new HashSet<CellCoord>();
+            foreach (T item in list)
+                if (IsSource(getCell(item)) && seen.Add(getCell(item)))
+                    kept.Add(item);
+            int sourceCount = kept.Count;
+            for (int i = 0; i < sourceCount; i++)
+            {
+                T flipped = flip(kept[i]);
+                if (seen.Add(getCell(flipped)))
+                    kept.Add(flipped);
+            }
+            list.Clear();
+            list.AddRange(kept);
+        }
+
+        MirrorList(tops, e => e.cell, e => { e.cell = Flip(e.cell); return e; });
+        MirrorList(topCells, c => c, Flip);
+        MirrorList(hills, e => e.cell, e => { e.cell = Flip(e.cell); return e; });
+        MirrorList(hillCells, c => c, Flip);
+        MirrorList(groundCells, c => c, Flip);
+        MirrorList(ramps, e => e.cell, e => { e.cell = Flip(e.cell); e.direction = FlipDir(e.direction); return e; });
+
+        lookupDirty = true;
+    }
+
     public Transform EnsureGeneratedRoot()
     {
         if (generatedRoot != null && generatedRoot != transform && generatedRoot.IsChildOf(transform))

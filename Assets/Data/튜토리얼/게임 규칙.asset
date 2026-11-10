@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 06ca03311d444d53bb11cd938787a4f7, type: 3}
+  m_Name: "\uAC8C\uC784 \uADDC\uCE59"
+  m_EditorClassIdentifier: 
+  pauseGame: 1
+  blockGameplay: 1
+  oncePerStage: 1
+  waitForEvent: 0
+  completionTrigger: 0
+  completionEvent: 
+  pages:
+  - text: "\uD568\uC7A5\uB2D8, \uC791\uC804 \uAD6C\uC5ED\uC5D0 \uC9C4\uC785\uD588\uC2B5\uB2C8\uB2E4.\n\uC774\uBC88
+      \uC784\uBB34\uC758 \uBAA9\uD45C\uB294 \uC801\uC758 \uBD80\uD654\uC7A5 \uD30C\uAD34\uC785\uB2C8\uB2E4.
+      \uBCF8\uBD80\uB97C \uAC70\uC810\uC73C\uB85C \uBCD1\uB825\uC744 \uC900\uBE44\uD574
+      \uC8FC\uC138\uC694."
+    image: {fileID: 21300000, guid: f8bca481c2c095f47907231cbb33d175, type: 3}
+    imageSlot: 0
+  - text: "\uC774 \uAD6C\uC5ED\uC5D0\uC11C\uB294 \uC77C\uC815 \uC2DC\uAC04\uC774
+      \uC9C0\uB0A0 \uB54C\uB9C8\uB2E4 \uB9F5 \uACF3\uACF3\uC5D0 \uC54C\uC774 \uB098\uD0C0\uB0A9\uB2C8\uB2E4.\n\uBBF8\uB2C8\uB9F5\uC5D0\uC11C
+      \uC54C \uC0DD\uC131 \uC704\uCE58\uB97C \uC54C \uC218 \uC788\uC2B5\uB2C8\uB2E4."
+    image: {fileID: 21300000, guid: f8bca481c2c095f47907231cbb33d175, type: 3}
+    imageSlot: 0
+  - text: "\uBC1C\uACAC\uD55C \uC54C\uC740 \uBD80\uD654\uD558\uAE30 \uC804\uC5D0
+      \uD30C\uAD34\uD574 \uC8FC\uC138\uC694.\n\uC2DC\uAC04 \uC548\uC5D0 \uCC98\uB9AC\uD558\uC9C0
+      \uBABB\uD558\uBA74 \uAC15\uB825\uD55C \uBAAC\uC2A4\uD130\uAC00 \uAE68\uC5B4\uB098
+      \uC6B0\uB9AC \uBCF8\uBD80\uB85C \uCCD0\uB4E4\uC5B4\uC635\uB2C8\uB2E4!"
+    image: {fileID: 21300000, guid: f8bca481c2c095f47907231cbb33d175, type: 3}
+    imageSlot: 0
+  - text: "\uBCF8\uBD80\uC758 \uBC29\uC5B4\uB97C \uAC16\uCD94\uACE0, \uC54C\uC744
+      \uCC98\uB9AC\uD560 \uBCD1\uB825\uB3C4 \uC900\uBE44\uD574 \uC8FC\uC138\uC694.\n\uBAA9\uD45C
+      \uC218\uB9CC\uD07C \uC54C\uC744 \uD30C\uAD34\uD558\uBA74 \uC784\uBB34 \uC644\uB8CC\uC785\uB2C8\uB2E4.\n\uD568\uC7A5\uB2D8,
+      \uC9C0\uD718\uB97C \uBD80\uD0C1\uB4DC\uB9BD\uB2C8\uB2E4!"
+    image: {fileID: 21300000, guid: f8bca481c2c095f47907231cbb33d175, type: 3}
+    imageSlot: 0

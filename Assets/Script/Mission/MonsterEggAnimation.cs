@@ -22,7 +22,7 @@ public class MonsterEggAnimation : MonoBehaviour
     [Label("부화 재생 속도")]
     [Min(0.01f)] public float hatchSpeed = 1f;
     [Label("긴장도 변화 곡선")]
-    [Tooltip("가로축은 현재 제한 시간의 진행률, 세로축은 속도와 맥박의 강화 정도입니다. 현재 부화 예정인 알에만 적용합니다.")]
+    [Tooltip("가로축은 이 알의 부화 진행률, 세로축은 속도와 맥박의 강화 정도입니다.")]
     public AnimationCurve urgencyCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
     [Label("부화 이벤트 대기 한도(초)")]
     [Tooltip("게임 시간 기준입니다. 소환 이벤트가 없으면 오류를 표시하며 자동 소환하지 않습니다. 소환 후 종료 이벤트가 없으면 이 시간이 지났을 때 껍질을 정리합니다.")]

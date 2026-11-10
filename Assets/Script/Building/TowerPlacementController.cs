@@ -373,6 +373,9 @@ public class TowerPlacementController : MonoBehaviour
         if (effectiveVolume <= 0.001f)
             return;
 
+        if (!SoundOverlapLimiter.TryPlay(clip, placementAudioSource.pitch))
+            return;
+
         placementAudioSource.PlayOneShot(clip, effectiveVolume);
     }
 

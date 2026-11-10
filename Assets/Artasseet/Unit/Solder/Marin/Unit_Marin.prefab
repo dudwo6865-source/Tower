@@ -127,7 +127,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   attackSounds:
   - clip: {fileID: 8300000, guid: a9e42927a85c3c94d8be314767863e4e, type: 3}
-    volume: 1.42
+    volume: 1.2
     initialized: 1
   attackHitSounds: []
   deathSounds:
@@ -212,6 +212,7 @@ MonoBehaviour:
   approachInset: 0.5
   engageHoldTimeout: 0.5
   useAttackAnimationEvent: 1
+  useAttackSoundEvent: 0
   restartAttackOnRetarget: 1
   projectileSpeed: 80
   firePoint: {fileID: 8163317513608224882}
@@ -219,6 +220,10 @@ MonoBehaviour:
   flameAimPitch: 1
   flameMaxPitchAngle: 45
   beamWidth: 1
+  meleeAreaShape: 0
+  meleeConeRange: 0
+  meleeConeAngle: 90
+  meleeConeMinDamageRatio: 1
   minAttackRange: 0
   arcHeight: 4
   arcHeightRatio: 0.3
@@ -403,6 +408,7 @@ MonoBehaviour:
   moveSpeedThreshold: 0.1
   useMoveAnimation: 1
   moveHoldTime: 0.2
+  attackStateName: Attack
 --- !u!114 &1717588552250266143
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -55,11 +55,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   entityType: 1
   ownerId: 2
-  entityTypeId: unit
+  entityTypeId: Monster_Egg
   autoAssignEntityTypeId: 1
   selectionCollider: {fileID: 0}
   showAttackRangeForUnit: 0
-  portrait: {fileID: 0}
+  portrait: {fileID: 21300000, guid: 21a6cbef4ea04c248a0f5ff41b145d08, type: 3}
   autoSetupHealth: 1
 --- !u!114 &4328603873915880876
 MonoBehaviour:
@@ -73,7 +73,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aaa78dcf412fc5543af7a979177f177e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxHealth: 4000
+  maxHealth: 2000
   armor: 3
   minDamageRatio: 0.1
   minDamage: 0.5
@@ -91,14 +91,17 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   displayName: "\uBAAC\uC2A4\uD130 \uC54C"
-  hatchPriority: 0
-  monsterPrefab: {fileID: 1747304969393589866, guid: fc3ef11110c821c4e94b35b9f97708dd, type: 3}
+  monsterPrefab: {fileID: 7811046601100530491, guid: f34009fabcd3daf4ab315f99ab9e13f8, type: 3}
   hatchPoint: {fileID: 0}
-  healthMultiplier: 3
-  damageMultiplier: 2
+  healthMultiplier: 0.5
+  damageMultiplier: 0.5
   speedMultiplier: 1
+  sizeMultiplier: 0.7
   nextHatchIndicator: {fileID: 0}
-  hatchEffectPrefab: {fileID: 0}
+  hatchEffectPrefab: {fileID: 88389803253649131, guid: af17f66cf4bc545479163894228f5b8f, type: 3}
+  hatchSound: {fileID: 8300000, guid: fb1c0147718c4fc4f9b724ee1df097e7, type: 3}
+  hatchSoundVolume: 1
+  eggAnimation: {fileID: 6233393488064439665}
 --- !u!114 &7549167416808976477
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -256,6 +259,18 @@ PrefabInstance:
       propertyPath: m_Layer
       value: 8
       objectReference: {fileID: 0}
+    - target: {fileID: -2639638324218457063, guid: 3fc3c6ae29beb4048a3dae6c99da5c8e, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 88.11601
+      objectReference: {fileID: 0}
+    - target: {fileID: -2639638324218457063, guid: 3fc3c6ae29beb4048a3dae6c99da5c8e, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: -170.10431
+      objectReference: {fileID: 0}
+    - target: {fileID: -2639638324218457063, guid: 3fc3c6ae29beb4048a3dae6c99da5c8e, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: -171.01956
+      objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 3fc3c6ae29beb4048a3dae6c99da5c8e, type: 3}
       propertyPath: m_Name
       value: Egg
@@ -272,16 +287,177 @@ PrefabInstance:
       propertyPath: m_Layer
       value: 8
       objectReference: {fileID: 0}
+    - target: {fileID: 8879528566716807029, guid: 3fc3c6ae29beb4048a3dae6c99da5c8e, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: -89.98021
+      objectReference: {fileID: 0}
+    - target: {fileID: 9044806412961212599, guid: 3fc3c6ae29beb4048a3dae6c99da5c8e, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: -89.98021
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 3fc3c6ae29beb4048a3dae6c99da5c8e, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2516512554674938367}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 3fc3c6ae29beb4048a3dae6c99da5c8e, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6233393488064439665}
   m_SourcePrefab: {fileID: 100100000, guid: 3fc3c6ae29beb4048a3dae6c99da5c8e, type: 3}
 --- !u!4 &1490686235737613858 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 3fc3c6ae29beb4048a3dae6c99da5c8e, type: 3}
   m_PrefabInstance: {fileID: 1379581732462330313}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &2298009638916078744 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 3fc3c6ae29beb4048a3dae6c99da5c8e, type: 3}
+  m_PrefabInstance: {fileID: 1379581732462330313}
+  m_PrefabAsset: {fileID: 0}
+--- !u!95 &2516512554674938367
+Animator:
+  serializedVersion: 5
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2298009638916078744}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: f7de392b8361662408f892615cd1c075, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &6233393488064439665
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2298009638916078744}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f84a7e83ad164a7195722bac0e370a97, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  idleState: Base Layer.Idle
+  hatchState: Base Layer.Hatch
+  animationLayer: 0
+  idleSpeed: 1
+  urgentIdleSpeed: 3
+  hatchSpeed: 1
+  urgencyCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.8293331
+      value: 0.40141046
+      inSlope: 0.8910394
+      outSlope: 0.8910394
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1.0035706
+      value: 0.7735863
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  hatchTimeout: 15
+  pulseEmission: 1
+  emissionRenderers: []
+  emissionProperty: _EmissionColor
+  emissionColor: {r: 17.148375, g: 0, b: 0, a: 1}
+  minimumEmission: 0.1
+  idleEmission: 1
+  urgentEmission: 5
+  idlePulseRate: 0.6
+  urgentPulseRate: 2.5
+  pulseCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.22
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.34
+      value: 0.65
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.48
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
 --- !u!1001 &4205411712716214649
 PrefabInstance:
   m_ObjectHideFlags: 0

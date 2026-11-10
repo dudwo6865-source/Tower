@@ -26,6 +26,10 @@ public class UnitSoundClip
     [Range(0f, 2f)]
     public float volume = 1f;
 
+    [Label("중복 재생 허용")]
+    [Tooltip("켜면 같은 클립이 같은 순간에 여러 번 재생되어도 생략하지 않습니다(SoundOverlapSettings의 중복 제한 예외).")]
+    public bool allowOverlap;
+
     // 인스펙터에서 배열에 새로 추가한 칸은 볼륨이 0으로 들어오므로, 처음 한 번만 1로 맞춘다.
     [SerializeField, HideInInspector]
     internal bool initialized = true;
@@ -449,9 +453,14 @@ public class UnitSound : MonoBehaviour, ISerializationCallbackReceiver
         if (!TryPickSound(attackSounds, out UnitSoundClip sound, out float playVolume))
             return;
 
+        float pitch = Random.Range(pitchRange.x, pitchRange.y);
+
+        if (!SoundOverlapLimiter.TryPlay(sound.clip, pitch, sound.allowOverlap || !SoundOverlapLimiter.ApplyToAttackSounds))
+            return;
+
         source.clip = sound.clip;
         source.volume = playVolume;
-        source.pitch = Random.Range(pitchRange.x, pitchRange.y);
+        source.pitch = pitch;
         source.Play();
     }
 
@@ -619,7 +628,13 @@ public class UnitSound : MonoBehaviour, ISerializationCallbackReceiver
         if (playVolume <= 0.001f)
             return;
 
-        PlayDetached(clip, playVolume, Random.Range(pitchRange.x, pitchRange.y));
+        float pitch = Random.Range(pitchRange.x, pitchRange.y);
+
+        // 알이 한꺼번에 부화하는 경우처럼 같은 순간에 몰린 같은 소리는 한 번만 낸다.
+        if (!SoundOverlapLimiter.TryPlay(clip, pitch))
+            return;
+
+        PlayDetached(clip, playVolume, pitch);
     }
 
     public void PlayDeath()
@@ -720,6 +735,9 @@ public class UnitSound : MonoBehaviour, ISerializationCallbackReceiver
         if (playVolume <= 0.001f)
             return false;
 
+        if (!SoundOverlapLimiter.TryPlay(sound.clip, audioSource.pitch, sound.allowOverlap))
+            return false;
+
         lastDetectedTime = Time.unscaledTime;
         audioSource.PlayOneShot(sound.clip, playVolume);
         return true;
@@ -806,6 +824,12 @@ public class UnitSound : MonoBehaviour, ISerializationCallbackReceiver
             return;
 
         float pitch = Random.Range(pitchRange.x, pitchRange.y);
+
+        // 공격 사운드는 PlayAttack에서 들어오므로 '공격 사운드에도 적용' 설정을 따른다.
+        bool exempt = sound.allowOverlap || (sounds == attackSounds && !SoundOverlapLimiter.ApplyToAttackSounds);
+
+        if (!SoundOverlapLimiter.TryPlay(sound.clip, pitch, exempt))
+            return;
 
         if (detached)
         {

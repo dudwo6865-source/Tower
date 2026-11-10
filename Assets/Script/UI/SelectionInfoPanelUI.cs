@@ -197,6 +197,29 @@ public partial class SelectionInfoPanelUI : MonoBehaviour
     [Tooltip("업그레이드 연구가 없을 때 표시할 문구입니다.")]
     public string upgradeResearchIdleFormat = "대기 중";
 
+    [Header("알 부화 (생산 영역 재사용)")]
+    [Label("다음 부화 문구")]
+    [Tooltip("부화를 기다리는 알을 선택했을 때 표시할 문구입니다. 알마다 부화 시간이 따로 흐르며, 슬라이더는 그 알의 부화까지 차오릅니다. {0}=남은 초, {1}=남은 시간(분:초)")]
+    public string eggNextHatchFormat = "부화까지  {1}";
+    [Label("부화 대기 문구")]
+    [Tooltip("알마다 따로 부화하도록 바뀐 뒤로는 쓰이지 않습니다. 모든 대기 알은 '다음 부화 문구'로 표시합니다. {0}=부화 순번")]
+    public string eggWaitingFormat = "부화 대기  ({0}번째)";
+    [Label("부화 중 문구")]
+    [Tooltip("부화 애니메이션이 재생 중인 알을 선택했을 때 표시할 문구입니다.")]
+    public string eggHatchingFormat = "부화 중!";
+    [Label("부화 준비 문구")]
+    [Tooltip("알 미션이 아직 시작되지 않았을 때 표시할 문구입니다.")]
+    public string eggPreparingFormat = "부화 준비 중";
+    [Label("미션 오류 문구")]
+    [Tooltip("알 미션 설정 오류로 부화가 멈췄을 때 표시할 문구입니다.")]
+    public string eggErrorFormat = "알 미션 설정 오류";
+    [Label("부화 임박 색상")]
+    [Tooltip("다음 부화까지 남은 시간이 '부화 임박 시간' 이하이거나 부화 중일 때 상태 문구 색입니다.")]
+    public Color eggUrgentColor = new Color(1f, 0.32f, 0.32f);
+    [Label("부화 임박 시간")]
+    [Tooltip("남은 시간이 이 값(초) 이하이면 상태 문구를 '부화 임박 색상'으로 칠합니다. 0이면 부화 중일 때만 칠합니다.")]
+    [Min(0f)] public float eggUrgentSeconds = 10f;
+
     // 인스펙터 칸에 연결된 오브젝트들(영역의 역할 없는 자식 판정용)
     readonly List<Transform> roleTransforms = new List<Transform>();
     // 단일 선택 시 생산 진행률 갱신 대상
@@ -261,9 +284,17 @@ public partial class SelectionInfoPanelUI : MonoBehaviour
         if (trackedEntity == null)
             return;
 
-        ProductionBuilding production = trackedEntity.GetComponent<ProductionBuilding>();
-        if (production != null)
-            RefreshProduction(production);
+        MonsterEgg egg = trackedEntity.GetComponent<MonsterEgg>();
+        if (egg != null)
+        {
+            RefreshEggHatch(egg);
+        }
+        else
+        {
+            ProductionBuilding production = trackedEntity.GetComponent<ProductionBuilding>();
+            if (production != null)
+                RefreshProduction(production);
+        }
 
         if (trackedEntity.GetComponent<UpgradeBuilding>() != null)
             RefreshUpgradeResearch(showSection: true);
@@ -283,7 +314,17 @@ public partial class SelectionInfoPanelUI : MonoBehaviour
 
         UnitData data = SelectionInfoUtility.GetUnitData(trackedEntity);
         RefreshCombat(trackedEntity, data);
-        RefreshProduction(trackedEntity.GetComponent<ProductionBuilding>());
+        RefreshProductionOrEgg(trackedEntity);
+    }
+
+    // 알은 생산 영역을 빌려 부화 상태를 보여주고, 그 밖에는 일반 생산 정보를 보여준다.
+    void RefreshProductionOrEgg(SelectableEntity entity)
+    {
+        MonsterEgg egg = entity.GetComponent<MonsterEgg>();
+        if (egg != null)
+            RefreshEggHatch(egg);
+        else
+            RefreshProduction(entity.GetComponent<ProductionBuilding>());
     }
 
     void HandleTrackedHealthChanged(float currentHealth, float maxHealth)
@@ -353,7 +394,7 @@ public partial class SelectionInfoPanelUI : MonoBehaviour
         }
 
         RefreshCombat(entity, data);
-        RefreshProduction(entity.GetComponent<ProductionBuilding>());
+        RefreshProductionOrEgg(entity);
         RefreshUpgradeResearch(entity.GetComponent<UpgradeBuilding>() != null);
     }
 
@@ -770,6 +811,72 @@ public partial class SelectionInfoPanelUI : MonoBehaviour
             productionSlider.minValue = 0f;
             productionSlider.maxValue = 1f;
             productionSlider.value = sliderValue;
+        }
+    }
+
+    // 알 미션의 알: 생산 영역에 부화 몬스터 아이콘·이름, 현재 상태, 부화까지 남은 진행률을 표시한다.
+    void RefreshEggHatch(MonsterEgg egg)
+    {
+        bool show = productionSection != null && egg != null && !egg.Resolved;
+        SetSectionActive(productionSection, show);
+        if (!show)
+            return;
+
+        GameObject monster = egg.monsterPrefab != null ? egg.monsterPrefab.gameObject : null;
+        UnitData monsterData = SelectionInfoUtility.GetUnitData(monster);
+
+        if (productionIconImage != null)
+        {
+            Sprite icon = monster != null ? SelectionInfoUtility.GetPortrait(monster, monsterData) : null;
+            productionIconImage.sprite = icon;
+            productionIconImage.enabled = icon != null;
+        }
+
+        SetText(productionTitleText, monster != null ? SelectionInfoUtility.GetDisplayName(monster, monsterData) : string.Empty);
+
+        MonsterEgg.HatchStatus status = egg.GetHatchStatus(out float remaining, out float progress, out int order);
+        string statusText;
+        bool urgent = false;
+
+        switch (status)
+        {
+            case MonsterEgg.HatchStatus.NextHatch:
+                int seconds = Mathf.CeilToInt(remaining);
+                statusText = string.Format(eggNextHatchFormat, remaining, $"{seconds / 60:00}:{seconds % 60:00}");
+                urgent = remaining <= eggUrgentSeconds;
+                break;
+            case MonsterEgg.HatchStatus.Waiting:
+                statusText = string.Format(eggWaitingFormat, order);
+                break;
+            case MonsterEgg.HatchStatus.Hatching:
+                statusText = eggHatchingFormat;
+                urgent = true;
+                break;
+            case MonsterEgg.HatchStatus.Error:
+                statusText = eggErrorFormat;
+                break;
+            default:
+                statusText = eggPreparingFormat;
+                break;
+        }
+
+        if (urgent && !string.IsNullOrEmpty(statusText))
+            statusText = $"<color=#{ColorUtility.ToHtmlStringRGBA(eggUrgentColor)}>{statusText}</color>";
+
+        // 생산 전용 칸(Watt 소모량·생산 속도)은 알에 의미가 없으므로 숨긴다.
+        SetProductionRoleVisible(productionIconImage, true);
+        SetProductionRoleVisible(productionTitleText, true);
+        SetProductionRoleVisible(productionSlider, true);
+        SetProductionRoleVisible(productionWattCostText, false);
+        SetProductionRoleVisible(productionSpeedText, false);
+
+        SetText(productionDetailText, statusText);
+
+        if (productionSlider != null)
+        {
+            productionSlider.minValue = 0f;
+            productionSlider.maxValue = 1f;
+            productionSlider.value = progress;
         }
     }
 

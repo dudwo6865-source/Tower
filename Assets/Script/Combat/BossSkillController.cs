@@ -115,8 +115,9 @@ public class BossSkillController : MonoBehaviour
             return false;
 
         // 보스 AI는 기존 둥지·후퇴 제한을 유지하고, 일반 유닛 AI는 둥지 없이 사용한다.
+        // 알에서 부화한 보스처럼 둥지 없이 생성된 보스는 계속 습격 중이므로 스킬을 쓸 수 있다.
         if (boss != null && boss.isActiveAndEnabled)
-            return boss.Nest != null && boss.Nest.isActiveAndEnabled &&
+            return (boss.WithoutNest || (boss.Nest != null && boss.Nest.isActiveAndEnabled)) &&
                 boss.State != BossSortieRules.Phase.Retreat;
         return unit != null && unit.isActiveAndEnabled;
     }

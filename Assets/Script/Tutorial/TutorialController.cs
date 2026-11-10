@@ -94,7 +94,7 @@ public class TutorialController : MonoBehaviour
             Time.frameCount > blockedThroughFrame) OpenNext();
     }
 
-    public void Notify(TutorialEvent trigger, string eventId = null, int wave = 0)
+    public void Notify(TutorialEvent trigger, string eventId = null, int wave = 0, int eggSpawnCount = 0)
     {
         if (!isActiveAndEnabled || !configured || (GameResultManager.Instance != null && GameResultManager.Instance.IsGameOver)) return;
         if (current != null && current.waitForEvent && pageIndex == current.pages.Length - 1 &&
@@ -105,6 +105,7 @@ public class TutorialController : MonoBehaviour
             if (binding == null || binding.trigger != trigger ||
                 (trigger == TutorialEvent.Custom && binding.eventId != eventId) ||
                 ((trigger == TutorialEvent.DayStarted || trigger == TutorialEvent.NightStarted) && binding.wave > 0 && binding.wave != wave) ||
+                (trigger == TutorialEvent.EggSpawnCountChanged && binding.eggSpawnCount > 0 && binding.eggSpawnCount != eggSpawnCount) ||
                 (binding.prerequisite != null && !completed.Contains(binding.prerequisite))) continue;
             Play(binding.sequence);
         }
@@ -119,10 +120,10 @@ public class TutorialController : MonoBehaviour
     {
         if (!isActiveAndEnabled || sequence == null || queued.Contains(sequence) || current == sequence ||
             (sequence.oncePerStage && completed.Contains(sequence))) return;
-        if (panel == null || !panel.CanShow(sequence) ||
-            (sequence.waitForEvent && (sequence.pauseGame || sequence.blockGameplay)))
+        string error = panel == null ? "TutorialController의 '표시 패널'을 연결하세요." : panel.GetValidationError(sequence);
+        if (error != null)
         {
-            Debug.LogWarning("TutorialController: 패널·본문·다음 버튼·입력 차단 배경·이미지 영역과 페이지를 확인하세요. 실습 안내는 시간 정지와 조작 차단을 꺼야 합니다.", this);
+            Debug.LogWarning($"TutorialController: 안내 '{sequence.name}' — {error}", sequence);
             return;
         }
         pending.Enqueue(sequence);

@@ -8,7 +8,8 @@ public enum TutorialEvent
     [InspectorName("밤 시작")] NightStarted,
     [InspectorName("건물 건설 완료")] BuildingCompleted,
     [InspectorName("유닛 생산 완료")] UnitProduced,
-    [InspectorName("사용자 지정 이벤트")] Custom
+    [InspectorName("사용자 지정 이벤트")] Custom,
+    [InspectorName("알 리젠 수 변화")] EggSpawnCountChanged
 }
 
 [Serializable]
@@ -29,6 +30,9 @@ public class TutorialBinding
     [Label("웨이브 번호")]
     [Tooltip("낮·밤 이벤트에 적용합니다. 0이면 모든 웨이브에 반응합니다.")]
     [Min(0)] public int wave;
+    [Label("변경 후 알 리젠 수")]
+    [Tooltip("알 리젠 수 변화 이벤트에 적용합니다. 0이면 모든 변화, 양수이면 한 번에 나오는 수가 그 값으로 바뀔 때 반응합니다.")]
+    [Min(0)] public int eggSpawnCount;
     [Label("선행 안내")]
     [Tooltip("연결하면 이 안내를 끝낸 뒤에 발생한 이벤트에만 반응합니다.")]
     public TutorialSequence prerequisite;

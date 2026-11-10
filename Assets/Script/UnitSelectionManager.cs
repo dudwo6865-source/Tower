@@ -62,6 +62,14 @@ public class UnitSelectionManager : MonoBehaviour
 
     private readonly List<SelectableEntity> selectedEntities =
         new List<SelectableEntity>();
+    // 포함 여부를 빠르게 확인하기 위한 집합. selectedEntities와 항상 같은 내용을 유지한다.
+    private readonly HashSet<SelectableEntity> selectedSet =
+        new HashSet<SelectableEntity>();
+
+    // 여러 대상을 한 번에 고를 때 선택 변경 알림을 마지막에 한 번만 보내기 위한 상태.
+    // (대상마다 알리면 선택 UI·건물 패널이 N번 다시 그려져 유닛이 많을 때 프레임이 크게 튄다.)
+    private int notifyBatchDepth;
+    private bool notifyBatchPending;
 
     private SelectableEntity lastClickedEntity;
     private float lastClickTime;
@@ -120,6 +128,32 @@ public class UnitSelectionManager : MonoBehaviour
             return;
         }
         if (StageIntroController.IsPlaying) return;
+
+        // 이번 프레임의 선택 변경은 모아서 끝에 한 번만 알린다.
+        BeginSelectionBatch();
+        try { UpdateInput(); }
+        finally { EndSelectionBatch(); }
+    }
+
+    void BeginSelectionBatch()
+    {
+        notifyBatchDepth++;
+    }
+
+    void EndSelectionBatch()
+    {
+        if (notifyBatchDepth > 0)
+            notifyBatchDepth--;
+
+        if (notifyBatchDepth == 0 && notifyBatchPending)
+        {
+            notifyBatchPending = false;
+            NotifySelectionChanged();
+        }
+    }
+
+    void UpdateInput()
+    {
         if (removedNotifyPending)
         {
             removedNotifyPending = false;
@@ -445,7 +479,7 @@ public class UnitSelectionManager : MonoBehaviour
 
             if (candidate != null &&
                 candidate.ownerId == localPlayerOwnerId &&
-                selectedEntities.Contains(candidate))
+                selectedSet.Contains(candidate))
             {
                 owned.Add(candidate);
             }
@@ -463,6 +497,13 @@ public class UnitSelectionManager : MonoBehaviour
     /// <summary>맵 전체의 내 유닛(건물 제외)을 선택합니다. 화면 밖·안개 속 유닛도 포함합니다.</summary>
     public void SelectAllOwnedUnits()
     {
+        BeginSelectionBatch();
+        try { SelectAllOwnedUnitsInternal(); }
+        finally { EndSelectionBatch(); }
+    }
+
+    void SelectAllOwnedUnitsInternal()
+    {
         if (!Input.GetKey(KeyCode.LeftShift))
             DeselectAll();
 
@@ -476,7 +517,7 @@ public class UnitSelectionManager : MonoBehaviour
                 !CanSelectEntityByOwner(entity))
                 continue;
 
-            EntityHealth health = entity.GetComponent<EntityHealth>();
+            EntityHealth health = entity.CachedHealth;
 
             if (health != null && !health.IsAlive)
                 continue;
@@ -632,7 +673,7 @@ public class UnitSelectionManager : MonoBehaviour
 
     void SelectEntity(SelectableEntity entity)
     {
-        if (selectedEntities.Contains(entity))
+        if (!selectedSet.Add(entity))
             return;
 
         entity.SetSelected(true);
@@ -643,6 +684,13 @@ public class UnitSelectionManager : MonoBehaviour
     /// <summary>기존 선택을 비우고 이 엔티티들만 선택합니다. (건물 업그레이드 교체 등)
     /// ignoreTypeFilter를 켜면 '선택 타입 필터'를 무시하고 소속만 검사합니다. (이미 선택돼 있던 대상을 다시 고를 때)</summary>
     public void SelectOnly(IReadOnlyList<SelectableEntity> entities, bool ignoreTypeFilter = false)
+    {
+        BeginSelectionBatch();
+        try { SelectOnlyInternal(entities, ignoreTypeFilter); }
+        finally { EndSelectionBatch(); }
+    }
+
+    void SelectOnlyInternal(IReadOnlyList<SelectableEntity> entities, bool ignoreTypeFilter)
     {
         DeselectAll();
 
@@ -664,8 +712,10 @@ public class UnitSelectionManager : MonoBehaviour
     /// <summary>이 엔티티만 선택에서 뺍니다. (다중 선택 초상화 Shift+클릭 등)</summary>
     public void Deselect(SelectableEntity entity)
     {
-        if (entity == null || !selectedEntities.Remove(entity))
+        if (entity == null || !selectedSet.Remove(entity))
             return;
+
+        selectedEntities.Remove(entity);
 
         entity.SetSelected(false);
 
@@ -678,7 +728,7 @@ public class UnitSelectionManager : MonoBehaviour
 
     void ToggleSelectEntity(SelectableEntity entity)
     {
-        if (selectedEntities.Contains(entity))
+        if (selectedSet.Remove(entity))
         {
             entity.SetSelected(false);
             selectedEntities.Remove(entity);
@@ -701,12 +751,19 @@ public class UnitSelectionManager : MonoBehaviour
         }
 
         selectedEntities.Clear();
+        selectedSet.Clear();
         RefreshCommandIndicators();
         NotifySelectionChanged();
     }
 
     void NotifySelectionChanged()
     {
+        if (notifyBatchDepth > 0)
+        {
+            notifyBatchPending = true;
+            return;
+        }
+
         OnSelectionChanged?.Invoke();
 
         if (UnitCommandController.HasInstance)
@@ -740,8 +797,11 @@ public class UnitSelectionManager : MonoBehaviour
             group?.Remove(entity);
 
         // 파괴 도중(OnDisable)에 UI를 바로 고치지 않고 다음 Update에서 한 번에 알린다.
-        if (selectedEntities.Remove(entity))
+        if (selectedSet.Remove(entity))
+        {
+            selectedEntities.Remove(entity);
             removedNotifyPending = true;
+        }
 
         if (lastClickedEntity == entity)
             lastClickedEntity = null;
@@ -801,22 +861,24 @@ public class UnitSelectionManager : MonoBehaviour
         return new Rect(xMin, yMin, xMax - xMin, yMax - yMin);
     }
 
+    // 대상마다 배열을 새로 만들지 않도록 재사용한다. (메인 스레드에서만 호출)
+    static readonly Vector3[] boundsCornersBuffer = new Vector3[8];
+
     static Vector3[] GetBoundsCorners(Bounds bounds)
     {
         Vector3 center = bounds.center;
         Vector3 extents = bounds.extents;
+        Vector3[] c = boundsCornersBuffer;
 
-        return new Vector3[]
-        {
-            center + new Vector3(extents.x, extents.y, extents.z),
-            center + new Vector3(extents.x, extents.y, -extents.z),
-            center + new Vector3(extents.x, -extents.y, extents.z),
-            center + new Vector3(extents.x, -extents.y, -extents.z),
-            center + new Vector3(-extents.x, extents.y, extents.z),
-            center + new Vector3(-extents.x, extents.y, -extents.z),
-            center + new Vector3(-extents.x, -extents.y, extents.z),
-            center + new Vector3(-extents.x, -extents.y, -extents.z)
-        };
+        c[0] = center + new Vector3(extents.x, extents.y, extents.z);
+        c[1] = center + new Vector3(extents.x, extents.y, -extents.z);
+        c[2] = center + new Vector3(extents.x, -extents.y, extents.z);
+        c[3] = center + new Vector3(extents.x, -extents.y, -extents.z);
+        c[4] = center + new Vector3(-extents.x, extents.y, extents.z);
+        c[5] = center + new Vector3(-extents.x, extents.y, -extents.z);
+        c[6] = center + new Vector3(-extents.x, -extents.y, extents.z);
+        c[7] = center + new Vector3(-extents.x, -extents.y, -extents.z);
+        return c;
     }
 
     bool IsPointerOverUI()

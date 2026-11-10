@@ -382,7 +382,7 @@ public class MapLoader : MonoBehaviour
         result.winByCapturingPoint = config.winByCapturingPoint;
         result.winByDefeatingBoss = config.winByDefeatingBoss;
         result.winByDestroyingEggs = config.winByDestroyingEggs;
-        result.eggStageDurations = config.eggStageDurations != null ? (float[])config.eggStageDurations.Clone() : null;
+        result.eggSettings = config.eggSettings != null ? config.eggSettings.Clone() : new EggMissionSettings();
         result.captureDuration = config.captureDuration;
     }
 }

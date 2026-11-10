@@ -14,6 +14,9 @@ public partial class MinimapBlipManager : MonoBehaviour
         public MinimapTacticalGlyph alert;
         public bool headquarters;
         public bool spawner;
+        public bool egg;
+        public bool boss;
+        public string typeId;
     }
 
     [Header("플레이어")]
@@ -184,6 +187,19 @@ public partial class MinimapBlipManager : MonoBehaviour
             fogVisibilityCache.Remove(entity);
         }
 
+        // '항상 위에 그리기' 아이콘을 먼저 올리고, 선택된 블립을 그 위에 올린다.
+        foreach (SelectableEntity entity in stillActive)
+        {
+            if (entity == null || !activeBlips.TryGetValue(entity, out BlipView blip))
+                continue;
+
+            IconSetting icon = ResolveIconSetting(blip);
+            if (icon != null && icon.drawOnTop)
+                blip.rect.SetAsLastSibling();
+        }
+
+        UpdateSpawnHighlights();
+
         foreach (SelectableEntity entity in stillActive)
         {
             if (entity == null || !entity.IsSelected)
@@ -326,6 +342,9 @@ public partial class MinimapBlipManager : MonoBehaviour
         blip.rect.gameObject.SetActive(true);
         blip.headquarters = entity.GetComponent<Headquarters>() != null;
         blip.spawner = entity.GetComponent<EnemySpawner>() != null;
+        blip.egg = entity.GetComponent<MonsterEgg>() != null;
+        blip.boss = entity.GetComponent<BossCombatAI>() != null;
+        blip.typeId = entity.entityTypeId;
         activeBlips.Add(entity, blip);
         return blip;
     }

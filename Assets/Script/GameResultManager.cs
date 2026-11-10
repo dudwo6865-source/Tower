@@ -74,15 +74,15 @@ public class GameResultManager : MonoBehaviour
     public string BossError { get; private set; }
     int bossDefeatedFrame = -1;
 
-    [Header("승리 조건 - 알과 부화 몬스터 제거")]
+    [Header("승리 조건 - 알 파괴")]
     [Label("알 파괴 미션 사용")]
+    [Tooltip("시간이 지나면 맵에 무작위로 알이 나오고, 알마다 따로 부화 시간이 흐릅니다. 정해진 수의 알을 파괴하면 승리합니다.")]
     public bool winByDestroyingEggs;
     [Label("알 미션")]
     [Tooltip("맵 루트에 붙인 EggMissionController를 연결합니다. 맵 로더가 있으면 자동으로 연결합니다.")]
     public EggMissionController eggMission;
-    [Label("단계별 제한 시간(초)")]
-    [Tooltip("알 개수 이상 입력합니다. 알이 파괴되거나 부화할 때 다음 시간으로 새로 시작합니다. 뒤로 갈수록 짧아야 합니다.")]
-    public float[] eggStageDurations = { 300f, 240f, 180f, 120f };
+    [Label("알 미션 설정")]
+    public EggMissionSettings eggSettings = new EggMissionSettings();
     public string EggError { get; private set; }
     int eggsCompletedFrame = -1;
 
@@ -100,7 +100,7 @@ public class GameResultManager : MonoBehaviour
             ? "맵 루트에 활성 알 미션 컴포넌트를 정확히 하나 연결하세요." : null;
         if (error == null)
         {
-            eggMission.Initialize(this, eggStageDurations);
+            eggMission.Initialize(this, eggSettings);
             eggMission.Tick(Time.deltaTime);
             error = eggMission.Error;
         }
@@ -108,7 +108,7 @@ public class GameResultManager : MonoBehaviour
         EggError = error;
         if (error != null || !eggMission.Complete) { eggsCompletedFrame = -1; return; }
         if (eggsCompletedFrame < 0) eggsCompletedFrame = Time.frameCount;
-        // 마지막 처치와 같은 프레임의 본부 파괴는 패배로 처리한다.
+        // 마지막 알 파괴와 같은 프레임의 본부 파괴는 패배로 처리한다.
         TrySubscribeHq();
         if (Time.frameCount > eggsCompletedFrame && hqHealth != null && hqHealth.IsAlive)
             EndGame(Result.Victory);
@@ -246,7 +246,7 @@ public class GameResultManager : MonoBehaviour
     void Start()
     {
         if (winByDestroyingEggs && eggMission != null)
-            eggMission.Initialize(this, eggStageDurations);
+            eggMission.Initialize(this, eggSettings);
         if (winByCapturingPoint)
         {
             ValidateCapturePoint();

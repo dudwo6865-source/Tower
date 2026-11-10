@@ -3058,11 +3058,11 @@ MonoBehaviour:
   missions:
   - stage: {fileID: 11400000, guid: 3e924dfe474f7fe4c9cbdb0f78996837, type: 2}
     number: 01
-  - stage: {fileID: 11400000, guid: 6f3f4814aa5a44478fc94f5effaf246a, type: 2}
+  - stage: {fileID: 11400000, guid: 42d5b236f2776fb4494e0346725a3416, type: 2}
     number: 02
   - stage: {fileID: 11400000, guid: 7db143866efcc8c44841e41c6acf0828, type: 2}
     number: 03
-  - stage: {fileID: 11400000, guid: ee9c0368b1a88b44a89d6bc460dbc117, type: 2}
+  - stage: {fileID: 11400000, guid: 6f3f4814aa5a44478fc94f5effaf246a, type: 2}
     number: 04
   - stage: {fileID: 11400000, guid: 79e1a34fe0b584b4a95a7ef33e8b787e, type: 2}
     number: 05

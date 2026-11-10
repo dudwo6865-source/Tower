@@ -17,8 +17,10 @@ public class BossCombatAI : MobileCombatAI
     [Min(0.1f)] public float routeCheckInterval = 0.5f;
 
     public BossNest Nest { get; private set; }
+    // 알 부화처럼 둥지 없이 생성된 보스는 후퇴·회복 없이 계속 본부를 습격한다.
+    public bool WithoutNest { get; private set; }
     public EntityHealth Health { get; private set; }
-    public BossSortieRules.Phase State => rules.State;
+    public BossSortieRules.Phase State => WithoutNest ? BossSortieRules.Phase.Assault : rules.State;
     public bool IsRegenerating { get; private set; }
     public string StateLabel => State == BossSortieRules.Phase.Retreat ? "둥지로 후퇴 중" :
         State == BossSortieRules.Phase.Assault ? "본부 습격 중" : HasValidTarget() ? "둥지에서 교전 중" : "둥지에서 대기 중";
@@ -51,7 +53,16 @@ public class BossCombatAI : MobileCombatAI
     public void Initialize(BossNest nest, Vector3 position)
     {
         Nest = nest;
+        WithoutNest = false;
         restPosition = position;
+    }
+
+    // 둥지 없이 생성한 보스를 곧바로 본부 습격 상태로 시작한다.
+    public void InitializeWithoutNest()
+    {
+        Nest = null;
+        WithoutNest = true;
+        restPosition = transform.position;
     }
 
     void OnDestroy()
@@ -96,6 +107,11 @@ public class BossCombatAI : MobileCombatAI
 
     void Update()
     {
+        if (WithoutNest)
+        {
+            UpdateWithoutNest();
+            return;
+        }
         if (Nest == null || !Nest.isActiveAndEnabled || Health == null || !Health.IsAlive ||
             (GameResultManager.Instance != null && GameResultManager.Instance.IsGameOver))
         {
@@ -147,6 +163,37 @@ public class BossCombatAI : MobileCombatAI
             return;
         }
 
+        UpdateAssault();
+    }
+
+    void UpdateWithoutNest()
+    {
+        IsRegenerating = false;
+        if (Health == null || !Health.IsAlive ||
+            (GameResultManager.Instance != null && GameResultManager.Instance.IsGameOver))
+        {
+            skills?.CancelSkill();
+            attacker.CancelPendingAttack();
+            StopAgentMovement();
+            return;
+        }
+        if (Time.deltaTime <= 0f || agent == null || !agent.enabled || !agent.isOnNavMesh) return;
+        if (Time.time >= nextTargetCheck || (localTarget != null && !IsAlive(localTarget)))
+        {
+            nextTargetCheck = Time.time + Mathf.Max(0.1f, retargetInterval);
+            localTarget = FindLocalTarget(false);
+        }
+        if (skills != null && skills.IsActive)
+        {
+            StopAgentMovement();
+            return;
+        }
+        UpdateAssault();
+    }
+
+    // 습격 중: 가까운 적과 교전하되 너무 멀리 유인되면 본부 방향 진군으로 돌아간다.
+    void UpdateAssault()
+    {
         if (pursuing && HorizontalDistance(transform.position, pursuitOrigin) >= pursuitDistance)
         {
             marchUntil = Time.time + resumeMarchDuration;
@@ -224,7 +271,7 @@ public class BossCombatAI : MobileCombatAI
             {
                 SetTarget(null);
                 attacker.CancelPendingAttack();
-                agent.stoppingDistance = Mathf.Min(stoppingDistance, Nest.arrivalDistance);
+                agent.stoppingDistance = Nest != null ? Mathf.Min(stoppingDistance, Nest.arrivalDistance) : stoppingDistance;
                 if (corners.Length > 0) agent.SetPath(route);
             }
         }

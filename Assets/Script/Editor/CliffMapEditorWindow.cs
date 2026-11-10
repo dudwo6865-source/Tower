@@ -43,6 +43,17 @@ public class CliffMapEditorWindow : EditorWindow
     // false면 씬 뷰 클릭/드래그를 가로채지 않아 다른 오브젝트 작업 가능
     bool paintEnabled = true;
 
+    // 대칭 칠하기: 켜진 축마다 브러시를 대칭 위치에도 함께 칠한다. 둘 다 켜면 4분면 대칭이 된다.
+    // 중심은 격자선 좌표(칸 단위, 0.5 단위)이며 0은 그리드 원점 선이다.
+    [SerializeField] bool mirrorX;
+    [SerializeField] bool mirrorZ;
+    [SerializeField] float mirrorCenterX;
+    [SerializeField] float mirrorCenterZ;
+    readonly List<CliffPainter.CellCoord> mirrorOrigins = new List<CliffPainter.CellCoord>(4);
+
+    int MirrorAxisX2 => Mathf.RoundToInt(mirrorCenterX * 2f);
+    int MirrorAxisZ2 => Mathf.RoundToInt(mirrorCenterZ * 2f);
+
     [MenuItem("Tools/맵/맵 생성기")]
     static void Open()
     {
@@ -273,6 +284,8 @@ public class CliffMapEditorWindow : EditorWindow
 
         EditorGUI.EndDisabledGroup();
 
+        DrawMirrorSettings();
+
         EditorGUILayout.Space(8f);
         EditorGUILayout.LabelField("데이터", EditorStyles.boldLabel);
         EditorGUILayout.LabelField($"Top 셀: {painter.TopCount}");
@@ -341,6 +354,150 @@ public class CliffMapEditorWindow : EditorWindow
 
         if (!paintEnabled)
             EditorGUILayout.HelpBox("페인트가 꺼져 있습니다. 씬에서 다른 오브젝트를 선택·편집할 수 있습니다.", MessageType.Warning);
+    }
+
+    void DrawMirrorSettings()
+    {
+        EditorGUILayout.Space(8f);
+        EditorGUILayout.LabelField("대칭", EditorStyles.boldLabel);
+
+        EditorGUI.BeginChangeCheck();
+        mirrorX = EditorGUILayout.ToggleLeft(new GUIContent("X축 대칭 (좌우 반전)",
+            "칠한 칸을 세로 대칭선 기준으로 좌우(월드 X) 반대편에도 칠합니다."), mirrorX);
+        mirrorZ = EditorGUILayout.ToggleLeft(new GUIContent("Y축 대칭 (앞뒤 반전, 월드 Z)",
+            "칠한 칸을 가로 대칭선 기준으로 앞뒤(월드 Z, 위에서 본 세로) 반대편에도 칠합니다."), mirrorZ);
+
+        EditorGUI.BeginDisabledGroup(!mirrorX && !mirrorZ);
+        EditorGUILayout.BeginHorizontal();
+        EditorGUIUtility.labelWidth = 70f;
+        mirrorCenterX = SnapHalf(EditorGUILayout.FloatField(new GUIContent("중심 X",
+            "대칭선의 X 위치(칸 단위, 0.5 단위)입니다. 0은 그리드 원점 선, 0.5는 0번 칸 가운데입니다."), mirrorCenterX));
+        mirrorCenterZ = SnapHalf(EditorGUILayout.FloatField(new GUIContent("중심 Z",
+            "대칭선의 Z 위치(칸 단위, 0.5 단위)입니다. 0은 그리드 원점 선, 0.5는 0번 칸 가운데입니다."), mirrorCenterZ));
+        EditorGUIUtility.labelWidth = 0f;
+        EditorGUILayout.EndHorizontal();
+
+        EditorGUILayout.BeginHorizontal();
+        if (GUILayout.Button(new GUIContent("칠한 범위 중심으로", "지금까지 칠한 칸 범위의 정중앙을 대칭 중심으로 잡습니다.")))
+            SetMirrorCenterToPaintedBounds();
+        if (GUILayout.Button(new GUIContent("그리드 원점으로", "대칭 중심을 그리드 원점 선(0, 0)으로 되돌립니다.")))
+        {
+            mirrorCenterX = 0f;
+            mirrorCenterZ = 0f;
+        }
+        EditorGUILayout.EndHorizontal();
+
+        if (mirrorX && mirrorZ)
+            EditorGUILayout.HelpBox("두 축이 모두 켜져 4분면 대칭으로 칠합니다.", MessageType.None);
+
+        EditorGUILayout.LabelField("이미 칠한 맵을 반대편에 복사", EditorStyles.miniBoldLabel);
+        EditorGUILayout.BeginHorizontal();
+        EditorGUI.BeginDisabledGroup(!mirrorX);
+        if (GUILayout.Button(new GUIContent("왼쪽 → 오른쪽", "대칭선 왼쪽(X 작은 쪽) 지형을 오른쪽에 반전 복사합니다. 오른쪽의 기존 지형은 지워집니다.")))
+            MirrorCopy(true, false);
+        if (GUILayout.Button(new GUIContent("오른쪽 → 왼쪽", "대칭선 오른쪽(X 큰 쪽) 지형을 왼쪽에 반전 복사합니다. 왼쪽의 기존 지형은 지워집니다.")))
+            MirrorCopy(true, true);
+        EditorGUI.EndDisabledGroup();
+        EditorGUILayout.EndHorizontal();
+        EditorGUILayout.BeginHorizontal();
+        EditorGUI.BeginDisabledGroup(!mirrorZ);
+        if (GUILayout.Button(new GUIContent("아래 → 위", "대칭선 아래(Z 작은 쪽) 지형을 위에 반전 복사합니다. 위쪽의 기존 지형은 지워집니다.")))
+            MirrorCopy(false, false);
+        if (GUILayout.Button(new GUIContent("위 → 아래", "대칭선 위(Z 큰 쪽) 지형을 아래에 반전 복사합니다. 아래쪽의 기존 지형은 지워집니다.")))
+            MirrorCopy(false, true);
+        EditorGUI.EndDisabledGroup();
+        EditorGUILayout.EndHorizontal();
+        EditorGUI.EndDisabledGroup();
+
+        if (EditorGUI.EndChangeCheck())
+            SceneView.RepaintAll();
+    }
+
+    static float SnapHalf(float value) => Mathf.Round(value * 2f) * 0.5f;
+
+    void SetMirrorCenterToPaintedBounds()
+    {
+        if (!painter.TryGetPaintedCellBounds(out CliffPainter.CellCoord min, out CliffPainter.CellCoord max))
+        {
+            ShowNotification(new GUIContent("칠한 칸이 없습니다."));
+            return;
+        }
+
+        // 칸 min~max의 바깥 격자선은 min과 max+1이므로 그 가운데가 중심이다.
+        mirrorCenterX = (min.x + max.x + 1) * 0.5f;
+        mirrorCenterZ = (min.z + max.z + 1) * 0.5f;
+        SceneView.RepaintAll();
+    }
+
+    // 한쪽 절반의 지형을 대칭선 반대편으로 반전 복사한다.
+    void MirrorCopy(bool alongX, bool fromHighSide)
+    {
+        FinishStroke();
+        string axis = alongX ? $"X = {mirrorCenterX:0.#}" : $"Z = {mirrorCenterZ:0.#}";
+        if (!EditorUtility.DisplayDialog("맵 생성기",
+                $"대칭선({axis}) 기준으로 한쪽 지형을 반대편에 복사합니다. 반대편의 기존 Top/언덕/바닥은 지워집니다.",
+                "복사", "취소"))
+            return;
+
+        int group = CliffPainterUndo.Begin(painter, "맵 대칭 복사");
+        if (alongX)
+            painter.MirrorCells(true, MirrorAxisX2, fromHighSide);
+        else
+            painter.MirrorCells(false, MirrorAxisZ2, fromHighSide);
+        RebuildNow();
+        MarkDirty();
+        CliffPainterUndo.End(group);
+        SceneView.RepaintAll();
+    }
+
+    // 브러시 스탬프(왼쪽 아래 칸 origin, 크기 stamp)의 대칭 위치 스탬프 원점을 모두 모은다.
+    List<CliffPainter.CellCoord> GetMirroredOrigins(CliffPainter.CellCoord origin, int stamp)
+    {
+        mirrorOrigins.Clear();
+        mirrorOrigins.Add(origin);
+        int mx = MirrorAxisX2 - origin.x - stamp;
+        int mz = MirrorAxisZ2 - origin.z - stamp;
+        if (mirrorX)
+            AddDistinct(mirrorOrigins, new CliffPainter.CellCoord(mx, origin.z));
+        if (mirrorZ)
+            AddDistinct(mirrorOrigins, new CliffPainter.CellCoord(origin.x, mz));
+        if (mirrorX && mirrorZ)
+            AddDistinct(mirrorOrigins, new CliffPainter.CellCoord(mx, mz));
+        return mirrorOrigins;
+    }
+
+    static void AddDistinct(List<CliffPainter.CellCoord> list, CliffPainter.CellCoord cell)
+    {
+        if (!list.Contains(cell))
+            list.Add(cell);
+    }
+
+    void DrawMirrorAxes()
+    {
+        if ((!mirrorX && !mirrorZ) || !painter.TryGetPaintedCellBounds(out CliffPainter.CellCoord min, out CliffPainter.CellCoord max))
+            return;
+
+        float size = painter.TileSize;
+        float y = painter.GetTopSurfaceHeight(0) + 0.3f;
+        Vector3 o = painter.gridOrigin;
+        // 칠한 범위보다 두 칸 넓게 그어 맵 밖에서도 대칭선이 보이게 한다.
+        float x0 = o.x + (Mathf.Min(min.x, mirrorCenterX) - 2f) * size;
+        float x1 = o.x + (Mathf.Max(max.x + 1, mirrorCenterX) + 2f) * size;
+        float z0 = o.z + (Mathf.Min(min.z, mirrorCenterZ) - 2f) * size;
+        float z1 = o.z + (Mathf.Max(max.z + 1, mirrorCenterZ) + 2f) * size;
+        Color prev = Handles.color;
+        Handles.color = new Color(1f, 0.85f, 0.2f, 0.9f);
+        if (mirrorX)
+        {
+            float x = o.x + mirrorCenterX * size;
+            Handles.DrawAAPolyLine(4f, new Vector3(x, y, z0), new Vector3(x, y, z1));
+        }
+        if (mirrorZ)
+        {
+            float z = o.z + mirrorCenterZ * size;
+            Handles.DrawAAPolyLine(4f, new Vector3(x0, y, z), new Vector3(x1, y, z));
+        }
+        Handles.color = prev;
     }
 
     void SetPaintEnabled(bool enabled)
@@ -576,6 +733,7 @@ public class CliffMapEditorWindow : EditorWindow
     {
         float size = painter.TileSize;
         Handles.zTest = UnityEngine.Rendering.CompareFunction.LessEqual;
+        DrawMirrorAxes();
 
         Color color = brushMode switch
         {
@@ -611,15 +769,20 @@ public class CliffMapEditorWindow : EditorWindow
 
         int stamp = GetStampSize();
 
-        for (int dx = 0; dx < stamp; dx++)
+        foreach (CliffPainter.CellCoord stampOrigin in GetMirroredOrigins(origin, stamp))
         {
-            for (int dz = 0; dz < stamp; dz++)
+            for (int dx = 0; dx < stamp; dx++)
             {
-                CliffPainter.CellCoord cell = new CliffPainter.CellCoord(origin.x + dx, origin.z + dz);
-                hoverPaintCells.Add(cell);
+                for (int dz = 0; dz < stamp; dz++)
+                {
+                    CliffPainter.CellCoord cell = new CliffPainter.CellCoord(stampOrigin.x + dx, stampOrigin.z + dz);
+                    if (hoverPaintCells.Contains(cell))
+                        continue;
+                    hoverPaintCells.Add(cell);
 
-                if (brushMode == BrushMode.PlaceHill && painter.CanPlaceHill(cell, GetHillBrushLayer(cell)))
-                    painter.CollectAutoConnectorNeighbors(cell, GetHillBrushLayer(cell), hoverConnectorCells);
+                    if (brushMode == BrushMode.PlaceHill && painter.CanPlaceHill(cell, GetHillBrushLayer(cell)))
+                        painter.CollectAutoConnectorNeighbors(cell, GetHillBrushLayer(cell), hoverConnectorCells);
+                }
             }
         }
 
@@ -770,13 +933,17 @@ public class CliffMapEditorWindow : EditorWindow
         if (painting && IsStampAlreadyInStroke(origin))
             return;
 
+        int stampSize = GetStampSize();
+        // 대칭 위치도 함께 칠한다. 아래 처리 중 목록이 바뀌지 않도록 복사해 둔다.
+        var origins = new List<CliffPainter.CellCoord>(GetMirroredOrigins(origin, stampSize));
+
         if (brushMode == BrushMode.PaintTop)
         {
             bool canPaint = false;
-            int size = GetStampSize();
-            for (int dx = 0; dx < size && !canPaint; dx++)
-                for (int dz = 0; dz < size && !canPaint; dz++)
-                    canPaint = painter.CanPlaceTop(new CliffPainter.CellCoord(origin.x + dx, origin.z + dz), paintTopLayer);
+            foreach (CliffPainter.CellCoord o in origins)
+                for (int dx = 0; dx < stampSize && !canPaint; dx++)
+                    for (int dz = 0; dz < stampSize && !canPaint; dz++)
+                        canPaint = painter.CanPlaceTop(new CliffPainter.CellCoord(o.x + dx, o.z + dz), paintTopLayer);
             // 빈 곳이나 이미 같은 높이인 곳을 누르면 빈 실행 취소 기록을 만들지 않는다.
             if (!canPaint) return;
         }
@@ -791,27 +958,30 @@ public class CliffMapEditorWindow : EditorWindow
 
         if (brushMode == BrushMode.PaintGround || brushMode == BrushMode.EraseGround)
         {
-            int size = GetStampSize();
-            changed = painter.FillGround(origin, size, erase: brushMode == BrushMode.EraseGround) > 0;
+            foreach (CliffPainter.CellCoord o in origins)
+                changed |= painter.FillGround(o, stampSize, erase: brushMode == BrushMode.EraseGround) > 0;
         }
         else if (brushMode == BrushMode.EraseTop)
         {
-            int stamp = GetStampSize();
-            var cells = new List<CliffPainter.CellCoord>();
-            for (int dx = 0; dx < stamp; dx++)
-                for (int dz = 0; dz < stamp; dz++)
-                    cells.Add(new CliffPainter.CellCoord(origin.x + dx, origin.z + dz));
+            // 대칭 칸을 한 번에 넘겨 주변 경계가 같은 규칙으로 물러나게 한다.
+            var cells = new HashSet<CliffPainter.CellCoord>();
+            foreach (CliffPainter.CellCoord o in origins)
+                for (int dx = 0; dx < stampSize; dx++)
+                    for (int dz = 0; dz < stampSize; dz++)
+                        cells.Add(new CliffPainter.CellCoord(o.x + dx, o.z + dz));
             changed = painter.TryRemoveTops(cells, paintTopLayer);
         }
         else
         {
-            int stamp = GetStampSize();
-            for (int dx = 0; dx < stamp; dx++)
+            foreach (CliffPainter.CellCoord o in origins)
             {
-                for (int dz = 0; dz < stamp; dz++)
+                for (int dx = 0; dx < stampSize; dx++)
                 {
-                    CliffPainter.CellCoord cell = new CliffPainter.CellCoord(origin.x + dx, origin.z + dz);
-                    changed |= ApplyBrushToCell(cell);
+                    for (int dz = 0; dz < stampSize; dz++)
+                    {
+                        CliffPainter.CellCoord cell = new CliffPainter.CellCoord(o.x + dx, o.z + dz);
+                        changed |= ApplyBrushToCell(cell);
+                    }
                 }
             }
         }
@@ -843,13 +1013,16 @@ public class CliffMapEditorWindow : EditorWindow
     void CollectStrokePreview(CliffPainter.CellCoord origin)
     {
         int stamp = GetStampSize();
-        for (int dx = 0; dx < stamp; dx++)
+        foreach (CliffPainter.CellCoord o in GetMirroredOrigins(origin, stamp))
         {
-            for (int dz = 0; dz < stamp; dz++)
+            for (int dx = 0; dx < stamp; dx++)
             {
-                CliffPainter.CellCoord cell = new CliffPainter.CellCoord(origin.x + dx, origin.z + dz);
-                if (strokePreviewCells.Add(cell))
-                    strokePreviewList.Add(cell);
+                for (int dz = 0; dz < stamp; dz++)
+                {
+                    CliffPainter.CellCoord cell = new CliffPainter.CellCoord(o.x + dx, o.z + dz);
+                    if (strokePreviewCells.Add(cell))
+                        strokePreviewList.Add(cell);
+                }
             }
         }
     }
