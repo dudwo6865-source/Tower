@@ -107,6 +107,7 @@ public partial class MinimapBlipManager
 
     void OnDisable()
     {
+        HideEggTimers();
         foreach (var watch in headquartersWatches.Values)
             if (watch.health != null) watch.health.OnDamaged -= watch.handler;
         headquartersWatches.Clear();

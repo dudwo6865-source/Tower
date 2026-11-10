@@ -384,6 +384,7 @@ public partial class MinimapBlipManager : MonoBehaviour
         blip.rect.sizeDelta = size;
         blip.image.color = display.color;
         ApplyTacticalBlip(blip, entity, display.color);
+        UpdateEggTimer(blip, entity);
     }
 
     bool IsEntityCurrentlyVisible(SelectableEntity entity)
